@@ -16,33 +16,21 @@ class Player:
         self.experience = self.db_data.get("experience", 0) 
         self.level = self.db_data.get("level", 1)         
         
-        # --- MODIFIED STAT FIELDS ---
-        # self.stats will hold the FINAL assigned stats (e.g., {"STR": 90, "CON": 75, ...})
+        # --- NEW STAT FIELDS ---
         self.stats: Dict[str, int] = self.db_data.get("stats", {})
-        
-        # RENAMED: This now stores the best *list* of rolls, not just the total
+        self.current_stat_pool: List[int] = self.db_data.get("current_stat_pool", [])
         self.best_stat_pool: List[int] = self.db_data.get("best_stat_pool", [])
-        # --- END MODIFIED STAT FIELDS ---
+        self.stats_to_assign: List[int] = self.db_data.get("stats_to_assign", [])
+        # --- END NEW STAT FIELDS ---
 
-
-        # DEPRECATED: These are now drawn from the self.stats dictionary
         self.strength = self.stats.get("STR", 10)
         self.agility = self.stats.get("AGI", 10)
 
-
         # --- FIELDS FOR CHARGEN AND DESCRIPTION ---
-        
-        # game_state: "playing" or "chargen"
         self.game_state: str = self.db_data.get("game_state", "playing")
-        
-        # Which chargen question they are on
         self.chargen_step: int = self.db_data.get("chargen_step", 0)
-        
-        # A dictionary to store all appearance data
         self.appearance: Dict[str, str] = self.db_data.get("appearance", {})
         
-        # --- END NEW FIELDS ---
-
     def send_message(self, message: str):
         """Adds a message to the player's output queue."""
         self.messages.append(message)
@@ -58,7 +46,6 @@ class Player:
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
         
-        # Update strength/agility from the stats dict before saving
         self.strength = self.stats.get("STR", self.strength)
         self.agility = self.stats.get("AGI", self.agility)
         
@@ -74,8 +61,9 @@ class Player:
             
             # --- FIELDS TO SAVE ---
             "stats": self.stats,
-            "best_stat_pool": self.best_stat_pool, # Was best_stat_roll_total
-            # --- END FIELDS TO SAVE ---
+            "current_stat_pool": self.current_stat_pool,
+            "best_stat_pool": self.best_stat_pool,
+            "stats_to_assign": self.stats_to_assign,
             
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
@@ -100,5 +88,28 @@ class Room:
         self._id = self.db_data.get("_id") 
         
         self.unabsorbed_social_exp = self.db_data.get("unabsorbed_social_exp", 0)
-        # Custom objects list for look and interaction
-        self.objects: List[Dict[str, Any]] = self.db_data.get("objects
+        self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
+        
+        # --- NEW FIELD ---
+        # Holds a dictionary of { "direction": "target_room_id" }
+        self.exits: Dict[str, str] = self.db_data.get("exits", {})
+
+    def to_dict(self) -> dict:
+        """Converts room state to a dictionary ready for MongoDB update."""
+        
+        data = {
+            **self.db_data,
+            "room_id": self.room_id,
+            "name": self.name,
+            "description": self.description,
+            "unabsorbed_social_exp": self.unabsorbed_social_exp,
+            "objects": self.objects,
+            "exits": self.exits, # --- ADDED ---
+        }
+        
+        if self._id:
+            data["_id"] = self._id
+        return data
+
+    def __repr__(self):
+        return f"<Room: {self.name}>"

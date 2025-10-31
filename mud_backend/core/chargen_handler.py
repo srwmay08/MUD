@@ -2,7 +2,6 @@
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import fetch_room_data
 
-# --- NEW IMPORTS ---
 from mud_backend.core.stat_roller import (
     roll_stat_pool,
     assign_stats_physical,
@@ -10,7 +9,6 @@ from mud_backend.core.stat_roller import (
     assign_stats_spiritual,
     format_stats
 )
-# ---
 
 # --- Helper function for "a" vs "an" ---
 def get_article(word: str) -> str:
@@ -20,7 +18,7 @@ def get_article(word: str) -> str:
     return "an" if word.lower().strip()[0] in 'aeiou' else "a"
 
 # --- Define all character creation questions ---
-# This list now starts AFTER the stat roll step
+# This list now starts AFTER the stat roll AND assignment steps
 CHARGEN_QUESTIONS = [
     {
         "key": "race",
@@ -84,49 +82,143 @@ CHARGEN_QUESTIONS = [
     }
 ]
 
-# --- UPDATED FUNCTION ---
+# ---
+# Step 1: Stat Rolling Logic
+# ---
+
 def do_initial_stat_roll(player: Player):
     """
-    Performs the player's first stat roll and sends the prompt.
+    Performs the player's first stat roll, sets it as both CURRENT and BEST,
+    and sends the prompt.
     """
     player.send_message("\nFirst, you must roll your 12 base stats.")
-    # Roll the first pool and save it as the best pool
-    player.best_stat_pool = roll_stat_pool()
+    
+    new_pool = roll_stat_pool()
+    player.current_stat_pool = new_pool
+    player.best_stat_pool = new_pool # The first roll is always the best
     
     # Send the first prompt
     send_stat_roll_prompt(player)
 
-# --- UPDATED FUNCTION ---
 def send_stat_roll_prompt(player: Player):
     """
-    Sends the player the stat roll and the options.
-    This now displays the *best* pool, sorted.
+    Sends the player their CURRENT roll and their BEST roll, with options.
     """
-    if not player.best_stat_pool:
-        player.send_message("ERROR: No stat pool found.")
-        return
-
-    # Sort the best pool (highest to lowest) for display
-    sorted_best_pool = sorted(player.best_stat_pool, reverse=True)
-    pool_str = ", ".join(map(str, sorted_best_pool))
-    total = sum(player.best_stat_pool)
+    # Format CURRENT roll
+    sorted_current_pool = sorted(player.current_stat_pool, reverse=True)
+    current_pool_str = ", ".join(map(str, sorted_current_pool))
+    current_total = sum(player.current_stat_pool)
     
-    player.send_message("\n--- **Your Best Stat Roll** ---")
-    player.send_message(f"Pool: {pool_str}")
-    player.send_message(f"Total: **{total}**")
+    player.send_message("\n--- **Your CURRENT Stat Roll** ---")
+    player.send_message(f"Roll:  {current_pool_str}")
+    player.send_message(f"Total: **{current_total}**")
+
+    # Format BEST roll
+    sorted_best_pool = sorted(player.best_stat_pool, reverse=True)
+    best_pool_str = ", ".join(map(str, sorted_best_pool))
+    best_total = sum(player.best_stat_pool)
+    
+    player.send_message("--- **Your BEST Stat Roll** ---")
+    player.send_message(f"Pool:  {best_pool_str}")
+    player.send_message(f"Total: **{best_total}**")
+    
+    # Show Options
     player.send_message("--- Options ---")
     player.send_message("- <span class='keyword'>REROLL</span>")
+    player.send_message("- <span class='keyword'>USE THIS ROLL</span> (Selects the CURRENT roll)")
+    player.send_message("- <span class='keyword'>USE BEST ROLL</span> (Selects the BEST roll)")
+
+def _handle_stat_roll_input(player: Player, command: str):
+    """Handles commands during the stat rolling step (step 1)."""
+    
+    if command == "reroll":
+        player.send_message("> REROLL")
+        
+        # Roll a new pool and set it as current
+        new_pool = roll_stat_pool()
+        new_total = sum(new_pool)
+        player.current_stat_pool = new_pool
+        
+        # Check if it's the new best
+        best_total = sum(player.best_stat_pool)
+        if new_total > best_total:
+            player.send_message(f"New total: {new_total}. **This is your new BEST roll!**")
+            player.best_stat_pool = new_pool
+        else:
+            player.send_message(f"New total: {new_total}. Your best remains {best_total}.")
+        
+        # Re-send the prompt
+        send_stat_roll_prompt(player)
+        
+    elif command == "use this roll":
+        player.send_message("> USE THIS ROLL")
+        player.stats_to_assign = player.current_stat_pool
+        player.chargen_step = 2 # Advance to assignment step
+        send_assignment_prompt(player, "CURRENT")
+
+    elif command == "use best roll":
+        player.send_message("> USE BEST ROLL")
+        player.stats_to_assign = player.best_stat_pool
+        player.chargen_step = 2 # Advance to assignment step
+        send_assignment_prompt(player, "BEST")
+        
+    else:
+        player.send_message("That is not a valid command.")
+        send_stat_roll_prompt(player)
+
+# ---
+# Step 2: Stat Assignment Logic
+# ---
+
+def send_assignment_prompt(player: Player, pool_name: str):
+    """
+    Shows the player the pool they selected and asks how to assign it.
+    """
+    sorted_pool = sorted(player.stats_to_assign, reverse=True)
+    pool_str = ", ".join(map(str, sorted_pool))
+    
+    player.send_message(f"\n--- Assigning your **{pool_name}** Roll ---")
+    player.send_message(f"Pool: {pool_str}")
+    player.send_message("How would you like to assign these stats?")
     player.send_message("- <span class='keyword'>ASSIGN PHYSICAL</span> (Prioritizes STR, DEX, CON, AGI)")
     player.send_message("- <span class='keyword'>ASSIGN INTELLECTUAL</span> (Prioritizes LOG, INT, WIS, INF)")
     player.send_message("- <span class='keyword'>ASSIGN SPIRITUAL</span> (Prioritizes ZEA, ESS, WIS, DIS)")
 
+def _handle_assignment_input(player: Player, command: str):
+    """Handles commands during the stat assignment step (step 2)."""
+
+    if command == "assign physical":
+        player.send_message("> ASSIGN PHYSICAL")
+        player.stats = assign_stats_physical(player.stats_to_assign)
+    
+    elif command == "assign intellectual":
+        player.send_message("> ASSIGN INTELLECTUAL")
+        player.stats = assign_stats_intellectual(player.stats_to_assign)
+        
+    elif command == "assign spiritual":
+        player.send_message("> ASSIGN SPIRITUAL")
+        player.stats = assign_stats_spiritual(player.stats_to_assign)
+        
+    else:
+        player.send_message("That is not a valid assignment command.")
+        send_assignment_prompt(player, "SELECTED") # Re-show the prompt
+        return # Don't advance to the next step
+
+    # If successful, show stats and move to appearance questions
+    player.send_message(format_stats(player.stats))
+    player.chargen_step = 3 # Advance to appearance questions
+    get_chargen_prompt(player) # Ask the first appearance question
+
+# ---
+# Step 3: Appearance Logic
+# ---
 
 def get_chargen_prompt(player: Player):
     """
     Gets the correct *appearance* question prompt based on the player's step.
-    Note: Stat rolling is step 1, so questions start at step 2.
+    Note: Appearance questions now start at step 3.
     """
-    question_index = player.chargen_step - 2 # Adjust index
+    question_index = player.chargen_step - 3 # Adjust index
     
     if 0 <= question_index < len(CHARGEN_QUESTIONS):
         question = CHARGEN_QUESTIONS[question_index]
@@ -136,64 +228,10 @@ def get_chargen_prompt(player: Player):
         player.send_message("An error occurred in character creation.")
         player.game_state = "playing"
 
-# --- UPDATED FUNCTION ---
-def _handle_stat_roll_input(player: Player, command: str):
-    """Handles commands during the stat rolling step (step 1)."""
-    
-    if command == "reroll":
-        player.send_message("> REROLL")
-        
-        # Roll a new pool and get its total
-        new_pool = roll_stat_pool()
-        new_total = sum(new_pool)
-        
-        # Get the current best total
-        best_total = sum(player.best_stat_pool)
-        
-        # Display the new roll (sorted) and its total
-        sorted_new_pool = sorted(new_pool, reverse=True)
-        player.send_message(f"Your new roll: {', '.join(map(str, sorted_new_pool))}")
-        player.send_message(f"New total: {new_total}")
-
-        if new_total > best_total:
-            player.send_message(f"**This is higher! Keeping this new roll.**")
-            player.best_stat_pool = new_pool
-        else:
-            player.send_message(f"Keeping your previous best roll total of {best_total}.")
-        
-        # Re-send the main prompt, which will show the *current best*
-        send_stat_roll_prompt(player)
-        
-    elif command == "assign physical":
-        player.send_message("> ASSIGN PHYSICAL")
-        # The assign functions now use the BEST pool
-        player.stats = assign_stats_physical(player.best_stat_pool)
-        player.send_message(format_stats(player.stats))
-        player.chargen_step = 2 # Advance to the first appearance question
-        get_chargen_prompt(player)
-        
-    elif command == "assign intellectual":
-        player.send_message("> ASSIGN INTELLECTUAL")
-        player.stats = assign_stats_intellectual(player.best_stat_pool)
-        player.send_message(format_stats(player.stats))
-        player.chargen_step = 2
-        get_chargen_prompt(player)
-        
-    elif command == "assign spiritual":
-        player.send_message("> ASSIGN SPIRITUAL")
-        player.stats = assign_stats_spiritual(player.best_stat_pool)
-        player.send_message(format_stats(player.stats))
-        player.chargen_step = 2
-        get_chargen_prompt(player)
-        
-    else:
-        player.send_message("That is not a valid stat roll command.")
-        send_stat_roll_prompt(player)
-
 def _handle_appearance_input(player: Player, text_input: str):
-    """Handles answers to appearance questions (step 2+)."""
+    """Handles answers to appearance questions (step 3+)."""
     
-    question_index = player.chargen_step - 2 # Adjust index
+    question_index = player.chargen_step - 3 # Adjust index
     
     if not (0 <= question_index < len(CHARGEN_QUESTIONS)):
         player.game_state = "playing"
@@ -211,7 +249,7 @@ def _handle_appearance_input(player: Player, text_input: str):
 
     # 2. Increment step and check if chargen is done
     player.chargen_step += 1
-    next_question_index = player.chargen_step - 2
+    next_question_index = player.chargen_step - 3
 
     if next_question_index < len(CHARGEN_QUESTIONS):
         # 3. Ask the next question
@@ -245,6 +283,10 @@ def _handle_appearance_input(player: Player, text_input: str):
                 )
             player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
 
+# ---
+# Main Input Router
+# ---
+
 def handle_chargen_input(player: Player, text_input: str):
     """
     Processes the player's input during character creation.
@@ -256,7 +298,10 @@ def handle_chargen_input(player: Player, text_input: str):
     if step == 1:
         # This is the stat rolling step
         _handle_stat_roll_input(player, command)
-    elif step > 1:
+    elif step == 2:
+        # This is the stat assignment step
+        _handle_assignment_input(player, command)
+    elif step > 2:
         # This is for appearance questions
         _handle_appearance_input(player, text_input)
     else:
@@ -282,7 +327,6 @@ def format_player_description(player_data: dict) -> str:
         "they": {"subj": "They", "obj": "them", "poss": "their"},
     }
     # For now, we'll just hardcode 'He' for simplicity
-    # A 'gender' question would be needed in chargen to make this dynamic
     pr = pronoun_map["he"] # TODO: Make this dynamic later
 
     # Build the description line by line, using defaults

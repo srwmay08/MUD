@@ -5,14 +5,33 @@ from typing import List, Tuple, Dict, Any
 
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.db import fetch_player_data, fetch_room_data, save_game_state
-# --- MODIFIED IMPORT ---
 from mud_backend.core.chargen_handler import (
     handle_chargen_input, 
     get_chargen_prompt, 
     do_initial_stat_roll
 )
 
-# --- THE TYPE HINT IS NOW 'dict' ---
+# --- NEW: Dictionary to map all directions ---
+DIRECTION_ALIASES = {
+    "n": "north",
+    "north": "north",
+    "s": "south",
+    "south": "south",
+    "e": "east",
+    "east": "east",
+    "w": "west",
+    "west": "west",
+    "ne": "northeast",
+    "northeast": "northeast",
+    "nw": "northwest",
+    "northwest": "northwest",
+    "se": "southeast",
+    "southeast": "southeast",
+    "sw": "southwest",
+    "southwest": "southwest",
+}
+# ---
+
 def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     """
     The main function to parse and execute a game command.
@@ -25,14 +44,10 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     # 2. Handle New vs. Existing Player
     if not player_db_data:
         # --- NEW CHARACTER ---
-        start_room_id = "inn_room" # New starting room
+        start_room_id = "inn_room"
         player = Player(player_name, start_room_id, {})
-        
-        # --- SET CHARGEN STATE ---
         player.game_state = "chargen"
-        player.chargen_step = 0 # Step 0 is the initial login
-        
-        # Send welcome message
+        player.chargen_step = 0
         player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         
     else:
@@ -49,41 +64,50 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     )
 
     # 4. --- CHECK GAME STATE ---
-    # This logic block will now work correctly
     
     if player.game_state == "chargen":
         
-        # --- THIS IS THE NEW LOGIC ---
-        # Step 0 is the initial "look" from the client after logging in.
-        # We use it to show the room and trigger the *first* chargen step.
         if player.chargen_step == 0 and command_line.lower() == "look":
-            
             player.send_message(f"**{room.name}**")
             player.send_message(room.description)
-            
-            # This is our new function that starts the stat roll process
             do_initial_stat_roll(player) 
-            
-            # We set the step to 1, which means "waiting for stat roll command"
-            player.chargen_step = 1
-            
+            player.chargen_step = 1 # Now waiting for stat roll command
         else:
-            # All other commands (REROLL, ASSIGN, or answers to questions)
-            # are handled by the chargen handler.
             handle_chargen_input(player, command_line)
         
     elif player.game_state == "playing":
-        # --- NORMAL GAMEPLAY (Unchanged) ---
+        # --- NORMAL GAMEPLAY ---
         
         # 1. Parse the command line
         parts = command_line.strip().split()
         if not parts:
             player.send_message("What?")
-            # --- MUST RETURN A DICT HERE TOO ---
             return { "messages": player.messages, "game_state": player.game_state }
         
         verb_name = parts[0].lower()
         args = parts[1:]
+
+        # --- NEW: Direction & Move Handling ---
+        # Check if the entered verb is a direction
+        normalized_direction = DIRECTION_ALIASES.get(verb_name)
+        
+        if normalized_direction:
+            # The command IS a direction. Reroute to 'move' verb.
+            verb_name = "move"
+            args = [normalized_direction] # e.g., ["north"]
+        elif verb_name == "move":
+            # The command is "move". We must normalize the argument.
+            if not args:
+                player.send_message("Move where?")
+                return { "messages": player.messages, "game_state": player.game_state }
+            
+            normalized_arg = DIRECTION_ALIASES.get(args[0].lower())
+            if not normalized_arg:
+                player.send_message(f"I don't understand the direction '{args[0]}'.")
+                return { "messages": player.messages, "game_state": player.game_state }
+            
+            args = [normalized_arg] # Replace "n" with "north"
+        # --- END NEW HANDLING ---
 
         # 2. Locate and Import the Verb File
         verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
@@ -121,3 +145,13 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         "messages": player.messages,
         "game_state": player.game_state
     }
+
+
+def get_player_object(player_name: str) -> Player:
+    """Helper function to load the player object without executing a command."""
+    player_db_data = fetch_player_data(player_name)
+    if not player_db_data:
+        return Player(player_name, "void") 
+    
+    player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
+    return player
