@@ -4,6 +4,7 @@ import os
 from typing import List, Tuple
 from .game_objects import Player, Room
 from .db import fetch_player_data, fetch_room_data, save_game_state
+from ..verbs.base_verb import BaseVerb # NEW: Absolute import for BaseVerb
 
 def execute_command(player_name: str, command_line: str) -> List[str]:
     """
@@ -24,12 +25,14 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
     if not player_db_data:
         return [f"Error: Player '{player_name}' not found."]
     
+    # We assume current_room_id exists if the player was found.
     room_db_data = fetch_room_data(player_db_data["current_room_id"])
     
     player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
     room = Room(room_db_data["id"], room_db_data["name"], room_db_data["description"])
 
     # 3. Locate and Import the Verb File
+    # The os.path.join logic remains the same to find the file dynamically.
     verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
     
     if not os.path.exists(verb_file_path):
@@ -45,7 +48,13 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
             verb_class_name = verb_name.capitalize()
             VerbClass = getattr(module, verb_class_name)
             
-            # 4. Instantiate and Execute the Verb
+            # 4. CRITICAL FIX: Dynamically Inject BaseVerb Inheritance
+            # We set the loaded class's bases to BaseVerb. 
+            # This makes the dynamically loaded class inherit methods 
+            # and properties from BaseVerb at runtime.
+            VerbClass.__bases__ = (BaseVerb,)
+
+            # 5. Instantiate and Execute the Verb
             verb_instance = VerbClass(player=player, room=room, args=args)
             verb_instance.execute()
             
@@ -58,8 +67,9 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
             player.send_message(f"An unexpected error occurred while running **{verb_name}**: {e}")
 
 
-    # 5. Persist State Changes
+    # 6. Persist State Changes
+    # This should be inside a transaction in a real MUD to prevent data loss.
     save_game_state(player)
 
-    # 6. Return output to the client
+    # 7. Return output to the client
     return player.messages

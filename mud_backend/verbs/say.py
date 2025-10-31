@@ -1,7 +1,9 @@
 # verbs/say.py
-from .base_verb import BaseVerb
 
-class Say(BaseVerb):
+# The BaseVerb class import has been removed here to resolve the dynamic loading issue.
+# The command executor now handles connecting the Say class to the BaseVerb class.
+
+class Say:
     """Handles the 'say' command."""
     
     def execute(self):
