@@ -38,7 +38,7 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
         player.send_message(f"I don't know the command **'{verb_name}'**.")
     else:
         try:
-            # --- THIS IS THE FIX ---
+            # --- THIS IS THE KEY FIX ---
             # We must tell importlib the FULL package path for the module,
             # not just the verb_name (e.g., "mud_backend.verbs.look")
             verb_module_name = f"mud_backend.verbs.{verb_name}"
