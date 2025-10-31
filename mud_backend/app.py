@@ -4,8 +4,6 @@ import os
 from flask import Flask, request, jsonify, render_template
 
 # --- CRITICAL FIX 1: Add the PROJECT ROOT to the Python path ---
-# This line goes one level up from 'app.py' to find the 'MUD' folder
-# so that 'from mud_backend.core...' works.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # -----------------------------------------------------------
 
@@ -13,37 +11,37 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from mud_backend.core.command_executor import execute_command
 
 # --- CRITICAL FIX 2: Tell Flask where the 'templates' folder is ---
-# It's one level up ('..'), inside 'mud_frontend', and then inside 'templates'
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 
-# We pass the template_folder argument to the Flask app
 app = Flask(__name__, template_folder=template_dir)
 # ---------------------------------------------------------
 
 
 # --- Route 1: Serve the HTML page ---
-# This serves the 'index.html' file to the user's browser
 @app.route("/")
 def index():
-    # This will now correctly find 'index.html' in the '.../mud_frontend/templates' folder
     return render_template("index.html")
 
 # --- Route 2: Handle Game Commands ---
-# This is the API endpoint our browser will send commands to
 @app.route("/api/command", methods=["POST"])
 def handle_command():
     try:
         data = request.json
         
-        # Get data from the frontend's request
-        player_name = data.get("player_name", "Alice") # Default to "Alice"
+        # --- THIS IS THE CHANGE ---
+        # We no longer hardcode "Alice". We get the name from the request.
+        player_name = data.get("player_name")
         command_line = data.get("command", "")
+        
+        # Add a check in case the name is missing
+        if not player_name:
+            return jsonify({"messages": ["Error: No player name received from client."]}), 400
         
         if not command_line:
             return jsonify({"messages": ["What?"]})
 
-        # --- This is the key part ---
-        # We call your existing backend function with the command
+        # --- This part is the same ---
+        # We call your existing backend function with the provided name
         output_messages = execute_command(player_name, command_line)
         # ---------------------------
 

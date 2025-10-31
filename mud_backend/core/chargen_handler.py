@@ -1,0 +1,215 @@
+# mud_backend/core/chargen_handler.py
+from mud_backend.core.game_objects import Player
+from mud_backend.core.db import fetch_room_data
+
+# --- Helper function for "a" vs "an" ---
+def get_article(word: str) -> str:
+    """Returns 'an' if the word starts with a vowel, otherwise 'a'."""
+    if not word:
+        return "a"
+    return "an" if word.lower().strip()[0] in 'aeiou' else "a"
+
+# --- Define all character creation questions ---
+# This list controls the entire chargen process.
+CHARGEN_QUESTIONS = [
+    {
+        "key": "race",
+        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Dark Elf</span>)"
+    },
+    {
+        "key": "height",
+        "prompt": "What is your **Height**?\n(Options: <span class='keyword'>shorter than average</span>, <span class='keyword'>average</span>, <span class='keyword'>taller than average</span>)"
+    },
+    {
+        "key": "build",
+        "prompt": "What is your **Body Build**?\n(Options: <span class='keyword'>slender</span>, <span class='keyword'>average</span>, <span class='keyword'>athletic</span>, <span class='keyword'>stocky</span>, <span class='keyword'>burly</span>)"
+    },
+    {
+        "key": "age",
+        "prompt": "How **Old** do you appear?\n(Options: <span class='keyword'>youthful</span>, <span class='keyword'>in your prime</span>, <span class='keyword'>middle-aged</span>, <span class='keyword'>wizened with age</span>)"
+    },
+    {
+        "key": "eye_char",
+        "prompt": "What is your **Eye Characteristic**?\n(Options: <span class='keyword'>piercing</span>, <span class='keyword'>clear</span>, <span class='keyword'>hooded</span>, <span class='keyword'>bright</span>, <span class='keyword'>deep-set</span>)"
+    },
+    {
+        "key": "eye_color",
+        "prompt": "What is your **Eye Color**?\n(Options: <span class='keyword'>blue</span>, <span class='keyword'>brown</span>, <span class='keyword'>green</span>, <span class='keyword'>hazel</span>, <span class='keyword'>violet</span>, <span class='keyword'>silver</span>)"
+    },
+    {
+        "key": "complexion",
+        "prompt": "What is your **Complexion**?\n(Options: <span class='keyword'>pale</span>, <span class='keyword'>fair</span>, <span class='keyword'>tan</span>, <span class='keyword'>dark</span>, <span class='keyword'>ashen</span>, <span class='keyword'>ruddy</span>)"
+    },
+    {
+        "key": "hair_style",
+        "prompt": "What is your **Hair Style**?\n(Options: <span class='keyword'>short</span>, <span class='keyword'>long</span>, <span class='keyword'>shoulder-length</span>, <span class='keyword'>shaved</span>, <span class='keyword'>cropped</span>)"
+    },
+    {
+        "key": "hair_texture",
+        "prompt": "What is your **Hair Texture**?\n(Options: <span class='keyword'>straight</span>, <span class='keyword'>wavy</span>, <span class='keyword'>curly</span>, <span class='keyword'>braided</span>)"
+    },
+    {
+        "key": "hair_color",
+        "prompt": "What is your **Hair Color**?\n(Options: <span class='keyword'>black</span>, <span class='keyword'>brown</span>, <span class='keyword'>blonde</span>, <span class='keyword'>red</span>, <span class='keyword'>silver</span>, <span class='keyword'>white</span>)"
+    },
+    {
+        "key": "hair_quirk",
+        "prompt": "What is your **Hair Quirk**? (e.g., <span class='keyword'>swept back</span>, <span class='keyword'>messy</span>, <span class='keyword'>in a ponytail</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+    },
+    {
+        "key": "face",
+        "prompt": "What is your **Face Shape**?\n(Options: <span class='keyword'>angular</span>, <span class='keyword'>round</span>, <span class='keyword'>square</span>, <span class='keyword'>oval</span>)"
+    },
+    {
+        "key": "nose",
+        "prompt": "What is your **Nose Shape**?\n(Options: <span class='keyword'>straight</span>, <span class='keyword'>aquiline</span>, <span class='keyword'>broad</span>, <span class='keyword'>button</span>)"
+    },
+    {
+        "key": "mark",
+        "prompt": "Any **Distinguishing Mark**? (e.g., <span class='keyword'>a scar over one eye</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+    },
+    {
+        "key": "unique",
+        "prompt": "Finally, what **Unique Feature** do you have? (e.g., <span class='keyword'>a silver locket</span>, <span class='keyword'>a faint aura</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+    }
+]
+
+
+def get_chargen_prompt(player: Player):
+    """
+    Gets the correct question prompt based on the player's chargen_step.
+    """
+    step = player.chargen_step
+    if 0 <= step < len(CHARGEN_QUESTIONS):
+        question = CHARGEN_QUESTIONS[step]
+        player.send_message("\n" + question["prompt"])
+    else:
+        # This shouldn't be reached, but just in case
+        player.send_message("An error occurred in character creation.")
+        player.game_state = "playing"
+
+
+def handle_chargen_input(player: Player, text_input: str):
+    """
+    Processes the player's answer to a chargen question.
+    """
+    step = player.chargen_step
+    if not (0 <= step < len(CHARGEN_QUESTIONS)):
+        player.game_state = "playing"
+        return
+
+    # 1. Get the current question and save the answer
+    question = CHARGEN_QUESTIONS[step]
+    answer = text_input.strip()
+    
+    # You could add validation here, but for now, we accept any text
+    if answer.lower() == "none":
+        answer = "" # Store 'none' as an empty string
+        
+    player.appearance[question["key"]] = answer
+    player.send_message(f"> {answer}") # Echo the choice
+
+    # 2. Increment step and check if chargen is done
+    player.chargen_step += 1
+
+    if player.chargen_step < len(CHARGEN_QUESTIONS):
+        # 3. Ask the next question
+        get_chargen_prompt(player)
+    else:
+        # 4. Chargen is complete!
+        player.game_state = "playing"
+        player.current_room_id = "town_square" # Move them to the main game
+        
+        player.send_message("\nCharacter creation complete! You feel the dream fade...")
+        player.send_message("You open your eyes and find yourself in...")
+        
+        # Manually send the 'look' output for the new room
+        town_square_data = fetch_room_data("town_square")
+        player.send_message(f"**{town_square_data.get('name', 'The Great Town Square')}**")
+        player.send_message(town_square_data.get('description', 'A bustling square.'))
+        
+        # Add objects to the look
+        objects = town_square_data.get('objects', [])
+        if objects:
+            html_objects = []
+            for obj in objects:
+                obj_name = obj['name']
+                verbs = obj.get('verbs', ['look'])
+                verb_str = ','.join(verbs).lower()
+                html_objects.append(
+                    f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
+                )
+            player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
+
+# --- Helper function to format the 'look' description ---
+
+def format_player_description(player_data: dict) -> str:
+    """
+    Builds the formatted description string for a player
+    based on their stored appearance data.
+    """
+    # Get the appearance dict, or an empty one if it's missing
+    app = player_data.get("appearance", {})
+
+    # He/She/They logic (default to 'They')
+    pronoun_map = {
+        "he": {"subj": "He", "obj": "him", "poss": "his"},
+        "she": {"subj": "She", "obj": "her", "poss": "her"},
+        "they": {"subj": "They", "obj": "them", "poss": "their"},
+    }
+    # For now, we'll just hardcode 'He' for simplicity
+    # A 'gender' question would be needed in chargen to make this dynamic
+    pr = pronoun_map["he"] # TODO: Make this dynamic later
+
+    # Build the description line by line, using defaults
+    desc = []
+
+    # Line 1: Race
+    desc.append(f"{pr['subj']} appears to be {get_article(app.get('race', 'Human'))} **{app.get('race', 'Human')}**.")
+    
+    # Line 2: Height & Build
+    line2 = f"{pr['subj']} is {app.get('height', 'average')}"
+    if app.get('build'):
+        line2 += f" and has {get_article(app.get('build'))} {app.get('build')} build."
+    else:
+        line2 += "."
+    desc.append(line2)
+
+    # Line 3: Age
+    desc.append(f"{pr['subj']} appears to be {app.get('age', 'in their prime')}.")
+
+    # Line 4: Eyes & Skin
+    line4 = f"{pr['subj']} has {app.get('eye_char', 'clear')} {app.get('eye_color', 'brown')} eyes"
+    if app.get('complexion'):
+        line4 += f" and {app.get('complexion')} skin."
+    else:
+        line4 += "."
+    desc.append(line4)
+
+    # Line 5: Hair
+    if app.get('hair_style'):
+        line5 = f"{pr['subj']} has {app.get('hair_style', '')} {app.get('hair_texture', 'straight')} {app.get('hair_color', 'brown')} hair"
+        if app.get('hair_quirk'):
+            line5 += f" {app.get('hair_quirk')}."
+        else:
+            line5 += "."
+        desc.append(line5)
+
+    # Line 6: Face & Features
+    face_parts = []
+    if app.get('face'):
+        face_parts.append(f"{get_article(app.get('face'))} {app.get('face')} face")
+    if app.get('nose'):
+        face_parts.append(f"{get_article(app.get('nose'))} {app.get('nose')} nose")
+    if app.get('mark'):
+        face_parts.append(f"{get_article(app.get('mark'))} {app.get('mark')}")
+    
+    if face_parts:
+        desc.append(f"{pr['subj']} has " + ", ".join(face_parts) + ".")
+
+    # Line 7: Unique
+    if app.get('unique'):
+        desc.append(app.get('unique') + ".")
+
+    # Join all lines with a newline
+    return "\n".join(desc)
