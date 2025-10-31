@@ -68,3 +68,20 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
 
     # 6. Return output to the client
     return player.messages
+
+# mud_backend/core/command_executor.py (add this function at the end)
+
+# ... (after the execute_command function) ...
+
+def get_player_object(player_name: str) -> Player:
+    """Helper function to load the player object without executing a command."""
+    
+    player_db_data = fetch_player_data(player_name)
+    if not player_db_data:
+        # Fallback to a blank player if not found
+        return Player(player_name, "void") 
+    
+    # We do not need room data here, but fetch it to initialize the Player correctly 
+    # based on the full constructor logic.
+    player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
+    return player

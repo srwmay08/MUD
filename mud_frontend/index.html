@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUD Client</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0F0; }
+        #output { width: 100%; height: 400px; border: 1px solid #0F0; overflow-y: scroll; 
+                  padding: 10px; box-sizing: border-box; white-space: pre-wrap; }
+        #input-line { display: flex; }
+        #input-line > span { padding-right: 10px; }
+        #command-input { flex-grow: 1; background: #000; color: #0F0; border: none; }
+        #command-input:focus { outline: none; }
+    </style>
+</head>
+<body>
+    <h1>My MUD Game</h1>
+    <div id="output">Welcome to the game. Type 'look' to begin.</div>
+    <div id="input-line">
+        <span>&gt;</span>
+        <input type="text" id="command-input" autofocus>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const input = document.getElementById('command-input');
+
+        // Listen for the "Enter" key
+        input.addEventListener('keydown', async function(event) {
+            if (event.key === 'Enter') {
+                const command = input.value;
+                if (!command) return;
+
+                // Display the command you typed
+                addMessage(`> ${command}`);
+                
+                // Clear the input box
+                input.value = '';
+
+                // Send the command to our Flask server's API
+                try {
+                    const response = await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            player_name: "Alice", // Hardcoded for this example
+                            command: command
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Display the server's response
+                    data.messages.forEach(addMessage);
+
+                } catch (error) {
+                    addMessage(`Error: Could not connect to server. ${error}`);
+                }
+            }
+        });
+
+        // Helper function to add a message to the output window
+        function addMessage(message) {
+            output.innerHTML += `\n${message}`;
+            output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
+        }
+    </script>
+</body>
+</html>
