@@ -3,7 +3,7 @@ import importlib.util
 import os
 from typing import List, Tuple
 
-# FIX: Imports are now absolute, referencing the 'mud_backend' package
+# Imports are all absolute, which is correct
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.db import fetch_player_data, fetch_room_data, save_game_state
 
@@ -26,24 +26,27 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
     if not player_db_data:
         return [f"Error: Player '{player_name}' not found."]
     
-    # We assume current_room_id exists if the player was found.
     room_db_data = fetch_room_data(player_db_data["current_room_id"])
     
     player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
-    
-    # FIX: Change key from "id" to "room_id"
     room = Room(room_db_data["room_id"], room_db_data["name"], room_db_data["description"])
 
     # 3. Locate and Import the Verb File
-    # The os.path.join logic remains the same to find the file dynamically.
     verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
     
     if not os.path.exists(verb_file_path):
         player.send_message(f"I don't know the command **'{verb_name}'**.")
     else:
         try:
-            # Dynamically import the module
-            spec = importlib.util.spec_from_file_location(verb_name, verb_file_path)
+            # --- THIS IS THE FIX ---
+            # We must tell importlib the FULL package path for the module,
+            # not just the verb_name (e.g., "mud_backend.verbs.look")
+            verb_module_name = f"mud_backend.verbs.{verb_name}"
+            
+            # Now, load the spec using the full name and file path
+            spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
+            # ---------------------
+            
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
@@ -52,7 +55,6 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
             VerbClass = getattr(module, verb_class_name)
             
             # 4. Instantiate and Execute the Verb
-            # VerbClass now correctly inherits from BaseVerb from within its own file
             verb_instance = VerbClass(player=player, room=room, args=args)
             verb_instance.execute()
             
@@ -69,9 +71,6 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
     save_game_state(player)
 
     # 6. Return output to the client
-    # --- THIS IS THE FIX ---
-    # This line ensures we always return a list (even an empty one)
-    # which fixes the 'forEach' error in the frontend.
     return player.messages
 
 
@@ -83,7 +82,5 @@ def get_player_object(player_name: str) -> Player:
         # Fallback to a blank player if not found
         return Player(player_name, "void") 
     
-    # We do not need room data here, but fetch it to initialize the Player correctly 
-    # based on the full constructor logic.
     player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
     return player
