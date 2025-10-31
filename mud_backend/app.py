@@ -4,20 +4,24 @@ import os
 from flask import Flask, request, jsonify, render_template
 
 # --- CRITICAL FIX: Add the PROJECT ROOT to the Python path ---
-# This line goes one level up from 'app.py' to find the 'MUD' folder.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # -----------------------------------------------------------
 
 # Now we can import using the absolute package path
 from mud_backend.core.command_executor import execute_command
 
-app = Flask(__name__)
+# --- FIX 2: Tell Flask where the 'templates' folder is ---
+# It's one level up ('..') from app.py and inside 'mud_frontend'
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend'))
+app = Flask(__name__, template_folder=template_dir)
+# ---------------------------------------------------------
+
 
 # --- Route 1: Serve the HTML page ---
 # This serves the 'index.html' file to the user's browser
 @app.route("/")
 def index():
-    # We will create this 'index.html' file next
+    # This will now correctly find 'index.html' in the 'mud_frontend' folder
     return render_template("index.html")
 
 # --- Route 2: Handle Game Commands ---
