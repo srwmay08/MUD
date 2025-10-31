@@ -30,7 +30,6 @@ CHARGEN_QUESTIONS = [
         "key": "height",
         "prompt": "What is your **Height**?\n(Options: <span class='keyword'>shorter than average</span>, <span class='keyword'>average</span>, <span class='keyword'>taller than average</span>)"
     },
-    # ... (all your other questions are unchanged) ...
     {
         "key": "build",
         "prompt": "What is your **Body Build**?\n(Options: <span class='keyword'>slender</span>, <span class='keyword'>average</span>, <span class='keyword'>athletic</span>, <span class='keyword'>stocky</span>, <span class='keyword'>burly</span>)"
@@ -85,36 +84,42 @@ CHARGEN_QUESTIONS = [
     }
 ]
 
-# --- NEW FUNCTION ---
+# --- UPDATED FUNCTION ---
 def do_initial_stat_roll(player: Player):
     """
     Performs the player's first stat roll and sends the prompt.
     """
     player.send_message("\nFirst, you must roll your 12 base stats.")
-    player.stat_pool = roll_stat_pool()
-    total = sum(player.stat_pool)
-    player.best_stat_roll_total = total
+    # Roll the first pool and save it as the best pool
+    player.best_stat_pool = roll_stat_pool()
     
     # Send the first prompt
     send_stat_roll_prompt(player)
 
-# --- NEW FUNCTION ---
+# --- UPDATED FUNCTION ---
 def send_stat_roll_prompt(player: Player):
     """
     Sends the player the stat roll and the options.
+    This now displays the *best* pool, sorted.
     """
-    pool_str = ", ".join(map(str, player.stat_pool))
-    total = sum(player.stat_pool)
+    if not player.best_stat_pool:
+        player.send_message("ERROR: No stat pool found.")
+        return
+
+    # Sort the best pool (highest to lowest) for display
+    sorted_best_pool = sorted(player.best_stat_pool, reverse=True)
+    pool_str = ", ".join(map(str, sorted_best_pool))
+    total = sum(player.best_stat_pool)
     
-    player.send_message("\n--- **Stat Roll** ---")
-    player.send_message(f"Your rolled pool: {pool_str}")
-    player.send_message(f"Total: **{total}** (Your best total: {player.best_stat_roll_total})")
+    player.send_message("\n--- **Your Best Stat Roll** ---")
+    player.send_message(f"Pool: {pool_str}")
+    player.send_message(f"Total: **{total}**")
     player.send_message("--- Options ---")
-    player.send_message("- <span class='keyword'>REROLL</span> (Keeps the highest total pool)")
+    player.send_message("- <span class='keyword'>REROLL</span>")
     player.send_message("- <span class='keyword'>ASSIGN PHYSICAL</span> (Prioritizes STR, DEX, CON, AGI)")
     player.send_message("- <span class='keyword'>ASSIGN INTELLECTUAL</span> (Prioritizes LOG, INT, WIS, INF)")
     player.send_message("- <span class='keyword'>ASSIGN SPIRITUAL</span> (Prioritizes ZEA, ESS, WIS, DIS)")
-    # player.send_message("- <span class='keyword'>ACCEPT</span> (Feature to assign manually later)")
+
 
 def get_chargen_prompt(player: Player):
     """
@@ -131,47 +136,56 @@ def get_chargen_prompt(player: Player):
         player.send_message("An error occurred in character creation.")
         player.game_state = "playing"
 
+# --- UPDATED FUNCTION ---
 def _handle_stat_roll_input(player: Player, command: str):
     """Handles commands during the stat rolling step (step 1)."""
     
     if command == "reroll":
         player.send_message("> REROLL")
+        
+        # Roll a new pool and get its total
         new_pool = roll_stat_pool()
         new_total = sum(new_pool)
         
-        if new_total > player.best_stat_roll_total:
-            player.send_message(f"New roll total: {new_total}. This is higher! Keeping this roll.")
-            player.stat_pool = new_pool
-            player.best_stat_roll_total = new_total
-        else:
-            player.send_message(f"New roll total: {new_total}. Keeping your previous best roll.")
+        # Get the current best total
+        best_total = sum(player.best_stat_pool)
         
-        # Re-send the prompt with updated values
+        # Display the new roll (sorted) and its total
+        sorted_new_pool = sorted(new_pool, reverse=True)
+        player.send_message(f"Your new roll: {', '.join(map(str, sorted_new_pool))}")
+        player.send_message(f"New total: {new_total}")
+
+        if new_total > best_total:
+            player.send_message(f"**This is higher! Keeping this new roll.**")
+            player.best_stat_pool = new_pool
+        else:
+            player.send_message(f"Keeping your previous best roll total of {best_total}.")
+        
+        # Re-send the main prompt, which will show the *current best*
         send_stat_roll_prompt(player)
         
     elif command == "assign physical":
         player.send_message("> ASSIGN PHYSICAL")
-        player.stats = assign_stats_physical(player.stat_pool)
+        # The assign functions now use the BEST pool
+        player.stats = assign_stats_physical(player.best_stat_pool)
         player.send_message(format_stats(player.stats))
         player.chargen_step = 2 # Advance to the first appearance question
         get_chargen_prompt(player)
         
     elif command == "assign intellectual":
         player.send_message("> ASSIGN INTELLECTUAL")
-        player.stats = assign_stats_intellectual(player.stat_pool)
+        player.stats = assign_stats_intellectual(player.best_stat_pool)
         player.send_message(format_stats(player.stats))
         player.chargen_step = 2
         get_chargen_prompt(player)
         
     elif command == "assign spiritual":
         player.send_message("> ASSIGN SPIRITUAL")
-        player.stats = assign_stats_spiritual(player.stat_pool)
+        player.stats = assign_stats_spiritual(player.best_stat_pool)
         player.send_message(format_stats(player.stats))
         player.chargen_step = 2
         get_chargen_prompt(player)
         
-    # TODO: Add "ACCEPT" logic here if you want manual assignment
-    
     else:
         player.send_message("That is not a valid stat roll command.")
         send_stat_roll_prompt(player)

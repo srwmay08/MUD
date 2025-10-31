@@ -12,25 +12,22 @@ class Player:
         # MongoDB specific field to store the primary key
         self._id = self.db_data.get("_id") 
 
-        # Player Stats (Old) - We'll keep them for now, but they will be
-        # overwritten by the new stat dictionary
+        # Player Stats (Old)
         self.experience = self.db_data.get("experience", 0) 
         self.level = self.db_data.get("level", 1)         
         
-        # --- NEW STAT FIELDS ---
+        # --- MODIFIED STAT FIELDS ---
         # self.stats will hold the FINAL assigned stats (e.g., {"STR": 90, "CON": 75, ...})
         self.stats: Dict[str, int] = self.db_data.get("stats", {})
         
-        # self.stat_pool will hold the 12 raw rolled numbers (e.g., [85, 72, 66, ...])
-        self.stat_pool: List[int] = self.db_data.get("stat_pool", [])
-        
-        # self.best_stat_roll_total tracks the highest roll for the "reroll" mechanic
-        self.best_stat_roll_total: int = self.db_data.get("best_stat_roll_total", 0)
+        # RENAMED: This now stores the best *list* of rolls, not just the total
+        self.best_stat_pool: List[int] = self.db_data.get("best_stat_pool", [])
+        # --- END MODIFIED STAT FIELDS ---
+
 
         # DEPRECATED: These are now drawn from the self.stats dictionary
         self.strength = self.stats.get("STR", 10)
         self.agility = self.stats.get("AGI", 10)
-        # --- END NEW STAT FIELDS ---
 
 
         # --- FIELDS FOR CHARGEN AND DESCRIPTION ---
@@ -75,11 +72,10 @@ class Player:
             "strength": self.strength,
             "agility": self.agility,
             
-            # --- NEW FIELDS TO SAVE ---
+            # --- FIELDS TO SAVE ---
             "stats": self.stats,
-            "stat_pool": self.stat_pool,
-            "best_stat_roll_total": self.best_stat_roll_total,
-            # --- END NEW FIELDS ---
+            "best_stat_pool": self.best_stat_pool, # Was best_stat_roll_total
+            # --- END FIELDS TO SAVE ---
             
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
@@ -94,8 +90,6 @@ class Player:
     def __repr__(self):
         return f"<Player: {self.name}>"
 
-# --- The 'Room' class below this line is unchanged ---
-
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
@@ -107,26 +101,4 @@ class Room:
         
         self.unabsorbed_social_exp = self.db_data.get("unabsorbed_social_exp", 0)
         # Custom objects list for look and interaction
-        self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
-
-    def to_dict(self) -> dict:
-        """Converts room state to a dictionary ready for MongoDB update."""
-        
-        # --- FIX APPLIED HERE TOO (good practice) ---
-        data = {
-            **self.db_data,
-            "room_id": self.room_id,
-            "name": self.name,
-            "description": self.description,
-            "unabsorbed_social_exp": self.unabsorbed_social_exp,
-            "objects": self.objects,
-        }
-        # ------------------------------------------
-        
-        if self._id:
-            data["_id"] = self._id
-        return data
-
-    def __repr__(self):
-        return f"<Room: {self.name}>"
-
+        self.objects: List[Dict[str, Any]] = self.db_data.get("objects
