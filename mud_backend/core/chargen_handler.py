@@ -2,6 +2,16 @@
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import fetch_room_data
 
+# --- NEW IMPORTS ---
+from mud_backend.core.stat_roller import (
+    roll_stat_pool,
+    assign_stats_physical,
+    assign_stats_intellectual,
+    assign_stats_spiritual,
+    format_stats
+)
+# ---
+
 # --- Helper function for "a" vs "an" ---
 def get_article(word: str) -> str:
     """Returns 'an' if the word starts with a vowel, otherwise 'a'."""
@@ -10,7 +20,7 @@ def get_article(word: str) -> str:
     return "an" if word.lower().strip()[0] in 'aeiou' else "a"
 
 # --- Define all character creation questions ---
-# This list controls the entire chargen process.
+# This list now starts AFTER the stat roll step
 CHARGEN_QUESTIONS = [
     {
         "key": "race",
@@ -20,6 +30,7 @@ CHARGEN_QUESTIONS = [
         "key": "height",
         "prompt": "What is your **Height**?\n(Options: <span class='keyword'>shorter than average</span>, <span class='keyword'>average</span>, <span class='keyword'>taller than average</span>)"
     },
+    # ... (all your other questions are unchanged) ...
     {
         "key": "build",
         "prompt": "What is your **Body Build**?\n(Options: <span class='keyword'>slender</span>, <span class='keyword'>average</span>, <span class='keyword'>athletic</span>, <span class='keyword'>stocky</span>, <span class='keyword'>burly</span>)"
@@ -46,7 +57,7 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "hair_texture",
-        "prompt": "What is your **Hair Texture**?\n(Options: <span class='keyword'>straight</span>, <span class='keyword'>wavy</span>, <span class='keyword'>curly</span>, <span class='keyword'>braided</span>)"
+        "prompt": "What is your **Hair Texture**?\n(Options: <span class'keyword'>straight</span>, <span class='keyword'>wavy</span>, <span class='keyword'>curly</span>, <span class='keyword'>braided</span>)"
     },
     {
         "key": "hair_color",
@@ -74,35 +85,110 @@ CHARGEN_QUESTIONS = [
     }
 ]
 
+# --- NEW FUNCTION ---
+def do_initial_stat_roll(player: Player):
+    """
+    Performs the player's first stat roll and sends the prompt.
+    """
+    player.send_message("\nFirst, you must roll your 12 base stats.")
+    player.stat_pool = roll_stat_pool()
+    total = sum(player.stat_pool)
+    player.best_stat_roll_total = total
+    
+    # Send the first prompt
+    send_stat_roll_prompt(player)
+
+# --- NEW FUNCTION ---
+def send_stat_roll_prompt(player: Player):
+    """
+    Sends the player the stat roll and the options.
+    """
+    pool_str = ", ".join(map(str, player.stat_pool))
+    total = sum(player.stat_pool)
+    
+    player.send_message("\n--- **Stat Roll** ---")
+    player.send_message(f"Your rolled pool: {pool_str}")
+    player.send_message(f"Total: **{total}** (Your best total: {player.best_stat_roll_total})")
+    player.send_message("--- Options ---")
+    player.send_message("- <span class='keyword'>REROLL</span> (Keeps the highest total pool)")
+    player.send_message("- <span class='keyword'>ASSIGN PHYSICAL</span> (Prioritizes STR, DEX, CON, AGI)")
+    player.send_message("- <span class='keyword'>ASSIGN INTELLECTUAL</span> (Prioritizes LOG, INT, WIS, INF)")
+    player.send_message("- <span class='keyword'>ASSIGN SPIRITUAL</span> (Prioritizes ZEA, ESS, WIS, DIS)")
+    # player.send_message("- <span class='keyword'>ACCEPT</span> (Feature to assign manually later)")
 
 def get_chargen_prompt(player: Player):
     """
-    Gets the correct question prompt based on the player's chargen_step.
+    Gets the correct *appearance* question prompt based on the player's step.
+    Note: Stat rolling is step 1, so questions start at step 2.
     """
-    step = player.chargen_step
-    if 0 <= step < len(CHARGEN_QUESTIONS):
-        question = CHARGEN_QUESTIONS[step]
+    question_index = player.chargen_step - 2 # Adjust index
+    
+    if 0 <= question_index < len(CHARGEN_QUESTIONS):
+        question = CHARGEN_QUESTIONS[question_index]
         player.send_message("\n" + question["prompt"])
     else:
-        # This shouldn't be reached, but just in case
+        # This should not be reached, but good to have a fallback
         player.send_message("An error occurred in character creation.")
         player.game_state = "playing"
 
+def _handle_stat_roll_input(player: Player, command: str):
+    """Handles commands during the stat rolling step (step 1)."""
+    
+    if command == "reroll":
+        player.send_message("> REROLL")
+        new_pool = roll_stat_pool()
+        new_total = sum(new_pool)
+        
+        if new_total > player.best_stat_roll_total:
+            player.send_message(f"New roll total: {new_total}. This is higher! Keeping this roll.")
+            player.stat_pool = new_pool
+            player.best_stat_roll_total = new_total
+        else:
+            player.send_message(f"New roll total: {new_total}. Keeping your previous best roll.")
+        
+        # Re-send the prompt with updated values
+        send_stat_roll_prompt(player)
+        
+    elif command == "assign physical":
+        player.send_message("> ASSIGN PHYSICAL")
+        player.stats = assign_stats_physical(player.stat_pool)
+        player.send_message(format_stats(player.stats))
+        player.chargen_step = 2 # Advance to the first appearance question
+        get_chargen_prompt(player)
+        
+    elif command == "assign intellectual":
+        player.send_message("> ASSIGN INTELLECTUAL")
+        player.stats = assign_stats_intellectual(player.stat_pool)
+        player.send_message(format_stats(player.stats))
+        player.chargen_step = 2
+        get_chargen_prompt(player)
+        
+    elif command == "assign spiritual":
+        player.send_message("> ASSIGN SPIRITUAL")
+        player.stats = assign_stats_spiritual(player.stat_pool)
+        player.send_message(format_stats(player.stats))
+        player.chargen_step = 2
+        get_chargen_prompt(player)
+        
+    # TODO: Add "ACCEPT" logic here if you want manual assignment
+    
+    else:
+        player.send_message("That is not a valid stat roll command.")
+        send_stat_roll_prompt(player)
 
-def handle_chargen_input(player: Player, text_input: str):
-    """
-    Processes the player's answer to a chargen question.
-    """
-    step = player.chargen_step
-    if not (0 <= step < len(CHARGEN_QUESTIONS)):
+def _handle_appearance_input(player: Player, text_input: str):
+    """Handles answers to appearance questions (step 2+)."""
+    
+    question_index = player.chargen_step - 2 # Adjust index
+    
+    if not (0 <= question_index < len(CHARGEN_QUESTIONS)):
         player.game_state = "playing"
         return
 
     # 1. Get the current question and save the answer
-    question = CHARGEN_QUESTIONS[step]
+    question = CHARGEN_QUESTIONS[question_index]
     answer = text_input.strip()
     
-    # You could add validation here, but for now, we accept any text
     if answer.lower() == "none":
         answer = "" # Store 'none' as an empty string
         
@@ -111,8 +197,9 @@ def handle_chargen_input(player: Player, text_input: str):
 
     # 2. Increment step and check if chargen is done
     player.chargen_step += 1
+    next_question_index = player.chargen_step - 2
 
-    if player.chargen_step < len(CHARGEN_QUESTIONS):
+    if next_question_index < len(CHARGEN_QUESTIONS):
         # 3. Ask the next question
         get_chargen_prompt(player)
     else:
@@ -122,6 +209,9 @@ def handle_chargen_input(player: Player, text_input: str):
         
         player.send_message("\nCharacter creation complete! You feel the dream fade...")
         player.send_message("You open your eyes and find yourself in...")
+        
+        # Show final stats
+        player.send_message(format_stats(player.stats))
         
         # Manually send the 'look' output for the new room
         town_square_data = fetch_room_data("town_square")
@@ -141,8 +231,28 @@ def handle_chargen_input(player: Player, text_input: str):
                 )
             player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
 
-# --- Helper function to format the 'look' description ---
+def handle_chargen_input(player: Player, text_input: str):
+    """
+    Processes the player's input during character creation.
+    Routes to the correct handler based on chargen_step.
+    """
+    step = player.chargen_step
+    command = text_input.strip().lower()
 
+    if step == 1:
+        # This is the stat rolling step
+        _handle_stat_roll_input(player, command)
+    elif step > 1:
+        # This is for appearance questions
+        _handle_appearance_input(player, text_input)
+    else:
+        # This should not happen (step 0 is handled by command_executor)
+        player.send_message("An error occurred. Please refresh.")
+        player.game_state = "playing"
+
+
+# --- Helper function to format the 'look' description ---
+# (This function is unchanged)
 def format_player_description(player_data: dict) -> str:
     """
     Builds the formatted description string for a player

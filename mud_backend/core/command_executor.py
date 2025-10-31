@@ -1,12 +1,16 @@
 # core/command_executor.py
 import importlib.util
 import os
-# --- THIS IMPORT IS NEW ---
 from typing import List, Tuple, Dict, Any 
 
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.db import fetch_player_data, fetch_room_data, save_game_state
-from mud_backend.core.chargen_handler import handle_chargen_input, get_chargen_prompt
+# --- MODIFIED IMPORT ---
+from mud_backend.core.chargen_handler import (
+    handle_chargen_input, 
+    get_chargen_prompt, 
+    do_initial_stat_roll
+)
 
 # --- THE TYPE HINT IS NOW 'dict' ---
 def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
@@ -25,8 +29,8 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         player = Player(player_name, start_room_id, {})
         
         # --- SET CHARGEN STATE ---
-        player.game_state = "chargEN" # NOTE: Your client expects "chargen"
-        player.chargen_step = 0
+        player.game_state = "chargen"
+        player.chargen_step = 0 # Step 0 is the initial login
         
         # Send welcome message
         player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
@@ -45,22 +49,31 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     )
 
     # 4. --- CHECK GAME STATE ---
-    # This is the most important new logic
+    # This logic block will now work correctly
     
     if player.game_state == "chargen":
-        # If in chargen, send input to the chargen handler
-        # We ignore the 'command_line' if it's the very first login step
+        
+        # --- THIS IS THE NEW LOGIC ---
+        # Step 0 is the initial "look" from the client after logging in.
+        # We use it to show the room and trigger the *first* chargen step.
         if player.chargen_step == 0 and command_line.lower() == "look":
-            # This is the auto-look from the frontend, show the first question
+            
             player.send_message(f"**{room.name}**")
             player.send_message(room.description)
-            get_chargen_prompt(player)
+            
+            # This is our new function that starts the stat roll process
+            do_initial_stat_roll(player) 
+            
+            # We set the step to 1, which means "waiting for stat roll command"
+            player.chargen_step = 1
+            
         else:
-            # This is an answer to a question
+            # All other commands (REROLL, ASSIGN, or answers to questions)
+            # are handled by the chargen handler.
             handle_chargen_input(player, command_line)
         
     elif player.game_state == "playing":
-        # --- NORMAL GAMEPLAY ---
+        # --- NORMAL GAMEPLAY (Unchanged) ---
         
         # 1. Parse the command line
         parts = command_line.strip().split()
@@ -103,8 +116,7 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     # 5. Persist State Changes
     save_game_state(player)
 
-    # 6. --- THIS IS THE FIX ---
-    # Return a dictionary containing the messages AND the current game state
+    # 6. Return output to the client
     return {
         "messages": player.messages,
         "game_state": player.game_state

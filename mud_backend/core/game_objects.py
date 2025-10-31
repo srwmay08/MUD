@@ -12,13 +12,28 @@ class Player:
         # MongoDB specific field to store the primary key
         self._id = self.db_data.get("_id") 
 
-        # Player Stats
+        # Player Stats (Old) - We'll keep them for now, but they will be
+        # overwritten by the new stat dictionary
         self.experience = self.db_data.get("experience", 0) 
         self.level = self.db_data.get("level", 1)         
-        self.strength = self.db_data.get("strength", 10)
-        self.agility = self.db_data.get("agility", 10)
+        
+        # --- NEW STAT FIELDS ---
+        # self.stats will hold the FINAL assigned stats (e.g., {"STR": 90, "CON": 75, ...})
+        self.stats: Dict[str, int] = self.db_data.get("stats", {})
+        
+        # self.stat_pool will hold the 12 raw rolled numbers (e.g., [85, 72, 66, ...])
+        self.stat_pool: List[int] = self.db_data.get("stat_pool", [])
+        
+        # self.best_stat_roll_total tracks the highest roll for the "reroll" mechanic
+        self.best_stat_roll_total: int = self.db_data.get("best_stat_roll_total", 0)
 
-        # --- NEW FIELDS FOR CHARGEN AND DESCRIPTION ---
+        # DEPRECATED: These are now drawn from the self.stats dictionary
+        self.strength = self.stats.get("STR", 10)
+        self.agility = self.stats.get("AGI", 10)
+        # --- END NEW STAT FIELDS ---
+
+
+        # --- FIELDS FOR CHARGEN AND DESCRIPTION ---
         
         # game_state: "playing" or "chargen"
         self.game_state: str = self.db_data.get("game_state", "playing")
@@ -46,9 +61,10 @@ class Player:
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
         
-        # --- THIS IS THE FIX ---
-        # **self.db_data MUST come first, so the new values
-        # overwrite the old ones from the database.
+        # Update strength/agility from the stats dict before saving
+        self.strength = self.stats.get("STR", self.strength)
+        self.agility = self.stats.get("AGI", self.agility)
+        
         data = {
             **self.db_data,
             
@@ -60,12 +76,15 @@ class Player:
             "agility": self.agility,
             
             # --- NEW FIELDS TO SAVE ---
+            "stats": self.stats,
+            "stat_pool": self.stat_pool,
+            "best_stat_roll_total": self.best_stat_roll_total,
+            # --- END NEW FIELDS ---
+            
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
-            # --- END NEW FIELDS ---
         }
-        # ---------------------
         
         if self._id:
             data["_id"] = self._id
@@ -74,6 +93,8 @@ class Player:
 
     def __repr__(self):
         return f"<Player: {self.name}>"
+
+# --- The 'Room' class below this line is unchanged ---
 
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
