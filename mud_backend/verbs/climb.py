@@ -13,7 +13,7 @@ class Climb(BaseVerb):
         
         # 1. Find the object the player wants to climb
         climbable_object = next((obj for obj in self.room.objects 
-                                 if obj['name'] == target_name and "CLIMB" in obj.get("verbs", [])), None)
+                                 if obj['name'].lower() == target_name and "CLIMB" in obj.get("verbs", [])), None)
 
         if not climbable_object:
             self.player.send_message(f"You cannot climb the **{target_name}** here.")
@@ -32,16 +32,8 @@ class Climb(BaseVerb):
         self.player.send_message(f"You grasp the rope and begin to climb...")
         self.player.send_message(f"After a few moments, you arrive at {target_room_id}.")
 
-        # 4. Special Logic: Monster Spawning
-        if target_room_id == "well_bottom":
-            # Check if a monster is already here (a simple placeholder)
-            if self.room.db_data.get("monster_present", False) == False:
-                # We update the room data model to add the monster and set health
-                self.room.db_data["monster_present"] = True
-                self.room.db_data["monster_name"] = "Slimy Well Horror"
-                self.room.db_data["monster_health"] = 50 
-                self.player.send_message("A **Slimy Well Horror** stirs in the stagnant water, hissing at your presence!")
-            else:
-                 self.player.send_message("The Slimy Well Horror is still here, waiting for you.")
+        # --- REMOVED: The old monster spawning logic is gone. ---
+        # The monster is now part of the room's permanent object list
+        # and will be shown by the 'look' command.
                 
         # The main executor will save the player and room state after this verb runs.

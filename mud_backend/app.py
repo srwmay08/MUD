@@ -28,25 +28,25 @@ def handle_command():
     try:
         data = request.json
         
-        # --- THIS IS THE CHANGE ---
-        # We no longer hardcode "Alice". We get the name from the request.
         player_name = data.get("player_name")
         command_line = data.get("command", "")
         
-        # Add a check in case the name is missing
         if not player_name:
             return jsonify({"messages": ["Error: No player name received from client."]}), 400
         
         if not command_line:
             return jsonify({"messages": ["What?"]})
 
-        # --- This part is the same ---
-        # We call your existing backend function with the provided name
-        output_messages = execute_command(player_name, command_line)
+        # --- THIS IS THE CHANGE ---
+        # execute_command now returns a dictionary
+        result_data = execute_command(player_name, command_line)
         # ---------------------------
 
-        # Send the game's response back to the frontend
-        return jsonify({"messages": output_messages})
+        # Send the game's response AND the player's current game state
+        return jsonify({
+            "messages": result_data["messages"],
+            "game_state": result_data["game_state"]
+        })
         
     except Exception as e:
         # Send any errors back to the frontend
