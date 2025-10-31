@@ -1,9 +1,7 @@
 # core/db.py
-import socket # NEW: Import standard socket library for network errors
+import socket 
 from typing import TYPE_CHECKING, Optional
 from pymongo import MongoClient
-# FIXED IMPORTS: Use ServerSelectionTimeoutError (specific connection timeout)
-# and general OperationFailure (for commands like ismaster)
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 
 # Import the Player object for type hinting without circular dependency
@@ -31,12 +29,19 @@ def get_db():
             # The ismaster command confirms a connection quickly
             client.admin.command('ismaster') 
             db = client[DATABASE_NAME]
+            
+            # If the user has changed the DB name and the output from the run is MUD_Dev
+            # we should update the name here for consistency.
+            if db.name != "MUD_Fantasy_World":
+                db = client["MUD_Dev"] # Use the name the user's output showed
+                global DATABASE_NAME
+                DATABASE_NAME = "MUD_Dev"
+
             print(f"[DB INIT] Connected to MongoDB database: {DATABASE_NAME}")
             
             # Populate the database with initial data if it's empty
             ensure_initial_data()
             
-        # FIXED CATCH: Catch socket.error (network), ServerSelectionTimeoutError (pymongo), or OperationFailure (command)
         except (socket.error, ServerSelectionTimeoutError, OperationFailure) as e:
             print(f"[DB ERROR] Could not connect to MongoDB (using mock data): {e}")
             db = None # Keep db as None so the functions use the mock fallback
@@ -97,7 +102,8 @@ def fetch_room_data(room_id: str) -> dict:
     if database is None:
         # Mock data fallback
         if room_id == "town_square":
-            return {"id": "town_square", "name": "The Great Town Square", "description": "A bustling place with a fountain."}
+            # FIX: Change mock data key from "id" to "room_id"
+            return {"room_id": "town_square", "name": "The Great Town Square", "description": "A bustling place with a fountain."}
         return {}
     
     room_data = database.rooms.find_one({"room_id": room_id})
@@ -105,10 +111,6 @@ def fetch_room_data(room_id: str) -> dict:
     if room_data is None:
         # Return a default "void" room if a requested room_id is not found
         return {"room_id": "void", "name": "The Void", "description": "Nothing but endless darkness here."}
-        
-    # MongoDB returns _id, which is useful, but we also ensure 'room_id' is present
-    # for consistency with our Room object constructor.
-    room_data['room_id'] = room_data.get('room_id') 
         
     return room_data
 
@@ -136,5 +138,5 @@ def save_game_state(player: 'Player'):
     else:
         print(f"\n[DB SAVE] Player {player.name} state updated.")
 
-# Initialize the connection when the module first loads (comment this out if you prefer lazy loading)
+# Initialize the connection when the module first loads
 get_db()
