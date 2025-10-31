@@ -1,7 +1,10 @@
 # core/db.py
-from typing import TYPE_CHECKING
+import socket # NEW: Import standard socket library for network errors
+from typing import TYPE_CHECKING, Optional
 from pymongo import MongoClient
-from pymongo.errors import ConnectionError, OperationFailure
+# FIXED IMPORTS: Use ServerSelectionTimeoutError (specific connection timeout)
+# and general OperationFailure (for commands like ismaster)
+from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 
 # Import the Player object for type hinting without circular dependency
 if TYPE_CHECKING:
@@ -11,7 +14,7 @@ if TYPE_CHECKING:
 # IMPORTANT: Use your actual MongoDB connection string here.
 # Assuming a local MongoDB server running on the default port.
 MONGO_URI = "mongodb://localhost:27017/" 
-DATABASE_NAME = "MUD_DEV"
+DATABASE_NAME = "MUD_Dev"
 # ---------------------
 
 # Global client and database object
@@ -33,7 +36,8 @@ def get_db():
             # Populate the database with initial data if it's empty
             ensure_initial_data()
             
-        except (ConnectionError, OperationFailure) as e:
+        # FIXED CATCH: Catch socket.error (network), ServerSelectionTimeoutError (pymongo), or OperationFailure (command)
+        except (socket.error, ServerSelectionTimeoutError, OperationFailure) as e:
             print(f"[DB ERROR] Could not connect to MongoDB (using mock data): {e}")
             db = None # Keep db as None so the functions use the mock fallback
             
@@ -102,6 +106,10 @@ def fetch_room_data(room_id: str) -> dict:
         # Return a default "void" room if a requested room_id is not found
         return {"room_id": "void", "name": "The Void", "description": "Nothing but endless darkness here."}
         
+    # MongoDB returns _id, which is useful, but we also ensure 'room_id' is present
+    # for consistency with our Room object constructor.
+    room_data['room_id'] = room_data.get('room_id') 
+        
     return room_data
 
 
@@ -128,5 +136,5 @@ def save_game_state(player: 'Player'):
     else:
         print(f"\n[DB SAVE] Player {player.name} state updated.")
 
-# Initialize the connection when the module first loads
+# Initialize the connection when the module first loads (comment this out if you prefer lazy loading)
 get_db()
