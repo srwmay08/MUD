@@ -1,9 +1,10 @@
 # verbs/look.py
-from .base_verb import BaseVerb # RESTORED: Relative import now works with correct package structure
+# FIX: Change to absolute import using the top package name
+from mud_backend.verbs.base_verb import BaseVerb
 
-class Look(BaseVerb): # RESTORED: Standard inheritance
+class Look(BaseVerb):
     """Handles the 'look' command."""
-
+    
     def execute(self):
         # The 'look' verb logic
         if not self.args:

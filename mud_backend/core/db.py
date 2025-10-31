@@ -10,9 +10,8 @@ if TYPE_CHECKING:
 
 # --- CONFIGURATION ---
 # IMPORTANT: Use your actual MongoDB connection string here.
-# Assuming a local MongoDB server running on the default port.
 MONGO_URI = "mongodb://localhost:27017/" 
-DATABASE_NAME = "MUD_Dev"
+DATABASE_NAME = "MUD_Dev"  # Set to the name confirmed by your successful connection
 # ---------------------
 
 # Global client and database object
@@ -21,7 +20,9 @@ db = None
 
 def get_db():
     """Initializes and returns the MongoDB database object."""
-    global client, db
+    # Only declare client and db as global since we intend to write to them.
+    # DATABASE_NAME is only read here, so no global declaration is needed for it.
+    global client, db 
     if db is None:
         try:
             # Attempt to connect to MongoDB with a timeout
@@ -30,13 +31,6 @@ def get_db():
             client.admin.command('ismaster') 
             db = client[DATABASE_NAME]
             
-            # If the user has changed the DB name and the output from the run is MUD_Dev
-            # we should update the name here for consistency.
-            if db.name != "MUD_Fantasy_World":
-                db = client["MUD_Dev"] # Use the name the user's output showed
-                global DATABASE_NAME
-                DATABASE_NAME = "MUD_Dev"
-
             print(f"[DB INIT] Connected to MongoDB database: {DATABASE_NAME}")
             
             # Populate the database with initial data if it's empty
@@ -44,7 +38,7 @@ def get_db():
             
         except (socket.error, ServerSelectionTimeoutError, OperationFailure) as e:
             print(f"[DB ERROR] Could not connect to MongoDB (using mock data): {e}")
-            db = None # Keep db as None so the functions use the mock fallback
+            db = None
             
     return db
 
@@ -55,7 +49,7 @@ def ensure_initial_data():
         return
 
     # 1. Rooms (We use 'room_id' as the unique key instead of MongoDB's '_id')
-    if database.rooms.count_documents({}) == 0:
+    if database.rooms.count_documents({"room_id": "town_square"}) == 0:
         database.rooms.insert_many([
             {
                 "room_id": "town_square", 
@@ -102,7 +96,6 @@ def fetch_room_data(room_id: str) -> dict:
     if database is None:
         # Mock data fallback
         if room_id == "town_square":
-            # FIX: Change mock data key from "id" to "room_id"
             return {"room_id": "town_square", "name": "The Great Town Square", "description": "A bustling place with a fountain."}
         return {}
     

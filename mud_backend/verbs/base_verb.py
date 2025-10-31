@@ -1,5 +1,6 @@
 # verbs/base_verb.py
-from ..core.game_objects import Player, Room # FIXED: Use relative path to access sibling package 'core'
+# FIX: Change to absolute import using the top package name
+from mud_backend.core.game_objects import Player, Room 
 from typing import List, TYPE_CHECKING
 # TYPE_CHECKING is used for type hints to avoid circular imports, 
 # though not strictly necessary for this simple example.

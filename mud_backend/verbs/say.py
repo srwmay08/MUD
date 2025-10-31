@@ -1,9 +1,10 @@
 # verbs/say.py
-from .base_verb import BaseVerb # RESTORED: Relative import now works with correct package structure
+# FIX: Change to absolute import using the top package name
+from mud_backend.verbs.base_verb import BaseVerb
 
-class Say(BaseVerb): # RESTORED: Standard inheritance
+class Say(BaseVerb):
     """Handles the 'say' command."""
-
+    
     def execute(self):
         # The 'say' verb logic
         if not self.args:
@@ -11,10 +12,10 @@ class Say(BaseVerb): # RESTORED: Standard inheritance
             return
 
         message = " ".join(self.args)
-
+        
         # Output for the player
         self.player.send_message(f"You say, \"{message}\"")
-
+        
         # Output that would be sent to others in the room
         # (This requires a message queue system, but we'll simulate the text)
         print(f"[To Room] {self.player.name} says, \"{message}\"")
