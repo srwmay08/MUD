@@ -264,8 +264,8 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.send_message("\nCharacter creation complete! You feel the dream fade...")
         player.send_message("You open your eyes and find yourself in...")
         
-        # Show final stats
-        player.send_message(format_stats(player.stats))
+        # --- THIS WAS THE BUG ---
+        # player.send_message(format_stats(player.stats)) # <-- REMOVED THIS LINE
         
         # --- THIS IS THE CHANGE ---
         # Manually fetch the new room and use the room_handler to show it
