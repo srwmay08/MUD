@@ -10,10 +10,8 @@ from mud_backend.core.chargen_handler import (
     get_chargen_prompt, 
     do_initial_stat_roll
 )
-# --- NEW IMPORT ---
 from mud_backend.core.room_handler import show_room_to_player
 
-# --- NEW: Master Verb Alias Dictionary ---
 # This maps all player commands to the correct verb file.
 VERB_ALIASES = {
     # Movement Verbs
@@ -40,6 +38,11 @@ VERB_ALIASES = {
     "enter": "enter",
     "climb": "climb",
     
+    # --- NEW VERBS ---
+    "examine": "examine",
+    "investigate": "investigate",
+    "search": "investigate", # Alias for investigate
+    
     # Exit Verbs
     "exit": "exit",
     "out": "exit",
@@ -48,18 +51,13 @@ VERB_ALIASES = {
     "look": "look",
     "say": "say",
 }
-
-# --- NEW: Full Direction Names ---
-# This helps the 'move' verb know what argument to use
+# This map is used to convert "n" to "north"
 DIRECTION_MAP = {
-    "n": "north",
-    "s": "south",
-    "e": "east",
-    "w": "west",
-    "ne": "northeast",
-    "nw": "northwest",
-    "se": "southeast",
-    "sw": "southwest",
+    "n": "north", "s": "south", "e": "east", "w": "west",
+    "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
+    # Add full names so they map to themselves
+    "north": "north", "south": "south", "east": "east", "west": "west",
+    "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
 
 def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
@@ -94,7 +92,6 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command_line.lower() == "look":
-            # Show room and trigger first chargen step
             show_room_to_player(player, room)
             do_initial_stat_roll(player) 
             player.chargen_step = 1 
@@ -113,27 +110,27 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         command = parts[0].lower()
         args = parts[1:]
 
-        # --- NEW: ALIAS-BASED VERB LOGIC ---
+        # --- UPDATED: ALIAS-BASED VERB LOGIC ---
         
-        # Find the verb file (e.g., "n" -> "move")
+        # Find the verb file (e.g., "n" -> "move", "go" -> "move")
         verb_name = VERB_ALIASES.get(command)
         
-        # Handle special case for 'move' aliases
+        # Special argument handling for aliased verbs
         if verb_name == "move":
-            if command == "move" or command == "go":
-                # Command was "move north" or "go n"
-                if not args:
-                    player.send_message("Move where?")
-                    return { "messages": player.messages, "game_state": player.game_state }
-                # Normalize the argument
-                arg_direction = args[0].lower()
-                normalized_arg = DIRECTION_MAP.get(arg_direction, arg_direction)
-                args = [normalized_arg]
+            if command in DIRECTION_MAP:
+                # Command was "n" or "north". Set args to ["north"]
+                args = [DIRECTION_MAP[command]]
             else:
-                # Command was "n" or "north"
-                normalized_direction = DIRECTION_MAP.get(command, command)
-                args = [normalized_direction]
-        # --- END NEW LOGIC ---
+                # Command was "move" or "go". Args are already set (e.g., ["door"] or ["n"])
+                pass 
+        elif verb_name == "exit":
+            if command == "out":
+                # Command was "out". Set args to empty list.
+                args = []
+            else:
+                # Command was "exit". Args are already set (e.g., [] or ["door"])
+                pass
+        # --- END UPDATED LOGIC ---
 
         # 2. Locate and Import the Verb File
         if not verb_name:

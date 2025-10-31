@@ -1,5 +1,7 @@
 # core/db.py
 import socket 
+import json
+import os
 from typing import TYPE_CHECKING, Optional
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
@@ -28,73 +30,58 @@ def get_db():
     return db
 
 def ensure_initial_data():
-    """Ensures base entities exist."""
+    """Ensures base entities exist from JSON definitions."""
     database = get_db()
     if database is None:
         return
 
-    # 1. Rooms
-    if database.rooms.count_documents({"room_id": "town_square"}) == 0:
-        database.rooms.insert_many([
-            # --- MAIN ROOM ---
-            {
-                "room_id": "town_square", 
-                "name": "The Great Town Square", 
-                # --- UPDATED DESCRIPTION ---
-                "description": "A bustling place with a magnificent fountain in the center. Paths lead in all directions, and a stone well stands near the eastern corner.",
-                "unabsorbed_social_exp": 100,
-                "objects": [ 
-                    {"name": "fountain", "description": "The fountain depicts the Goddess of Wealth pouring endless gold into the city. Its water is cool and clear."},
-                    {"name": "well", "description": "A weathered stone well. You can see a dark, winding rope tied to the lip, leading down. You could probably **CLIMB** the rope.", "verbs": ["CLIMB"], "target_room": "well_bottom"},
-                    # The 'door' is now in 'ts_south'
-                ],
-                "exits": {
-                    "north": "ts_north",
-                    "south": "ts_south",
-                    "east": "ts_east",
-                    "west": "ts_west",
-                    "northeast": "ts_northeast",
-                    "northwest": "ts_northwest",
-                    "southeast": "ts_southeast",
-                    "southwest": "ts_southwest",
-                }
-            },
-            
-            # --- DIRECTIONAL ROOMS ---
-            {"room_id": "ts_north", "name": "North Square", "description": "You are in the northern part of the town square. The main square is to the south.", "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}},
-            # --- UPDATED SOUTHERN ROOM ---
-            {"room_id": "ts_south", "name": "South Square", "description": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here.", "exits": {"north": "town_square", "east": "ts_southeast", "west": "ts_southwest"}, "objects": [{"name": "door", "description": "The sturdy wooden door to the inn. You could probably **ENTER** it.", "verbs": ["ENTER"], "target_room": "inn_room"}]},
-            {"room_id": "ts_east", "name": "East Square", "description": "You are in the eastern part of the town square. The main square is to the west. The old well is here.", "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, "objects": [{"name": "well", "description": "A weathered stone well...", "verbs": ["CLIMB"], "target_room": "well_bottom"}]},
-            {"room_id": "ts_west", "name": "West Square", "description": "You are in the western part of the town square. The main square is to the east.", "exits": {"east": "town_square", "north": "ts_northwest", "south": "ts_southwest"}},
-            {"room_id": "ts_northeast", "name": "Northeast Square", "description": "You are in the northeast corner of the town square.", "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"}},
-            {"room_id": "ts_northwest", "name": "Northwest Square", "description": "You are in the northwest corner of the town square.", "exits": {"southeast": "town_square", "south": "ts_west", "east": "ts_north"}},
-            {"room_id": "ts_southeast", "name": "Southeast Square", "description": "You are in the southeast corner of the town square.", "exits": {"northwest": "town_square", "north": "ts_east", "west": "ts_south"}},
-            {"room_id": "ts_southwest", "name": "Southwest Square", "description": "You are in the southwest corner of the town square.", "exits": {"northeast": "town_square", "north": "ts_west", "east": "ts_south"}},
-
-            # --- OTHER ROOMS ---
-            {
-                "room_id": "inn_room",
-                "name": "A Room at the Inn",
-                "description": "You are in a simple, comfortable room... You feel as though you just woke from a long, hazy dream...",
-                "objects": [
-                    {"name": "bed", "description": "A simple straw mattress..."},
-                    {"name": "window", "description": "Looking out the window, you can see the bustling town square."}
-                ],
-                # --- NEW EXIT ---
-                "exits": { "out": "ts_south" } 
-            },
-            {
-                "room_id": "well_bottom", 
-                "name": "The Bottom of the Well", 
-                "description": "It is dark and cramped down here. A monster is stirring in the corner!",
-                "objects": [
-                    {"name": "rope", "description": "A thick, wet rope leads back up to the town square.", "verbs": ["CLIMB"], "target_room": "town_square"}
-                ],
-                "exits": {}
-            }
-        ])
-        print("[DB INIT] Inserted initial room data.")
+    # --- NEW: Load from JSON ---
+    print("[DB INIT] Checking initial data from JSON...")
+    
+    # 1. Load Rooms from JSON
+    try:
+        # Build the path relative to this db.py file
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'rooms.json')
         
+        with open(json_path, 'r') as f:
+            room_data_list = json.load(f)
+            
+        upsert_count = 0
+        update_count = 0
+        
+        for room_data in room_data_list:
+            room_id = room_data.get("room_id")
+            if not room_id:
+                continue
+            
+            # Use update_one with upsert=True
+            # This will INSERT if 'room_id' doesn't exist, or UPDATE if it does
+            result = database.rooms.update_one(
+                {"room_id": room_id},
+                {"$set": room_data},
+                upsert=True
+            )
+            
+            if result.upserted_id:
+                print(f"[DB DEBUG] Inserted new room: {room_id}")
+                upsert_count += 1
+            elif result.modified_count > 0:
+                print(f"[DB DEBUG] Updated existing room: {room_id}")
+                update_count += 1
+        
+        if upsert_count > 0 or update_count > 0:
+             print(f"[DB INIT] JSON sync complete. Inserted: {upsert_count}, Updated: {update_count}.")
+        else:
+             print("[DB INIT] All room data is up-to-date.")
+             
+    except FileNotFoundError:
+        print(f"[DB ERROR] Could not find 'rooms.json' at: {json_path}")
+    except json.JSONDecodeError:
+        print(f"[DB ERROR] 'rooms.json' contains invalid JSON.")
+    except Exception as e:
+        print(f"[DB ERROR] An error occurred loading rooms: {e}")
+    # --- END NEW LOGIC ---
+
     # 2. Test Player 'Alice' (Unchanged)
     if database.players.count_documents({"name": "Alice"}) == 0:
         database.players.insert_one(

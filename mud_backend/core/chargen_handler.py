@@ -65,7 +65,7 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "hair_quirk",
-        "prompt": "What is your **Hair Quirk**? (e.g., <span class='keyword'>swept back</span>, <span class='keyword'>messy</span>, <span class='keyword'>in a ponytail</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+        "prompt": "What is your **Hair Quirk**?\n(e.g., <span class='keyword'>swept back</span>, <span class='keyword'>messy</span>, <span class='keyword'>in a ponytail</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
     },
     {
         "key": "face",
@@ -77,11 +77,11 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "mark",
-        "prompt": "Any **Distinguishing Mark**? (e.g., <span class='keyword'>a scar over one eye</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+        "prompt": "Any **Distinguishing Mark**?\n(e.g., <span class='keyword'>a scar over one eye</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
     },
     {
         "key": "unique",
-        "prompt": "Finally, what **Unique Feature** do you have? (e.g., <span class='keyword'>a silver locket</span>, <span class='keyword'>a faint aura</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+        "prompt": "Finally, what **Unique Feature** do you have?\n(e.g., <span class='keyword'>a silver locket</span>, <span class='keyword'>a faint aura</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
     }
 ]
 
