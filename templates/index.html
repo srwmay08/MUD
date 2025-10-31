@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUD Client</title>
+    <style>
+        body {
+            font-family: 'Lucida Console', 'Courier New', monospace;
+            background: #000;
+            color: #CCC; /* Default text color */
+            margin: 0;
+            padding: 20px;
+        }
+
+        #output {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #333;
+            overflow-y: scroll;
+            padding: 10px;
+            box-sizing: border-box;
+            white-space: pre-wrap; /* Preserves newlines */
+            line-height: 1.5;
+            background: #0a0a0a;
+        }
+
+        /* Style for room titles, like [Icemule Trace] */
+        .room-title {
+            color: #61bfff; /* Bright Blue */
+            font-weight: bold;
+        }
+        
+        /* Style for keywords, like 'fountain' or 'well' */
+        .keyword {
+            color: #f0c674; /* Yellow/Gold */
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        
+        /* Style for your own typed commands */
+        .command-echo {
+            color: #888;
+        }
+
+        #input-line {
+            display: flex;
+            margin-top: 10px;
+        }
+        
+        #input-line > span {
+            padding-right: 10px;
+            color: #CCC;
+        }
+        
+        #command-input {
+            flex-grow: 1;
+            background: #000;
+            color: #0F0;
+            border: none;
+            font-family: 'Lucida Console', 'Courier New', monospace;
+        }
+        #command-input:focus {
+            outline: none;
+        }
+
+        /* --- The new Right-Click Context Menu --- */
+        #context-menu {
+            display: none; /* Hidden by default */
+            position: absolute;
+            background-color: #2c2c2c;
+            border: 1px solid #888;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            min-width: 150px;
+            z-index: 1000;
+        }
+        
+        #context-menu div {
+            padding: 8px 12px;
+            color: #DDD;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+        }
+        
+        #context-menu div:last-child {
+            border-bottom: none;
+        }
+
+        #context-menu div:hover {
+            background-color: #4a4a4a;
+            color: #FFF;
+        }
+    </style>
+</head>
+<body>
+    <div id="output">Welcome to the game. Type 'look' to begin.</div>
+    
+    <div id="input-line">
+        <span>&gt;</span>
+        <input type="text" id="command-input" autofocus>
+    </div>
+
+    <div id="context-menu"></div>
+
+    <script>
+        const output = document.getElementById('output');
+        const input = document.getElementById('command-input');
+        const contextMenu = document.getElementById('context-menu');
+        
+        // --- This will store the keyword we right-clicked on ---
+        let activeKeyword = null;
+
+        // --- Helper: Send Command to Backend ---
+        async function sendCommand(command) {
+            // Display the command you're sending
+            addMessage(`> ${command}`, 'command-echo');
+            
+            try {
+                const response = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        player_name: "Alice", // Hardcoded for this example
+                        command: command
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Display the server's response
+                data.messages.forEach(msg => addMessage(msg));
+
+            } catch (error) {
+                addMessage(`Error: Could not connect to server. ${error}`);
+            }
+        }
+
+        // --- Helper: Add Message to Output ---
+        function addMessage(message, messageClass = null) {
+            let formattedMessage = message;
+
+            // 1. Find room titles (like **Title**) and replace with styled span
+            formattedMessage = formattedMessage.replace(
+                /\*\*(.*?)\*\*/g, 
+                '<span class="room-title">[$1]</span>'
+            );
+
+            // 2. Add class if one was provided
+            if (messageClass) {
+                formattedMessage = `<span class="${messageClass}">${formattedMessage}</span>`;
+            }
+            
+            output.innerHTML += `\n${formattedMessage}`;
+            output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
+        }
+
+        // --- Input: Listen for "Enter" key ---
+        input.addEventListener('keydown', async function(event) {
+            if (event.key === 'Enter') {
+                const command = input.value;
+                if (!command) return;
+
+                // Clear the input box
+                input.value = '';
+                
+                // Send the command
+                await sendCommand(command);
+            }
+        });
+
+        // --- Right-Click Menu: Show Menu ---
+        output.addEventListener('contextmenu', function(event) {
+            // Check if we right-clicked on a keyword
+            const target = event.target;
+            if (target.classList.contains('keyword')) {
+                event.preventDefault(); // Stop the default browser menu
+                
+                // Get the keyword name (e.g., "fountain")
+                activeKeyword = target.dataset.name || target.innerText;
+                
+                // --- Build the menu content ---
+                // We'll use the verbs from the data-verbs attribute
+                const verbs = (target.dataset.verbs || "look").split(',');
+                
+                contextMenu.innerHTML = ''; // Clear old items
+                
+                verbs.forEach(verb => {
+                    const item = document.createElement('div');
+                    item.innerText = `${verb} ${activeKeyword}`;
+                    item.dataset.command = `${verb} ${activeKeyword}`;
+                    contextMenu.appendChild(item);
+                });
+
+                // --- Position and show the menu ---
+                contextMenu.style.left = `${event.pageX}px`;
+                contextMenu.style.top = `${event.pageY}px`;
+                contextMenu.style.display = 'block';
+            }
+        });
+
+        // --- Right-Click Menu: Hide Menu ---
+        // Hide when clicking anywhere on the page
+        document.addEventListener('click', function(event) {
+            if (contextMenu.style.display === 'block') {
+                contextMenu.style.display = 'none';
+            }
+        });
+
+        // --- Right-Click Menu: Handle Click on Menu Item ---
+        contextMenu.addEventListener('click', function(event) {
+            const command = event.target.dataset.command;
+            if (command) {
+                input.value = ''; // Clear input
+                sendCommand(command); // Send the command (e.g., "look fountain")
+            }
+        });
+
+    </script>
+</body>
+</html>
