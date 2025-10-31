@@ -1,5 +1,5 @@
 # verbs/base_verb.py
-from core.game_objects import Player, Room
+from ..core.game_objects import Player, Room # FIXED: Use relative path to access sibling package 'core'
 from typing import List, TYPE_CHECKING
 # TYPE_CHECKING is used for type hints to avoid circular imports, 
 # though not strictly necessary for this simple example.

@@ -1,11 +1,9 @@
 # verbs/say.py
+from .base_verb import BaseVerb # RESTORED: Relative import now works with correct package structure
 
-# The BaseVerb class import has been removed here to resolve the dynamic loading issue.
-# The command executor now handles connecting the Say class to the BaseVerb class.
-
-class Say:
+class Say(BaseVerb): # RESTORED: Standard inheritance
     """Handles the 'say' command."""
-    
+
     def execute(self):
         # The 'say' verb logic
         if not self.args:
@@ -13,10 +11,10 @@ class Say:
             return
 
         message = " ".join(self.args)
-        
+
         # Output for the player
         self.player.send_message(f"You say, \"{message}\"")
-        
+
         # Output that would be sent to others in the room
         # (This requires a message queue system, but we'll simulate the text)
         print(f"[To Room] {self.player.name} says, \"{message}\"")

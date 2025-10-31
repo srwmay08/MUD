@@ -1,5 +1,17 @@
 # main.py
-from core.command_executor import execute_command
+import sys
+import os
+
+# --- CRITICAL FIX: Add the project root to the system path ---
+# This ensures that 'core' and 'verbs' are found when running the package.
+# It calculates the path one level up from the directory containing main.py (mud_backend)
+# and prepends it to Python's search list.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# -------------------------------------------------------------
+
+from mud_backend.core.command_executor import execute_command
+# NOTE: The import must now be absolute, referencing the package name.
+
 
 # --- Simulation of a command coming from the web client ---
 

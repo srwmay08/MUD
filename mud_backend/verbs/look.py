@@ -1,15 +1,9 @@
 # verbs/look.py
+from .base_verb import BaseVerb # RESTORED: Relative import now works with correct package structure
 
-# The BaseVerb class import has been removed here to resolve the dynamic loading issue.
-# The command executor now handles connecting the Look class to the BaseVerb class.
-
-class Look:
+class Look(BaseVerb): # RESTORED: Standard inheritance
     """Handles the 'look' command."""
-    
-    # We rely on the command_executor to instantiate this class 
-    # and ensure it inherits from BaseVerb, giving it access to self.player, 
-    # self.room, and self.args.
-    
+
     def execute(self):
         # The 'look' verb logic
         if not self.args:
