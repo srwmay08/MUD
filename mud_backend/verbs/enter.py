@@ -2,6 +2,8 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.db import fetch_room_data
 from mud_backend.core.game_objects import Room
+# --- NEW IMPORT ---
+from mud_backend.core.room_handler import show_room_to_player
 
 class Enter(BaseVerb):
     """Handles the 'enter' command to move through doors, portals, etc."""
@@ -45,17 +47,4 @@ class Enter(BaseVerb):
         
         # 4. Success message and automatic "Look"
         self.player.send_message(f"You enter the {target_name}...")
-
-        self.player.send_message(f"**{new_room.name}**")
-        self.player.send_message(new_room.description)
-        
-        if new_room.objects:
-            html_objects = []
-            for obj in new_room.objects:
-                obj_name = obj['name']
-                verbs = obj.get('verbs', ['look'])
-                verb_str = ','.join(verbs).lower()
-                html_objects.append(
-                    f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
-                )
-            self.player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
+        show_room_to_player(self.player, new_room)

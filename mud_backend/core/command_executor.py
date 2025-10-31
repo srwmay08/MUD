@@ -10,27 +10,57 @@ from mud_backend.core.chargen_handler import (
     get_chargen_prompt, 
     do_initial_stat_roll
 )
+# --- NEW IMPORT ---
+from mud_backend.core.room_handler import show_room_to_player
 
-# --- NEW: Dictionary to map all directions ---
-DIRECTION_ALIASES = {
-    "n": "north",
-    "north": "north",
-    "s": "south",
-    "south": "south",
-    "e": "east",
-    "east": "east",
-    "w": "west",
-    "west": "west",
-    "ne": "northeast",
-    "northeast": "northeast",
-    "nw": "northwest",
-    "northwest": "northwest",
-    "se": "southeast",
-    "southeast": "southeast",
-    "sw": "southwest",
-    "southwest": "southwest",
+# --- NEW: Master Verb Alias Dictionary ---
+# This maps all player commands to the correct verb file.
+VERB_ALIASES = {
+    # Movement Verbs
+    "move": "move",
+    "go": "move",
+    "n": "move",
+    "north": "move",
+    "s": "move",
+    "south": "move",
+    "e": "move",
+    "east": "move",
+    "w": "move",
+    "west": "move",
+    "ne": "move",
+    "northeast": "move",
+    "nw": "move",
+    "northwest": "move",
+    "se": "move",
+    "southeast": "move",
+    "sw": "move",
+    "southwest": "move",
+    
+    # Object Interaction Verbs
+    "enter": "enter",
+    "climb": "climb",
+    
+    # Exit Verbs
+    "exit": "exit",
+    "out": "exit",
+    
+    # Other Verbs
+    "look": "look",
+    "say": "say",
 }
-# ---
+
+# --- NEW: Full Direction Names ---
+# This helps the 'move' verb know what argument to use
+DIRECTION_MAP = {
+    "n": "north",
+    "s": "south",
+    "e": "east",
+    "w": "west",
+    "ne": "northeast",
+    "nw": "northwest",
+    "se": "southeast",
+    "sw": "southwest",
+}
 
 def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     """
@@ -43,15 +73,12 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     
     # 2. Handle New vs. Existing Player
     if not player_db_data:
-        # --- NEW CHARACTER ---
         start_room_id = "inn_room"
         player = Player(player_name, start_room_id, {})
         player.game_state = "chargen"
         player.chargen_step = 0
         player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
-        
     else:
-        # --- EXISTING CHARACTER ---
         player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
 
     # 3. Fetch Room Data
@@ -66,12 +93,11 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     # 4. --- CHECK GAME STATE ---
     
     if player.game_state == "chargen":
-        
         if player.chargen_step == 0 and command_line.lower() == "look":
-            player.send_message(f"**{room.name}**")
-            player.send_message(room.description)
+            # Show room and trigger first chargen step
+            show_room_to_player(player, room)
             do_initial_stat_roll(player) 
-            player.chargen_step = 1 # Now waiting for stat roll command
+            player.chargen_step = 1 
         else:
             handle_chargen_input(player, command_line)
         
@@ -84,39 +110,38 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
             player.send_message("What?")
             return { "messages": player.messages, "game_state": player.game_state }
         
-        verb_name = parts[0].lower()
+        command = parts[0].lower()
         args = parts[1:]
 
-        # --- NEW: Direction & Move Handling ---
-        # Check if the entered verb is a direction
-        normalized_direction = DIRECTION_ALIASES.get(verb_name)
+        # --- NEW: ALIAS-BASED VERB LOGIC ---
         
-        if normalized_direction:
-            # The command IS a direction. Reroute to 'move' verb.
-            verb_name = "move"
-            args = [normalized_direction] # e.g., ["north"]
-        elif verb_name == "move":
-            # The command is "move". We must normalize the argument.
-            if not args:
-                player.send_message("Move where?")
-                return { "messages": player.messages, "game_state": player.game_state }
-            
-            normalized_arg = DIRECTION_ALIASES.get(args[0].lower())
-            if not normalized_arg:
-                player.send_message(f"I don't understand the direction '{args[0]}'.")
-                return { "messages": player.messages, "game_state": player.game_state }
-            
-            args = [normalized_arg] # Replace "n" with "north"
-        # --- END NEW HANDLING ---
+        # Find the verb file (e.g., "n" -> "move")
+        verb_name = VERB_ALIASES.get(command)
+        
+        # Handle special case for 'move' aliases
+        if verb_name == "move":
+            if command == "move" or command == "go":
+                # Command was "move north" or "go n"
+                if not args:
+                    player.send_message("Move where?")
+                    return { "messages": player.messages, "game_state": player.game_state }
+                # Normalize the argument
+                arg_direction = args[0].lower()
+                normalized_arg = DIRECTION_MAP.get(arg_direction, arg_direction)
+                args = [normalized_arg]
+            else:
+                # Command was "n" or "north"
+                normalized_direction = DIRECTION_MAP.get(command, command)
+                args = [normalized_direction]
+        # --- END NEW LOGIC ---
 
         # 2. Locate and Import the Verb File
-        verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
-        
-        if not os.path.exists(verb_file_path):
-            player.send_message(f"I don't know the command **'{verb_name}'**.")
+        if not verb_name:
+            player.send_message(f"I don't know the command **'{command}'**.")
         else:
+            verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
+            
             try:
-                # Dynamically import the module
                 verb_module_name = f"mud_backend.verbs.{verb_name}"
                 spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
                 

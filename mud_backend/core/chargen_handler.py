@@ -2,6 +2,9 @@
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import fetch_room_data
 
+# --- NEW IMPORT ---
+from mud_backend.core.room_handler import show_room_to_player
+
 from mud_backend.core.stat_roller import (
     roll_stat_pool,
     assign_stats_physical,
@@ -18,12 +21,12 @@ def get_article(word: str) -> str:
     return "an" if word.lower().strip()[0] in 'aeiou' else "a"
 
 # --- Define all character creation questions ---
-# This list now starts AFTER the stat roll AND assignment steps
 CHARGEN_QUESTIONS = [
     {
         "key": "race",
         "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Dark Elf</span>)"
     },
+    # ... (all other questions are unchanged) ...
     {
         "key": "height",
         "prompt": "What is your **Height**?\n(Options: <span class='keyword'>shorter than average</span>, <span class='keyword'>average</span>, <span class='keyword'>taller than average</span>)"
@@ -46,7 +49,7 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "complexion",
-        "prompt": "What is your **Complexion**?\n(Options: <span class='keyword'>pale</span>, <span class='keyword'>fair</span>, <span class='keyword'>tan</span>, <span class='keyword'>dark</span>, <span class='keyword'>ashen</span>, <span class='keyword'>ruddy</span>)"
+        "prompt": "What is your **Complexion**?\n(Options: <span class='keyword'>pale</span>, <span class='keyword'>fair</span>, <span class='keyword'>tan</span>, <span class='keyword'>dark</span>, <span class'keyword'>ashen</span>, <span class='keyword'>ruddy</span>)"
     },
     {
         "key": "hair_style",
@@ -54,7 +57,7 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "hair_texture",
-        "prompt": "What is your **Hair Texture**?\n(Options: <span class'keyword'>straight</span>, <span class='keyword'>wavy</span>, <span class='keyword'>curly</span>, <span class='keyword'>braided</span>)"
+        "prompt": "What is your **Hair Texture**?\n(Options: <span class='keyword'>straight</span>, <span class='keyword'>wavy</span>, <span class='keyword'>curly</span>, <span class='keyword'>braided</span>)"
     },
     {
         "key": "hair_color",
@@ -224,7 +227,6 @@ def get_chargen_prompt(player: Player):
         question = CHARGEN_QUESTIONS[question_index]
         player.send_message("\n" + question["prompt"])
     else:
-        # This should not be reached, but good to have a fallback
         player.send_message("An error occurred in character creation.")
         player.game_state = "playing"
 
@@ -265,23 +267,18 @@ def _handle_appearance_input(player: Player, text_input: str):
         # Show final stats
         player.send_message(format_stats(player.stats))
         
-        # Manually send the 'look' output for the new room
+        # --- THIS IS THE CHANGE ---
+        # Manually fetch the new room and use the room_handler to show it
+        from mud_backend.core.game_objects import Room
         town_square_data = fetch_room_data("town_square")
-        player.send_message(f"**{town_square_data.get('name', 'The Great Town Square')}**")
-        player.send_message(town_square_data.get('description', 'A bustling square.'))
-        
-        # Add objects to the look
-        objects = town_square_data.get('objects', [])
-        if objects:
-            html_objects = []
-            for obj in objects:
-                obj_name = obj['name']
-                verbs = obj.get('verbs', ['look'])
-                verb_str = ','.join(verbs).lower()
-                html_objects.append(
-                    f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
-                )
-            player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
+        new_room = Room(
+            room_id=town_square_data.get("room_id"),
+            name=town_square_data.get("name"),
+            description=town_square_data.get("description"),
+            db_data=town_square_data
+        )
+        show_room_to_player(player, new_room)
+        # --- END CHANGE ---
 
 # ---
 # Main Input Router
@@ -296,16 +293,12 @@ def handle_chargen_input(player: Player, text_input: str):
     command = text_input.strip().lower()
 
     if step == 1:
-        # This is the stat rolling step
         _handle_stat_roll_input(player, command)
     elif step == 2:
-        # This is the stat assignment step
         _handle_assignment_input(player, command)
     elif step > 2:
-        # This is for appearance questions
         _handle_appearance_input(player, text_input)
     else:
-        # This should not happen (step 0 is handled by command_executor)
         player.send_message("An error occurred. Please refresh.")
         player.game_state = "playing"
 
@@ -317,25 +310,19 @@ def format_player_description(player_data: dict) -> str:
     Builds the formatted description string for a player
     based on their stored appearance data.
     """
-    # Get the appearance dict, or an empty one if it's missing
     app = player_data.get("appearance", {})
 
-    # He/She/They logic (default to 'They')
     pronoun_map = {
         "he": {"subj": "He", "obj": "him", "poss": "his"},
         "she": {"subj": "She", "obj": "her", "poss": "her"},
         "they": {"subj": "They", "obj": "them", "poss": "their"},
     }
-    # For now, we'll just hardcode 'He' for simplicity
-    pr = pronoun_map["he"] # TODO: Make this dynamic later
+    pr = pronoun_map.get(player_data.get("gender", "they"), pronoun_map["they"])
 
-    # Build the description line by line, using defaults
     desc = []
 
-    # Line 1: Race
     desc.append(f"{pr['subj']} appears to be {get_article(app.get('race', 'Human'))} **{app.get('race', 'Human')}**.")
     
-    # Line 2: Height & Build
     line2 = f"{pr['subj']} is {app.get('height', 'average')}"
     if app.get('build'):
         line2 += f" and has {get_article(app.get('build'))} {app.get('build')} build."
@@ -343,10 +330,8 @@ def format_player_description(player_data: dict) -> str:
         line2 += "."
     desc.append(line2)
 
-    # Line 3: Age
     desc.append(f"{pr['subj']} appears to be {app.get('age', 'in their prime')}.")
 
-    # Line 4: Eyes & Skin
     line4 = f"{pr['subj']} has {app.get('eye_char', 'clear')} {app.get('eye_color', 'brown')} eyes"
     if app.get('complexion'):
         line4 += f" and {app.get('complexion')} skin."
@@ -354,7 +339,6 @@ def format_player_description(player_data: dict) -> str:
         line4 += "."
     desc.append(line4)
 
-    # Line 5: Hair
     if app.get('hair_style'):
         line5 = f"{pr['subj']} has {app.get('hair_style', '')} {app.get('hair_texture', 'straight')} {app.get('hair_color', 'brown')} hair"
         if app.get('hair_quirk'):
@@ -363,7 +347,6 @@ def format_player_description(player_data: dict) -> str:
             line5 += "."
         desc.append(line5)
 
-    # Line 6: Face & Features
     face_parts = []
     if app.get('face'):
         face_parts.append(f"{get_article(app.get('face'))} {app.get('face')} face")
@@ -375,9 +358,7 @@ def format_player_description(player_data: dict) -> str:
     if face_parts:
         desc.append(f"{pr['subj']} has " + ", ".join(face_parts) + ".")
 
-    # Line 7: Unique
     if app.get('unique'):
         desc.append(app.get('unique') + ".")
 
-    # Join all lines with a newline
     return "\n".join(desc)
