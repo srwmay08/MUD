@@ -4,14 +4,13 @@ from typing import TYPE_CHECKING, Optional
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 
-# Import the Player object for type hinting without circular dependency
+# Import the Player and Room object for type hinting
 if TYPE_CHECKING:
-    from .game_objects import Player
+    from .game_objects import Player, Room # Added Room
 
 # --- CONFIGURATION ---
-# IMPORTANT: Use your actual MongoDB connection string here.
 MONGO_URI = "mongodb://localhost:27017/" 
-DATABASE_NAME = "MUD_Dev"  # Set to the name confirmed by your successful connection
+DATABASE_NAME = "MUD_Dev"  
 # ---------------------
 
 # Global client and database object
@@ -20,20 +19,15 @@ db = None
 
 def get_db():
     """Initializes and returns the MongoDB database object."""
-    # Only declare client and db as global since we intend to write to them.
-    # DATABASE_NAME is only read here, so no global declaration is needed for it.
     global client, db 
     if db is None:
         try:
-            # Attempt to connect to MongoDB with a timeout
             client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-            # The ismaster command confirms a connection quickly
             client.admin.command('ismaster') 
             db = client[DATABASE_NAME]
             
             print(f"[DB INIT] Connected to MongoDB database: {DATABASE_NAME}")
             
-            # Populate the database with initial data if it's empty
             ensure_initial_data()
             
         except (socket.error, ServerSelectionTimeoutError, OperationFailure) as e:
@@ -43,23 +37,53 @@ def get_db():
     return db
 
 def ensure_initial_data():
-    """Ensures base entities (like the starting room and a test player) exist."""
+    """Ensures base entities exist."""
     database = get_db()
     if database is None:
         return
 
-    # 1. Rooms (We use 'room_id' as the unique key instead of MongoDB's '_id')
-    if database.rooms.count_documents({"room_id": "town_square"}) == 0:
+    # 1. Rooms
+    if database.rooms.count_documents({"room_id": "well_bottom"}) == 0:
         database.rooms.insert_many([
+            # UPDATED: Town Square now includes the 'well' object for LOOK/CLIMB
             {
                 "room_id": "town_square", 
                 "name": "The Great Town Square", 
-                "description": "A bustling place with a magnificent fountain in the center."
+                "description": "A bustling place with a magnificent fountain in the center. A stone well stands near the eastern corner, with a thick, wet rope disappearing into the darkness.",
+                "unabsorbed_social_exp": 100,
+                "objects": [ # NEW OBJECT LIST
+                    {
+                        "name": "fountain", 
+                        "description": "The fountain depicts the Goddess of Wealth pouring endless gold into the city. Its water is cool and clear."
+                    },
+                    {
+                        "name": "well",
+                        "description": "A weathered stone well. You can see a dark, winding rope tied to the lip, leading down. You could probably **CLIMB** the rope.",
+                        "verbs": ["CLIMB"],
+                        "target_room": "well_bottom"
+                    }
+                ]
             },
             {
                 "room_id": "north_gate", 
                 "name": "Northern City Gate", 
-                "description": "The massive iron gates leading out of the city stand before you."
+                "description": "The massive iron gates leading out of the city stand before you.",
+                "unabsorbed_social_exp": 0
+            },
+            # NEW: Well Bottom Room
+            {
+                "room_id": "well_bottom", 
+                "name": "The Bottom of the Well", 
+                "description": "It is dark and cramped down here. The air is damp and smells of stagnant water and mildew. A monster is stirring in the corner!",
+                "unabsorbed_social_exp": 0,
+                "objects": [
+                    {
+                        "name": "rope",
+                        "description": "A thick, wet rope leads back up to the town square. You can **CLIMB** back up.",
+                        "verbs": ["CLIMB"],
+                        "target_room": "town_square"
+                    }
+                ]
             }
         ])
         print("[DB INIT] Inserted initial room data.")
@@ -70,7 +94,10 @@ def ensure_initial_data():
             {
                 "name": "Alice", 
                 "current_room_id": "town_square", 
-                "level": 5,
+                "level": 1, # Changed from 5 for new players
+                "experience": 0,
+                "strength": 12, # NEW STAT
+                "agility": 15,  # NEW STAT
                 "gold": 100
             }
         )
@@ -81,9 +108,9 @@ def fetch_player_data(player_name: str) -> dict:
     """Fetches player data from the 'players' collection or returns mock data."""
     database = get_db()
     if database is None:
-        # Mock data fallback
+        # Mock data fallback (Updated to include new stats)
         if player_name == "Alice":
-            return {"name": "Alice", "current_room_id": "town_square", "level": 5}
+            return {"name": "Alice", "current_room_id": "town_square", "level": 1, "experience": 0, "strength": 12, "agility": 15}
         return {}
 
     player_data = database.players.find_one({"name": player_name})
@@ -94,15 +121,20 @@ def fetch_room_data(room_id: str) -> dict:
     """Fetches room data from the 'rooms' collection or returns mock data."""
     database = get_db()
     if database is None:
-        # Mock data fallback
+        # Mock data fallback (Updated)
         if room_id == "town_square":
-            return {"room_id": "town_square", "name": "The Great Town Square", "description": "A bustling place with a fountain."}
+            return {
+                "room_id": "town_square", 
+                "name": "The Great Town Square", 
+                "description": "A bustling place with a magnificent fountain in the center. A stone well stands near the eastern corner.",
+                "unabsorbed_social_exp": 100,
+                "objects": [{"name": "well", "description": "A well. You could CLIMB down."}]
+            }
         return {}
     
     room_data = database.rooms.find_one({"room_id": room_id})
     
     if room_data is None:
-        # Return a default "void" room if a requested room_id is not found
         return {"room_id": "void", "name": "The Void", "description": "Nothing but endless darkness here."}
         
     return room_data
@@ -117,19 +149,33 @@ def save_game_state(player: 'Player'):
 
     player_data = player.to_dict()
     
-    # Update/Insert operation (upsert=True)
     result = database.players.update_one(
-        {"name": player.name}, # Query: Find player by name
-        {"$set": player_data}, # Update: Set all fields from player_data
-        upsert=True            # Option: Insert if no document is found
+        {"name": player.name}, 
+        {"$set": player_data}, 
+        upsert=True            
     )
     
     if result.upserted_id:
-        # If a new document was inserted, update the Player object with the new _id
         player._id = result.upserted_id
         print(f"\n[DB SAVE] Player {player.name} created with ID: {player._id}")
     else:
         print(f"\n[DB SAVE] Player {player.name} state updated.")
 
-# Initialize the connection when the module first loads
+def save_room_state(room: 'Room'):
+    """Saves room state back to the 'rooms' collection."""
+    database = get_db()
+    if database is None:
+        print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
+        return
+
+    room_data = room.to_dict()
+    
+    # Update operation on room using its unique room_id
+    database.rooms.update_one(
+        {"room_id": room.room_id}, 
+        {"$set": room_data},       
+        upsert=True
+    )
+    print(f"\n[DB SAVE] Room {room.name} state updated.")
+
 get_db()
