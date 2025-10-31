@@ -114,6 +114,10 @@
         
         // NEW: We track the game state, sent from the backend
         let currentGameState = "login"; 
+        
+        // --- NEW: Command History ---
+        let commandHistory = [];
+        let historyIndex = -1; // -1 means we are at the new, blank command line
 
         // --- Helper: Send Command to Backend ---
         async function sendCommand(command, name) {
@@ -164,6 +168,14 @@
                 const commandOrName = input.value;
                 if (!commandOrName) return;
 
+                // --- NEW: Add to history ---
+                // Add to history if it's not a duplicate of the last command
+                if (playerName && commandOrName !== commandHistory[0]) {
+                    commandHistory.unshift(commandOrName); // Adds to the start of the array
+                }
+                historyIndex = -1; // Reset history position to the blank line
+                // --- END NEW ---
+
                 input.value = '';
 
                 if (playerName === null) {
@@ -181,6 +193,28 @@
                     // --- 3. This is a NORMAL game command ---
                     addMessage(`> ${commandOrName}`, 'command-echo');
                     await sendCommand(commandOrName, playerName);
+                }
+            }
+            // --- NEW: Listen for ArrowUp ---
+            else if (event.key === 'ArrowUp') {
+                event.preventDefault(); // Stop cursor from moving in the input
+                // Check if we have history and we aren't at the end of it
+                if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    input.value = commandHistory[historyIndex];
+                }
+            }
+            // --- NEW: Listen for ArrowDown (for convenience) ---
+            else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                // Check if we are currently looking at history
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    input.value = commandHistory[historyIndex];
+                } else if (historyIndex === 0) {
+                    // We were at the last command, go back to blank
+                    historyIndex = -1;
+                    input.value = "";
                 }
             }
         });

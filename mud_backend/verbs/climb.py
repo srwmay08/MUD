@@ -3,6 +3,7 @@ from mud_backend.verbs.base_verb import BaseVerb
 # --- NEW IMPORTS ---
 from mud_backend.core.db import fetch_room_data
 from mud_backend.core.game_objects import Room # Need this to create a Room object
+from mud_backend.core.room_handler import show_room_to_player # <-- IMPORT THIS
 
 class Climb(BaseVerb):
     """Handles the 'climb' command to move between connected objects (like wells/ropes)."""
@@ -46,25 +47,12 @@ class Climb(BaseVerb):
         # 2. Change the player's room
         self.player.current_room_id = target_room_id
         
-        # 3. Success message (uses new_room.name)
+        # 3. Success message
         self.player.send_message(f"You grasp the {target_name} and begin to climb...")
-        # Use the proper room name, not the ID
         self.player.send_message(f"After a few moments, you arrive.")
 
         # 4. --- NEW: Automatic "Look" ---
-        # We manually send the look data for the new room
-        self.player.send_message(f"**{new_room.name}**")
-        self.player.send_message(new_room.description)
-        
-        if new_room.objects:
-            html_objects = []
-            for obj in new_room.objects:
-                obj_name = obj['name']
-                verbs = obj.get('verbs', ['look'])
-                verb_str = ','.join(verbs).lower()
-                html_objects.append(
-                    f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
-                )
-            self.player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
+        # We now use the central function to show everything
+        show_room_to_player(self.player, new_room)
         
         # The main executor will save the player state after this verb runs.
