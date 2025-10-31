@@ -1,17 +1,18 @@
 # core/command_executor.py
 import importlib.util
 import os
-from typing import List, Tuple
+# --- THIS IMPORT IS NEW ---
+from typing import List, Tuple, Dict, Any 
 
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.db import fetch_player_data, fetch_room_data, save_game_state
-# --- NEW IMPORT ---
 from mud_backend.core.chargen_handler import handle_chargen_input, get_chargen_prompt
 
-def execute_command(player_name: str, command_line: str) -> List[str]:
+# --- THE TYPE HINT IS NOW 'dict' ---
+def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     """
     The main function to parse and execute a game command.
-    Returns a list of messages for the client.
+    Returns a dictionary with messages and game state.
     """
     
     # 1. Fetch Player Data
@@ -24,7 +25,7 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
         player = Player(player_name, start_room_id, {})
         
         # --- SET CHARGEN STATE ---
-        player.game_state = "chargen"
+        player.game_state = "chargEN" # NOTE: Your client expects "chargen"
         player.chargen_step = 0
         
         # Send welcome message
@@ -65,7 +66,8 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
         parts = command_line.strip().split()
         if not parts:
             player.send_message("What?")
-            return player.messages # Return early
+            # --- MUST RETURN A DICT HERE TOO ---
+            return { "messages": player.messages, "game_state": player.game_state }
         
         verb_name = parts[0].lower()
         args = parts[1:]
@@ -101,15 +103,9 @@ def execute_command(player_name: str, command_line: str) -> List[str]:
     # 5. Persist State Changes
     save_game_state(player)
 
-    # 6. Return output to the client
-    return player.messages
-
-
-def get_player_object(player_name: str) -> Player:
-    """Helper function to load the player object without executing a command."""
-    player_db_data = fetch_player_data(player_name)
-    if not player_db_data:
-        return Player(player_name, "void") 
-    
-    player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
-    return player
+    # 6. --- THIS IS THE FIX ---
+    # Return a dictionary containing the messages AND the current game state
+    return {
+        "messages": player.messages,
+        "game_state": player.game_state
+    }
