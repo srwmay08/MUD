@@ -3,8 +3,7 @@ import importlib.util
 import os
 import time 
 import datetime 
-import copy # <-- NEW IMPORT
-# --- FIX: Import Optional ---
+import copy # <-- Keep this import
 from typing import List, Tuple, Dict, Any, Optional 
 
 from mud_backend.core.game_objects import Player, Room
@@ -22,7 +21,7 @@ from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 # ---
 
-# This maps all player commands to the correct verb file.
+# (VERB_ALIASES and DIRECTION_MAP are unchanged)
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement Verbs (all in 'movement.py')
     "move": ("movement", "Move"),
@@ -40,7 +39,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "nw": ("movement", "Move"),
     "northwest": ("movement", "Move"),
     "se": ("movement", "Move"),
-    "southeast": ("movement", "Move"), # <-- FIX: Removed the stray 'V'
+    "southeast": ("movement", "Move"),
     "sw": ("movement", "Move"),
     "southwest": ("movement", "Move"),
     
@@ -64,11 +63,8 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Other Verbs
     "say": ("say", "Say"),
     
-    # --- UPDATED TICK VERB ---
     "ping": ("tick", "Tick"),
 }
-
-# This map is used to convert "n" to "north"
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
@@ -77,22 +73,13 @@ DIRECTION_MAP = {
 }
 
 
-# ---
-# UPDATED FUNCTION: Prune Stale Players
-# ---
+# --- (Prune Stale Players function is unchanged) ---
 def _prune_active_players(log_prefix: str, broadcast_callback):
-    """
-    Removes players from ACTIVE_PLAYERS if they haven't
-    been seen in PLAYER_TIMEOUT_SECONDS.
-    """
     current_time = time.time()
     stale_players = []
-    
-    # Now we loop by player_name
     for player_name, data in game_state.ACTIVE_PLAYERS.items():
         if (current_time - data["last_seen"]) > game_state.PLAYER_TIMEOUT_SECONDS:
             stale_players.append(player_name)
-            
     if stale_players:
         for player_name in stale_players:
             player_info = game_state.ACTIVE_PLAYERS.pop(player_name, None)
@@ -102,9 +89,7 @@ def _prune_active_players(log_prefix: str, broadcast_callback):
                 broadcast_callback(room_id, disappears_message, "ambient")
                 print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
 
-# ---
-# UPDATED FUNCTION: THE GAME TICK
-# ---
+# --- (Game Tick function is unchanged) ---
 def _check_and_run_game_tick(broadcast_callback):
     """
     Checks if enough time has passed and runs the global game tick.
@@ -120,7 +105,6 @@ def _check_and_run_game_tick(broadcast_callback):
     # Get *all* active players for the environment check
     temp_active_players = {}
     for player_name, data in game_state.ACTIVE_PLAYERS.items():
-        # Pass the full player object if we have it, else a light one
         player_obj = data.get("player_obj")
         if not player_obj:
             player_obj = Player(player_name, data["current_room_id"])
@@ -139,15 +123,18 @@ def _check_and_run_game_tick(broadcast_callback):
         broadcast_callback=broadcast_callback
     )
 
+    # ---
+    # THIS IS THE FIX. We only pass the arguments it actually needs.
+    # ---
     monster_respawn.process_respawns(
         log_time_prefix=log_prefix,
         current_time_utc=datetime.datetime.now(datetime.timezone.utc),
         broadcast_callback=broadcast_callback,
-        game_npcs_dict={}, 
-        game_monster_templates_dict=game_state.GAME_MONSTER_TEMPLATES, # Pass the real templates
-        game_equipment_tables_global={}, 
+        game_npcs_dict={}, # TODO: Pass real data
+        game_equipment_tables_global={}, # TODO: Pass real data
         game_items_global=game_state.GAME_ITEMS # Pass the real items
     )
+    # --- END FIX ---
     
     print(f"{log_prefix}: Global tick complete.")
 
@@ -159,10 +146,10 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
     The main function to parse and execute a game command.
     """
     
-    # 1. Fetch Player Data
+    # 1. Fetch Player Data (unchanged)
     player_db_data = fetch_player_data(player_name)
     
-    # 2. Handle New vs. Existing Player
+    # 2. Handle New vs. Existing Player (unchanged)
     if not player_db_data:
         start_room_id = "inn_room"
         player = Player(player_name, start_room_id, {})
@@ -177,25 +164,26 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
     # 3. RUN THE GAME TICK (No longer needed here)
 
     # 4. Fetch Room Data (FROM CACHE)
-    # --- We now get a DEEP COPY so we can modify it ---
-    room_db_data_template = game_state.GAME_ROOMS.get(player.current_room_id)
-    if not room_db_data_template:
+    # --- THIS IS THE BUG FIX ---
+    # We NO LONGER deepcopy. We get the *actual* live room object.
+    room_db_data = game_state.GAME_ROOMS.get(player.current_room_id)
+    if not room_db_data:
         print(f"[WARN] Room {player.current_room_id} not in cache! Fetching from DB.")
-        room_db_data_template = fetch_room_data(player.current_room_id)
-        if room_db_data_template and room_db_data_template.get("room_id") != "void":
-            game_state.GAME_ROOMS[player.current_room_id] = room_db_data_template
-    
-    # --- Create a working copy for this command ---
-    room_db_data = copy.deepcopy(room_db_data_template)
+        room_db_data = fetch_room_data(player.current_room_id)
+        if room_db_data and room_db_data.get("room_id") != "void":
+            game_state.GAME_ROOMS[player.current_room_id] = room_db_data
+    # --- END BUG FIX ---
             
     room = Room(
         room_id=room_db_data.get("room_id", "void"), 
         name=room_db_data.get("name", "The Void"), 
         description=room_db_data.get("description", "..."), 
-        db_data=room_db_data
+        # Pass the *live* dict so the Room object can modify it
+        db_data=room_db_data 
     )
 
-    # Filter defeated monsters and INFLATE stubs
+    # --- UPDATED: Filter defeated monsters and INFLATE stubs ---
+    # This now modifies the live game_state.GAME_ROOMS[...]["objects"] list
     active_monsters = []
     if "objects" in room_db_data:
         for obj in room_db_data["objects"]:
@@ -203,38 +191,28 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             if monster_id and monster_id in game_state.DEFEATED_MONSTERS:
                 pass # Monster is dead, don't add it
             else:
-                # --- NEW: Inflate monster stubs ---
-                # If it's a monster and has no stats, it's a "stub"
+                # --- Inflate monster stubs ---
                 if monster_id and "stats" not in obj:
                     template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
                     if template:
-                        # Create a new object by merging the stub (obj)
-                        # with the template (copy)
-                        inflated_monster = template.copy()
-                        inflated_monster.update(obj) # Apply any room-specific overrides
-                        active_monsters.append(inflated_monster)
+                        # --- INFLATE IN-PLACE ---
+                        # Merge the template data into the room's object
+                        obj.update(copy.deepcopy(template))
+                        active_monsters.append(obj)
                     else:
                         print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
                 else:
                     # It's a normal object or an already-inflated monster
                     active_monsters.append(obj)
-                # --- END NEW ---
                 
     room.objects = active_monsters
+    # We no longer need to write this back, as we modified it in-place.
+    # The `room` object's `self.objects` list points to the same
+    # list as `game_state.GAME_ROOMS[player.current_room_id]["objects"]`.
+    # --- END UPDATE ---
     
-    # ---
-    # *** THE CRITICAL FIX ***
-    # ---
-    # Write the inflated, live monster list back to the
-    # global game state cache so the combat tick can see it.
-    if room_db_data_template: # Make sure the original room exists
-        game_state.GAME_ROOMS[player.current_room_id]["objects"] = active_monsters
-    # ---
-    # *** END FIX ***
-    # ---
-
     # 5. --- CHECK GAME STATE ---
-    
+    # (Chargen logic is unchanged)
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command_line.lower() == "look":
             show_room_to_player(player, room)
@@ -244,8 +222,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             handle_chargen_input(player, command_line)
         
     elif player.game_state == "playing":
-        # --- NORMAL GAMEPLAY ---
-        
+        # (Verb execution logic is unchanged)
         parts = command_line.strip().split()
         if not parts:
             if command_line.lower() != "ping":
@@ -259,7 +236,6 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             if not verb_info:
                 player.send_message(f"I don't know the command **'{command}'**.")
             else:
-                # ... (verb execution logic, unchanged) ...
                 verb_name, verb_class_name = verb_info
                 if verb_class_name == "Move":
                     if command in DIRECTION_MAP: args = [DIRECTION_MAP[command]]
@@ -274,49 +250,38 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
                     VerbClass = getattr(module, verb_class_name)
-                    
                     verb_instance = VerbClass(player=player, room=room, args=args)
                     verb_instance.execute()
                 except Exception as e:
                     player.send_message(f"An unexpected error occurred while running **{command}**: {e}")
                     print(f"Full error for command '{command}': {e}")
     
-    # ---
-    # 6. UPDATE ACTIVE PLAYER LIST (with SID and full Player object)
-    # ---
+    # 6. UPDATE ACTIVE PLAYER LIST (unchanged)
     game_state.ACTIVE_PLAYERS[player.name.lower()] = {
         "sid": sid,
-        "player_name": player.name, # Store case-correct name
+        "player_name": player.name, 
         "current_room_id": player.current_room_id,
         "last_seen": time.time(),
-        "player_obj": player # Store the full object for combat
+        "player_obj": player 
     }
 
-    # 7. Persist State Changes
+    # 7. Persist State Changes (unchanged)
     save_game_state(player)
 
-    # 8. Return output to the client
+    # 8. Return output to the client (unchanged)
     return {
         "messages": player.messages,
         "game_state": player.game_state
     }
 
 
+# 9. get_player_object (unchanged)
 def get_player_object(player_name: str) -> Optional[Player]:
-    """
-    Helper function to get a player object.
-    Tries to get the "live" object from ACTIVE_PLAYERS first.
-    Falls back to loading from DB.
-    """
-    # 1. Try to get the live object from game state
     player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
     if player_info and player_info.get("player_obj"):
         return player_info["player_obj"]
-
-    # 2. Fallback: Load from database (for offline players or lookups)
     player_db_data = fetch_player_data(player_name)
     if not player_db_data:
         return None
-    
     player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
     return player

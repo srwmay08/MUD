@@ -6,11 +6,9 @@ import time
 import copy
 from typing import Dict, Any, Optional
 
-# --- UPDATED: Import global state ---
 from mud_backend.core import game_state
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import save_game_state
-# --- NEW: Import our full loot system ---
 from mud_backend.core import loot_system
 
 # (MockConfig and utility functions are unchanged)
@@ -135,16 +133,88 @@ def calculate_defense_strength(defender_name: str, defender_stats: dict, defende
         print(f"DEBUG DS CALC for {defender_name if defender_name else 'entity'} (Armor: {armor_name_display}, Shield: {shield_name_display}): Factors = {' + '.join(ds_components_log)} => Raw DS = {ds_val}")
     return ds_val
 
+# --- (Flavorful Combat Messaging is unchanged) ---
+HIT_MESSAGES = {
+    "player_hit": [
+        "You swing {weapon_display} and strike {defender}!",
+        "Your {weapon_display} finds its mark on {defender}!",
+        "A solid blow from {weapon_display} connects with {defender}!"
+    ],
+    "monster_hit": [
+        "{attacker} swings {weapon_display} and strikes {defender}!",
+        "{attacker}'s {weapon_display} finds its mark on {defender}!",
+        "A solid blow from {attacker}'s {weapon_display} connects with {defender}!"
+    ],
+    "player_crit": [
+        "A devastating blow! Your {weapon_display} slams into {defender} with incredible force!",
+        "You find a vital spot, driving your {weapon_display} deep into {defender}!",
+        "A perfect strike! {defender} reels from the hit!"
+    ],
+    "monster_crit": [
+        "A devastating blow! {attacker}'s {weapon_display} slams into {defender}!",
+        "{attacker} finds a vital spot, driving its {weapon_display} into {defender}!",
+        "A perfect strike! {defender} reels from {attacker}'s hit!"
+    ],
+    "player_miss": [
+        "You swing {weapon_display} at {defender}, but miss.",
+        "{defender} deftly avoids your {weapon_display}!",
+        "Your {weapon_display} whistles through the air, hitting nothing."
+    ],
+    "monster_miss": [
+        "{attacker} swings {weapon_display} at {defender}, but misses.",
+        "{defender} deftly avoids {attacker}'s {weapon_display}!",
+        "{attacker}'s {weapon_display} whistles through the air, hitting nothing."
+    ],
+    "player_fumble": [
+        "You swing wildly and lose your balance, fumbling your attack!",
+        "Your {weapon_display} slips! You completely miss {defender}."
+    ],
+    "monster_fumble": [
+        "{attacker} swings wildly and loses its balance, fumbling the attack!",
+        "{attacker}'s {weapon_display} slips! It completely misses {defender}."
+    ]
+}
+
+def get_flavor_message(key, d100_roll, combat_roll_result):
+    if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
+        if d100_roll >= 95: # Critical Hit
+            return random.choice(HIT_MESSAGES[key.replace("hit", "crit")])
+        else: # Normal Hit
+            return random.choice(HIT_MESSAGES[key])
+    else:
+        if d100_roll <= 5: # Critical Miss (Fumble)
+            return random.choice(HIT_MESSAGES[key.replace("miss", "fumble")])
+        else: # Normal Miss
+            return random.choice(HIT_MESSAGES[key.replace("hit", "miss")])
+            
+def get_roll_descriptor(roll_result):
+    if roll_result > 100:
+        return "a **critical** strike"
+    elif roll_result > 75:
+        return "a **solid** strike"
+    elif roll_result > 50:
+        return "a **good** hit"
+    elif roll_result > 25:
+        return "a glancing hit"
+    elif roll_result > 0:
+        return "a minor hit"
+    elif roll_result > -25:
+        return "a near miss"
+    else:
+        return "a total miss"
+
+# ---
+# UPDATED: resolve_attack
+# ---
+
 def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dict:
-    """
-    Resolves a single attack.
-    Uses 'isinstance(obj, Player)' to differentiate player objects
-    from monster data dictionaries.
-    """
     is_attacker_player = isinstance(attacker, Player)
     attacker_name = attacker.name if is_attacker_player else attacker.get("name", "Creature")
+    
+    # --- FIX: Use .get() for dictionaries ---
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
     attacker_skills = attacker.skills if is_attacker_player else attacker.get("skills", {})
+    # ---
     
     if is_attacker_player:
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand", game_items_global)
@@ -154,8 +224,11 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
 
     is_defender_player = isinstance(defender, Player)
     defender_name = defender.name if is_defender_player else defender.get("name", "Creature")
+
+    # --- FIX: Use .get() for dictionaries ---
     defender_stats = defender.stats if is_defender_player else defender.get("stats", {})
     defender_skills = defender.skills if is_defender_player else defender.get("skills", {})
+    # ---
 
     if is_defender_player:
         defender_armor_data = defender.get_equipped_item_data("torso", game_items_global)
@@ -180,14 +253,24 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     d100_roll = random.randint(1, 100)
     combat_roll_result = (attacker_as - defender_ds) + config.COMBAT_ADVANTAGE_FACTOR + d100_roll
     
-    roll_string = f"  (Roll: {attacker_name} AS {attacker_as} vs {defender_name} DS {defender_ds} -> Result {combat_roll_result})"
+    roll_descriptor = get_roll_descriptor(combat_roll_result)
+    roll_string = f"  (Roll: {roll_descriptor}!)"
     
     if is_attacker_player:
-        weapon_name_self = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
-        weapon_name_other = attacker_weapon_data.get("name", "their fist") if attacker_weapon_data else "their fist"
+        weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
+        msg_key_hit = "player_hit"
+        msg_key_miss = "player_miss"
     else:
-        weapon_name_self = attacker_weapon_data.get("name", "its natural weapons") if attacker_weapon_data else "its natural weapons"
-        weapon_name_other = weapon_name_self
+        weapon_display = attacker_weapon_data.get("name", "its natural weapons") if attacker_weapon_data else "its natural weapons"
+        msg_key_hit = "monster_hit"
+        msg_key_miss = "monster_miss"
+    
+    # Use 'weapon_display' for the new flavor messages
+    msg_vars = {
+        "attacker": attacker_name,
+        "defender": defender_name,
+        "weapon_display": weapon_display
+    }
 
     results = {
         'hit': False, 'damage': 0, 'roll_string': roll_string,
@@ -207,16 +290,26 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         
         damage_bonus_from_roll = max(0, (combat_roll_result - config.COMBAT_HIT_THRESHOLD) // config.COMBAT_DAMAGE_MODIFIER_DIVISOR)
         total_damage = max(1, flat_base_damage_component + damage_bonus_from_roll)
+        
+        if d100_roll >= 95:
+             total_damage = int(total_damage * 1.5) 
+             
         results['damage'] = total_damage
 
-        results['attacker_msg'] = f"You swing your {weapon_name_self} at {defender_name} and HIT for {total_damage} damage!"
-        results['defender_msg'] = f"{attacker_name} swings {weapon_name_other} at you and HITS for {total_damage} damage!"
-        results['broadcast_msg'] = f"{attacker_name} HITS {defender_name} with {weapon_name_other} for {total_damage} damage!"
+        flavor_msg = get_flavor_message(msg_key_hit, d100_roll, combat_roll_result)
+        
+        results['attacker_msg'] = (flavor_msg + f" You hit for **{total_damage}** damage!").format(**msg_vars)
+        results['defender_msg'] = (flavor_msg + f" You are hit for **{total_damage}** damage!").format(**msg_vars)
+        # Broadcast message is for *other* people, so it should be impersonal
+        results['broadcast_msg'] = (flavor_msg + f" It hits for **{total_damage}** damage!").format(**msg_vars)
+
     else:
         results['hit'] = False
-        results['attacker_msg'] = f"You swing your {weapon_name_self} at {defender_name} but MISS!"
-        results['defender_msg'] = f"{attacker_name} swings {weapon_name_other} at you but MISSES!"
-        results['broadcast_msg'] = f"{attacker_name} attacks {defender_name} with {weapon_name_other} but MISSES!"
+        flavor_msg = get_flavor_message(msg_key_miss, d100_roll, combat_roll_result)
+        
+        results['attacker_msg'] = flavor_msg.format(**msg_vars)
+        results['defender_msg'] = flavor_msg.format(**msg_vars)
+        results['broadcast_msg'] = flavor_msg.format(**msg_vars)
 
     return results
 
@@ -226,49 +319,33 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
 # ---
 
 def calculate_roundtime(agility: int) -> float:
-    """
-    Calculates the time (in seconds) until the next action
-    based on Agility.
-    """
-    # Base 6 second roundtime, minus 1 second for every 20 AGI over 50.
-    # Capped at a minimum of 2 seconds.
+    # ... (function unchanged) ...
     agi_bonus_seconds = (agility - 50.0) / 20.0
     return max(2.0, 6.0 - agi_bonus_seconds)
 
 def _find_combatant(entity_id: str) -> Optional[Any]:
-    """
-    Finds a combatant (Player object or *live* monster dict) by their ID.
-    """
-    # 1. Is it a player?
-    player_data = game_state.ACTIVE_PLAYERS.get(entity_id.lower()) # key is lowercase name
+    # ... (function unchanged) ...
+    player_data = game_state.ACTIVE_PLAYERS.get(entity_id.lower())
     if player_data:
-        return player_data.get("player_obj") # Return the full Player object
-
-    # 2. Is it a monster?
+        return player_data.get("player_obj") 
     combat_data = game_state.COMBAT_STATE.get(entity_id)
     if not combat_data:
         return None 
-    
     room_id = combat_data.get("current_room_id")
     if not room_id:
         return None 
-        
     room_data = game_state.GAME_ROOMS.get(room_id)
     if not room_data:
         return None 
-
-    # --- UPDATED: Find *live* monster in room ---
-    # We now find the *live* monster object in the room's list.
-    # This is no longer just a template.
     monster_data = next((obj for obj in room_data.get("objects", []) if obj.get("monster_id") == entity_id), None)
     return monster_data 
 
 def stop_combat(combatant_id: str, target_id: str):
-    """Removes both combatant and target from the COMBAT_STATE."""
+    # ... (function unchanged) ...
     game_state.COMBAT_STATE.pop(combatant_id, None)
     game_state.COMBAT_STATE.pop(target_id, None)
 
-def process_combat_tick(broadcast_callback):
+def process_combat_tick(broadcast_callback, send_to_player_callback):
     """
     This is the main combat loop, run by the global game tick.
     """
@@ -286,18 +363,32 @@ def process_combat_tick(broadcast_callback):
         if not attacker or not defender or not room_id:
             stop_combat(combatant_id, state["target_id"])
             continue
+            
+        is_attacker_player = isinstance(attacker, Player)
+        
+        # --- NEW: PLAYER AUTO-ATTACK FIX ---
+        # If the attacker is a player, their 'attack' command
+        # handles their action. This tick only handles monsters.
+        if is_attacker_player:
+            continue
+        # --- END FIX ---
+            
+        is_defender_player = isinstance(defender, Player)
 
-        # --- Use global item data ---
         attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS) 
         
-        # 5. Broadcast the public result
-        broadcast_callback(room_id, attack_results['broadcast_msg'], "combat")
+        # --- Send messages to correct recipients ---
+        if is_attacker_player:
+            send_to_player_callback(attacker.name, attack_results['attacker_msg'], "combat_self")
+        if is_defender_player:
+            send_to_player_callback(defender.name, attack_results['defender_msg'], "combat_other")
+        
+        broadcast_callback(room_id, attack_results['broadcast_msg'], "combat_broadcast")
         broadcast_callback(room_id, attack_results['roll_string'], "combat_roll")
 
         # 6. Apply damage and check for death
         if attack_results['hit']:
             damage = attack_results['damage']
-            is_defender_player = isinstance(defender, Player)
             
             if is_defender_player:
                 defender.hp -= damage
@@ -311,38 +402,35 @@ def process_combat_tick(broadcast_callback):
                     stop_combat(combatant_id, state["target_id"])
                     continue
                 else:
-                    save_game_state(defender) # Save player's new HP
+                    send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
+                    save_game_state(defender)
             else:
                 # Defender is a monster
                 monster_id = defender.get("monster_id")
                 
-                # --- Get/Set RUNTIME HP ---
                 if monster_id not in game_state.RUNTIME_MONSTER_HP:
                     game_state.RUNTIME_MONSTER_HP[monster_id] = defender.get("max_hp", 1)
                 
                 game_state.RUNTIME_MONSTER_HP[monster_id] -= damage
+                new_hp = game_state.RUNTIME_MONSTER_HP[monster_id]
                 
-                if game_state.RUNTIME_MONSTER_HP[monster_id] <= 0:
+                if new_hp <= 0:
                     broadcast_callback(room_id, f"**The {defender.get('name')} has been DEFEATED!**", "combat_death")
                     
-                    # --- NEW: Loot/Corpse Generation ---
+                    # --- Loot/Corpse Generation ---
                     corpse_data = loot_system.create_corpse_object_data(
-                        defeated_entity_template=defender, # Pass the live monster dict
+                        defeated_entity_template=defender, 
                         defeated_entity_runtime_id=monster_id,
                         game_items_data=game_state.GAME_ITEMS,
                         game_loot_tables=game_state.GAME_LOOT_TABLES,
-                        game_equipment_tables_data={} # TODO: Pass real data
+                        game_equipment_tables_data={} 
                     )
                     
-                    # Add corpse to the room's objects list
                     room_data = game_state.GAME_ROOMS.get(room_id)
                     if room_data:
                         room_data["objects"].append(corpse_data)
-                        # Remove live monster
                         room_data["objects"] = [obj for obj in room_data["objects"] if obj.get("monster_id") != monster_id]
                         broadcast_callback(room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
-                    
-                    # ---
                     
                     game_state.DEFEATED_MONSTERS[monster_id] = {
                         "room_id": room_id,
@@ -352,7 +440,13 @@ def process_combat_tick(broadcast_callback):
                     }
                     stop_combat(combatant_id, state["target_id"])
                     continue
+                else:
+                    if is_attacker_player:
+                         send_to_player_callback(attacker.name, f"(The {defender.get('name')} has {new_hp} HP remaining)", "system_info")
         
         # 7. Calculate and set next action time for the attacker
-        rt_seconds = calculate_roundtime(attacker.stats.get("AGI", 50))
+        # --- FIX: Use .get() for monster stats ---
+        attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
+        rt_seconds = calculate_roundtime(attacker_stats.get("AGI", 50))
+        # ---
         state["next_action_time"] = current_time + rt_seconds
