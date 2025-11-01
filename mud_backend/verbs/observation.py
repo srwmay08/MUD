@@ -4,9 +4,12 @@ from mud_backend.core.db import fetch_player_data
 from mud_backend.core.chargen_handler import format_player_description
 from mud_backend.core.room_handler import show_room_to_player
 import math
+# --- NEW IMPORT ---
+from mud_backend.core import game_state
 
 # --- Class from examine.py ---
 class Examine(BaseVerb):
+    # ... (This class is unchanged) ...
     """
     Handles the 'examine' command.
     Checks a player's Investigation (LOG) skill against hidden object details.
@@ -60,7 +63,6 @@ class Look(BaseVerb):
     def execute(self):
         if not self.args:
             # --- 1. LOOK (at room) ---
-            # This is now handled by the central room_handler
             show_room_to_player(self.player, self.room)
                 
         else:
@@ -81,28 +83,40 @@ class Look(BaseVerb):
                     self.player.send_message(f"You could try: {verb_list}")
                 return 
 
-            # B. Check if target is a player
-            if target_name.lower() == self.player.name.lower():
+            # B. Check if target is 'self'
+            if target_name == self.player.name.lower():
                 self.player.send_message(f"You see **{self.player.name}** (that's you!).")
                 self.player.send_message(format_player_description(self.player.to_dict()))
                 return
-
-            target_player_data = fetch_player_data(target_name)
+                
+            # --- C. (REVISED) Check if target is another player *in the room* ---
+            target_player_state = None
             
-            if target_player_data:
-                self.player.send_message(f"You see **{target_player_data['name']}**.")
-                description = format_player_description(target_player_data)
-                self.player.send_message(description)
-                return
-
-            # C. Not found
+            # Find the player in the global active list
+            for player_name, data in game_state.ACTIVE_PLAYERS.items():
+                if player_name.lower() == target_name:
+                    target_player_state = data
+                    break
+            
+            # Check if they are online AND in the same room
+            if target_player_state and target_player_state["current_room_id"] == self.room.room_id:
+                # They are here! Now fetch their full data for description
+                target_player_data = fetch_player_data(target_name)
+                
+                if target_player_data:
+                    self.player.send_message(f"You see **{target_player_data['name']}**.")
+                    description = format_player_description(target_player_data)
+                    self.player.send_message(description)
+                    return
+            
+            # --- D. Not found ---
             self.player.send_message(f"You do not see a **{target_name}** here.")
 
 # --- Class from investigate.py ---
 class Investigate(Examine):
+    # ... (This class is unchanged) ...
     """
     Handles the 'investigate' command.
     This verb is an alias for 'examine' and uses the same logic.
     """
-    # By inheriting from Examine, it will run the Examine.execute() method
     pass
