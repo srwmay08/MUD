@@ -1,26 +1,35 @@
-# mud_project/game_logic/environment.py
+# mud_backend/core/game_loop/environment.py
 import random
 import datetime
 import pytz 
 
+# --- REFACTORED IMPORTS ---
+# We no longer need a root 'config' file.
+# We will create a mock config here for default values.
+
+class MockConfig:
+    DEBUG_MODE = True
+    TIME_CHANGE_INTERVAL_TICKS = 20
+    WEATHER_CHANGE_INTERVAL_TICKS = 15
+    WEATHER_SEVERITY_ORDER = ["clear", "light clouds", "overcast", "fog", 
+                              "light rain", "rain", "heavy rain", "storm"]
+    WEATHER_STAY_CLEAR_BASE_CHANCE = 0.65
+    WEATHER_WORSEN_FROM_CLEAR_START_CHANCE = 0.10
+    WEATHER_WORSEN_ESCALATION = 0.03
+    WEATHER_MAX_WORSEN_FROM_CLEAR_CHANCE = 0.75
+    WEATHER_IMPROVE_BASE_CHANCE = 0.50
+    WEATHER_STAY_SAME_BAD_CHANCE = 0.40
+config = MockConfig()
+
 try:
-    import config
-except ImportError as e:
-    print(f"ERROR (environment.py): Failed to import 'config'. {e}")
-    # Basic fallback for essential attributes if config fails to load
-    class MockConfig:
-        DEBUG_MODE = True
-        TIME_CHANGE_INTERVAL_TICKS = 20
-        WEATHER_CHANGE_INTERVAL_TICKS = 15
-        WEATHER_SEVERITY_ORDER = ["clear", "light clouds", "overcast", "fog", 
-                                  "light rain", "rain", "heavy rain", "storm"]
-        WEATHER_STAY_CLEAR_BASE_CHANCE = 0.65
-        WEATHER_WORSEN_FROM_CLEAR_START_CHANCE = 0.10
-        WEATHER_WORSEN_ESCALATION = 0.03
-        WEATHER_MAX_WORSEN_FROM_CLEAR_CHANCE = 0.75
-        WEATHER_IMPROVE_BASE_CHANCE = 0.50
-        WEATHER_STAY_SAME_BAD_CHANCE = 0.40
-    config = MockConfig()
+    from mud_backend.core import game_state
+except ImportError:
+    print("ERROR (environment.py): Failed to import 'game_state'. Using mock.")
+    class MockGameState:
+        GAME_ROOMS = {}
+    game_state = MockGameState()
+# --- END REFACTORED IMPORTS ---
+
 
 # --- Module-level state for environment ---
 current_time_of_day = "day"
@@ -95,7 +104,15 @@ def get_description_for_room(room_data):
     else: # Indoors or shielded underground
         return base_description
 
-def update_environment_state(game_tick_counter, active_players_dict, game_rooms_dict, log_time_prefix, broadcast_callback):
+def update_environment_state(game_tick_counter, 
+                             active_players_dict, 
+                             log_time_prefix, 
+                             broadcast_callback):
+    
+    # --- Get rooms from global state ---
+    game_rooms_dict = game_state.GAME_ROOMS
+    # ---
+    
     global current_time_of_day, current_weather, consecutive_clear_checks
 
     time_change_interval = getattr(config, 'TIME_CHANGE_INTERVAL_TICKS', 20) 
@@ -132,9 +149,7 @@ def update_environment_state(game_tick_counter, active_players_dict, game_rooms_
             current_worsen_chance = min(max_worsen_chance, worsen_from_clear_start + (consecutive_clear_checks * worsen_escalation))
             
             if roll < current_worsen_chance: # Worsen from clear
-                # Typically worsens by one step, but could be more dramatic occasionally
                 if len(WEATHER_ORDER) > 1:
-                    # Pick from the next 1 or 2 worse states
                     worsen_options = WEATHER_ORDER[1:min(3, len(WEATHER_ORDER))] 
                     new_weather_candidate = random.choice(worsen_options) if worsen_options else WEATHER_ORDER[1]
                 consecutive_clear_checks = 0 
@@ -165,7 +180,6 @@ def update_environment_state(game_tick_counter, active_players_dict, game_rooms_
     # --- Broadcast Ambient Messages ---
     time_message_str = ""
     if time_changed_this_tick:
-        # More descriptive time changes
         if current_time_of_day == "dusk": time_message_str = "The sun begins its descent, painting the sky with hues of orange and purple. Evening approaches."
         elif current_time_of_day == "night": time_message_str = "Darkness blankets the land as night takes hold."
         elif current_time_of_day == "dawn": time_message_str = "The first faint light of dawn breaks on the eastern horizon."
@@ -173,7 +187,6 @@ def update_environment_state(game_tick_counter, active_players_dict, game_rooms_
     
     weather_message_str = ""
     if weather_changed_this_tick:
-        # More descriptive weather changes
         if current_weather == "clear": weather_message_str = "The skies clear, revealing brilliant sunshine." if current_time_of_day == "day" else "The skies clear, revealing a canopy of stars."
         elif current_weather == "light clouds": weather_message_str = "A few wispy clouds drift across the sky."
         elif current_weather == "overcast": weather_message_str = "The sky becomes overcast with a thick blanket of grey clouds."
@@ -192,10 +205,10 @@ def update_environment_state(game_tick_counter, active_players_dict, game_rooms_
         for p_obj in active_players_dict.values():
             p_room_data = game_rooms_dict.get(p_obj.current_room_id)
             if p_room_data and is_room_exposed(p_room_data):
-                if time_message_str: # Send as separate messages for clarity
-                    p_obj.add_message(time_message_str, "ambient_time")
+                if time_message_str: 
+                    p_obj.send_message(time_message_str)
                 if weather_message_str:
-                    p_obj.add_message(weather_message_str, "ambient_weather")
+                    p_obj.send_message(weather_message_str)
 
 def get_current_time_of_day_str():
     return current_time_of_day

@@ -13,10 +13,16 @@ from mud_backend.core import game_state
 from mud_backend.core import db
 # ---
 
-# --- CRITICAL FIX 2: Tell Flask where the 'templates' folder is ---
+# --- CRITICAL FIX 2: Define file paths ---
+# Path to the 'templates' folder
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 
-app = Flask(__name__, template_folder=template_dir)
+# --- NEW: Path to the 'static' folder ---
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'static'))
+# --- END NEW ---
+
+# --- UPDATED: Tell Flask about both folders ---
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 # ---------------------------------------------------------
 
 
@@ -37,37 +43,25 @@ def handle_command():
         if not player_name:
             return jsonify({"messages": ["Error: No player name received from client."]}), 400
         
-        # NOTE: "What?" is now handled inside execute_command
-        # to allow "ping" commands to be silent.
-
-        # --- THIS IS THE CHANGE ---
-        # execute_command now returns a dictionary
         result_data = execute_command(player_name, command_line)
-        # ---------------------------
 
-        # Send the game's response AND the player's current game state
         return jsonify({
             "messages": result_data["messages"],
             "game_state": result_data["game_state"]
         })
         
     except Exception as e:
-        # Send any errors back to the frontend
         return jsonify({"messages": [f"Server Error: {str(e)}"]}), 500
 
 if __name__ == "__main__":
-    # --- NEW: LOAD THE WORLD STATE ---
-    # We must initialize the database connection
-    # and load all rooms into the cache *before* running the app.
     print("[SERVER START] Initializing database...")
     database = db.get_db()
-    if database:
+    
+    if database is not None:
         print("[SERVER START] Loading all rooms into game state cache...")
         game_state.GAME_ROOMS = db.fetch_all_rooms()
         print(f"[SERVER START] Successfully cached {len(game_state.GAME_ROOMS)} rooms.")
     else:
         print("[SERVER START] ERROR: Could not connect to database. Server may not function.")
-    # ---
     
-    # Run the web server on http://localhost:8000
     app.run(port=8000, debug=True, use_reloader=False)
