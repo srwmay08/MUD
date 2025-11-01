@@ -2,16 +2,15 @@
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 
-# --- Import our new game state ---
+# --- NEW, CLEAN IMPORTS ---
 from mud_backend.core.game_state import RUNTIME_MONSTER_HP, DEFEATED_MONSTERS
+from mud_backend.core import combat_system
+from mud_backend.core import loot_system
+# ---
 
-# --- Import the legacy code ---
-# (Assuming combat.py and loot_handler.py are in mud_backend/core/legacy/)
-from mud_backend.core.legacy import combat
-from mud_backend.core.legacy import loot_handler
-
-# --- Mock data required by the legacy files ---
-# We need to provide the global data these files expect
+# --- Mock data required by the new systems ---
+# Eventually, this data should be loaded globally,
+# but for now, the verb can provide it.
 GAME_ITEMS = {
     "pelt_ruined": {
         "name": "a ruined pelt",
@@ -31,14 +30,13 @@ GAME_LOOT_TABLES = {
 GAME_EQUIPMENT_TABLES = {}
 # --- End Mock Data ---
 
-# --- Monkey-patch the global data into the legacy modules ---
-# This is how we give them the data they need
-loot_handler.GAME_LOOT_TABLES = GAME_LOOT_TABLES
-# (We'd also patch GAME_ITEMS once we have them)
-
 
 class Attack(BaseVerb):
-    """Handles the 'attack' command."""
+    """
+    Handles the 'attack' command.
+    This verb acts as a controller, calling on combat_system and loot_system
+    to perform game logic, and updating core.game_state.
+    """
     
     def execute(self):
         if not self.args:
@@ -48,6 +46,7 @@ class Attack(BaseVerb):
         target_name = " ".join(self.args).lower()
         
         # 1. Find the target in the room
+        # We must find the *actual object data* from the room
         target_monster_data = next((obj for obj in self.room.objects 
                                     if obj['name'].lower() == target_name and obj.get("is_monster")), None)
 
@@ -60,7 +59,7 @@ class Attack(BaseVerb):
             self.player.send_message("That creature cannot be attacked.")
             return
 
-        # 2. Check if monster is already dead
+        # 2. Check if monster is already dead (from central state)
         if monster_id in DEFEATED_MONSTERS:
             self.player.send_message(f"The {target_monster_data['name']} is already dead.")
             return
@@ -71,63 +70,84 @@ class Attack(BaseVerb):
             
         current_hp = RUNTIME_MONSTER_HP[monster_id]
         
-        # 4. Call the legacy combat function
-        # We pass our Player object and the monster's data dictionary
-        combat_results = combat.handle_player_attack(
-            player=self.player,
-            target_data=target_monster_data,
-            target_type="monster",
-            target_name_raw_from_player=target_name,
-            game_items_global=GAME_ITEMS,
-            monster_runtime_id=monster_id
+        # ---
+        # 4. PLAYER ATTACKS MONSTER
+        # ---
+        attack_results = combat_system.resolve_attack(
+            attacker=self.player,
+            defender=target_monster_data,
+            game_items_global=GAME_ITEMS
         )
-
-        # 5. Process the results from the player's attack
-        # The combat function modifies RUNTIME_MONSTER_HP directly
-        new_hp = RUNTIME_MONSTER_HP.get(monster_id, 0)
         
-        if combat_results.get("defeated"):
-            self.player.send_message(f"You have defeated the {target_monster_data['name']}!")
-            DEFEATED_MONSTERS[monster_id] = time.time()
-            
-            # --- Loot Integration ---
-            # Create a corpse object
-            corpse_data = loot_handler.create_corpse_object_data(
-                defeated_entity_template=target_monster_data,
-                defeated_entity_runtime_id=monster_id,
-                game_items_data=GAME_ITEMS,
-                game_equipment_tables_data=GAME_EQUIPMENT_TABLES
-            )
-            
-            # Add corpse to the room's objects list
-            # Note: This is in-memory only!
-            self.room.objects.append(corpse_data)
-            # We also need to remove the monster object
-            self.room.objects = [obj for obj in self.room.objects if obj.get("monster_id") != monster_id]
-            
-            self.player.send_message(f"The corpse of a {target_monster_data['name']} falls to the ground.")
-            # We would need to save self.room here, but that's a later step
-            
-        else:
-            # Monster is still alive, update its HP in our state
-            RUNTIME_MONSTER_HP[monster_id] = new_hp
-            self.player.send_message(f"The {target_monster_data['name']} has {new_hp} HP remaining.")
+        # Send messages from the attack
+        self.player.send_message(attack_results['attacker_msg'])
+        self.player.send_message(attack_results['roll_string'])
+        # We would also send broadcast_msg to the room here
 
-        # 6. Monster Retaliation (Simple version)
-        if self.player.hp > 0 and not combat_results.get("defeated"):
-            self.player.send_message(f"The {target_monster_data['name']} attacks you back!")
+        if attack_results['hit']:
+            # 5. Process damage and check for defeat
+            new_hp = current_hp - attack_results['damage']
             
-            # Call the *other* combat function
-            monster_attack_results = combat.handle_entity_attack(
-                attacker_entity_data=target_monster_data,
-                attacker_entity_type="monster",
-                attacker_runtime_id=monster_id,
-                defender_player=self.player,
-                game_items_global=GAME_ITEMS
-            )
+            if new_hp <= 0:
+                # --- MONSTER IS DEFEATED ---
+                self.player.send_message(f"You have defeated the {target_monster_data['name']}!")
+                
+                # Update central state
+                RUNTIME_MONSTER_HP[monster_id] = 0
+                DEFEATED_MONSTERS[monster_id] = time.time()
+                
+                # --- Loot Integration ---
+                corpse_data = loot_system.create_corpse_object_data(
+                    defeated_entity_template=target_monster_data,
+                    defeated_entity_runtime_id=monster_id,
+                    game_items_data=GAME_ITEMS,
+                    game_loot_tables=GAME_LOOT_TABLES,
+                    game_equipment_tables_data=GAME_EQUIPMENT_TABLES
+                )
+                
+                # Add corpse to the room's objects list (in-memory)
+                self.room.objects.append(corpse_data)
+                
+                # Remove the live monster from the room's objects list (in-memory)
+                self.room.objects = [obj for obj in self.room.objects if obj.get("monster_id") != monster_id]
+                
+                self.player.send_message(f"The {corpse_data['name']} falls to the ground.")
+                return # Stop combat
+                
+            else:
+                # Monster is still alive, update its HP in central state
+                RUNTIME_MONSTER_HP[monster_id] = new_hp
+                self.player.send_message(f"The {target_monster_data['name']} has {new_hp} HP remaining.")
+        
+        # ---
+        # 6. MONSTER RETALIATES (if not dead)
+        # ---
+        if self.player.hp <= 0:
+             return # Player was already dead?
+             
+        self.player.send_message(f"The {target_monster_data['name']} attacks you back!")
+        
+        retaliation_results = combat_system.resolve_attack(
+            attacker=target_monster_data,
+            defender=self.player,
+            game_items_global=GAME_ITEMS
+        )
+        
+        # Send messages to the player
+        self.player.send_message(retaliation_results['defender_msg'])
+        self.player.send_message(retaliation_results['roll_string'])
+
+        if retaliation_results['hit']:
+            # 7. Process damage to player
+            self.player.hp -= retaliation_results['damage']
             
-            if monster_attack_results.get("defender_defeated"):
+            if self.player.hp <= 0:
+                # --- PLAYER IS DEFEATED ---
+                self.player.hp = 0
                 self.player.send_message("You have been defeated!")
-                # Handle player death logic (e.g., move to death room)
-                self.player.current_room_id = "town_square" # Send back to town for now
-                self.player.hp = 1 # Heal 1 HP
+                # Handle player death logic
+                self.player.current_room_id = "town_square" # Send back to town
+                self.player.hp = 1 # Heal 1 HP so they aren't dead on arrival
+                # We would also need to show the new room, but we'll skip for now
+            else:
+                self.player.send_message(f"You have {self.player.hp}/{self.player.max_hp} HP remaining.")

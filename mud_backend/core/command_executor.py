@@ -1,6 +1,7 @@
 # core/command_executor.py
 import importlib.util
 import os
+# --- UPDATED TYPING ---
 from typing import List, Tuple, Dict, Any 
 
 from mud_backend.core.game_objects import Player, Room
@@ -11,56 +12,61 @@ from mud_backend.core.chargen_handler import (
     do_initial_stat_roll
 )
 from mud_backend.core.room_handler import show_room_to_player
-
-# --- Import our new game state ---
-# This ensures the in-memory dictionaries are initialized
 from mud_backend.core import game_state
 
-# This maps all player commands to the correct verb file.
-VERB_ALIASES = {
-    # Movement Verbs
-    "move": "move",
-    "go": "move",
-    "n": "move",
-    "north": "move",
-    "s": "move",
-    "south": "move",
-    "e": "move",
-    "east": "move",
-    "w": "move",
-    "west": "move",
-    "ne": "move",
-    "northeast": "move",
-    "nw": "move",
-    "northwest": "move",
-    "se": "move",
-    "southeast": "move",
-    "sw": "move",
-    "southwest": "move",
+# ---
+# NEW VERB_ALIASES MAPPING
+# ---
+# This dictionary now maps a command string to a TUPLE:
+# (filename, ClassName)
+# This allows us to group multiple classes in one file.
+#
+VERB_ALIASES: Dict[str, Tuple[str, str]] = {
+    # Movement Verbs (all in 'movement.py')
+    "move": ("movement", "Move"),
+    "go": ("movement", "Move"),
+    "n": ("movement", "Move"),
+    "north": ("movement", "Move"),
+    "s": ("movement", "Move"),
+    "south": ("movement", "Move"),
+    "e": ("movement", "Move"),
+    "east": ("movement", "Move"),
+    "w": ("movement", "Move"),
+    "west": ("movement", "Move"),
+    "ne": ("movement", "Move"),
+    "northeast": ("movement", "Move"),
+    "nw": ("movement", "Move"),
+    "northwest": ("movement", "Move"),
+    "se": ("movement", "Move"),
+    "southeast": ("movement", "Move"),
+    "sw": ("movement", "Move"),
+    "southwest": ("movement", "Move"),
     
     # Object Interaction Verbs
-    "enter": "enter",
-    "climb": "climb",
+    "enter": ("movement", "Enter"),
+    "climb": ("movement", "Climb"),
     
-    # --- NEW VERBS ---
-    "examine": "examine",
-    "investigate": "investigate",
-    "search": "investigate", # Alias for investigate
-    "attack": "attack",      # <-- NEW
+    # Observation Verbs (all in 'observation.py')
+    "examine": ("observation", "Examine"),
+    "investigate": ("observation", "Investigate"),
+    "search": ("observation", "Investigate"), # Alias
+    "look": ("observation", "Look"),
+
+    # Combat Verbs
+    "attack": ("attack", "Attack"),
     
     # Exit Verbs
-    "exit": "exit",
-    "out": "exit",
+    "exit": ("movement", "Exit"),
+    "out": ("movement", "Exit"),
     
     # Other Verbs
-    "look": "look",
-    "say": "say",
+    "say": ("say", "Say"),
 }
-# This map is used to convert "n" to "north"
+
+# This map is still needed for the 'move' verb logic
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
-    # Add full names so they map to themselves
     "north": "north", "south": "south", "east": "east", "west": "west",
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
@@ -71,6 +77,8 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     Returns a dictionary with messages and game state.
     """
     
+    # ... (Steps 1, 2, 3: Fetching Player, Room, and filtering monsters are unchanged) ...
+    
     # 1. Fetch Player Data
     player_db_data = fetch_player_data(player_name)
     
@@ -80,7 +88,6 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         player = Player(player_name, start_room_id, {})
         player.game_state = "chargen"
         player.chargen_step = 0
-        # --- NEW: Set default HP for new players ---
         player.hp = 100
         player.max_hp = 100
         player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
@@ -96,28 +103,23 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         db_data=room_db_data
     )
 
-    # --- NEW: Filter defeated monsters from room ---
-    # Check for defeated monsters in this room
-    # And remove them from the room object *before* the verb runs
+    # Filter defeated monsters
     active_monsters = []
     for obj in room.objects:
         monster_id = obj.get("monster_id")
         if monster_id:
             if monster_id in game_state.DEFEATED_MONSTERS:
-                # Monster is dead, don't add it
                 pass
             else:
-                # Monster is alive, add it
                 active_monsters.append(obj)
         else:
-            # Not a monster, just add it
             active_monsters.append(obj)
     room.objects = active_monsters
-    # --- END NEW FILTER ---
 
     # 4. --- CHECK GAME STATE ---
     
-    if player.game_state == "chargen":
+    if player.game_state == "chargEN":
+        # ... (Chargen logic is unchanged) ...
         if player.chargen_step == 0 and command_line.lower() == "look":
             show_room_to_player(player, room)
             do_initial_stat_roll(player) 
@@ -137,54 +139,68 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         command = parts[0].lower()
         args = parts[1:]
 
-        # --- UPDATED: ALIAS-BASED VERB LOGIC ---
+        # ---
+        # UPDATED VERB LOADING LOGIC
+        # ---
         
-        # Find the verb file (e.g., "n" -> "move", "go" -> "move")
-        verb_name = VERB_ALIASES.get(command)
+        # 2. Find the verb file and class name from the new mapping
+        verb_info = VERB_ALIASES.get(command)
         
-        # Special argument handling for aliased verbs
-        if verb_name == "move":
-            if command in DIRECTION_MAP:
-                # Command was "n" or "north". Set args to ["north"]
-                args = [DIRECTION_MAP[command]]
-            else:
-                # Command was "move" or "go". Args are already set (e.g., ["door"] or ["n"])
-                pass 
-        elif verb_name == "exit":
-            if command == "out":
-                # Command was "out". Set args to empty list.
-                args = []
-            else:
-                # Command was "exit". Args are already set (e.g., [] or ["door"])
-                pass
-        # --- END UPDATED LOGIC ---
-
-        # 2. Locate and Import the Verb File
-        if not verb_name:
+        if not verb_info:
             player.send_message(f"I don't know the command **'{command}'**.")
         else:
+            # Unpack the tuple
+            verb_name, verb_class_name = verb_info
+        
+            # 3. Special argument handling (THIS LOGIC IS UPDATED)
+            # We check the ClassName, not the filename
+            if verb_class_name == "Move":
+                if command in DIRECTION_MAP:
+                    # Command was "n" or "north". Set args to ["north"]
+                    args = [DIRECTION_MAP[command]]
+                else:
+                    # Command was "move" or "go". Args are already set
+                    pass 
+            elif verb_class_name == "Exit":
+                if command == "out":
+                    # Command was "out". Set args to empty list.
+                    args = []
+                else:
+                    # Command was "exit". Args are already set
+                    pass
+            # --- END UPDATED LOGIC ---
+
+            # 4. Locate and Import the Verb File
             verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
             
             try:
                 verb_module_name = f"mud_backend.verbs.{verb_name}"
                 spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
                 
+                if spec is None:
+                     raise FileNotFoundError(f"Verb file not found at {verb_file_path}")
+                
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
 
-                verb_class_name = verb_name.capitalize()
+                # 5. Get the class from the module
+                # We use the specific verb_class_name from our alias map
                 VerbClass = getattr(module, verb_class_name)
                 
-                # 4. Instantiate and Execute the Verb
+                # 6. Instantiate and Execute the Verb
                 verb_instance = VerbClass(player=player, room=room, args=args)
                 verb_instance.execute()
                 
+            except FileNotFoundError:
+                 player.send_message(f"Server Error: The verb file '{verb_name}.py' is missing.")
             except AttributeError:
                 player.send_message(f"Error: The file '{verb_name}.py' is missing the class '{verb_class_name}'.")
             except NotImplementedError as e:
                 player.send_message(f"Error in '{verb_name}': {e}")
             except Exception as e:
-                player.send_message(f"An unexpected error occurred while running **{verb_name}**: {e}")
+                player.send_message(f"An unexpected error occurred while running **{command}**: {e}")
+                # Log the full error for debugging
+                print(f"Full error for command '{command}': {e}")
     
     # 5. Persist State Changes
     save_game_state(player)
@@ -197,7 +213,7 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
 
 
 def get_player_object(player_name: str) -> Player:
-    """Helper function to load the player object without executing a command."""
+    # ... (This function is unchanged) ...
     player_db_data = fetch_player_data(player_name)
     if not player_db_data:
         return Player(player_name, "void") 
