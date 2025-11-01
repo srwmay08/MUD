@@ -6,34 +6,22 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.game_state import RUNTIME_MONSTER_HP, DEFEATED_MONSTERS
 
 # --- Import the legacy code ---
-# We must place combat.py and loot_handler.py inside a folder
-# that Python can see. Let's assume we place them in a new
-# 'mud_backend/legacy/' folder.
-#
-# To make this work, you must:
-# 1. Create a folder: `mud_backend/legacy/`
-# 2. Place `combat.py`, `loot_handler.py`, etc., inside it.
-# 3. Create an empty `mud_backend/legacy/__init__.py` file.
-#
-# For now, I will assume these files are in `mud_backend/core/`
-# for simplicity, but a `legacy` folder is cleaner.
-#
-# Let's adjust the imports in the legacy files to be relative
-# (This is tricky, a better way is to make them part of the package)
-
-# --- A Better Way: Let's treat them as part of our package ---
-# 1. Place `combat.py`, `loot_handler.py`, `environment.py`, 
-#    and `monster_respawn.py` into `mud_backend/core/`
-#
-# 2. We will have to edit combat.py to import Player from game_objects
-#    (I'll skip that for now and assume the MOCK player is fine)
-
+# (Assuming combat.py and loot_handler.py are in mud_backend/core/legacy/)
 from mud_backend.core.legacy import combat
 from mud_backend.core.legacy import loot_handler
 
 # --- Mock data required by the legacy files ---
 # We need to provide the global data these files expect
-GAME_ITEMS = {} # We'll need to create this later
+GAME_ITEMS = {
+    "pelt_ruined": {
+        "name": "a ruined pelt",
+        "description": "A worthless, ruined pelt."
+    },
+    "monster_claw": {
+        "name": "a monster claw",
+        "description": "A sharp, wicked-looking claw."
+    }
+}
 GAME_LOOT_TABLES = {
     "well_monster_loot": [
         {"item_id": "pelt_ruined", "chance": 0.5, "quantity": 1},
@@ -94,8 +82,9 @@ class Attack(BaseVerb):
             monster_runtime_id=monster_id
         )
 
-        # 5. Process the results
-        new_hp = RUNTIME_MONSTER_HP.get(monster_id)
+        # 5. Process the results from the player's attack
+        # The combat function modifies RUNTIME_MONSTER_HP directly
+        new_hp = RUNTIME_MONSTER_HP.get(monster_id, 0)
         
         if combat_results.get("defeated"):
             self.player.send_message(f"You have defeated the {target_monster_data['name']}!")
@@ -106,18 +95,18 @@ class Attack(BaseVerb):
             corpse_data = loot_handler.create_corpse_object_data(
                 defeated_entity_template=target_monster_data,
                 defeated_entity_runtime_id=monster_id,
-                game_items_data=GAME_ITEMS, # Still empty, but passed
+                game_items_data=GAME_ITEMS,
                 game_equipment_tables_data=GAME_EQUIPMENT_TABLES
             )
             
             # Add corpse to the room's objects list
-            # Note: This is in-memory only! We need to save the room state.
+            # Note: This is in-memory only!
             self.room.objects.append(corpse_data)
             # We also need to remove the monster object
             self.room.objects = [obj for obj in self.room.objects if obj.get("monster_id") != monster_id]
             
             self.player.send_message(f"The corpse of a {target_monster_data['name']} falls to the ground.")
-            # We would need to save self.room here
+            # We would need to save self.room here, but that's a later step
             
         else:
             # Monster is still alive, update its HP in our state
@@ -137,7 +126,8 @@ class Attack(BaseVerb):
                 game_items_global=GAME_ITEMS
             )
             
-            # (We would process player death here)
             if monster_attack_results.get("defender_defeated"):
                 self.player.send_message("You have been defeated!")
-                # (Handle player death logic)
+                # Handle player death logic (e.g., move to death room)
+                self.player.current_room_id = "town_square" # Send back to town for now
+                self.player.hp = 1 # Heal 1 HP

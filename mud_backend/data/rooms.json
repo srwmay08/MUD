@@ -69,7 +69,7 @@
                 "name": "stirring monster",
                 "description": "A mass of shadows and wet fur, it huffs angrily. It doesn't seem to have noticed you yet.",
                 "verbs": ["look", "attack"],
-                "perception_dc": 75,
+                "perception_dc": 15,
                 
                 "is_monster": true,
                 "monster_id": "well_bottom_stirring_monster",
