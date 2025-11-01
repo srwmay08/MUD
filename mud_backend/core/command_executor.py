@@ -18,7 +18,6 @@ from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core import game_state
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
-from mud_backend.core import combat_system # monster_respawn needs this
 # ---
 
 # This maps all player commands to the correct verb file.
@@ -39,7 +38,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "nw": ("movement", "Move"),
     "northwest": ("movement", "Move"),
     "se": ("movement", "Move"),
-    "southeast": ("movement", "Move"),
+    "southeast": ("movement",V "Move"),
     "sw": ("movement", "Move"),
     "southwest": ("movement", "Move"),
     
@@ -63,8 +62,10 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Other Verbs
     "say": ("say", "Say"),
     
-    # --- NEW PING VERB ---
-    "ping": ("ping", "Ping"),
+    # --- UPDATED TICK VERB ---
+    # The client still sends "ping", but it now runs the "Tick" class
+    # from the "tick.py" file.
+    "ping": ("tick", "Tick"),
 }
 
 # This map is used to convert "n" to "north"
@@ -78,7 +79,7 @@ DIRECTION_MAP = {
 
 
 # ---
-# NEW FUNCTION: THE GAME TICK
+# UPDATED FUNCTION: THE GAME TICK
 # ---
 def _check_and_run_game_tick(current_player: Player):
     """
@@ -93,46 +94,39 @@ def _check_and_run_game_tick(current_player: Player):
         # --- IT'S TIME TO TICK! ---
         game_state.LAST_GAME_TICK_TIME = current_time
         
-        # We don't have a full active player list, but we can
-        # create a temporary one with just the player who triggered the tick.
-        # This allows environment to send them messages.
-        # A more advanced server would track all active players.
+        # --- INCREMENT THE GLOBAL COUNTER ---
+        game_state.GAME_TICK_COUNTER += 1
+        
         temp_active_players = {current_player.name: current_player}
         
-        # Create a log prefix
+        # --- Add counter to log ---
         log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-        log_prefix = f"{log_time} - GAME_TICK"
+        log_prefix = f"{log_time} - GAME_TICK ({game_state.GAME_TICK_COUNTER})" 
         print(f"{log_prefix}: Running global tick...")
 
         # 1. Update Environment (Time/Weather)
-        # Note: We create a dummy broadcast_callback for now
-        def broadcast_to_room(room_id, message, type):
-            # In a real setup, this would find all players in room_id
-            # and send them the message.
+        def broadcast_to_room(room_id, message, msg_type):
             if current_player.current_room_id == room_id:
                 current_player.send_message(message)
 
-        # TODO: game_tick_counter isn't tracked, just pass 1
         environment.update_environment_state(
-            game_tick_counter=1,
+            game_tick_counter=game_state.GAME_TICK_COUNTER, # <-- Pass the real counter
             active_players_dict=temp_active_players,
             log_time_prefix=log_prefix,
             broadcast_callback=broadcast_to_room
         )
 
         # 2. Update Monster Respawns
-        # TODO: Pass real global data
         monster_respawn.process_respawns(
             log_time_prefix=log_prefix,
             current_time_utc=datetime.datetime.now(datetime.timezone.utc),
-            tracked_defeated_entities_dict=game_state.DEFEATED_MONSTERS, # Using this as a proxy
-            game_rooms_dict=game_state.GAME_ROOMS,
-            game_npcs_dict={}, # TODO: Pass real data
-            game_monster_templates_dict={}, # TODO: Pass real data
             broadcast_callback=broadcast_to_room,
-            recently_defeated_targets_dict=combat_system.RUNTIME_ENTITY_HP, # Needs a better name
-            game_equipment_tables_global={}, # TODO: Pass real data
-            game_items_global={} # TODO: Pass real data
+            
+            # TODO: Pass real global data
+            game_npcs_dict={}, 
+            game_monster_templates_dict={}, 
+            game_equipment_tables_global={}, 
+            game_items_global={} 
         )
         
         print(f"{log_prefix}: Global tick complete.")
@@ -163,9 +157,6 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
     # ---
     # 3. RUN THE GAME TICK
     # ---
-    # This runs *before* the player's command.
-    # It checks the global timer and runs all tick logic if needed.
-    # We pass the current player so they can receive ambient messages.
     _check_and_run_game_tick(player)
     # ---
 
@@ -221,28 +212,21 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         
         command = parts[0].lower()
         args = parts[1:]
-
-        # --- UPDATED: ALIAS-BASED VERB LOGIC ---
-        
-        # Find the verb file and class name from the new mapping
+ 
         verb_info = VERB_ALIASES.get(command)
         
         if not verb_info:
             player.send_message(f"I don't know the command **'{command}'**.")
         else:
-            # Unpack the tuple
             verb_name, verb_class_name = verb_info
         
-            # Special argument handling
             if verb_class_name == "Move":
                 if command in DIRECTION_MAP:
                     args = [DIRECTION_MAP[command]]
             elif verb_class_name == "Exit":
                 if command == "out":
                     args = []
-            # --- END UPDATED LOGIC ---
 
-            # 4. Locate and Import the Verb File
             verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
             
             try:
@@ -268,7 +252,6 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
                 player.send_message(f"Error in '{verb_name}': {e}")
             except Exception as e:
                 player.send_message(f"An unexpected error occurred while running **{command}**: {e}")
-                # Log the full error for debugging
                 print(f"Full error for command '{command}': {e}")
     
     # 6. Persist State Changes

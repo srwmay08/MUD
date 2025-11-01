@@ -11,8 +11,6 @@ RUNTIME_MONSTER_HP = {}
 # Value: timestamp of death
 DEFEATED_MONSTERS = {}
 
-# --- NEW GLOBAL STATE ---
-
 # Cache for all rooms, loaded from DB at startup.
 # This is our "live world."
 # Key: room_id, Value: room_data dictionary
@@ -22,4 +20,7 @@ GAME_ROOMS = {}
 LAST_GAME_TICK_TIME = time.time()
 
 # How many seconds must pass before the loop runs again
-TICK_INTERVAL_SECONDS = 10
+TICK_INTERVAL_SECONDS = 10 
+
+# --- NEW: Global tick counter ---
+GAME_TICK_COUNTER = 0

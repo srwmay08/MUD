@@ -1,4 +1,4 @@
-# mud_project/game_logic/monster_respawn.py
+# mud_backend/core/game_loop/monster_respawn.py
 import random
 import time
 import datetime 
@@ -7,19 +7,29 @@ import copy # For deepcopying templates
 
 try:
     import config
-    # --- UPDATED IMPORT ---
-    from mud_backend.core import combat_system as combat 
-    # (We also need to import the new global state)
-    from mud_backend.core import game_state
+    # --- UPDATED IMPORTS ---
+    # We no longer import combat, we import the global state
+    from mud_backend.core import game_state 
 except ImportError as e:
-    # ... (mock config) ...
+    # ... (your existing mock config) ...
+    class MockConfig:
+        DEBUG_MODE = True
+        EQUIPMENT_SLOTS = {"torso": "Torso", "mainhand": "Main Hand", "offhand": "Off Hand"}
+        NPC_DEFAULT_RESPAWN_CHANCE = 0.2
+    config = MockConfig()
+    
+    # --- ADD MOCK GAME_STATE FOR FALLBACK ---
+    class MockGameState:
+        RUNTIME_MONSTER_HP = {}
+        DEFEATED_MONSTERS = {}
+        GAME_ROOMS = {}
+    game_state = MockGameState()
     pass
 
 
 def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_equipment_tables, game_items):
     """
     Helper to re-initialize the 'equipped' dict for a respawning NPC or Monster.
-    This is similar to the logic in data_loader but applied to an existing runtime_data structure.
     """
     if not entity_runtime_data or not entity_template:
         return
@@ -45,35 +55,40 @@ def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_eq
                     elif config.DEBUG_MODE: print(f"DEBUG RESPAWN_EQUIP_WARN: Item '{item_id_to_equip}' cannot go in slot '{slot_key_in_table}' for '{entity_template.get('name')}'.")
                 elif config.DEBUG_MODE: print(f"DEBUG RESPAWN_EQUIP_WARN: Item '{item_id_to_equip}' from table '{equipment_table_id}' not in GAME_ITEMS for '{entity_template.get('name')}'.")
         elif config.DEBUG_MODE: print(f"DEBUG RESPAWN_EQUIP_WARN: Equip table '{equipment_table_id}' not found for '{entity_template.get('name')}'.")
-    # Also re-initialize other dynamic fields if necessary, e.g., current HP to max_hp from template
+    
     entity_runtime_data["hp"] = entity_template.get("max_hp", entity_template.get("hp", 1))
 
 
 def process_respawns(log_time_prefix, current_time_utc, 
-                     tracked_defeated_entities_dict, 
-                     game_rooms_dict, game_npcs_dict, game_monster_templates_dict, 
                      broadcast_callback,
-                     recently_defeated_targets_dict, # From combat.py
-                     game_equipment_tables_global, # NEW: Pass GAME_EQUIPMENT_TABLES
-                     game_items_global             # NEW: Pass GAME_ITEMS
+                     # --- Pass in the data it needs ---
+                     game_npcs_dict, game_monster_templates_dict, 
+                     game_equipment_tables_global, 
+                     game_items_global             
                      ):
+    """
+    Processes all respawns.
+    This function now reads its state from the global 'game_state' module.
+    """
+    
+    # --- NEW: Get state from the global game_state module ---
+    tracked_defeated_entities_dict = game_state.DEFEATED_MONSTERS
+    game_rooms_dict = game_state.GAME_ROOMS
+    # ---
+    
     if config.DEBUG_MODE and getattr(config, 'DEBUG_GAME_TICK_RESPAWN_PHASE', True) and tracked_defeated_entities_dict: 
         print(f"{log_time_prefix} - RESPAWN_SYSTEM: Checking {len(tracked_defeated_entities_dict)} defeated entities.")
     
     respawned_entity_runtime_ids_to_remove = []
 
     for runtime_id, respawn_info in list(tracked_defeated_entities_dict.items()):
-        entity_template_key = respawn_info["template_key"]
-        is_eligible = current_time_utc >= respawn_info["eligible_at"]
+        entity_template_key = respawn_info.get("template_key", runtime_id) # Fallback for older entries
+        is_eligible = current_time_utc >= respawn_info.get("eligible_at", current_time_utc)
         
-        # ... (your existing eligibility and chance logging) ...
-
         if is_eligible:
             respawn_chance = respawn_info.get("chance", getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2))
             roll_for_respawn = random.random()
             should_respawn_by_chance = roll_for_respawn < respawn_chance
-
-            # ... (your existing roll logging) ...
 
             if should_respawn_by_chance:
                 room_id_to_respawn_in = respawn_info["room_id"]
@@ -94,59 +109,45 @@ def process_respawns(log_time_prefix, current_time_utc,
                     base_template_data = game_monster_templates_dict.get(entity_template_key)
 
                 if not base_template_data:
-                    if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_ERROR: Template data for '{entity_template_key}' (type: {entity_type}) not found. Cannot respawn.")
-                    continue
+                    # --- This is a critical fallback ---
+                    # If monster templates aren't loaded, find the original in the room
+                    original_room_data = db.fetch_room_data(room_id_to_respawn_in)
+                    if original_room_data:
+                         base_template_data = next((obj for obj in original_room_data.get("objects", []) if obj.get("monster_id") == entity_template_key), None)
+                    
+                    if not base_template_data:
+                        if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_ERROR: Template data for '{entity_template_key}' (type: {entity_type}) not found. Cannot respawn.")
+                        continue
                 
                 entity_display_name = base_template_data.get("name", entity_template_key)
                 
                 can_respawn_this_template_into_room = True
-                if is_template_unique: # For unique NPCs/Monsters
-                    # Check if an active instance (not marked as recently defeated) of this unique template already exists in the room's list
-                    # This assumes unique entities are identified by their template_key in the room's list
-                    if entity_template_key in room_data.get(room_entity_list_key, []) and \
-                       runtime_id not in recently_defeated_targets_dict: # Check if it's *not* the one currently defeated and awaiting respawn
+                if is_template_unique: 
+                    # Check if an active instance is already in the room's *live* object list
+                    current_room_objects = room_data.get("objects", [])
+                    if any(obj.get("monster_id") == entity_template_key for obj in current_room_objects):
                         can_respawn_this_template_into_room = False
-                        if config.DEBUG_MODE: 
-                            print(f"{log_time_prefix} - RESPAWN_SKIP: Unique template {entity_display_name} (Key: {entity_template_key}) already actively present in room {room_id_to_respawn_in}.")
                 
                 if can_respawn_this_template_into_room:
-                    if room_entity_list_key not in room_data: room_data[room_entity_list_key] = []
+                    if "objects" not in room_data: room_data["objects"] = []
                     
-                    # For monsters, we add their template key back to the room's monster list.
-                    # The actual monster instance is conceptual until combat or interaction.
-                    # For unique NPCs, their template key should already be in game_npcs_dict.
-                    # We are essentially "activating" it again.
                     if entity_type == "monster":
-                        # For non-unique monsters, we add their template key.
-                        # The 'original_instance_index' might be used if you need to restore it to a specific "slot"
-                        # in the room's monster list, but simple append is often fine.
-                        room_data[room_entity_list_key].append(entity_template_key)
-                        if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_ACTION: Monster template '{entity_template_key}' added back to room {room_id_to_respawn_in}'s '{room_entity_list_key}' list.")
+                        # Add a deep copy of the monster template back to the room's objects
+                        room_data["objects"].append(copy.deepcopy(base_template_data))
+                        if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_ACTION: Monster '{entity_template_key}' added back to room {room_id_to_respawn_in}'s object list.")
+                    
                     elif entity_type == "npc":
-                        # For NPCs, they are typically referenced by their key from game_npcs_dict.
-                        # We ensure the key is in the room's list if it was somehow removed.
-                        # The main action is clearing their defeated status.
-                        if entity_template_key not in room_data.get(room_entity_list_key, []):
-                             room_data[room_entity_list_key].append(entity_template_key) # Ensure it's listed in room
-                        
-                        # Re-initialize equipped items for the NPC from its template
-                        # The base_template_data is from GAME_NPCS, which should have been processed by data_loader
-                        # to include an 'equipped' dict. If not, or if we need to ensure it's fresh:
-                        npc_runtime_data_ref = game_npcs_dict.get(entity_template_key) # Get the global template
-                        if npc_runtime_data_ref:
-                             _re_equip_entity_from_template(npc_runtime_data_ref, base_template_data, game_equipment_tables_global, game_items_global)
-                        if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_ACTION: NPC '{entity_template_key}' marked as active in room {room_id_to_respawn_in}.")
+                        # (Logic for NPCs, if they are stored differently)
+                        pass
 
-
-                    # Clear runtime combat states
-                    if runtime_id in combat.RUNTIME_ENTITY_HP: combat.RUNTIME_ENTITY_HP.pop(runtime_id, None)
-                    if runtime_id in recently_defeated_targets_dict: recently_defeated_targets_dict.pop(runtime_id, None)
-                    if runtime_id in combat.RECENTLY_DEFEATED_TARGETS_IN_ROOM: combat.RECENTLY_DEFEATED_TARGETS_IN_ROOM.pop(runtime_id, None) # Ensure global one is also cleared
-
-                    # ... (your existing logging for state clear and success) ...
+                    # --- Clear runtime combat states from game_state ---
+                    if runtime_id in game_state.RUNTIME_MONSTER_HP:
+                        game_state.RUNTIME_MONSTER_HP.pop(runtime_id, None)
+                    # ---
+                    
                     broadcast_callback(room_id_to_respawn_in, f"{entity_display_name} has appeared.", "ambient_spawn")
                     respawned_entity_runtime_ids_to_remove.append(runtime_id)
     
     for runtime_id_key_to_remove in respawned_entity_runtime_ids_to_remove:
-        if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_SYSTEM_CLEANUP: Removing '{runtime_id_key_to_remove}' from TRACKED_DEFEATED_ENTITIES.")
+        if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_SYSTEM_CLEANUP: Removing '{runtime_id_key_to_remove}' from DEFEATED_MONSTERS.")
         tracked_defeated_entities_dict.pop(runtime_id_key_to_remove, None)
