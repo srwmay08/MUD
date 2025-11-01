@@ -73,8 +73,11 @@ def handle_disconnect():
         room_id = player_info["current_room_id"]
         print(f"[CONNECTION] Player {player_name} disconnected: {sid}")
         
-        # Broadcast that the player has left
-        emit("message", f"{player_name} disappears.", to=room_id)
+        # --- UPDATED BROADCAST ---
+        # Format the message as a clickable keyword
+        disappears_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> disappears.'
+        emit("message", disappears_message, to=room_id)
+        # --- END UPDATE ---
     else:
         print(f"[CONNECTION] Unknown client disconnected: {sid}")
 
@@ -97,7 +100,6 @@ def handle_command_event(data):
     old_room_id = old_player_info.get("current_room_id") if old_player_info else None
     
     # --- 2. Execute the command ---
-    # We pass the SID to execute_command so it can update the player's state
     result_data = execute_command(player_name, command_line, sid)
 
     # --- 3. Get player's new room (from the updated state) ---
@@ -109,10 +111,16 @@ def handle_command_event(data):
         # Player has moved or just logged in
         if old_room_id:
             leave_room(old_room_id, sid=sid)
-            emit("message", f"{player_name} leaves.", to=old_room_id)
+            # --- UPDATED BROADCAST ---
+            leaves_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> leaves.'
+            emit("message", leaves_message, to=old_room_id)
+            # --- END UPDATE ---
         
         join_room(new_room_id, sid=sid)
-        emit("message", f"{player_name} arrives.", to=new_room_id, skip_sid=sid) # skip_sid prevents echo
+        # --- UPDATED BROADCAST ---
+        arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
+        emit("message", arrives_message, to=new_room_id, skip_sid=sid) # skip_sid prevents echo
+        # --- END UPDATE ---
 
     # --- 5. Send the command result *back to the sender* ---
     emit("command_response", result_data, to=sid)

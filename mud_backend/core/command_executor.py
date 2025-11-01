@@ -20,7 +20,7 @@ from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 # ---
 
-# This maps all player commands to the correct verb file.
+# (VERB_ALIASES and DIRECTION_MAP are unchanged)
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement Verbs (all in 'movement.py')
     "move": ("movement", "Move"),
@@ -38,7 +38,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "nw": ("movement", "Move"),
     "northwest": ("movement", "Move"),
     "se": ("movement", "Move"),
-    "southeast": ("movement", "Move"), # <-- FIX: Removed the stray 'V'
+    "southeast": ("movement", "Move"),
     "sw": ("movement", "Move"),
     "southwest": ("movement", "Move"),
     
@@ -62,11 +62,8 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Other Verbs
     "say": ("say", "Say"),
     
-    # --- UPDATED TICK VERB ---
     "ping": ("tick", "Tick"),
 }
-
-# This map is used to convert "n" to "north"
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
@@ -96,8 +93,13 @@ def _prune_active_players(log_prefix: str, broadcast_callback):
             if player_info:
                 room_id = player_info.get("current_room_id", "unknown")
                 player_name = player_info.get("player_name", "Unknown")
+                
+                # --- UPDATED BROADCAST ---
                 # Send broadcast via the callback
-                broadcast_callback(room_id, f"{player_name} disappears.", "ambient")
+                disappears_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> disappears.'
+                broadcast_callback(room_id, disappears_message, "ambient")
+                # --- END UPDATE ---
+                
                 print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
 
 # ---
@@ -266,7 +268,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
     save_game_state(player)
 
     # 8. Return output to the client
-    # (We no longer check broadcasts here, app.py does it)
+    # (Broadcasts are now handled by app.py)
     return {
         "messages": player.messages,
         "game_state": player.game_state

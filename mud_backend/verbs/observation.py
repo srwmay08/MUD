@@ -93,8 +93,11 @@ class Look(BaseVerb):
             target_player_state = None
             
             # Find the player in the global active list
-            for player_name, data in game_state.ACTIVE_PLAYERS.items():
-                if player_name.lower() == target_name:
+            # The key 'sid' is the connection ID, 'data' holds the info
+            for sid, data in game_state.ACTIVE_PLAYERS.items():
+                
+                # --- FIX: We must check against the name *inside* the data ---
+                if data["player_name"].lower() == target_name:
                     target_player_state = data
                     break
             

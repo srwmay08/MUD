@@ -29,23 +29,27 @@ def show_room_to_player(player: Player, room: Room):
         if html_objects:
             player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
     
-    # --- NEW: Show Other Players ---
+    # --- UPDATED: Show Other Players ---
     other_players_in_room = []
-    for player_name, data in game_state.ACTIVE_PLAYERS.items():
+    # The key is now the 'sid', the value is 'data'
+    for sid, data in game_state.ACTIVE_PLAYERS.items():
+        
+        # --- FIX: Get the name from the data value ---
+        player_name_in_room = data["player_name"] 
+
         # Don't show the player themselves
-        if player_name.lower() == player.name.lower():
+        if player_name_in_room.lower() == player.name.lower():
             continue
         
         # If the other player is in this room, add them
         if data["current_room_id"] == room.room_id:
-            # Format them as a clickable keyword
             other_players_in_room.append(
-                f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span>'
+                f'<span class="keyword" data-name="{player_name_in_room}" data-verbs="look">{player_name_in_room}</span>'
             )
             
     if other_players_in_room:
         player.send_message(f"Also here: {', '.join(other_players_in_room)}.")
-    # --- END NEW LOGIC ---
+    # --- END UPDATED LOGIC ---
 
     # 2. Show Exits
     if room.exits:
