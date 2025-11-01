@@ -68,8 +68,25 @@
             {
                 "name": "stirring monster",
                 "description": "A mass of shadows and wet fur, it huffs angrily. It doesn't seem to have noticed you yet.",
-                "verbs": ["look"],
-                "perception_dc": 75
+                "verbs": ["look", "attack"],
+                "perception_dc": 75,
+                
+                "is_monster": true,
+                "monster_id": "well_bottom_stirring_monster",
+                "hp": 50,
+                "max_hp": 50,
+                "stats": { "strength": 60, "agility": 50 },
+                "skills": { "brawling": 30 },
+                "loot_table_id": "well_monster_loot",
+                
+                "details": [
+                    {
+                        "name": "monster-wounds",
+                        "description": "It's covered in matted fur and old scars. It looks tough.",
+                        "skill_check": "LOG",
+                        "dc": 50
+                    }
+                ]
             }
         ],
         "exits": {}

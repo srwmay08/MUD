@@ -12,6 +12,10 @@ from mud_backend.core.chargen_handler import (
 )
 from mud_backend.core.room_handler import show_room_to_player
 
+# --- Import our new game state ---
+# This ensures the in-memory dictionaries are initialized
+from mud_backend.core import game_state
+
 # This maps all player commands to the correct verb file.
 VERB_ALIASES = {
     # Movement Verbs
@@ -42,6 +46,7 @@ VERB_ALIASES = {
     "examine": "examine",
     "investigate": "investigate",
     "search": "investigate", # Alias for investigate
+    "attack": "attack",      # <-- NEW
     
     # Exit Verbs
     "exit": "exit",
@@ -75,6 +80,9 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         player = Player(player_name, start_room_id, {})
         player.game_state = "chargen"
         player.chargen_step = 0
+        # --- NEW: Set default HP for new players ---
+        player.hp = 100
+        player.max_hp = 100
         player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
     else:
         player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
@@ -87,6 +95,25 @@ def execute_command(player_name: str, command_line: str) -> Dict[str, Any]:
         description=room_db_data["description"], 
         db_data=room_db_data
     )
+
+    # --- NEW: Filter defeated monsters from room ---
+    # Check for defeated monsters in this room
+    # And remove them from the room object *before* the verb runs
+    active_monsters = []
+    for obj in room.objects:
+        monster_id = obj.get("monster_id")
+        if monster_id:
+            if monster_id in game_state.DEFEATED_MONSTERS:
+                # Monster is dead, don't add it
+                pass
+            else:
+                # Monster is alive, add it
+                active_monsters.append(obj)
+        else:
+            # Not a monster, just add it
+            active_monsters.append(obj)
+    room.objects = active_monsters
+    # --- END NEW FILTER ---
 
     # 4. --- CHECK GAME STATE ---
     

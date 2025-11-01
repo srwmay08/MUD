@@ -31,6 +31,14 @@ class Player:
         self.chargen_step: int = self.db_data.get("chargen_step", 0)
         self.appearance: Dict[str, str] = self.db_data.get("appearance", {})
         
+        # --- NEW COMBAT/SKILL FIELDS ---
+        self.hp: int = self.db_data.get("hp", 100)
+        self.max_hp: int = self.db_data.get("max_hp", 100)
+        # We'll make skills a placeholder for now, you can expand this later
+        self.skills: Dict[str, int] = self.db_data.get("skills", {"brawling": 20, "shield_use": 10})
+        # Placeholder for equipped items, which combat.py needs
+        self.equipped_items: Dict[str, str] = self.db_data.get("equipped_items", {"mainhand": None, "offhand": None, "torso": None})
+        
     def send_message(self, message: str):
         """Adds a message to the player's output queue."""
         self.messages.append(message)
@@ -42,6 +50,28 @@ class Player:
         if self.experience >= self.level * 1000:
             self.level += 1
             self.send_message(f"**CONGRATULATIONS! You have advanced to Level {self.level}!**")
+
+    # --- NEW COMBAT HELPER METHODS ---
+    # These are required by combat.py
+    
+    def get_equipped_item_data(self, slot: str, game_items_global: dict) -> Optional[dict]:
+        """Gets the item data for an equipped item."""
+        item_id = self.equipped_items.get(slot)
+        if item_id:
+            return game_items_global.get(item_id)
+        return None
+
+    def get_armor_type(self, game_items_global: dict) -> str:
+        """Gets the player's current armor type from their torso slot."""
+        # This is a mock config value from combat.py
+        DEFAULT_UNARMORED_TYPE = "unarmored" 
+        
+        armor_data = self.get_equipped_item_data("torso", game_items_global)
+        if armor_data and armor_data.get("type") == "armor":
+            return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
+        return DEFAULT_UNARMORED_TYPE
+    
+    # --- END NEW COMBAT HELPER METHODS ---
 
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
@@ -68,6 +98,12 @@ class Player:
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
+            
+            # --- NEW COMBAT/SKILL FIELDS TO SAVE ---
+            "hp": self.hp,
+            "max_hp": self.max_hp,
+            "skills": self.skills,
+            "equipped_items": self.equipped_items,
         }
         
         if self._id:
@@ -78,6 +114,7 @@ class Player:
     def __repr__(self):
         return f"<Player: {self.name}>"
 
+# --- (Room class is unchanged) ---
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
