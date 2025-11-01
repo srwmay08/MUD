@@ -141,7 +141,7 @@ def update_environment_state(game_tick_counter,
                 print(f"{log_time_prefix} - ENV_SYSTEM: Weather check rolled, but weather stayed the same: {current_weather}")
 
 
-    # --- Broadcast Ambient Messages ---
+# --- Broadcast Ambient Messages ---
     time_message_str = ""
     if time_changed_this_tick:
         if current_time_of_day == "dusk": time_message_str = "The sun begins its descent, painting the sky with hues of orange and purple. Evening approaches."
@@ -156,39 +156,37 @@ def update_environment_state(game_tick_counter,
         elif current_weather == "overcast": weather_message_str = "The sky becomes overcast with a thick blanket of grey clouds."
         elif current_weather == "fog": weather_message_str = "A damp fog rolls in, obscuring the distance."
         elif current_weather == "light rain": weather_message_str = "A light rain begins to patter down."
-        elif current_weather == "rain": weather_message_str = "Rain starts to fall more steadily."
+        elif current_weather == "rain": weather_message_str = "Rain falls steadily."
         elif current_weather == "heavy rain": weather_message_str = "The heavens open and a heavy rain pours down."
-        # ... (add other weather messages as needed) ...
         elif current_weather == "storm": weather_message_str = "Dark clouds roil as a fierce storm begins to brew!"
 
 
     if time_message_str or weather_message_str:
+        
+        # --- FIX: Find unique rooms that need messages ---
+        exposed_rooms_with_players = set()
         for p_obj in active_players_dict.values():
             p_room_data = game_rooms_dict.get(p_obj.current_room_id)
-            
-            # --- NEW DEBUGGING BLOCK ---
             room_is_exposed = p_room_data and is_room_exposed(p_room_data)
+            
             if config.DEBUG_MODE:
                 room_id_str = p_room_data.get('room_id', 'Unknown') if p_room_data else 'Unknown'
                 print(f"{log_time_prefix} - ENV_SYSTEM: Player {p_obj.name} is in room {room_id_str}. Exposed: {room_is_exposed}")
-            # --- END NEW DEBUGGING BLOCK ---
-
+            
             if room_is_exposed:
-                if time_message_str: 
-                    broadcast_callback(p_obj.current_room_id, time_message_str, "ambient_time")
-                if weather_message_str:
-                    broadcast_callback(p_obj.current_room_id, weather_message_str, "ambient_weather")
+                exposed_rooms_with_players.add(p_obj.current_room_id)
+        
+        # --- Now, broadcast ONCE per room ---
+        if config.DEBUG_MODE:
+            print(f"{log_time_prefix} - ENV_SYSTEM: Broadcasting to unique exposed rooms: {exposed_rooms_with_players}")
+
+        for room_id in exposed_rooms_with_players:
+            if time_message_str: 
+                broadcast_callback(room_id, time_message_str, "ambient_time")
+            if weather_message_str:
+                broadcast_callback(room_id, weather_message_str, "ambient_weather")
+        # --- END FIX ---
     
     elif config.DEBUG_MODE:
         if game_tick_counter > 0 and (game_tick_counter % weather_change_interval == 0 or game_tick_counter % time_change_interval == 0):
             print(f"{log_time_prefix} - ENV_SYSTEM: Tick event ran, but no new messages were generated.")
-
-
-def get_current_time_of_day_str():
-    return current_time_of_day
-
-def get_current_weather_str():
-    return current_weather
-
-if config.DEBUG_MODE:
-    print("game_logic.environment loaded with dynamic weather.")

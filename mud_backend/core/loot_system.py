@@ -9,6 +9,8 @@ class MockConfig:
     DEFAULT_DROP_EQUIPPED_CHANCE = 1.0; DEFAULT_DROP_CARRIED_CHANCE = 1.0
 config = MockConfig()
 
+# --- REMOVED: No more global GAME_LOOT_TABLES mock data ---
+
 def generate_loot_from_table(loot_table_id: str, game_loot_tables: dict, game_items_data: dict) -> list:
     """
     Generates a list of item_ids from a specific loot table.
@@ -18,8 +20,8 @@ def generate_loot_from_table(loot_table_id: str, game_loot_tables: dict, game_it
         if config.DEBUG_MODE: print(f"DEBUG LOOT_HANDLER: Loot table ID '{loot_table_id}' not found.")
         return []
     
+    # ... (rest of function is identical) ...
     dropped_items = []
-    # ... (rest of function is identical to legacy/loot_handler.py) ...
     if config.DEBUG_MODE: print(f"DEBUG LOOT_HANDLER: Processing loot_table_id '{loot_table_id}'. game_items_data available: {bool(game_items_data)}")
     for entry in loot_table:
         item_id = entry.get("item_id"); chance = entry.get("chance", 0.0)
@@ -49,7 +51,7 @@ def generate_loot_from_table(loot_table_id: str, game_loot_tables: dict, game_it
     return dropped_items
 
 def generate_skinning_loot(monster_template: dict, player_skill_value: int, game_items_data: dict) -> list:
-    # ... (This function is identical to legacy/loot_handler.py) ...
+    # ... (This function is identical) ...
     skinned_items = []
     skinning_info = monster_template.get("skinning", {})
     success_item_id = skinning_info.get("item_yield_success_key")
@@ -75,17 +77,15 @@ def create_corpse_object_data(defeated_entity_template: dict, defeated_entity_ru
     """
     Creates a new dictionary representing a corpse object, ready to be added to a room.
     """
+    # ... (This function is identical) ...
     entity_name = defeated_entity_template.get("name", "Unknown Creature")
     corpse_name = f"corpse of a {entity_name}"
     
-    # Use the monster_id from the template, which is the key
     original_template_key = defeated_entity_template.get("monster_id", defeated_entity_template.get("_id", "unknown_key"))
 
     corpse_id = f"corpse_{defeated_entity_runtime_id}_{int(time.time())}"
     loot_items_for_corpse_inventory = []
 
-    # ... (rest of loot generation: carried, equipped) ...
-    # (This logic is identical to legacy/loot_handler.py)
     drop_carried_chance = getattr(config, 'NPC_DROP_CARRIED_CHANCE', getattr(config, 'DEFAULT_DROP_CARRIED_CHANCE', 1.0))
     for item_key in defeated_entity_template.get("items", []): 
         if item_key in game_items_data:
@@ -110,7 +110,6 @@ def create_corpse_object_data(defeated_entity_template: dict, defeated_entity_ru
             if item_should_drop: 
                 loot_items_for_corpse_inventory.append(equipped_item_id)
 
-    # Generate loot from table
     loot_table_id = defeated_entity_template.get("loot_table_id")
     if loot_table_id:
         table_loot_ids = generate_loot_from_table(loot_table_id, game_loot_tables, game_items_data)
@@ -118,8 +117,6 @@ def create_corpse_object_data(defeated_entity_template: dict, defeated_entity_ru
     
     final_loot_on_corpse = loot_items_for_corpse_inventory 
 
-    # --- NEW: Create keywords for the corpse ---
-    # This makes it targetable by "look corpse", "look stirring", "examine monster", etc.
     keywords = ["corpse", entity_name.lower()] + entity_name.lower().split()
     
     corpse_data = {
@@ -128,13 +125,9 @@ def create_corpse_object_data(defeated_entity_template: dict, defeated_entity_ru
         "original_name": entity_name,
         "original_template_key": original_template_key, 
         "description": f"The lifeless body of {entity_name}.",
-        
-        # --- NEW: Add verbs and keywords ---
-        "keywords": list(set(keywords)), # Use set to remove duplicates
-        "verbs": ["LOOK", "EXAMINE", "SEARCH", "GET"], # Verbs for interacting with the corpse
-        "perception_dc": 0, # Corpses are obvious
-        # ---
-        
+        "keywords": list(set(keywords)),
+        "verbs": ["LOOK", "EXAMINE", "SEARCH", "GET"],
+        "perception_dc": 0,
         "inventory": final_loot_on_corpse, 
         "is_corpse": True, 
         "skinnable": defeated_entity_template.get("skinnable", False), 
@@ -155,23 +148,19 @@ def create_corpse_object_data(defeated_entity_template: dict, defeated_entity_ru
     return corpse_data
 
 def process_corpse_decay(game_rooms_dict: dict, log_time_prefix: str) -> dict:
-    # ... (This function is identical to legacy/loot_handler.py) ...
+    # ... (This function is identical) ...
     current_time = time.time(); decayed_corpse_messages = {} 
     for room_id, room_data in game_rooms_dict.items():
-        # This function assumes room_data["objects"] is a DICT,
-        # but our new Room object uses a LIST. We must adapt this!
-        
-        # --- ADAPTATION for list of objects ---
-        if not hasattr(room_data, 'objects') or not isinstance(room_data.objects, list):
-            continue # Skip if room object is not as expected
+        if not isinstance(room_data, dict) or "objects" not in room_data or not isinstance(room_data["objects"], list):
+            continue
             
         corpses_to_remove = [
-            obj for obj in room_data.objects 
+            obj for obj in room_data["objects"]
             if obj.get("is_corpse") and obj.get("decay_at", 0) < current_time
         ]
         
         for corpse in corpses_to_remove:
-            room_data.objects.remove(corpse)
+            room_data["objects"].remove(corpse)
             if config.DEBUG_MODE: 
                 print(f"{log_time_prefix} - CORPSE_DECAY: Corpse '{corpse.get('name', 'unknown')}' in room {room_id} decayed.")
             decay_message = f"The {corpse.get('name', 'corpse')} decays and disappears."

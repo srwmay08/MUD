@@ -64,8 +64,15 @@ socket.on('command_response', (data) => {
 socket.on('message', (message) => {
     addMessage(message);
 });
+// 3. This handles the global tick event
+socket.on('tick', () => {
+    // Only show the tick prompt if we are in the main game
+    if (playerName && currentGameState === "playing") {
+        addMessage(">", "command-echo");
+    }
+});
 
-// 3. Handle connection/disconnection events (optional but good)
+// 4. Handle connection/disconnection events (optional but good)
 socket.on('connect', () => {
     console.log("Connected to server with ID:", socket.id);
 });

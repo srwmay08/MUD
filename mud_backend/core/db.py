@@ -35,33 +35,25 @@ def ensure_initial_data():
     if database is None:
         return
 
-    # --- NEW: Load from JSON ---
+    # --- 1. Load Rooms from JSON ---
     print("[DB INIT] Checking initial data from JSON...")
-    
-    # 1. Load Rooms from JSON
     try:
-        # Build the path relative to this db.py file
         json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'rooms.json')
-        
         with open(json_path, 'r') as f:
             room_data_list = json.load(f)
-            
+        
+        # (Rest of room loading logic is unchanged)
         upsert_count = 0
         update_count = 0
-        
         for room_data in room_data_list:
             room_id = room_data.get("room_id")
             if not room_id:
                 continue
-            
-            # Use update_one with upsert=True
-            # This will INSERT if 'room_id' doesn't exist, or UPDATE if it does
             result = database.rooms.update_one(
                 {"room_id": room_id},
                 {"$set": room_data},
                 upsert=True
             )
-            
             if result.upserted_id:
                 print(f"[DB DEBUG] Inserted new room: {room_id}")
                 upsert_count += 1
@@ -80,7 +72,6 @@ def ensure_initial_data():
         print(f"[DB ERROR] 'rooms.json' contains invalid JSON.")
     except Exception as e:
         print(f"[DB ERROR] An error occurred loading rooms: {e}")
-    # --- END NEW LOGIC ---
 
     # 2. Test Player 'Alice' (Unchanged)
     if database.players.count_documents({"name": "Alice"}) == 0:
@@ -106,6 +97,7 @@ def ensure_initial_data():
 
 
 def fetch_player_data(player_name: str) -> dict:
+    # (function is unchanged)
     database = get_db()
     if database is None: return {} 
     player_data = database.players.find_one({"name": {"$regex": f"^{player_name}$", "$options": "i"}})
@@ -113,6 +105,7 @@ def fetch_player_data(player_name: str) -> dict:
 
 
 def fetch_room_data(room_id: str) -> dict:
+    # (function is unchanged)
     database = get_db()
     if database is None:
         if room_id == "town_square":
@@ -123,8 +116,8 @@ def fetch_room_data(room_id: str) -> dict:
         return {"room_id": "void", "name": "The Void", "description": "Nothing but endless darkness here."}
     return room_data
 
-
 def save_game_state(player: 'Player'):
+    # (function is unchanged)
     database = get_db()
     if database is None:
         print(f"\n[DB SAVE MOCK] Player {player.name} state saved (Mock).")
@@ -142,6 +135,7 @@ def save_game_state(player: 'Player'):
         print(f"\n[DB SAVE] Player {player.name} state updated.")
 
 def save_room_state(room: 'Room'):
+    # (function is unchanged)
     database = get_db()
     if database is None:
         print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
@@ -154,13 +148,8 @@ def save_room_state(room: 'Room'):
     )
     print(f"\n[DB SAVE] Room {room.name} state updated.")
 
-get_db()
-
 def fetch_all_rooms() -> dict:
-    """
-    Fetches all rooms from the database and returns them as a dictionary
-    keyed by room_id. This is used to populate the in-memory game state.
-    """
+    # (function is unchanged)
     database = get_db()
     if database is None:
         print("[DB WARN] No database connection, cannot fetch all rooms.")
@@ -178,3 +167,46 @@ def fetch_all_rooms() -> dict:
     except Exception as e:
         print(f"[DB ERROR] Failed to fetch all rooms: {e}")
         return {}
+
+# ---
+# NEW FUNCTIONS TO LOAD DATA FILES
+# ---
+
+def _load_json_data(filename: str) -> dict:
+    """Helper to load a JSON file from the 'data' directory."""
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', filename)
+        with open(json_path, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"[DB ERROR] Could not find '{filename}' at: {json_path}")
+    except json.JSONDecodeError:
+        print(f"[DB ERROR] '{filename}' contains invalid JSON.")
+    except Exception as e:
+        print(f"[DB ERROR] An error occurred loading '{filename}': {e}")
+    return {}
+
+def fetch_all_monsters() -> dict:
+    """Loads monsters.json and keys it by monster_id."""
+    print("[DB INIT] Caching all monsters from monsters.json...")
+    monster_list = _load_json_data("monsters.json")
+    monster_templates = {m["monster_id"]: m for m in monster_list if m.get("monster_id")}
+    print(f"[DB INIT] ...Cached {len(monster_templates)} monsters.")
+    return monster_templates
+
+def fetch_all_loot_tables() -> dict:
+    """Loads loot.json."""
+    print("[DB INIT] Caching all loot tables from loot.json...")
+    loot_tables = _load_json_data("loot.json")
+    print(f"[DB INIT] ...Cached {len(loot_tables)} loot tables.")
+    return loot_tables
+
+def fetch_all_items() -> dict:
+    """Loads items.json."""
+    print("[DB INIT] Caching all items from items.json...")
+    items = _load_json_data("items.json")
+    print(f"[DB INIT] ...Cached {len(items)} items.")
+    return items
+
+# ---
+get_db()
