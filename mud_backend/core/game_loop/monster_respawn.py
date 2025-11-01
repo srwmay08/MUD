@@ -7,12 +7,12 @@ import copy # For deepcopying templates
 
 try:
     import config
-    from . import combat 
-    # Assuming GAME_EQUIPMENT_TABLES and GAME_ITEMS will be available globally or passed
-    # For now, this module doesn't directly equip, it relies on data_loader or main logic to handle it
-    # when the monster template is re-added to the room.
+    # --- UPDATED IMPORT ---
+    from mud_backend.core import combat_system as combat 
+    # (We also need to import the new global state)
+    from mud_backend.core import game_state
 except ImportError as e:
-    # ... (your existing mock config) ...
+    # ... (mock config) ...
     pass
 
 

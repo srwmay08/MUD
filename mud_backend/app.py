@@ -7,8 +7,11 @@ from flask import Flask, request, jsonify, render_template
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # -----------------------------------------------------------
 
-# Now we can import using the absolute package path
+# --- UPDATED IMPORTS ---
 from mud_backend.core.command_executor import execute_command
+from mud_backend.core import game_state
+from mud_backend.core import db
+# ---
 
 # --- CRITICAL FIX 2: Tell Flask where the 'templates' folder is ---
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
@@ -34,8 +37,8 @@ def handle_command():
         if not player_name:
             return jsonify({"messages": ["Error: No player name received from client."]}), 400
         
-        if not command_line:
-            return jsonify({"messages": ["What?"]})
+        # NOTE: "What?" is now handled inside execute_command
+        # to allow "ping" commands to be silent.
 
         # --- THIS IS THE CHANGE ---
         # execute_command now returns a dictionary
@@ -53,5 +56,18 @@ def handle_command():
         return jsonify({"messages": [f"Server Error: {str(e)}"]}), 500
 
 if __name__ == "__main__":
+    # --- NEW: LOAD THE WORLD STATE ---
+    # We must initialize the database connection
+    # and load all rooms into the cache *before* running the app.
+    print("[SERVER START] Initializing database...")
+    database = db.get_db()
+    if database:
+        print("[SERVER START] Loading all rooms into game state cache...")
+        game_state.GAME_ROOMS = db.fetch_all_rooms()
+        print(f"[SERVER START] Successfully cached {len(game_state.GAME_ROOMS)} rooms.")
+    else:
+        print("[SERVER START] ERROR: Could not connect to database. Server may not function.")
+    # ---
+    
     # Run the web server on http://localhost:8000
-    app.run(port=8000, debug=True)
+    app.run(port=8000, debug=True, use_reloader=False)

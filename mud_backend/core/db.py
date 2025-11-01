@@ -155,3 +155,26 @@ def save_room_state(room: 'Room'):
     print(f"\n[DB SAVE] Room {room.name} state updated.")
 
 get_db()
+
+def fetch_all_rooms() -> dict:
+    """
+    Fetches all rooms from the database and returns them as a dictionary
+    keyed by room_id. This is used to populate the in-memory game state.
+    """
+    database = get_db()
+    if database is None:
+        print("[DB WARN] No database connection, cannot fetch all rooms.")
+        return {}
+        
+    print("[DB INIT] Caching all rooms from database...")
+    rooms_dict = {}
+    try:
+        for room_data in database.rooms.find():
+            room_id = room_data.get("room_id")
+            if room_id:
+                rooms_dict[room_id] = room_data
+        print(f"[DB INIT] ...Cached {len(rooms_dict)} rooms.")
+        return rooms_dict
+    except Exception as e:
+        print(f"[DB ERROR] Failed to fetch all rooms: {e}")
+        return {}
