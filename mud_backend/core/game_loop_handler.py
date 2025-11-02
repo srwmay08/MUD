@@ -73,13 +73,14 @@ def check_and_run_game_tick(broadcast_callback: Callable):
     )
 
     # --- 3. Process monster/NPC respawns ---
+    # --- THIS IS THE FIX: Removed 'current_time_utc' ---
     monster_respawn.process_respawns(
         log_time_prefix=log_prefix,
-        current_time_utc=datetime.datetime.now(datetime.timezone.utc),
         broadcast_callback=broadcast_callback,
         game_npcs_dict={}, # TODO: Pass real data
         game_equipment_tables_global={}, # TODO: Pass real data
         game_items_global=game_state.GAME_ITEMS # Pass the real items
     )
+    # --- END FIX ---
     
     print(f"{log_prefix}: Global tick complete.")

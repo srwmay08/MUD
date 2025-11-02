@@ -80,7 +80,7 @@ def ensure_initial_data():
             {
                 "name": "Alice", 
                 "current_room_id": "town_square",
-                "level": 1, "experience": 0, "game_state": "playing", "chargen_step": 99,
+                "level": 0, "experience": 0, "game_state": "playing", "chargen_step": 99, # <-- CHANGED
                 "stats": {
                     "STR": 75, "CON": 70, "DEX": 80, "AGI": 72, "LOG": 85, "INT": 88, "WIS": 65, "INF": 60,
                     "ZEA": 50, "ESS": 55, "DIS": 68, "AUR": 78

@@ -1,7 +1,7 @@
 # core/game_objects.py
-from typing import Optional, List, Dict, Any, Tuple # <-- Added Tuple
-import math # <-- NEW IMPORT
-from mud_backend.core import game_state # <-- NEW IMPORT
+from typing import Optional, List, Dict, Any, Tuple
+import math
+from mud_backend.core import game_state
 
 class Player:
     def __init__(self, name: str, current_room_id: str, db_data: Optional[dict] = None):
@@ -15,7 +15,7 @@ class Player:
         # --- REFACTORED XP FIELDS ---
         self.experience: int = self.db_data.get("experience", 0)     # This is TOTAL absorbed XP
         self.unabsorbed_exp: int = self.db_data.get("unabsorbed_exp", 0) # This is the "Field Exp" pool
-        self.level: int = self.db_data.get("level", 1)
+        self.level: int = self.db_data.get("level", 0) # <-- Default level is 0
         # --- END REFACTORED XP ---
         
         self.stats: Dict[str, int] = self.db_data.get("stats", {})
@@ -105,22 +105,28 @@ class Player:
             self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
 
     # --- Absorb from Field Exp (on tick) ---
-    def absorb_exp_pulse(self):
+    def absorb_exp_pulse(self, room_type: str = "other") -> bool:
         """
         Absorbs one pulse of experience from the field pool.
         This updates total experience and checks for level-ups.
+        Returns True if absorption occurred, False otherwise.
         """
         if self.unabsorbed_exp <= 0:
-            return # Nothing to absorb
+            return False # Nothing to absorb
 
-        # --- Calculate Absorption Rate ---
-        # Using "On-node" as the default for now.
+        # --- Calculate Absorption Rate based on Room Type ---
+        base_rate = 19
+        logic_divisor = 7
         
-        # Base Rate: 25 (On-node)
-        base_rate = 25
-        
-        # Logic Bonus: (Logic / 5)
-        logic_bonus = math.floor(self.stats.get("LOG", 0) / 5.0)
+        if room_type == "on_node":
+            base_rate = 25
+            logic_divisor = 5
+        elif room_type == "in_town":
+            base_rate = 22
+            logic_divisor = 5
+
+        # Logic Bonus: (Logic / Divisor)
+        logic_bonus = math.floor(self.stats.get("LOG", 0) / logic_divisor)
         
         # Pool Size Bonus: 1 per 200, max 10
         pool_bonus = min(10, math.floor(self.unabsorbed_exp / 200.0))
@@ -134,7 +140,7 @@ class Player:
         amount_to_absorb = min(self.unabsorbed_exp, amount_to_absorb)
         
         if amount_to_absorb <= 0:
-            return
+            return False
 
         # --- Apply the absorption ---
         self.unabsorbed_exp -= amount_to_absorb
@@ -144,6 +150,7 @@ class Player:
         
         # --- Check for Level Up ---
         self._check_for_level_up()
+        return True # We successfully absorbed
 
     # --- Level Up Helper ---
     def _get_xp_target_for_level(self, level: int) -> int:
@@ -153,28 +160,37 @@ class Player:
         table = game_state.GAME_LEVEL_TABLE
         if not table:
             # Fallback to simple formula if table isn't loaded
-            return (level) * 1000 + (level * 250) 
+            return (level + 1) * 1000 # Lvl 0 -> Lvl 1 = 1000
             
-        if level <= 0: return 0
-        if level > 100:
+        if level < 0: return 0
+        if level >= 100:
             # Post-cap: 2500 XP per TP cycle
             return self.experience + 2500 
             
-        # List is 0-indexed (level 1 is index 0)
-        # We need to get the target for the *next* level, so level-1 is correct
-        if level - 1 < len(table):
-            return table[level - 1]
+        # List is 0-indexed:
+        # To hit Lvl 1 (from Lvl 0), you need table[0] (2500)
+        # To hit Lvl 2 (from Lvl 1), you need table[1] (7500)
+        if level < len(table):
+            return table[level]
         else:
             # Failsafe if table is shorter than 100
              return self.experience + 999999
 
     def _calculate_tps_per_level(self) -> Tuple[int, int, int]:
-        """Calculates TPs gained for one level."""
+        """
+        Calculates TPs gained for one level based on your formulas.
+        """
         s = self.stats
         hybrid_bonus = (s.get("AUR", 0) + s.get("DIS", 0)) / 2
         
+        # MTPs = 25 + [(LOG + INT + WIS + INF + ((AUR + DIS) / 2)) / 20]
         mtp_calc = 25 + ((s.get("LOG", 0) + s.get("INT", 0) + s.get("WIS", 0) + s.get("INF", 0) + hybrid_bonus) / 20)
+        
+        # PTPs = 25 + [(STR + CON + DEX + AGI + ((AUR + DIS) / 2)) / 20]
         ptp_calc = 25 + ((s.get("STR", 0) + s.get("CON", 0) + s.get("DEX", 0) + s.get("AGI", 0) + hybrid_bonus) / 20)
+        
+        # STPs = 25 + [(WIS + INF + FAITH + ESS + ((AUR + DIS) / 2)) / 20]
+        # (Assuming FAITH = ZEA)
         stp_calc = 25 + ((s.get("WIS", 0) + s.get("INF", 0) + s.get("ZEA", 0) + s.get("ESS", 0) + hybrid_bonus) / 20)
 
         return int(ptp_calc), int(mtp_calc), int(stp_calc)
@@ -182,7 +198,7 @@ class Player:
     def _check_for_level_up(self):
         """Checks if absorbed XP passes the next level's threshold."""
         
-        # Update target just in case it's 0
+        # Update target just in case it's 0 (for a new Lvl 0 player)
         if self.level_xp_target == 0:
            self.level_xp_target = self._get_xp_target_for_level(self.level)
            
@@ -250,22 +266,18 @@ class Player:
             "name": self.name,
             "current_room_id": self.current_room_id,
             
-            # --- UPDATED XP/LEVEL FIELDS ---
             "experience": self.experience, 
             "unabsorbed_exp": self.unabsorbed_exp,
             "level": self.level,           
-            # --- END UPDATED ---
             
             "strength": self.strength,
             "agility": self.agility,
             
             "stats": self.stats,
             
-            # --- CHARGEN STATS ---
             "current_stat_pool": self.current_stat_pool,
             "best_stat_pool": self.best_stat_pool,
             "stats_to_assign": self.stats_to_assign,
-            # --- END CHARGEN STATS ---
             
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
@@ -276,7 +288,6 @@ class Player:
             "skills": self.skills,
             "equipped_items": self.equipped_items,
             
-            # --- TP FIELDS TO SAVE ---
             "ptps": self.ptps,
             "mtps": self.mtps,
             "stps": self.stps,
@@ -306,7 +317,6 @@ class Room:
         
         self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
         
-        # --- NEW FIELD ---
         # Holds a dictionary of { "direction": "target_room_id" }
         self.exits: Dict[str, str] = self.db_data.get("exits", {})
 
@@ -320,11 +330,11 @@ class Room:
             "description": self.description,
             "unabsorbed_social_exp": self.unabsorbed_social_exp,
             "objects": self.objects,
-            "exits": self.exits, # --- ADDED ---
+            "exits": self.exits,
         }
         
         if self._id:
-            data["_id"] = self._id
+            data["_id"] = self.to_dict
         return data
 
     def __repr__(self):
