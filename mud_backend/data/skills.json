@@ -1,0 +1,370 @@
+[
+    {
+        "skill_id": "armor_use",
+        "name": "Armor Use",
+        "category": "Armor Skills",
+        "keywords": ["armor", "armor use"],
+        "base_cost": {"ptp": 12, "mtp": 1, "stp": 1},
+        "key_attributes": {"ptp": ["STR", "CON"], "mtp": ["LOG"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "shield_use",
+        "name": "Shield Use",
+        "category": "Armor Skills",
+        "keywords": ["shield", "shield use"],
+        "base_cost": {"ptp": 8, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "AGI"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "brawling",
+        "name": "Brawling",
+        "category": "Weapon Skills",
+        "keywords": ["brawling"],
+        "base_cost": {"ptp": 5, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "AGI"], "mtp": ["INT"], "stp": []}
+    },
+    {
+        "skill_id": "small_edged",
+        "name": "Small Edged Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["small edged", "small edged weapons"],
+        "base_cost": {"ptp": 4, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "DEX"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "edged_weapons",
+        "name": "Edged Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["edged", "edged weapons"],
+        "base_cost": {"ptp": 5, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "DEX"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "two_handed_edged",
+        "name": "Two-Handed Edged Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["two-handed edged", "two-handed edged weapons"],
+        "base_cost": {"ptp": 6, "mtp": 2, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "DEX"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "small_blunt",
+        "name": "Small Blunt Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["small blunt", "small blunt weapons"],
+        "base_cost": {"ptp": 4, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "CON"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "blunt_weapons",
+        "name": "Blunt Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["blunt", "blunt weapons"],
+        "base_cost": {"ptp": 5, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "CON"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "two_handed_blunt",
+        "name": "Two-Handed Blunt Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["two-handed blunt", "two-handed blunt weapons"],
+        "base_cost": {"ptp": 6, "mtp": 2, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "CON"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "polearms",
+        "name": "Polearms",
+        "category": "Weapon Skills",
+        "keywords": ["polearms"],
+        "base_cost": {"ptp": 6, "mtp": 2, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "AGI"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "staves",
+        "name": "Staves",
+        "category": "Weapon Skills",
+        "keywords": ["staves"],
+        "base_cost": {"ptp": 4, "mtp": 4, "stp": 4},
+        "key_attributes": {"ptp": ["DEX", "AGI"], "mtp": ["INT", "WIS"], "stp": ["ESS", "ZEA"]}
+    },
+    {
+        "skill_id": "bows",
+        "name": "Bows",
+        "category": "Weapon Skills",
+        "keywords": ["bows"],
+        "base_cost": {"ptp": 5, "mtp": 2, "stp": 0},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["INT"], "stp": []}
+    },
+    {
+        "skill_id": "crossbows",
+        "name": "Crossbows",
+        "category": "Weapon Skills",
+        "keywords": ["crossbows"],
+        "base_cost": {"ptp": 6, "mtp": 2, "stp": 0},
+        "key_attributes": {"ptp": ["DEX", "STR"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "slings",
+        "name": "Slings",
+        "category": "Weapon Skills",
+        "keywords": ["slings"],
+        "base_cost": {"ptp": 4, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["DEX", "AGI"], "mtp": ["INT"], "stp": []}
+    },
+    {
+        "skill_id": "small_thrown",
+        "name": "Small Thrown Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["small thrown", "small thrown weapons"],
+        "base_cost": {"ptp": 4, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["DEX", "AGI"], "mtp": ["INT"], "stp": []}
+    },
+    {
+        "skill_id": "large_thrown",
+        "name": "Large Thrown Weapons",
+        "category": "Weapon Skills",
+        "keywords": ["large thrown", "large thrown weapons"],
+        "base_cost": {"ptp": 4, "mtp": 1, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "DEX"], "mtp": ["INT"], "stp": []}
+    },
+    {
+        "skill_id": "two_weapon_combat",
+        "name": "Two Weapon Combat",
+        "category": "Combat Skills",
+        "keywords": ["two weapon combat", "twc"],
+        "base_cost": {"ptp": 6, "mtp": 4, "stp": 0},
+        "key_attributes": {"ptp": ["DEX", "AGI"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "combat_maneuvers",
+        "name": "Combat Maneuvers",
+        "category": "Combat Skills",
+        "keywords": ["combat maneuvers", "cman"],
+        "base_cost": {"ptp": 7, "mtp": 5, "stp": 1},
+        "key_attributes": {"ptp": ["STR", "AGI"], "mtp": ["LOG"], "stp": ["ZEA"]}
+    },
+    {
+        "skill_id": "multi_opponent",
+        "name": "Multi Opponent Combat",
+        "category": "Combat Skills",
+        "keywords": ["multi opponent", "multi opponent combat", "moc"],
+        "base_cost": {"ptp": 8, "mtp": 4, "stp": 2},
+        "key_attributes": {"ptp": ["AGI", "STR"], "mtp": ["INT"], "stp": ["ZEA"]}
+    },
+    {
+        "skill_id": "ambush",
+        "name": "Ambush",
+        "category": "Combat Skills",
+        "keywords": ["ambush"],
+        "base_cost": {"ptp": 6, "mtp": 6, "stp": 1},
+        "key_attributes": {"ptp": ["AGI"], "mtp": ["INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "parrying",
+        "name": "Parrying",
+        "category": "Defensive Skills",
+        "keywords": ["parrying"],
+        "base_cost": {"ptp": 8, "mtp": 4, "stp": 1},
+        "key_attributes": {"ptp": ["DEX", "AGI"], "mtp": ["LOG", "INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "dodging",
+        "name": "Dodging",
+        "category": "Defensive Skills",
+        "keywords": ["dodging"],
+        "base_cost": {"ptp": 10, "mtp": 3, "stp": 2},
+        "key_attributes": {"ptp": ["AGI"], "mtp": ["INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "physical_fitness",
+        "name": "Physical Fitness",
+        "category": "Physical Skills",
+        "keywords": ["physical fitness", "pfit"],
+        "base_cost": {"ptp": 6, "mtp": 0, "stp": 1},
+        "key_attributes": {"ptp": ["CON", "STR"], "mtp": [], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "climbing",
+        "name": "Climbing",
+        "category": "Physical Skills",
+        "keywords": ["climbing"],
+        "base_cost": {"ptp": 5, "mtp": 0, "stp": 0},
+        "key_attributes": {"ptp": ["STR", "AGI"], "mtp": [], "stp": []}
+    },
+    {
+        "skill_id": "swimming",
+        "name": "Swimming",
+        "category": "Physical Skills",
+        "keywords": ["swimming"],
+        "base_cost": {"ptp": 5, "mtp": 0, "stp": 0},
+        "key_attributes": {"ptp": ["CON", "AGI"], "mtp": [], "stp": []}
+    },
+    {
+        "skill_id": "stalking_hiding",
+        "name": "Stalking and Hiding",
+        "category": "Subterfuge Skills",
+        "keywords": ["stalking", "hiding", "stalking and hiding"],
+        "base_cost": {"ptp": 4, "mtp": 3, "stp": 1},
+        "key_attributes": {"ptp": ["AGI"], "mtp": ["INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "pickpocketing",
+        "name": "Pickpocketing",
+        "category": "Subterfuge Skills",
+        "keywords": ["pickpocketing"],
+        "base_cost": {"ptp": 4, "mtp": 3, "stp": 0},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["INT"], "stp": []}
+    },
+    {
+        "skill_id": "disarming_traps",
+        "name": "Disarming Traps",
+        "category": "Subterfuge Skills",
+        "keywords": ["disarm", "disarming traps"],
+        "base_cost": {"ptp": 3, "mtp": 5, "stp": 0},
+        "key_attributes": {"ptp": ["DEX", "AGI"], "mtp": ["LOG", "INT"], "stp": []}
+    },
+    {
+        "skill_id": "picking_locks",
+        "name": "Picking Locks",
+        "category": "Subterfuge Skills",
+        "keywords": ["pick", "picking locks"],
+        "base_cost": {"ptp": 3, "mtp": 5, "stp": 0},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["LOG"], "stp": []}
+    },
+    {
+        "skill_id": "investigation",
+        "name": "Investigation",
+        "category": "General Skills",
+        "keywords": ["investigation", "investigate"],
+        "base_cost": {"ptp": 0, "mtp": 4, "stp": 2},
+        "key_attributes": {"ptp": [], "mtp": ["LOG", "INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "trading",
+        "name": "Trading",
+        "category": "General Skills",
+        "keywords": ["trading"],
+        "base_cost": {"ptp": 0, "mtp": 4, "stp": 0},
+        "key_attributes": {"ptp": [], "mtp": ["INF", "LOG"], "stp": []}
+    },
+    {
+        "skill_id": "survival",
+        "name": "Survival",
+        "category": "General Skills",
+        "keywords": ["survival"],
+        "base_cost": {"ptp": 3, "mtp": 3, "stp": 3},
+        "key_attributes": {"ptp": ["CON"], "mtp": ["INT", "WIS"], "stp": ["WIS"]}
+    },
+    {
+        "skill_id": "first_aid",
+        "name": "First Aid",
+        "category": "General Skills",
+        "keywords": ["first aid"],
+        "base_cost": {"ptp": 2, "mtp": 4, "stp": 2},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["LOG", "WIS"], "stp": ["WIS"]}
+    },
+    {
+        "skill_id": "arcane_symbols",
+        "name": "Arcane Symbols",
+        "category": "Magical Skills",
+        "keywords": ["arcane symbols", "arcane"],
+        "base_cost": {"ptp": 1, "mtp": 10, "stp": 1},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["LOG", "INT"], "stp": ["WIS"]}
+    },
+    {
+        "skill_id": "magic_item_use",
+        "name": "Magic Item Use",
+        "category": "Magical Skills",
+        "keywords": ["magic item use", "miu"],
+        "base_cost": {"ptp": 1, "mtp": 8, "stp": 2},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["LOG", "INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "harness_power",
+        "name": "Harness Power",
+        "category": "Magical Skills",
+        "keywords": ["harness power", "harness"],
+        "base_cost": {"ptp": 0, "mtp": 8, "stp": 2},
+        "key_attributes": {"ptp": [], "mtp": ["INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "mana_control",
+        "name": "Mana Control",
+        "category": "Magical Skills",
+        "keywords": ["mana control", "mana"],
+        "base_cost": {"ptp": 0, "mtp": 12, "stp": 3},
+        "key_attributes": {"ptp": [], "mtp": ["INT", "INF"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "elemental_lore",
+        "name": "Elemental Lore",
+        "category": "Lore Skills",
+        "keywords": ["elemental lore", "elemental"],
+        "base_cost": {"ptp": 0, "mtp": 15, "stp": 5},
+        "key_attributes": {"ptp": [], "mtp": ["LOG", "INT"], "stp": ["WIS"]}
+    },
+    {
+        "skill_id": "sorcerous_lore",
+        "name": "Sorcerous Lore",
+        "category": "Lore Skills",
+        "keywords": ["sorcerous lore", "sorcery"],
+        "base_cost": {"ptp": 0, "mtp": 18, "stp": 6},
+        "key_attributes": {"ptp": [], "mtp": ["LOG", "INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "mental_lore",
+        "name": "Mental Lore",
+        "category": "Lore Skills",
+        "keywords": ["mental lore", "mental"],
+        "base_cost": {"ptp": 0, "mtp": 15, "stp": 5},
+        "key_attributes": {"ptp": [], "mtp": ["LOG", "INF"], "stp": ["WIS"]}
+    },
+    {
+        "skill_id": "spiritual_lore",
+        "name": "Spiritual Lore",
+        "category": "Lore Skills",
+        "keywords": ["spiritual lore", "spiritual"],
+        "base_cost": {"ptp": 0, "mtp": 5, "stp": 15},
+        "key_attributes": {"ptp": [], "mtp": ["LOG", "WIS"], "stp": ["ZEA", "WIS"]}
+    },
+    {
+        "skill_id": "theology",
+        "name": "Theology",
+        "category": "Spiritual Skills",
+        "keywords": ["theology"],
+        "base_cost": {"ptp": 0, "mtp": 6, "stp": 8},
+        "key_attributes": {"ptp": [], "mtp": ["LOG", "WIS"], "stp": ["ZEA", "WIS"]}
+    },
+    {
+        "skill_id": "blessings",
+        "name": "Blessings",
+        "category": "Spiritual Skills",
+        "keywords": ["blessings"],
+        "base_cost": {"ptp": 0, "mtp": 2, "stp": 10},
+        "key_attributes": {"ptp": [], "mtp": ["INF"], "stp": ["ZEA", "INF"]}
+    },
+    {
+        "skill_id": "divination",
+        "name": "Divination",
+        "category": "Spiritual Skills",
+        "keywords": ["divination"],
+        "base_cost": {"ptp": 0, "mtp": 6, "stp": 10},
+        "key_attributes": {"ptp": [], "mtp": ["INT", "WIS"], "stp": ["ZEA", "ESS"]}
+    },
+    {
+        "skill_id": "manipulation",
+        "name": "Manipulation",
+        "category": "Mental Skills",
+        "keywords": ["manipulation"],
+        "base_cost": {"ptp": 0, "mtp": 14, "stp": 2},
+        "key_attributes": {"ptp": [], "mtp": ["INF"], "stp": ["WIS"]}
+    },
+    {
+        "skill_id": "telepathy",
+        "name": "Telepathy",
+        "category": "Mental Skills",
+        "keywords": ["telepathy"],
+        "base_cost": {"ptp": 0, "mtp": 12, "stp": 4},
+        "key_attributes": {"ptp": [], "mtp": ["INF", "INT"], "stp": ["ESS"]}
+    }
+]

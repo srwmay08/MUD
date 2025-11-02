@@ -16,6 +16,7 @@ GAME_MONSTER_TEMPLATES = {} # Key: monster_id, Value: monster_data dict
 GAME_LOOT_TABLES = {}       # Key: loot_table_id, Value: loot_table list
 GAME_ITEMS = {}             # Key: item_id, Value: item_data dict
 GAME_LEVEL_TABLE = {}       # <-- NEW: Holds the XP totals for levels
+GAME_SKILLS = {}            # <-- NEW: Holds all skill definitions
 # ---
 
 # Timestamp of the last time the global game loop ran

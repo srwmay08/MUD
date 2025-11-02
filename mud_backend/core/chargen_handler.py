@@ -1,10 +1,12 @@
 # mud_backend/core/chargen_handler.py
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import fetch_room_data
-from mud_backend import config # <-- NEW IMPORT
+from mud_backend import config 
 
-# --- NEW IMPORT ---
+# --- NEW IMPORTS ---
 from mud_backend.core.room_handler import show_room_to_player
+from mud_backend.core.skill_handler import show_training_menu
+# ---
 
 from mud_backend.core.stat_roller import (
     roll_stat_pool,
@@ -237,6 +239,7 @@ def _handle_appearance_input(player: Player, text_input: str):
     question_index = player.chargen_step - 3 # Adjust index
     
     if not (0 <= question_index < len(CHARGEN_QUESTIONS)):
+        # This case should ideally not be hit if logic is correct
         player.game_state = "playing"
         return
 
@@ -258,35 +261,32 @@ def _handle_appearance_input(player: Player, text_input: str):
         # 3. Ask the next question
         get_chargen_prompt(player)
     else:
+        # ---
         # 4. Chargen is complete!
+        # ---
         
-        # --- NEW: GRANT LEVEL 0 TRAINING POINTS ---
-        # (We do this *before* changing game state)
+        # Mark chargen as "finished"
+        player.chargen_step = 99 
+        
+        # Grant LEVEL 0 TRAINING POINTS
         ptps, mtps, stps = player._calculate_tps_per_level()
         player.ptps += ptps
         player.mtps += mtps
         player.stps += stps
         player.send_message("\nYou have received your initial training points:")
         player.send_message(f" {ptps} PTPs, {mtps} MTPs, {stps} STPs")
-        # --- END NEW ---
         
-        player.game_state = "playing"
-        player.current_room_id = config.CHARGEN_COMPLETE_ROOM
+        # --- CHANGED: Set game state to 'training' ---
+        player.game_state = "training"
         
-        player.send_message("\nCharacter creation complete! You feel the dream fade...")
-        player.send_message("You open your eyes and find yourself in...")
+        player.send_message("\nCharacter creation complete! You must now train your initial skills.")
         
-        # Manually fetch the new room and use the room_handler to show it
-        from mud_backend.core.game_objects import Room
-        town_square_data = fetch_room_data(config.CHARGEN_COMPLETE_ROOM)
-        new_room = Room(
-            room_id=town_square_data.get("room_id"),
-            name=town_square_data.get("name"),
-            description=town_square_data.get("description"),
-            db_data=town_square_data
-        )
-        show_room_to_player(player, new_room)
-        # --- END CHANGE ---
+        # --- CHANGED: Show the training menu ---
+        show_training_menu(player)
+        
+        # We no longer send the player to the town square here.
+        # The 'Done' verb in training.py will handle that.
+        
 # ---
 # Main Input Router
 # ---
@@ -303,9 +303,10 @@ def handle_chargen_input(player: Player, text_input: str):
         _handle_stat_roll_input(player, command)
     elif step == 2:
         _handle_assignment_input(player, command)
-    elif step > 2:
+    elif step > 2 and step < 99: # Only process if not yet finished
         _handle_appearance_input(player, text_input)
     else:
+        # This catches input if something went wrong
         player.send_message("An error occurred. Please refresh.")
         player.game_state = "playing"
 

@@ -3,7 +3,7 @@ import importlib.util
 import os
 import time 
 import datetime 
-import copy # <-- Keep this import
+import copy 
 from typing import List, Tuple, Dict, Any, Optional 
 
 from mud_backend.core.game_objects import Player, Room
@@ -15,11 +15,15 @@ from mud_backend.core.chargen_handler import (
 )
 from mud_backend.core.room_handler import show_room_to_player
 
+# --- Import our new skill handler ---
+from mud_backend.core.skill_handler import show_training_menu
+
 # --- Import our new game state and loop functions ---
 from mud_backend.core import game_state
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 # ---
+from mud_backend import config # <-- NEW IMPORT
 
 # (VERB_ALIASES and DIRECTION_MAP are unchanged)
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
@@ -50,7 +54,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Observation Verbs (all in 'observation.py')
     "examine": ("observation", "Examine"),
     "investigate": ("observation", "Investigate"),
-    "search": ("harvesting", "Search"), # <-- This was 'observation.py', but should be 'harvesting.py'
+    "search": ("harvesting", "Search"), 
     "look": ("observation", "Look"),
 
     # Combat Verbs
@@ -63,8 +67,15 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # --- NEW VERBS ---
     "experience": ("experience", "Experience"),
     "exp": ("experience", "Experience"),
-    "absorb": ("harvesting", "Absorb"), # <-- Keeping this in case you re-add it
+    "absorb": ("harvesting", "Absorb"), 
     "skin": ("harvesting", "Skin"),
+    
+    # --- NEW TRAINING VERBS ---
+    "check": ("training", "CheckIn"),
+    "checkin": ("training", "CheckIn"),
+    "train": ("training", "Train"),
+    "list": ("training", "List"),
+    "done": ("training", "Done"),
     # --- END NEW VERBS ---
     
     # Other Verbs
@@ -166,7 +177,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         
         if not player_db_data:
             # 4. This is a NEW character
-            start_room_id = "inn_room"
+            start_room_id = config.CHARGEN_START_ROOM # <-- CHANGED
             player = Player(player_name, start_room_id, {})
             player.game_state = "chargen"
             player.chargen_step = 0
@@ -213,53 +224,69 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                 
     room.objects = active_monsters
     
+    # ---
     # 5. --- CHECK GAME STATE ---
+    # ---
+    
+    parts = command_line.strip().split()
+    command = ""
+    args = []
+    if parts:
+        command = parts[0].lower()
+        args = parts[1:]
+        
     if player.game_state == "chargen":
-        if player.chargen_step == 0 and command_line.lower() == "look":
+        # --- Handle Chargen State ---
+        if player.chargen_step == 0 and command == "look":
             show_room_to_player(player, room)
             do_initial_stat_roll(player) 
             player.chargen_step = 1 
         else:
             handle_chargen_input(player, command_line)
+            
+    elif player.game_state == "training":
+        # --- Handle Training State ---
+        if not parts:
+            player.send_message("Invalid command. Type 'list', 'train', or 'done'.")
+        
+        verb_info = VERB_ALIASES.get(command)
+        
+        # Only allow training commands
+        if command in ["train", "list", "done", "look"]:
+            if command == "look":
+                # Allow looking at the room
+                verb_info = ("observation", "Look")
+                if args: # But not at items
+                    player.send_message("You must 'done' training to interact with objects.")
+                    verb_info = None # Prevent 'look <item>'
+            
+            if verb_info:
+                # Run the command as normal
+                _run_verb(player, room, command, args, verb_info)
+            else:
+                player.send_message(f"Unknown command '{command}' in training mode.")
+        else:
+            player.send_message(f"You cannot '{command}' while training. Type 'done' to finish.")
         
     elif player.game_state == "playing":
-        parts = command_line.strip().split()
+        # --- Handle Normal Playing State ---
         if not parts:
             if command_line.lower() != "ping":
                 player.send_message("What?")
         else:
-            command = parts[0].lower()
-            args = parts[1:]
- 
             verb_info = VERB_ALIASES.get(command)
             
             if not verb_info:
                 player.send_message(f"I don't know the command **'{command}'**.")
             else:
-                verb_name, verb_class_name = verb_info
-                if verb_class_name == "Move":
-                    if command in DIRECTION_MAP: args = [DIRECTION_MAP[command]]
-                elif verb_class_name == "Exit":
-                    if command == "out": args = []
-
-                verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
-                try:
-                    verb_module_name = f"mud_backend.verbs.{verb_name}"
-                    spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
-                    if spec is None: 
-                        if verb_name == "experience":
-                             player.send_message("Error: The 'experience.py' verb file is missing.")
-                             raise FileNotFoundError("experience.py not found")
-                        raise FileNotFoundError(f"Verb file not found at {verb_file_path}")
-                        
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    VerbClass = getattr(module, verb_class_name)
-                    verb_instance = VerbClass(player=player, room=room, args=args)
-                    verb_instance.execute()
-                except Exception as e:
-                    player.send_message(f"An unexpected error occurred while running **{command}**: {e}")
-                    print(f"Full error for command '{command}': {e}")
+                # --- This is the key change ---
+                # Don't let a "playing" player use "training" commands
+                # (except for 'checkin')
+                verb_module, verb_class = verb_info
+                if verb_module == "training" and command not in ["check", "checkin"]:
+                    player.send_message("You must 'check in' at the inn to train.")
+                else:
+                    _run_verb(player, room, command, args, verb_info)
     
     # 6. UPDATE ACTIVE PLAYER LIST (unchanged)
     game_state.ACTIVE_PLAYERS[player.name.lower()] = {
@@ -279,14 +306,57 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         "game_state": player.game_state
     }
 
+def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):
+    """
+    Helper function to load and execute a verb class.
+    (This logic was extracted from the 'playing' state)
+    """
+    try:
+        verb_name, verb_class_name = verb_info
+        
+        # Normalize directional commands
+        if verb_class_name == "Move":
+            if command in DIRECTION_MAP: args = [DIRECTION_MAP[command]]
+        elif verb_class_name == "Exit":
+            if command == "out": args = []
+
+        verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
+        
+        verb_module_name = f"mud_backend.verbs.{verb_name}"
+        spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
+        
+        if spec is None: 
+             raise FileNotFoundError(f"Verb file '{verb_name}.py' not found")
+                
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        
+        VerbClass = getattr(module, verb_class_name)
+        verb_instance = VerbClass(player=player, room=room, args=args)
+        verb_instance.execute()
+        
+    except Exception as e:
+        player.send_message(f"An unexpected error occurred while running **{command}**: {e}")
+        print(f"Full error for command '{command}' from file '{verb_name}.py': {e}")
+        import traceback
+        traceback.print_exc()
+
 
 # 9. get_player_object (unchanged)
 def get_player_object(player_name: str) -> Optional[Player]:
+    """
+    Gets the Player object for a given player name,
+    either from the active list or by fetching from the DB.
+    """
     player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
     if player_info and player_info.get("player_obj"):
         return player_info["player_obj"]
+    
+    # If not in active list, fetch from DB
     player_db_data = fetch_player_data(player_name)
     if not player_db_data:
         return None
+        
+    # Create a new Player object instance
     player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
     return player

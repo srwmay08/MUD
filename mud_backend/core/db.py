@@ -2,7 +2,7 @@
 import socket 
 import json
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Any
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config # <-- NEW IMPORT
@@ -218,6 +218,19 @@ def fetch_all_levels() -> list:
         return level_data
     print("[DB ERROR] 'leveling.json' is not a valid list.")
     return []
+
+# --- NEW FUNCTION ---
+def fetch_all_skills() -> dict:
+    """Loads skills.json and keys it by skill_id."""
+    print("[DB INIT] Caching all skills from skills.json...")
+    skill_list = _load_json_data("skills.json")
+    if not isinstance(skill_list, list):
+        print("[DB ERROR] 'skills.json' is not a valid list.")
+        return {}
+    skill_templates = {s["skill_id"]: s for s in skill_list if s.get("skill_id")}
+    print(f"[DB INIT] ...Cached {len(skill_templates)} skills.")
+    return skill_templates
+# --- END NEW FUNCTION ---
 
 # ---
 get_db()

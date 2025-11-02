@@ -54,8 +54,10 @@ def game_tick_thread():
                         socketio.emit("message", message, to=sid)
             # ---
 
-            # Pass the broadcast function to the main tick
-            check_and_run_game_tick(broadcast_to_room) # <-- CHANGED
+            # --- THIS IS THE FIX ---
+            # Call the function we actually imported: 'check_and_run_game_tick'
+            check_and_run_game_tick(broadcast_to_room)
+            # --- END FIX ---
             
             # --- Run the combat tick with *both* callbacks ---
             combat_system.process_combat_tick(
@@ -179,7 +181,13 @@ if __name__ == "__main__":
         game_state.GAME_ITEMS = db.fetch_all_items()
         print("[SERVER START] Loading level table...")
         game_state.GAME_LEVEL_TABLE = db.fetch_all_levels()
-        print(f"[SERVER START] Successfully cached {len(game_state.GAME_ROOMS)} rooms, {len(game_state.GAME_MONSTER_TEMPLATES)} monsters, {len(game_state.GAME_LOOT_TABLES)} loot tables, and {len(game_state.GAME_ITEMS)} items.")
+        print("[SERVER START] Loading all skills...")
+        game_state.GAME_SKILLS = db.fetch_all_skills()
+        print(f"[SERVER START] Successfully cached {len(game_state.GAME_ROOMS)} rooms, "
+              f"{len(game_state.GAME_MONSTER_TEMPLATES)} monsters, "
+              f"{len(game_state.GAME_LOOT_TABLES)} loot tables, "
+              f"{len(game_state.GAME_ITEMS)} items, "
+              f"and {len(game_state.GAME_SKILLS)} skills.")
     else:
         print("[SERVER START] ERROR: Could not connect to database.")
     
