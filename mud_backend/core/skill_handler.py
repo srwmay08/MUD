@@ -97,29 +97,54 @@ def show_training_menu(player: Player):
     Displays the main training menu and TP totals to the player.
     """
     player.send_message("\n--- **Skill Training** ---")
-    player.send_message(f" <span class='keyword'>Physical TPs: {player.ptps}</span>")
-    player.send_message(f" <span class='keyword'>Mental TPs:   {player.mtps}</span>")
-    player.send_message(f" <span class='keyword'>Spiritual TPs: {player.stps}</span>")
+    player.send_message(f" <span class='keyword' data-name='list physical tps' data-verbs='list'>Physical TPs: {player.ptps}</span>")
+    player.send_message(f" <span class='keyword' data-name='list mental tps' data-verbs='list'>Mental TPs:   {player.mtps}</span>")
+    player.send_message(f" <span class='keyword' data-name='list spiritual tps' data-verbs='list'>Spiritual TPs: {player.stps}</span>")
     player.send_message("---")
-    player.send_message("Type '<span class='keyword'>LIST &lt;category&gt;</span>' (e.g., LIST ARMOR, LIST WEAPON, LIST ALL)")
+    player.send_message("Type '<span class='keyword' data-name='list all' data-verbs='list'>LIST ALL</span>' to see all skills.")
+    player.send_message("Type '<span class='keyword' data-name='list categories' data-verbs='list'>LIST CATEGORIES</span>' to see skill groups.")
     player.send_message("Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")
-    player.send_message("Type '<span class='keyword'>DONE</span>' to finish training.")
+    player.send_message("Type '<span class='keyword' data-name='done' data-verbs='done'>DONE</span>' to finish training.")
+
+def _show_all_skills_by_category(player: Player):
+    """
+    Internal helper to list all skills, grouped by category.
+    """
+    all_categories = sorted(list(set(s.get("category", "Uncategorized") for s in game_state.GAME_SKILLS.values())))
+    sorted_skills = sorted(game_state.GAME_SKILLS.values(), key=lambda s: s.get("name", "zzz"))
+    
+    for category in all_categories:
+        player.send_message(f"\n--- **{category.upper()}** ---")
+        
+        for skill_data in sorted_skills:
+            if skill_data.get("category", "Uncategorized") != category:
+                continue
+                
+            skill_id = skill_data["skill_id"]
+            skill_name = skill_data["name"]
+            current_rank = player.skills.get(skill_id, 0)
+            
+            costs = get_skill_costs(player, skill_data)
+            cost_str = f"Cost: {costs['ptp']}p / {costs['mtp']}m / {costs['stp']}s"
+            
+            player.send_message(
+                f"- <span class='keyword' data-name='train {skill_name} 1' data-verbs='train'>{skill_name:<24}</span> "
+                f"(Rank: {current_rank:<3}) "
+                f"[{cost_str}]"
+            )
 
 def show_skill_list(player: Player, category: str):
     """
     Lists all skills, filtered by category, showing ranks and costs.
     """
     category_lower = category.lower()
-    found_skills = False
     
     # Get all categories
     all_categories = sorted(list(set(s.get("category", "Uncategorized") for s in game_state.GAME_SKILLS.values())))
     
     if category_lower == "all":
-        player.send_message("--- **All Skill Categories** ---")
-        for cat in all_categories:
-            player.send_message(f"- {cat}")
-        player.send_message("Type 'LIST <Category Name>' to see skills.")
+        # --- NEW: Call the helper function ---
+        _show_all_skills_by_category(player)
         return
         
     if category_lower == "categories":
@@ -128,6 +153,14 @@ def show_skill_list(player: Player, category: str):
             player.send_message(f"- <span class='keyword' data-name='list {cat}' data-verbs='list'>{cat}</span>")
         return
 
+    # --- Handle specific category listing ---
+    
+    # Check if the category is valid
+    if category not in [cat.lower() for cat in all_categories]:
+        player.send_message(f"No skills found for category '{category}'.")
+        player.send_message("Type '<span class='keyword' data-name='list categories' data-verbs='list'>LIST CATEGORIES</span>' to see all categories.")
+        return
+        
     player.send_message(f"--- **{category.upper()}** ---")
     
     # Sort skills by name
@@ -138,7 +171,6 @@ def show_skill_list(player: Player, category: str):
         if category_lower != skill_cat.lower():
             continue
             
-        found_skills = True
         skill_id = skill_data["skill_id"]
         skill_name = skill_data["name"]
         current_rank = player.skills.get(skill_id, 0)
@@ -153,10 +185,6 @@ def show_skill_list(player: Player, category: str):
             f"(Rank: {current_rank:<3}) "
             f"[{cost_str}]"
         )
-        
-    if not found_skills:
-        player.send_message(f"No skills found for category '{category}'.")
-        player.send_message("Type '<span class='keyword'>LIST CATEGORIES</span>' to see all categories.")
 
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):
     """

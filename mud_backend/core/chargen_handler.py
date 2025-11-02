@@ -5,7 +5,7 @@ from mud_backend import config
 
 # --- NEW IMPORTS ---
 from mud_backend.core.room_handler import show_room_to_player
-from mud_backend.core.skill_handler import show_training_menu
+from mud_backend.core.skill_handler import show_training_menu, show_skill_list # <-- UPDATED
 # ---
 
 from mud_backend.core.stat_roller import (
@@ -29,7 +29,6 @@ CHARGEN_QUESTIONS = [
         "key": "race",
         "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Dark Elf</span>)"
     },
-    # ... (all other questions are unchanged) ...
     {
         "key": "height",
         "prompt": "What is your **Height**?\n(Options: <span class='keyword'>shorter than average</span>, <span class='keyword'>average</span>, <span class='keyword'>taller than average</span>)"
@@ -48,7 +47,7 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "eye_color",
-        "prompt": "What is your **Eye Color**?\n(Options: <span class='keyword'>blue</span>, <span class='keyword'>brown</span>, <span class='keyword'>green</span>, <span class='keyword'>hazel</span>, <span class='keyword'>violet</span>, <span class='keyword'>silver</span>)"
+        "prompt": "What is your **Eye Color**?\n(Options: <span class'keyword'>blue</span>, <span class='keyword'>brown</span>, <span class='keyword'>green</span>, <span class='keyword'>hazel</span>, <span class='keyword'>violet</span>, <span class='keyword'>silver</span>)"
     },
     {
         "key": "complexion",
@@ -284,8 +283,10 @@ def _handle_appearance_input(player: Player, text_input: str):
         # --- CHANGED: Show the training menu ---
         show_training_menu(player)
         
-        # We no longer send the player to the town square here.
-        # The 'Done' verb in training.py will handle that.
+        # --- NEW: Automatically list all skills ---
+        player.send_message("\n--- **All Skills** ---")
+        show_skill_list(player, "all")
+        # ---
         
 # ---
 # Main Input Router
