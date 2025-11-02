@@ -47,11 +47,11 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "eye_color",
-        "prompt": "What is your **Eye Color**?\n(Options: <span class'keyword'>blue</span>, <span class='keyword'>brown</span>, <span class='keyword'>green</span>, <span class='keyword'>hazel</span>, <span class='keyword'>violet</span>, <span class='keyword'>silver</span>)"
+        "prompt": "What is your **Eye Color**?\n(Options: <span class='keyword'>blue</span>, <span class='keyword'>brown</span>, <span class='keyword'>green</span>, <span class='keyword'>hazel</span>, <span class='keyword'>violet</span>, <span class='keyword'>silver</span>)"
     },
     {
         "key": "complexion",
-        "prompt": "What is your **Complexion**?\n(Options: <span class='keyword'>pale</span>, <span class='keyword'>fair</span>, <span class='keyword'>tan</span>, <span class='keyword'>dark</span>, <span class'keyword'>ashen</span>, <span class='keyword'>ruddy</span>)"
+        "prompt": "What is your **Complexion**?\n(Options: <span class='keyword'>pale</span>, <span class='keyword'>fair</span>, <span class='keyword'>tan</span>, <span class='keyword'>dark</span>, <span class='keyword'>ashen</span>, <span class='keyword'>ruddy</span>)"
     },
     {
         "key": "hair_style",
@@ -67,7 +67,7 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "hair_quirk",
-        "prompt": "What is your **Hair Quirk**?\n(e.g., <span class='keyword'>swept back</span>, <span class='keyword'>messy</span>, <span class='keyword'>in a ponytail</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+        "prompt": "What is your **Hair Quirk**?\n(e.g., <span class='keyword'>swept back</span>, <span class='keyword'>messy</span>, <span class='keyword'>in a ponytail</span>, <span class='keyword'>none</span>)"
     },
     {
         "key": "face",
@@ -79,11 +79,11 @@ CHARGEN_QUESTIONS = [
     },
     {
         "key": "mark",
-        "prompt": "Any **Distinguishing Mark**?\n(e.g., <span class='keyword'>a scar over one eye</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+        "prompt": "Any **Distinguishing Mark**?\n(e.g., <span class='keyword'>a scar over one eye</span>, <span class='keyword'>none</span>)"
     },
     {
         "key": "unique",
-        "prompt": "Finally, what **Unique Feature** do you have?\n(e.g., <span class='keyword'>a silver locket</span>, <span class='keyword'>a faint aura</span>, <span class='keyword'>none</span>)\n(Type your own or 'none')"
+        "prompt": "Finally, what **Unique Feature** do you have?\n(e.g., <span class='keyword'>a silver locket</span>, <span class='keyword'>a faint aura</span>, <span class='keyword'>none</span>)"
     }
 ]
 

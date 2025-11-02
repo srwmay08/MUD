@@ -36,6 +36,7 @@ function addMessage(message, messageClass = null) {
     if (messageClass) {
         formattedMessage = `<span class="${messageClass}">${formattedMessage}</span>`;
     }
+    // We use innerHTML to render the <table> tags
     output.innerHTML += `\n${formattedMessage}`;
     output.scrollTop = output.scrollHeight;
 }
@@ -109,7 +110,7 @@ input.addEventListener('keydown', async function(event) {
             sendCommand(commandOrName, playerName);
             
         } else {
-            // --- 3. This is a NORMAL game command ---
+            // --- 3. This is a NORMAL game command (or training) ---
             addMessage(`> ${commandOrName}`, 'command-echo');
             sendCommand(commandOrName, playerName);
         }
@@ -134,21 +135,38 @@ input.addEventListener('keydown', async function(event) {
     }
 });
 
-// --- Left-Click Menu Logic (Unchanged) ---
+// --- UPDATED: Left-Click Menu Logic ---
 output.addEventListener('click', function(event) {
     const target = event.target;
     
+    // Check if the clicked element is a 'keyword'
     if (target.classList.contains('keyword')) {
         event.preventDefault();
         event.stopPropagation();
         
+        // --- THIS IS THE PRIMARY FIX ---
+        // First, check if the keyword has a direct 'data-command'
+        const command = target.dataset.command;
+        
+        if (command) {
+            // This is a clickable skill or menu option (like in training)
+            input.value = ''; 
+            addMessage(`> ${command}`, 'command-echo');
+            sendCommand(command, playerName);
+            return; // We are done
+        }
+        // --- END FIX ---
+
+        // If no data-command, proceed with old logic
         const keyword = target.dataset.name || target.innerText;
 
         if (currentGameState === "chargen") {
+            // This handles clicking chargen options
             input.value = '';
             sendCommand(target.innerText, playerName); 
             
         } else if (currentGameState === "playing") {
+            // This opens the right-click context menu
             activeKeyword = keyword;
             const verbs = (target.dataset.verbs || "look").split(',');
             

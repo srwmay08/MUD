@@ -34,6 +34,10 @@ class Player:
         self.mtps: int = self.db_data.get("mtps", 0) # Mental
         self.stps: int = self.db_data.get("stps", 0) # Spiritual
         # --- END TP ---
+        
+        # --- NEW: Skill rank tracking for "per level" limits ---
+        self.ranks_trained_this_level: Dict[str, int] = self.db_data.get("ranks_trained_this_level", {})
+        # ---
 
         self.strength = self.stats.get("STR", 10)
         self.agility = self.stats.get("AGI", 10)
@@ -44,7 +48,7 @@ class Player:
         
         self.hp: int = self.db_data.get("hp", 100)
         self.max_hp: int = self.db_data.get("max_hp", 100)
-        self.skills: Dict[str, int] = self.db_data.get("skills", {"brawling": 20, "shield_use": 10})
+        self.skills: Dict[str, int] = self.db_data.get("skills", {})
         self.equipped_items: Dict[str, str] = self.db_data.get("equipped_items", {"mainhand": None, "offhand": None, "torso": None})
 
     # --- Field Exp Pool Properties ---
@@ -225,8 +229,13 @@ class Player:
                 self.mtps += mtps
                 self.stps += stps
                 
+                # --- NEW: Reset ranks trained this level ---
+                self.ranks_trained_this_level.clear()
+                # ---
+                
                 self.send_message(f"**CONGRATULATIONS! You have advanced to Level {self.level}!**")
                 self.send_message(f"You gain: {ptps} PTPs, {mtps} MTPs, {stps} STPs.")
+                self.send_message("Your skill training limits have been reset for this level.")
                 
                 # Set new XP target
                 self.level_xp_target = self._get_xp_target_for_level(self.level)
@@ -291,6 +300,10 @@ class Player:
             "ptps": self.ptps,
             "mtps": self.mtps,
             "stps": self.stps,
+            
+            # --- NEW: Save ranks trained ---
+            "ranks_trained_this_level": self.ranks_trained_this_level,
+            # ---
         }
         
         if self._id:
