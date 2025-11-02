@@ -259,19 +259,26 @@ def _handle_appearance_input(player: Player, text_input: str):
         get_chargen_prompt(player)
     else:
         # 4. Chargen is complete!
+        
+        # --- NEW: GRANT LEVEL 0 TRAINING POINTS ---
+        # (We do this *before* changing game state)
+        ptps, mtps, stps = player._calculate_tps_per_level()
+        player.ptps += ptps
+        player.mtps += mtps
+        player.stps += stps
+        player.send_message("\nYou have received your initial training points:")
+        player.send_message(f" {ptps} PTPs, {mtps} MTPs, {stps} STPs")
+        # --- END NEW ---
+        
         player.game_state = "playing"
-        player.current_room_id = config.CHARGEN_COMPLETE_ROOM # <-- CHANGED
+        player.current_room_id = config.CHARGEN_COMPLETE_ROOM
         
         player.send_message("\nCharacter creation complete! You feel the dream fade...")
         player.send_message("You open your eyes and find yourself in...")
         
-        # --- THIS WAS THE BUG ---
-        # player.send_message(format_stats(player.stats)) # <-- REMOVED THIS LINE
-        
-        # --- THIS IS THE CHANGE ---
         # Manually fetch the new room and use the room_handler to show it
         from mud_backend.core.game_objects import Room
-        town_square_data = fetch_room_data(config.CHARGEN_COMPLETE_ROOM) # <-- CHANGED
+        town_square_data = fetch_room_data(config.CHARGEN_COMPLETE_ROOM)
         new_room = Room(
             room_id=town_square_data.get("room_id"),
             name=town_square_data.get("name"),
@@ -280,7 +287,6 @@ def _handle_appearance_input(player: Player, text_input: str):
         )
         show_room_to_player(player, new_room)
         # --- END CHANGE ---
-
 # ---
 # Main Input Router
 # ---
