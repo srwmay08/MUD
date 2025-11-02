@@ -1,5 +1,5 @@
 # core/game_objects.py
-from typing import Optional, List, Dict, Any, Tuple # <-- Add Tuple
+from typing import Optional, List, Dict, Any, Tuple # <-- Added Tuple
 import math # <-- NEW IMPORT
 from mud_backend.core import game_state # <-- NEW IMPORT
 
@@ -8,7 +8,7 @@ class Player:
         self.name = name
         self.current_room_id = current_room_id
         self.db_data = db_data if db_data is not None else {}
-        self.messages = []
+        self.messages = [] 
         
         self._id = self.db_data.get("_id") 
 
@@ -20,29 +20,34 @@ class Player:
         
         self.stats: Dict[str, int] = self.db_data.get("stats", {})
         
-        # --- NEW: Get XP target for next level ---
-        # We'll set this properly on first check
+        # --- CHARGEN STAT FIELDS ---
+        self.current_stat_pool: List[int] = self.db_data.get("current_stat_pool", [])
+        self.best_stat_pool: List[int] = self.db_data.get("best_stat_pool", [])
+        self.stats_to_assign: List[int] = self.db_data.get("stats_to_assign", [])
+        # --- END CHARGEN STATS ---
+
+        # --- Get XP target for next level ---
         self.level_xp_target: int = self._get_xp_target_for_level(self.level)
         
-        # --- NEW TP FIELDS ---
+        # --- TP FIELDS ---
         self.ptps: int = self.db_data.get("ptps", 0) # Physical
         self.mtps: int = self.db_data.get("mtps", 0) # Mental
         self.stps: int = self.db_data.get("stps", 0) # Spiritual
-        # --- END NEW TP ---
+        # --- END TP ---
 
-        # ... (stat_pool, chargen_step, appearance, hp, max_hp, skills, etc. are unchanged) ...
         self.strength = self.stats.get("STR", 10)
         self.agility = self.stats.get("AGI", 10)
+        
         self.game_state: str = self.db_data.get("game_state", "playing")
         self.chargen_step: int = self.db_data.get("chargen_step", 0)
         self.appearance: Dict[str, str] = self.db_data.get("appearance", {})
+        
         self.hp: int = self.db_data.get("hp", 100)
         self.max_hp: int = self.db_data.get("max_hp", 100)
         self.skills: Dict[str, int] = self.db_data.get("skills", {"brawling": 20, "shield_use": 10})
         self.equipped_items: Dict[str, str] = self.db_data.get("equipped_items", {"mainhand": None, "offhand": None, "torso": None})
 
-
-    # --- NEW: Field Exp Pool Properties ---
+    # --- Field Exp Pool Properties ---
     @property
     def field_exp_capacity(self) -> int:
         """Calculates the max size of the field experience pool."""
@@ -55,7 +60,12 @@ class Player:
         if self.unabsorbed_exp <= 0:
             return "clear as a bell"
         
-        saturation = self.unabsorbed_exp / self.field_exp_capacity
+        # Handle potential division by zero if capacity is somehow 0
+        capacity = self.field_exp_capacity
+        if capacity == 0:
+            return "completely saturated"
+            
+        saturation = self.unabsorbed_exp / capacity
         
         if saturation > 1.0: return "completely saturated"
         if saturation > 0.9: return "must rest"
@@ -65,7 +75,7 @@ class Player:
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
-    # --- NEW: Add to Field Exp (with diminishing returns) ---
+    # --- Add to Field Exp (with diminishing returns) ---
     def add_field_exp(self, nominal_amount: int):
         """
         Adds experience to the field pool, applying diminishing returns.
@@ -94,7 +104,7 @@ class Player:
             self.unabsorbed_exp += actual_gained
             self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
 
-    # --- NEW: Absorb from Field Exp (on tick) ---
+    # --- Absorb from Field Exp (on tick) ---
     def absorb_exp_pulse(self):
         """
         Absorbs one pulse of experience from the field pool.
@@ -104,19 +114,18 @@ class Player:
             return # Nothing to absorb
 
         # --- Calculate Absorption Rate ---
-        # We'll use "On-node" as the default for now.
-        # You can make this more complex by adding room flags.
+        # Using "On-node" as the default for now.
         
         # Base Rate: 25 (On-node)
         base_rate = 25
         
-        # Logic Bonus: (Logic Bonus/5)
+        # Logic Bonus: (Logic / 5)
         logic_bonus = math.floor(self.stats.get("LOG", 0) / 5.0)
         
         # Pool Size Bonus: 1 per 200, max 10
         pool_bonus = min(10, math.floor(self.unabsorbed_exp / 200.0))
         
-        # Group Bonus: (We'll skip this for now, assume 0)
+        # Group Bonus: (Skipping for now)
         group_bonus = 0
         
         amount_to_absorb = int(base_rate + logic_bonus + pool_bonus + group_bonus)
@@ -136,7 +145,7 @@ class Player:
         # --- Check for Level Up ---
         self._check_for_level_up()
 
-    # --- NEW: Level Up Helper ---
+    # --- Level Up Helper ---
     def _get_xp_target_for_level(self, level: int) -> int:
         """
         Gets the TOTAL experience required to have achieved a given level.
@@ -152,7 +161,12 @@ class Player:
             return self.experience + 2500 
             
         # List is 0-indexed (level 1 is index 0)
-        return table[level - 1]
+        # We need to get the target for the *next* level, so level-1 is correct
+        if level - 1 < len(table):
+            return table[level - 1]
+        else:
+            # Failsafe if table is shorter than 100
+             return self.experience + 999999
 
     def _calculate_tps_per_level(self) -> Tuple[int, int, int]:
         """Calculates TPs gained for one level."""
@@ -168,17 +182,24 @@ class Player:
     def _check_for_level_up(self):
         """Checks if absorbed XP passes the next level's threshold."""
         
+        # Update target just in case it's 0
+        if self.level_xp_target == 0:
+           self.level_xp_target = self._get_xp_target_for_level(self.level)
+           
         # Use a while loop in case of multi-level gain
         while self.experience >= self.level_xp_target:
             if self.level >= 100:
                 # --- Post-Cap TP Gain ---
-                ptps, mtps, stps = 1, 1, 0 # Per wiki: 1 MTP, 1 PTP
+                ptps, mtps = 1, 1 # Per wiki: 1 MTP, 1 PTP
                 self.ptps += ptps
                 self.mtps += mtps
                 self.send_message(f"**You gain 1 MTP and 1 PTP from post-cap experience!**")
                 
                 # Set next target
                 self.level_xp_target = self.experience + 2500
+                if self.level_xp_target <= self.experience:
+                    # Failsafe for very large XP gains
+                    self.level_xp_target = self.experience + 1
             else:
                 # --- Normal Level Up ---
                 self.level += 1
@@ -194,28 +215,29 @@ class Player:
                 # Set new XP target
                 self.level_xp_target = self._get_xp_target_for_level(self.level)
 
-    # --- REMOVE OLD gain_exp METHOD ---
-    # def gain_exp(self, amount: int): ... (THIS IS NOW GONE)
-
     def send_message(self, message: str):
-        # ... (unchanged)
+        """Adds a message to the player's output queue."""
         self.messages.append(message)
 
+    # --- COMBAT HELPER METHODS ---
     def get_equipped_item_data(self, slot: str, game_items_global: dict) -> Optional[dict]:
-        # ... (unchanged)
+        """Gets the item data for an equipped item."""
         item_id = self.equipped_items.get(slot)
         if item_id:
             return game_items_global.get(item_id)
         return None
 
     def get_armor_type(self, game_items_global: dict) -> str:
-        # ... (unchanged)
+        """Gets the player's current armor type from their torso slot."""
         DEFAULT_UNARMORED_TYPE = "unarmored" 
+        
         armor_data = self.get_equipped_item_data("torso", game_items_global)
         if armor_data and armor_data.get("type") == "armor":
             return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
         return DEFAULT_UNARMORED_TYPE
     
+    # --- END COMBAT HELPER METHODS ---
+
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
         
@@ -238,9 +260,12 @@ class Player:
             "agility": self.agility,
             
             "stats": self.stats,
+            
+            # --- CHARGEN STATS ---
             "current_stat_pool": self.current_stat_pool,
             "best_stat_pool": self.best_stat_pool,
             "stats_to_assign": self.stats_to_assign,
+            # --- END CHARGEN STATS ---
             
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
@@ -251,7 +276,7 @@ class Player:
             "skills": self.skills,
             "equipped_items": self.equipped_items,
             
-            # --- NEW TP FIELDS TO SAVE ---
+            # --- TP FIELDS TO SAVE ---
             "ptps": self.ptps,
             "mtps": self.mtps,
             "stps": self.stps,
@@ -265,8 +290,8 @@ class Player:
     def __repr__(self):
         return f"<Player: {self.name}>"
 
+
 # --- (Room class is unchanged) ---
-# ...
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
@@ -276,7 +301,9 @@ class Room:
         
         self._id = self.db_data.get("_id") 
         
-        self.unabsorbed_social_exp = self.db_data.get("unabsorbed_social_exp", 0)
+        # This field is no longer used by the new XP system
+        self.unabsorbed_social_exp = self.db_data.get("unabsorbed_social_exp", 0) 
+        
         self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
         
         # --- NEW FIELD ---

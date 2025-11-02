@@ -218,6 +218,10 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     
     if is_attacker_player:
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand", game_items_global)
+        # --- NEW: LEARNED SKILL XP ---
+        # Give 1 XP for just using the skill
+        attacker.add_field_exp(1)
+        # --- END NEW ---
     else:
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
         attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
@@ -416,6 +420,36 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                 
                 if new_hp <= 0:
                     broadcast_callback(room_id, f"**The {defender.get('name')} has been DEFEATED!**", "combat_death")
+                    
+                    # --- NEW: GRANT XP (to the attacker) ---
+                    if is_attacker_player: # Check if the attacker is the player
+                        
+                        # --- TESTING MODIFICATION ---
+                        # Give a flat 1000 XP per kill to speed up testing
+                        nominal_xp = 1000 
+                        # --- END TESTING MODIFICATION ---
+
+                        # --- Original Level-Difference Logic (Commented out for testing) ---
+                        # monster_level = defender.get("level", 1)
+                        # level_diff = attacker.level - monster_level
+                        # 
+                        # nominal_xp = 100 # Default for same-level
+                        # if level_diff >= 10:
+                        #     nominal_xp = 0
+                        # elif level_diff > 0: # Monster is lower level
+                        #     nominal_xp = 100 - (level_diff * 10)
+                        # elif level_diff <= -5: # Monster is 5+ levels higher
+                        #     nominal_xp = 150
+                        # elif level_diff < 0: # Monster is 1-4 levels higher
+                        #     nominal_xp = 100 + (abs(level_diff) * 10)
+                        # --- End Original Logic ---
+
+                        if nominal_xp > 0:
+                            # Use the new method that handles diminishing returns
+                            attacker.add_field_exp(nominal_xp)
+                            # Send a message just to the player
+                            send_to_player_callback(attacker.name, "You gain field experience.", "system_info")
+                    # --- END NEW ---
                     
                     # --- Loot/Corpse Generation ---
                     corpse_data = loot_system.create_corpse_object_data(

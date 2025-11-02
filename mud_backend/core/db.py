@@ -209,5 +209,15 @@ def fetch_all_items() -> dict:
     print(f"[DB INIT] ...Cached {len(items)} items.")
     return items
 
+def fetch_all_levels() -> list:
+    """Loads leveling.json."""
+    print("[DB INIT] Caching level table from leveling.json...")
+    level_data = _load_json_data("leveling.json")
+    if isinstance(level_data, list):
+        print(f"[DB INIT] ...Cached {len(level_data)} level thresholds.")
+        return level_data
+    print("[DB ERROR] 'leveling.json' is not a valid list.")
+    return []
+
 # ---
 get_db()

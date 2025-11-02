@@ -2,7 +2,8 @@
 import importlib.util
 import os
 import time 
-import copy # <-- Still needed for monster inflation
+import datetime 
+import copy # <-- Keep this import
 from typing import List, Tuple, Dict, Any, Optional 
 
 from mud_backend.core.game_objects import Player, Room
@@ -13,13 +14,11 @@ from mud_backend.core.chargen_handler import (
     do_initial_stat_roll
 )
 from mud_backend.core.room_handler import show_room_to_player
-from mud_backend.core import game_state
-from mud_backend import config
 
-# --- REMOVED IMPORTS ---
-# - datetime (moved to game_loop_handler)
-# - environment (moved to game_loop_handler)
-# - monster_respawn (moved to game_loop_handler)
+# --- Import our new game state and loop functions ---
+from mud_backend.core import game_state
+from mud_backend.core.game_loop import environment
+from mud_backend.core.game_loop import monster_respawn
 # ---
 
 # (VERB_ALIASES and DIRECTION_MAP are unchanged)
@@ -51,7 +50,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Observation Verbs (all in 'observation.py')
     "examine": ("observation", "Examine"),
     "investigate": ("observation", "Investigate"),
-    "search": ("observation", "Investigate"), # Alias
+    "search": ("harvesting", "Search"), # <-- This was 'observation.py', but should be 'harvesting.py'
     "look": ("observation", "Look"),
 
     # Combat Verbs
@@ -60,10 +59,16 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Exit Verbs
     "exit": ("movement", "Exit"),
     "out": ("movement", "Exit"),
+
+    # --- NEW VERBS ---
+    "experience": ("experience", "Experience"),
+    "exp": ("experience", "Experience"),
+    "absorb": ("harvesting", "Absorb"), # <-- Keeping this in case you re-add it
+    "skin": ("harvesting", "Skin"),
+    # --- END NEW VERBS ---
     
     # Other Verbs
     "say": ("say", "Say"),
-    
     "ping": ("tick", "Tick"),
 }
 DIRECTION_MAP = {
@@ -74,37 +79,106 @@ DIRECTION_MAP = {
 }
 
 
-# --- REMOVED: _prune_active_players function (moved to game_loop_handler) ---
+# --- (Prune Stale Players function is unchanged) ---
+def _prune_active_players(log_prefix: str, broadcast_callback):
+    current_time = time.time()
+    stale_players = []
+    for player_name, data in game_state.ACTIVE_PLAYERS.items():
+        if (current_time - data["last_seen"]) > game_state.PLAYER_TIMEOUT_SECONDS:
+            stale_players.append(player_name)
+    if stale_players:
+        for player_name in stale_players:
+            player_info = game_state.ACTIVE_PLAYERS.pop(player_name, None)
+            if player_info:
+                room_id = player_info.get("current_room_id", "unknown")
+                disappears_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> disappears.'
+                broadcast_callback(room_id, disappears_message, "ambient")
+                print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
 
-# --- REMOVED: _check_and_run_game_tick function (moved to game_loop_handler) ---
+# --- (Game Tick function is unchanged) ---
+def _check_and_run_game_tick(broadcast_callback):
+    """
+    Checks if enough time has passed and runs the global game tick.
+    """
+    current_time = time.time()
+    
+    if (current_time - game_state.LAST_GAME_TICK_TIME) < game_state.TICK_INTERVAL_SECONDS:
+        return # Not time to tick yet
+        
+    game_state.LAST_GAME_TICK_TIME = current_time
+    game_state.GAME_TICK_COUNTER += 1
+    
+    # Get *all* active players for the environment check
+    temp_active_players = {}
+    for player_name, data in game_state.ACTIVE_PLAYERS.items():
+        player_obj = data.get("player_obj")
+        if not player_obj:
+            # This is a fallback, but player_obj should always exist
+            player_obj = Player(player_name, data["current_room_id"])
+        temp_active_players[player_name] = player_obj
+    
+    log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    log_prefix = f"{log_time} - GAME_TICK ({game_state.GAME_TICK_COUNTER})" 
+    print(f"{log_prefix}: Running global tick...")
 
+    _prune_active_players(log_prefix, broadcast_callback)
+
+    environment.update_environment_state(
+        game_tick_counter=game_state.GAME_TICK_COUNTER,
+        active_players_dict=temp_active_players,
+        log_time_prefix=log_prefix,
+        broadcast_callback=broadcast_callback
+    )
+
+    # ---
+    # THIS IS THE FIX. We only pass the arguments it actually needs.
+    # ---
+    monster_respawn.process_respawns(
+        log_time_prefix=log_prefix,
+        broadcast_callback=broadcast_callback,
+        game_npcs_dict={}, # TODO: Pass real data
+        game_equipment_tables_global={}, # TODO: Pass real data
+        game_items_global=game_state.GAME_ITEMS # Pass the real items
+    )
+    # --- END FIX ---
+    
+    print(f"{log_prefix}: Global tick complete.")
 
 # ---
-# EXECUTE_COMMAND
+# UPDATED EXECUTE_COMMAND
 # ---
 def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
     """
     The main function to parse and execute a game command.
     """
     
-    # 1. Fetch Player Data (unchanged)
-    player_db_data = fetch_player_data(player_name)
+    # --- STATE MANAGEMENT REFACTOR ---
+    # 1. Check if player is already active in memory
+    player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
     
-    # 2. Handle New vs. Existing Player (unchanged)
-    if not player_db_data:
-        start_room_id = config.CHARGEN_START_ROOM 
-        player = Player(player_name, start_room_id, {})
-        player.game_state = "chargen"
-        player.chargen_step = 0
-        player.hp = 100
-        player.max_hp = 100
-        player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
+    if player_info and player_info.get("player_obj"):
+        # 2. If yes, use the existing Player object (which is being updated by the tick)
+        player = player_info["player_obj"]
+        player.messages.clear() # Clear messages from the last command
     else:
-        player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
-    
-    # 3. --- GAME TICK IS NO LONGER RUN HERE ---
-
-    # 4. Fetch Room Data (FROM CACHE) (unchanged)
+        # 3. If no, this is a new login. Fetch from DB.
+        player_db_data = fetch_player_data(player_name)
+        
+        if not player_db_data:
+            # 4. This is a NEW character
+            start_room_id = "inn_room"
+            player = Player(player_name, start_room_id, {})
+            player.game_state = "chargen"
+            player.chargen_step = 0
+            player.hp = 100
+            player.max_hp = 100
+            player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
+        else:
+            # 5. This is a RETURNING character
+            player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
+    # --- END REFACTOR ---
+            
+    # 4. Fetch Room Data (FROM CACHE)
     room_db_data = game_state.GAME_ROOMS.get(player.current_room_id)
     if not room_db_data:
         print(f"[WARN] Room {player.current_room_id} not in cache! Fetching from DB.")
@@ -119,7 +193,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         db_data=room_db_data 
     )
 
-    # 5. Inflate Room Monsters (unchanged)
+    # --- UPDATED: Filter defeated monsters and INFLATE stubs ---
     active_monsters = []
     if "objects" in room_db_data:
         for obj in room_db_data["objects"]:
@@ -139,8 +213,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                 
     room.objects = active_monsters
     
-    # 6. --- CHECK GAME STATE ---
-    # (Chargen logic is unchanged)
+    # 5. --- CHECK GAME STATE ---
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command_line.lower() == "look":
             show_room_to_player(player, room)
@@ -150,7 +223,6 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             handle_chargen_input(player, command_line)
         
     elif player.game_state == "playing":
-        # (Verb execution logic is unchanged)
         parts = command_line.strip().split()
         if not parts:
             if command_line.lower() != "ping":
@@ -174,7 +246,12 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                 try:
                     verb_module_name = f"mud_backend.verbs.{verb_name}"
                     spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
-                    if spec is None: raise FileNotFoundError(f"Verb file not found at {verb_file_path}")
+                    if spec is None: 
+                        if verb_name == "experience":
+                             player.send_message("Error: The 'experience.py' verb file is missing.")
+                             raise FileNotFoundError("experience.py not found")
+                        raise FileNotFoundError(f"Verb file not found at {verb_file_path}")
+                        
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
                     VerbClass = getattr(module, verb_class_name)
@@ -184,7 +261,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                     player.send_message(f"An unexpected error occurred while running **{command}**: {e}")
                     print(f"Full error for command '{command}': {e}")
     
-    # 7. UPDATE ACTIVE PLAYER LIST (unchanged)
+    # 6. UPDATE ACTIVE PLAYER LIST (unchanged)
     game_state.ACTIVE_PLAYERS[player.name.lower()] = {
         "sid": sid,
         "player_name": player.name, 
@@ -193,17 +270,17 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         "player_obj": player 
     }
 
-    # 8. Persist State Changes (unchanged)
+    # 7. Persist State Changes (unchanged)
     save_game_state(player)
 
-    # 9. Return output to the client (unchanged)
+    # 8. Return output to the client (unchanged)
     return {
         "messages": player.messages,
         "game_state": player.game_state
     }
 
 
-# 10. get_player_object (unchanged)
+# 9. get_player_object (unchanged)
 def get_player_object(player_name: str) -> Optional[Player]:
     player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
     if player_info and player_info.get("player_obj"):

@@ -94,7 +94,7 @@ class Attack(BaseVerb):
                     monster_level = target_monster_data.get("level", 1)
                     level_diff = self.player.level - monster_level
                     
-                    nominal_xp = 100 # Default for same-level
+                    nominal_xp = 1000 # Default for same-level
                     if level_diff >= 10:
                         nominal_xp = 0
                     elif level_diff > 0: # Monster is lower level

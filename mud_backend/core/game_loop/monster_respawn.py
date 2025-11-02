@@ -6,7 +6,8 @@ import pytz
 import copy 
 
 try:
-    from mud_backend import config # <-- CHANGED
+    # This will be used by your IDE, but the mock is fine for runtime
+    from mud_backend.core import config
     from mud_backend.core import game_state 
 except ImportError as e:
     # (MockConfig and MockGameState)
@@ -33,7 +34,7 @@ def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_eq
     entity_runtime_data["hp"] = entity_template.get("max_hp", entity_template.get("hp", 1))
 
 
-def process_respawns(log_time_prefix, current_time_utc, 
+def process_respawns(log_time_prefix, 
                      broadcast_callback,
                      # --- Pass in the data it needs ---
                      game_npcs_dict, 
@@ -44,6 +45,11 @@ def process_respawns(log_time_prefix, current_time_utc,
     Processes all respawns.
     This function now reads its state from the global 'game_state' module.
     """
+    
+    # --- THIS IS THE FIX ---
+    # Get the current time as a float, just like the timestamps we are comparing
+    current_time_float = time.time()
+    # --- END FIX ---
     
     # --- Get state from the global game_state module ---
     tracked_defeated_entities_dict = game_state.DEFEATED_MONSTERS
@@ -67,7 +73,10 @@ def process_respawns(log_time_prefix, current_time_utc,
             continue
         # ---
         
-        is_eligible = current_time_utc >= respawn_info.get("eligible_at", current_time_utc)
+        # --- THIS IS THE FIX ---
+        # Compare float to float
+        is_eligible = current_time_float >= respawn_info.get("eligible_at", current_time_float)
+        # --- END FIX ---
         
         if is_eligible:
             respawn_chance = respawn_info.get("chance", getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2))
