@@ -2,12 +2,9 @@
 import random
 import time
 from typing import Dict, Any
+from mud_backend import config # <-- NEW IMPORT
 
-# Mock config, same as before
-class MockConfig:
-    DEBUG_MODE = True; CORPSE_DECAY_TIME_SECONDS = 300
-    DEFAULT_DROP_EQUIPPED_CHANCE = 1.0; DEFAULT_DROP_CARRIED_CHANCE = 1.0
-config = MockConfig()
+# --- REMOVED: MockConfig class ---
 
 # --- REMOVED: No more global GAME_LOOT_TABLES mock data ---
 

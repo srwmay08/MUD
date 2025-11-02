@@ -5,12 +5,13 @@ import os
 from typing import TYPE_CHECKING, Optional
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
+from mud_backend import config # <-- NEW IMPORT
 
 if TYPE_CHECKING:
     from .game_objects import Player, Room
 
-MONGO_URI = "mongodb://localhost:27017/" 
-DATABASE_NAME = "MUD_Dev"  
+MONGO_URI = config.MONGO_URI # <-- CHANGED
+DATABASE_NAME = config.DATABASE_NAME # <-- CHANGED
 
 client: Optional[MongoClient] = None
 db = None

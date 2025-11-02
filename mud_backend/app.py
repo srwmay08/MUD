@@ -4,12 +4,17 @@ import os
 import time
 import datetime
 import threading 
+import math
 from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 # --- (Imports are unchanged) ---
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from mud_backend.core.command_executor import execute_command, _check_and_run_game_tick
+
+# --- UPDATED IMPORTS ---
+from mud_backend.core.command_executor import execute_command
+from mud_backend.core.game_loop_handler import check_and_run_game_tick # <-- CHANGED
+# ---
 from mud_backend.core import game_state
 from mud_backend.core import db
 from mud_backend.core import combat_system 
@@ -50,15 +55,30 @@ def game_tick_thread():
             # ---
 
             # Pass the broadcast function to the main tick
-            _check_and_run_game_tick(broadcast_to_room)
+            check_and_run_game_tick(broadcast_to_room) # <-- CHANGED
             
             # --- Run the combat tick with *both* callbacks ---
             combat_system.process_combat_tick(
                 broadcast_callback=broadcast_to_room,
                 send_to_player_callback=send_to_player
             )
+
+            # --- REVISED: XP ABSORPTION LOGIC ---
+            for player_name_lower, player_data in list(game_state.ACTIVE_PLAYERS.items()):
+                player_obj = player_data.get("player_obj")
+                
+                # Check if player is valid and has XP to absorb
+                if player_obj and player_obj.unabsorbed_exp > 0:
+                    
+                    # Call the player's internal absorption method
+                    # This will handle all calculations and leveling
+                    player_obj.absorb_exp_pulse()
+                    
+            # --- END REVISED XP LOGIC ---
             
             socketio.emit('tick')
+            
+            # Reads interval from game_state (which gets it from config)
             time.sleep(game_state.TICK_INTERVAL_SECONDS)
 
 # ---
@@ -157,6 +177,8 @@ if __name__ == "__main__":
         game_state.GAME_LOOT_TABLES = db.fetch_all_loot_tables()
         print("[SERVER START] Loading all items...")
         game_state.GAME_ITEMS = db.fetch_all_items()
+        print("[SERVER START] Loading level table...")
+        game_state.GAME_LEVEL_TABLE = db.fetch_all_levels()
         print(f"[SERVER START] Successfully cached {len(game_state.GAME_ROOMS)} rooms, {len(game_state.GAME_MONSTER_TEMPLATES)} monsters, {len(game_state.GAME_LOOT_TABLES)} loot tables, and {len(game_state.GAME_ITEMS)} items.")
     else:
         print("[SERVER START] ERROR: Could not connect to database.")

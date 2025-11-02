@@ -6,7 +6,7 @@ import pytz
 import copy 
 
 try:
-    import config
+    from mud_backend import config # <-- CHANGED
     from mud_backend.core import game_state 
 except ImportError as e:
     # (MockConfig and MockGameState)

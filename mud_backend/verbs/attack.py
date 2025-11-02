@@ -90,6 +90,27 @@ class Attack(BaseVerb):
                     # Monster is dead
                     self.player.send_message(f"**The {target_monster_data['name']} has been DEFEATED!**")
                     
+                    # --- NEW: GRANT XP (Level-based) ---
+                    monster_level = target_monster_data.get("level", 1)
+                    level_diff = self.player.level - monster_level
+                    
+                    nominal_xp = 100 # Default for same-level
+                    if level_diff >= 10:
+                        nominal_xp = 0
+                    elif level_diff > 0: # Monster is lower level
+                        nominal_xp = 100 - (level_diff * 10)
+                    elif level_diff <= -5: # Monster is 5+ levels higher
+                        nominal_xp = 150
+                    elif level_diff < 0: # Monster is 1-4 levels higher
+                        nominal_xp = 100 + (abs(level_diff) * 10)
+
+                    if nominal_xp > 0:
+                        # Use the new method that handles diminishing returns
+                        self.player.add_field_exp(nominal_xp)
+                    else:
+                        self.player.send_message("You learn nothing from this kill.")
+                    # --- END NEW ---
+                    
                     corpse_data = loot_system.create_corpse_object_data(
                         defeated_entity_template=target_monster_data, 
                         defeated_entity_runtime_id=monster_id,

@@ -1,6 +1,7 @@
 # mud_backend/core/chargen_handler.py
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import fetch_room_data
+from mud_backend import config # <-- NEW IMPORT
 
 # --- NEW IMPORT ---
 from mud_backend.core.room_handler import show_room_to_player
@@ -259,7 +260,7 @@ def _handle_appearance_input(player: Player, text_input: str):
     else:
         # 4. Chargen is complete!
         player.game_state = "playing"
-        player.current_room_id = "town_square" # Move them to the main game
+        player.current_room_id = config.CHARGEN_COMPLETE_ROOM # <-- CHANGED
         
         player.send_message("\nCharacter creation complete! You feel the dream fade...")
         player.send_message("You open your eyes and find yourself in...")
@@ -270,7 +271,7 @@ def _handle_appearance_input(player: Player, text_input: str):
         # --- THIS IS THE CHANGE ---
         # Manually fetch the new room and use the room_handler to show it
         from mud_backend.core.game_objects import Room
-        town_square_data = fetch_room_data("town_square")
+        town_square_data = fetch_room_data(config.CHARGEN_COMPLETE_ROOM) # <-- CHANGED
         new_room = Room(
             room_id=town_square_data.get("room_id"),
             name=town_square_data.get("name"),
