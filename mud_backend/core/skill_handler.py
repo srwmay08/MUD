@@ -1,14 +1,13 @@
 # mud_backend/core/skill_handler.py
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from mud_backend.core.game_objects import Player
 from mud_backend.core import game_state
 
 # ---
-# Skill Cost Calculation Logic
+# Skill Cost Calculation Logic (Unchanged)
 # ---
 
-# (This function is unchanged)
 def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attrs: List[str]) -> int:
     """
     Calculates the final, discounted cost for one TP type (PTP, MTP, or STP).
@@ -53,7 +52,6 @@ def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attr
     
     return int(final_cost)
 
-# (This function is unchanged)
 def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
     """
     Gets the final PTP, MTP, and STP costs for a skill for a specific player.
@@ -80,7 +78,6 @@ def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
     
     return {"ptp": final_ptp, "mtp": final_mtp, "stp": final_stp}
 
-# (This function is unchanged)
 def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
     """Finds a skill in the global state by its name or keywords."""
     skill_name_lower = skill_name.lower()
@@ -91,11 +88,131 @@ def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
             return skill_data
     return None
 
-# ---
-# Training Menu / "GUI" Logic
-# ---
+# --- NEW TP CONVERSION LOGIC ---
+
+def _check_for_tp_conversion_needs(player: Player, total_costs: Dict[str, int]) -> Optional[Dict[str, Any]]:
+    """
+    Checks if the player needs and can afford TP conversion for the given costs.
+    Returns:
+        A dict with conversion details if needed/possible, or None otherwise.
+    """
+    needed_ptp = max(0, total_costs["ptp"] - player.ptps)
+    needed_mtp = max(0, total_costs["mtp"] - player.mtps)
+    needed_stp = max(0, total_costs["stp"] - player.stps)
+
+    # Check for simple case: only one type of TP is missing
+    missing_count = sum(1 for n in [needed_ptp, needed_mtp, needed_stp] if n > 0)
+    if missing_count != 1:
+        return None
+
+    # 1. PTP conversion (Cost: 1 MTP + 1 STP for 1 PTP)
+    if needed_ptp > 0:
+        conversion_ratio = needed_ptp
+        needed_mtp_for_conversion = conversion_ratio
+        needed_stp_for_conversion = conversion_ratio
+        
+        if player.mtps >= needed_mtp_for_conversion and player.stps >= needed_stp_for_conversion:
+            return {
+                "tp_type": "PTP",
+                "converted_amount": needed_ptp,
+                "conv_mtp": needed_mtp_for_conversion,
+                "conv_stp": needed_stp_for_conversion,
+                "msg": f"You are short {needed_ptp} PTPs. Do you wish to convert {needed_mtp_for_conversion} MTPs and {needed_stp_for_conversion} STPs to proceed?"
+            }
+
+    # 2. MTP conversion (Cost: 1 PTP + 1 STP for 1 MTP)
+    if needed_mtp > 0:
+        conversion_ratio = needed_mtp
+        needed_ptp_for_conversion = conversion_ratio
+        needed_stp_for_conversion = conversion_ratio
+        
+        if player.ptps >= needed_ptp_for_conversion and player.stps >= needed_stp_for_conversion:
+            return {
+                "tp_type": "MTP",
+                "converted_amount": needed_mtp,
+                "conv_ptp": needed_ptp_for_conversion,
+                "conv_stp": needed_stp_for_conversion,
+                "msg": f"You are short {needed_mtp} MTPs. Do you wish to convert {needed_ptp_for_conversion} PTPs and {needed_stp_for_conversion} STPs to proceed?"
+            }
+
+    # 3. STP conversion (Cost: 1 PTP + 1 MTP for 1 STP)
+    if needed_stp > 0:
+        conversion_ratio = needed_stp
+        needed_ptp_for_conversion = conversion_ratio
+        needed_mtp_for_conversion = conversion_ratio
+        
+        if player.ptps >= needed_ptp_for_conversion and player.mtps >= needed_mtp_for_conversion:
+            return {
+                "tp_type": "STP",
+                "converted_amount": needed_stp,
+                "conv_ptp": needed_ptp_for_conversion,
+                "conv_mtp": needed_mtp_for_conversion,
+                "msg": f"You are short {needed_stp} STPs. Do you wish to convert {needed_ptp_for_conversion} PTPs and {needed_mtp_for_conversion} MTPs to proceed?"
+            }
+            
+    return None
+
+def _perform_conversion_and_train(player: Player, training_data: Dict[str, Any]):
+    """
+    Performs the TP conversion and completes the training.
+    Assumes player has already confirmed and has the TPs.
+    """
+    
+    skill_data = training_data["skill_data"]
+    ranks_to_train = training_data["ranks"]
+    total_costs = training_data["total_costs"]
+    conversion_data = training_data["conversion_data"]
+    
+    # 1. Perform the Conversion (Spend 2 TPs, Gain 1 TP in the needed pool)
+    conv_type = conversion_data["tp_type"]
+    converted_amount = conversion_data["converted_amount"]
+    
+    conversion_msg = ""
+    
+    if conv_type == "PTP":
+        player.mtps -= conversion_data["conv_mtp"]
+        player.stps -= conversion_data["conv_stp"]
+        player.ptps += converted_amount
+        conversion_msg = f"Converted {conversion_data['conv_mtp']} MTPs and {conversion_data['conv_stp']} STPs into {converted_amount} PTPs."
+    elif conv_type == "MTP":
+        player.ptps -= conversion_data["conv_ptp"]
+        player.stps -= conversion_data["conv_stp"]
+        player.mtps += converted_amount
+        conversion_msg = f"Converted {conversion_data['conv_ptp']} PTPs and {conversion_data['conv_stp']} STPs into {converted_amount} MTPs."
+    elif conv_type == "STP":
+        player.ptps -= conversion_data["conv_ptp"]
+        player.mtps -= conversion_data["conv_mtp"]
+        player.stps += converted_amount
+        conversion_msg = f"Converted {conversion_data['conv_ptp']} PTPs and {conversion_data['conv_mtp']} MTPs into {converted_amount} STPs."
+
+    player.send_message(f"**TP Conversion Successful:** {conversion_msg}")
+    
+    # 2. Subtract the *original* total costs from the pool
+    player.ptps -= total_costs["ptp"]
+    player.mtps -= total_costs["mtp"]
+    player.stps -= total_costs["stp"]
+    
+    # 3. Complete the training
+    skill_id = skill_data["skill_id"]
+    ranks_already_trained = player.ranks_trained_this_level.get(skill_id, 0)
+    new_rank = player.skills.get(skill_id, 0) + ranks_to_train
+    player.skills[skill_id] = new_rank
+    player.ranks_trained_this_level[skill_id] = ranks_already_trained + ranks_to_train
+    
+    # 4. Success message and menu display
+    player.send_message(f"You train **{skill_data['name']}** to rank **{new_rank}**!")
+    show_training_menu(player)
+    player.send_message("\n--- **All Skills** ---")
+    _show_all_skills_by_category(player)
+    
+    # 5. Clear pending state
+    player.db_data.pop('_pending_training', None)
+
+
+# --- Training Menu / "GUI" Logic (Unchanged) ---
 
 def show_training_menu(player: Player):
+# ... (function body unchanged) ...
     """
     Displays the main training menu and TP totals to the player.
     """
@@ -111,6 +228,7 @@ def show_training_menu(player: Player):
 
 
 def _format_skill_line(player: Player, skill_data: Dict) -> str:
+# ... (function body unchanged) ...
     """
     Formats a single skill line as a <tr> for the HTML table.
     """
@@ -148,6 +266,7 @@ def _format_skill_line(player: Player, skill_data: Dict) -> str:
 
 
 def _show_all_skills_by_category(player: Player):
+# ... (function body unchanged) ...
     """
     Internal helper to list all skills, grouped by category, in two columns.
     """
@@ -218,6 +337,7 @@ def _show_all_skills_by_category(player: Player):
 
 
 def show_skill_list(player: Player, category: str):
+# ... (function body unchanged) ...
     """
     Lists all skills, filtered by category, showing ranks and costs.
     """
@@ -255,10 +375,16 @@ def show_skill_list(player: Player, category: str):
     player.send_message("</table>")
 
 
+# --- MODIFIED train_skill ---
+
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):
     """
     Attempts to train a skill a number of times, spending TPs.
+    If conversion is needed, stores the intent and prompts for confirmation.
     """
+    # Clear any old pending training state before starting a new one
+    player.db_data.pop('_pending_training', None) 
+
     if ranks_to_train <= 0:
         player.send_message("You must train at least 1 rank.")
         return
@@ -280,32 +406,56 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
         player.send_message(f"You can only train {3 - ranks_already_trained} more rank(s) in **{skill_data['name']}** this level.")
         return
     
+    # Calculate the total cost for the requested ranks
     costs = get_skill_costs(player, skill_data)
-    
-    total_ptp = 0
-    total_mtp = 0
-    total_stp = 0
+    total_costs = {"ptp": 0, "mtp": 0, "stp": 0}
     
     for i in range(ranks_to_train):
         multiplier = (ranks_already_trained + 1) + i
+        total_costs["ptp"] += costs["ptp"] * multiplier
+        total_costs["mtp"] += costs["mtp"] * multiplier
+        total_costs["stp"] += costs["stp"] * multiplier
         
-        total_ptp += costs["ptp"] * multiplier
-        total_mtp += costs["mtp"] * multiplier
-        total_stp += costs["stp"] * multiplier
+    # --- CONVERSION CHECK ---
+    has_enough = (
+        player.ptps >= total_costs["ptp"] and
+        player.mtps >= total_costs["mtp"] and
+        player.stps >= total_costs["stp"]
+    )
     
-    if player.ptps < total_ptp:
-        player.send_message(f"You need {total_ptp} PTPs but only have {player.ptps}.")
-        return
-    if player.mtps < total_mtp:
-        player.send_message(f"You need {total_mtp} MTPs but only have {player.mtps}.")
-        return
-    if player.stps < total_stp:
-        player.send_message(f"You need {total_stp} STPs but only have {player.stps}.")
-        return
+    if not has_enough:
         
-    player.ptps -= total_ptp
-    player.mtps -= total_mtp
-    player.stps -= total_stp
+        # Check if conversion is possible (only one type missing and have enough of the other two)
+        conversion_data = _check_for_tp_conversion_needs(player, total_costs)
+        
+        if conversion_data:
+            # Store intent and prompt user for confirmation
+            # We store the *full* training context needed for the confirmation step
+            player.db_data['_pending_training'] = {
+                "skill_name": skill_name,
+                "ranks": ranks_to_train,
+                "skill_data": skill_data,
+                "total_costs": total_costs,
+                "conversion_data": conversion_data
+            }
+            player.send_message(conversion_data["msg"])
+            player.send_message("Type '<span class='keyword' data-command='train CONFIRM'>TRAIN CONFIRM</span>' to proceed with the conversion and training.")
+            player.send_message("Type '<span class='keyword' data-command='train CANCEL'>TRAIN CANCEL</span>' to abort.")
+            return # Stop here, waiting for confirmation
+        
+        # If conversion is not possible, send normal failure messages
+        if player.ptps < total_costs["ptp"]:
+            player.send_message(f"You need {total_costs['ptp']} PTPs but only have {player.ptps}.")
+        if player.mtps < total_costs["mtp"]:
+            player.send_message(f"You need {total_costs['mtp']} MTPs but only have {player.mtps}.")
+        if player.stps < total_costs["stp"]:
+            player.send_message(f"You need {total_costs['stp']} STPs but only have {player.stps}.")
+        return 
+        
+    # --- NO CONVERSION NEEDED (Original Logic) ---
+    player.ptps -= total_costs["ptp"]
+    player.mtps -= total_costs["mtp"]
+    player.stps -= total_costs["stp"]
     
     new_rank = player.skills.get(skill_id, 0) + ranks_to_train
     player.skills[skill_id] = new_rank
@@ -314,8 +464,7 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
     
     player.send_message(f"You train **{skill_data['name']}** to rank **{new_rank}**!")
     
-    # --- UPDATED: Show menu AND list ---
+    # Show menu and list
     show_training_menu(player)
     player.send_message("\n--- **All Skills** ---")
     _show_all_skills_by_category(player)
-    # ---

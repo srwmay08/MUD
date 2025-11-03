@@ -1,4 +1,5 @@
 # mud_backend/verbs/training.py
+import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.game_objects import Room
 from mud_backend.core.db import fetch_room_data
@@ -7,10 +8,12 @@ from mud_backend import config
 from mud_backend.core.skill_handler import (
     show_training_menu, 
     show_skill_list, 
-    train_skill
+    train_skill,
+    _perform_conversion_and_train # <-- NEW IMPORT
 )
 
 class CheckIn(BaseVerb):
+# ... (class body unchanged) ...
     """
     Handles the 'check in' command at the inn.
     Enters the 'training' game state.
@@ -33,6 +36,7 @@ class CheckIn(BaseVerb):
         # ---
 
 class List(BaseVerb):
+# ... (class body unchanged) ...
     """
     Handles the 'list' command *while in the training state*.
     """
@@ -51,14 +55,44 @@ class List(BaseVerb):
 class Train(BaseVerb):
     """
     Handles the 'train' command *while in the training state*.
+    Now handles conversion confirmation.
     """
     def execute(self):
         if self.player.game_state != "training":
             self.player.send_message("You can only do that while you are training.")
             return
 
+        # 1. Check for pending training state
+        pending_training = self.player.db_data.get('_pending_training')
+        
+        if pending_training:
+            # Player is currently in a confirmation step
+            action = self.args[0].lower() if self.args else ""
+            
+            if action == "confirm":
+                self.player.send_message("> TRAIN CONFIRM")
+                
+                # Perform the conversion and training
+                _perform_conversion_and_train(self.player, pending_training)
+                
+            elif action == "cancel":
+                self.player.send_message("> TRAIN CANCEL")
+                self.player.send_message("Training cancelled.")
+                self.player.db_data.pop('_pending_training', None)
+                show_training_menu(self.player)
+            
+            else:
+                self.player.send_message(f"You must confirm or cancel the pending training. (TRAIN CONFIRM/TRAIN CANCEL)")
+                # Resend the original prompt
+                self.player.send_message(pending_training['conversion_data']['msg'])
+                self.player.send_message("Type '<span class='keyword' data-command='train CONFIRM'>TRAIN CONFIRM</span>' to proceed with the conversion and training.")
+                self.player.send_message("Type '<span class='keyword' data-command='train CANCEL'>TRAIN CANCEL</span>' to abort.")
+
+            return # Exit after handling confirmation step
+
+        # 2. Handle initial TRAIN command (Original logic)
         if not self.args or len(self.args) < 2:
-            self.player.send_message("Usage: TRAIN <skill name> <ranks>")
+            self.player.send_message("Usage: TRAIN <skill name> <ranks> or TRAIN CONFIRM/CANCEL")
             return
             
         # Try to parse the rank number
@@ -72,9 +106,11 @@ class Train(BaseVerb):
         if ranks_to_train <= 0:
             ranks_to_train = 1
             
+        # This calls the updated train_skill which handles success or stores pending state.
         train_skill(self.player, skill_name, ranks_to_train)
 
 class Done(BaseVerb):
+# ... (class body unchanged) ...
     """
     Handles the 'done' command *while in the training state*.
     Exits training and returns to the appropriate room.
