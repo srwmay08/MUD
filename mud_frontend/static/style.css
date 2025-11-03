@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
+
 body {
-    font-family: 'Lucida Console', 'Courier New', monospace;
-    background: #000;
+    /* --- MODIFIED: Prioritize Courier New --- */
+    font-family: 'Inconsolata', 'Courier New', monospace;    background: #000;
     color: #CCC; /* Default text color */
     
-    /* --- NEW: Flexbox layout --- */
+    /* --- Flexbox layout --- */
     display: flex;
     flex-direction: column;
     height: 100vh; /* Fill the entire viewport height */
@@ -17,13 +19,18 @@ body {
     
     /* --- MODIFIED: Use flex-grow instead of fixed height --- */
     flex-grow: 1; /* This makes the output window take all available space */
-    /* height: 500px; */ /* <-- REMOVED */
     
     border: 1px solid #333;
     overflow-y: scroll;
     padding: 10px;
     box-sizing: border-box;
-    white-space: pre-wrap; /* Preserves newlines */
+    
+    /* --- THIS IS THE FIX --- */
+    /* 'pre-wrap' preserves newlines but *also* renders HTML */
+    white-space: pre-wrap; 
+    /* --- END FIX --- */
+    
+    font-family: 'Courier New', 'Lucida Console', monospace;
     line-height: 1.5;
     background: #0a0a0a;
 }
@@ -65,7 +72,7 @@ body {
     background: #000;
     color: #0F0;
     border: none;
-    font-family: 'Lucida Console', 'Courier New', monospace;
+    font-family: 'Courier New', 'Lucida Console', monospace;
 }
 #command-input:focus {
     outline: none;

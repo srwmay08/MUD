@@ -24,13 +24,12 @@ class CheckIn(BaseVerb):
         self.player.game_state = "training"
         self.player.send_message("You approach the front desk to review your skills...")
         
-        # Show the main menu
-        show_training_menu(self.player)
-        
-        # --- NEW: Automatically list all skills ---
+        # --- MODIFIED: Show list FIRST, then menu ---
         self.player.send_message("\n--- **All Skills** ---")
         show_skill_list(self.player, "all")
+        show_training_menu(self.player)
         # ---
+        
 
 class List(BaseVerb):
     """
@@ -45,8 +44,11 @@ class List(BaseVerb):
             category = "categories"
         else:
             category = " ".join(self.args)
-            
+        
+        # --- MODIFIED: Show list FIRST, then menu ---
         show_skill_list(self.player, category)
+        show_training_menu(self.player)
+        # ---
 
 class Train(BaseVerb):
     """
