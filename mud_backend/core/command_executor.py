@@ -40,11 +40,11 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "west": ("movement", "Move"),
     "ne": ("movement", "Move"),
     "northeast": ("movement", "Move"),
-    "nw": ("movement", "Northwest"),
+    "nw": ("movement", "Move"), # <-- THIS IS THE FIX
     "se": ("movement", "Move"),
     "southeast": ("movement", "Move"),
-    "sw": ("movement", "Move"),
-    "southwest": ("movement", "Southwest"),
+    "sw": ("movement", "Move"), # <-- THIS IS THE FIX
+    "southwest": ("movement", "Move"), # <-- THIS IS THE FIX
     
     # Object Interaction Verbs
     "enter": ("movement", "Enter"),
@@ -55,7 +55,8 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "take": ("item_actions", "Take"),
     "drop": ("item_actions", "Drop"),
     "put": ("item_actions", "Put"),
-    "stow": ("item_actions", "Put"), 
+    "stow": ("item_actions", "Put"),
+    "pour": ("item_actions", "Pour"), 
     
     # Observation Verbs
     "examine": ("observation", "Examine"),
@@ -65,6 +66,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Harvesting/Resource Verbs
     "search": ("harvesting", "Search"), 
     "skin": ("harvesting", "Skin"),
+    "forage": ("foraging", "Forage"), 
     
     # Combat Verbs
     "attack": ("attack", "Attack"),
@@ -116,6 +118,10 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "buy": ("shop", "Buy"),
     "sell": ("shop", "Sell"),
     "appraise": ("shop", "Appraise"),
+    
+    # --- NEW: Herb Use Verbs ---
+    "eat": ("foraging", "Eat"),
+    "drink": ("foraging", "Drink"),
 }
 # --- END UPDATED ---
 
@@ -192,19 +198,13 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         player_db_data = fetch_player_data(player_name)
         
         if not player_db_data:
-            # 4. This is a NEW character
             start_room_id = config.CHARGEN_START_ROOM
             player = Player(player_name, start_room_id, {})
             player.game_state = "chargen"
             player.chargen_step = 0
-            
-            # --- FIX: Set HP to Max HP ---
             player.hp = player.max_hp 
-            # --- END FIX ---
-            
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
-            # 5. This is a RETURNING character
             player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             
     # --- (Room fetching logic is unchanged) ---
@@ -230,10 +230,8 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         for obj in all_objects:
             monster_id = obj.get("monster_id")
             
-            # 1. If it has a monster_id: check if it is active (not defeated)
             if monster_id:
                 if monster_id not in game_state.DEFEATED_MONSTERS:
-                    # Logic to re-inject template if monster object is missing stats/etc. (e.g., just respawned)
                     if "stats" not in obj:
                         template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
                         if template:
@@ -243,13 +241,10 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                             print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
                     else:
                         live_room_objects.append(obj)
-            
-            # 2. If it does NOT have a monster_id (e.g., fountain, well, CORPSE, or ITEM): KEEP IT
             else:
                 live_room_objects.append(obj)
 
     room.objects = live_room_objects
-    # --- END UPDATED ---
     
     # --- (Command parsing logic is unchanged) ---
     parts = command_line.strip().split()

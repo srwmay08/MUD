@@ -4,8 +4,22 @@ from mud_backend.core.db import fetch_room_data
 from mud_backend.core.game_objects import Room
 from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core.command_executor import DIRECTION_MAP
-# --- NEW IMPORT ---
+# --- NEW IMPORTS ---
 from mud_backend.core import game_state
+
+# --- NEW HELPER FUNCTION ---
+def _stop_player_combat(player):
+    """Stops any combat the player is involved in."""
+    player_id = player.name.lower()
+    if player_id in game_state.COMBAT_STATE:
+        combat_data = game_state.COMBAT_STATE.pop(player_id, None)
+        if combat_data and combat_data.get("target_id"):
+            target_id = combat_data["target_id"]
+            # Stop the monster from fighting too
+            game_state.COMBAT_STATE.pop(target_id, None)
+            player.send_message(f"You flee from the {target_id}!")
+# --- END NEW HELPER ---
+
 
 # --- Class from enter.py ---
 class Enter(BaseVerb):
@@ -33,9 +47,7 @@ class Enter(BaseVerb):
             return
 
         # 2. Fetch new room data
-        # --- FIX: Get from live game_state cache, not stale DB ---
         new_room_data = game_state.GAME_ROOMS.get(target_room_id)
-        # --- END FIX ---
         
         if not new_room_data or new_room_data.get("room_id") == "void":
             self.player.send_message("You try to enter, but find only an endless void. You quickly scramble back.")
@@ -48,7 +60,11 @@ class Enter(BaseVerb):
             db_data=new_room_data
         )
 
-        # 3. Change the player's room
+        # 3. --- THIS IS THE FIX ---
+        # Stop combat *before* changing rooms.
+        _stop_player_combat(self.player)
+        # --- END FIX ---
+        
         self.player.current_room_id = target_room_id
         
         # 4. Success message and automatic "Look"
@@ -81,9 +97,7 @@ class Climb(BaseVerb):
             return
             
         # 2. Fetch new room data
-        # --- FIX: Get from live game_state cache, not stale DB ---
         new_room_data = game_state.GAME_ROOMS.get(target_room_id)
-        # --- END FIX ---
         
         if not new_room_data or new_room_data.get("room_id") == "void":
             self.player.send_message("You climb, but find only an endless void. You quickly scramble back.")
@@ -96,7 +110,11 @@ class Climb(BaseVerb):
             db_data=new_room_data
         )
 
-        # 3. Change the player's room
+        # 3. --- THIS IS THE FIX ---
+        # Stop combat *before* changing rooms.
+        _stop_player_combat(self.player)
+        # --- END FIX ---
+        
         self.player.current_room_id = target_room_id
         
         # 4. Success message
@@ -128,9 +146,7 @@ class Move(BaseVerb):
         
         if target_room_id:
             # --- Found a cardinal exit ---
-            # --- FIX: Get from live game_state cache, not stale DB ---
             new_room_data = game_state.GAME_ROOMS.get(target_room_id)
-            # --- END FIX ---
             
             if not new_room_data or new_room_data.get("room_id") == "void":
                 self.player.send_message("You move, but find only an endless void.")
@@ -142,6 +158,11 @@ class Move(BaseVerb):
                 description=new_room_data["description"],
                 db_data=new_room_data
             )
+            
+            # --- THIS IS THE FIX ---
+            _stop_player_combat(self.player)
+            # --- END FIX ---
+            
             self.player.current_room_id = target_room_id
             self.player.send_message(f"You move {normalized_direction}...")
             show_room_to_player(self.player, new_room)
@@ -157,7 +178,7 @@ class Move(BaseVerb):
             # We can just create an instance of the Enter verb and run it
             # No import needed, class is in the same file!
             enter_verb = Enter(self.player, self.room, self.args)
-            enter_verb.execute()
+            enter_verb.execute() # This will handle its own combat check
             return
 
         # --- If neither, fail ---
@@ -181,9 +202,7 @@ class Exit(BaseVerb):
 
             if target_room_id:
                 # --- Found the "out" exit ---
-                # --- FIX: Get from live game_state cache, not stale DB ---
                 new_room_data = game_state.GAME_ROOMS.get(target_room_id)
-                # --- END FIX ---
                 
                 if not new_room_data or new_room_data.get("room_id") == "void":
                     self.player.send_message("You try to leave, but find only an endless void.")
@@ -195,6 +214,11 @@ class Exit(BaseVerb):
                     description=new_room_data["description"],
                     db_data=new_room_data
                 )
+                
+                # --- THIS IS THE FIX ---
+                _stop_player_combat(self.player)
+                # --- END FIX ---
+                
                 self.player.current_room_id = target_room_id
                 self.player.send_message("You head out...")
                 show_room_to_player(self.player, new_room)
@@ -203,12 +227,12 @@ class Exit(BaseVerb):
                 # --- No "out" exit, try to "enter door" ---
                 # This handles being in the inn and typing "exit"
                 enter_verb = Enter(self.player, self.room, ["door"])
-                enter_verb.execute()
+                enter_verb.execute() # This will handle its own combat check
                 return
 
         else:
             # --- CHECK 2: Handle 'exit <object>' (e.g., "exit door") ---
             # This is the same as "enter <object>"
             enter_verb = Enter(self.player, self.room, self.args)
-            enter_verb.execute()
+            enter_verb.execute() # This will handle its own combat check
             return

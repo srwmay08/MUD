@@ -53,7 +53,7 @@
     {
         "room_id": "well_bottom", 
         "name": "The Bottom of the Well", 
-        "description": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur.",
+        "description": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur. You notice some strange plants growing in the muck near the wall.",
         "objects": [
             {
                 "name": "rope", 
@@ -80,7 +80,11 @@
                 "monster_id": "well_bottom_stirring_monster"
             }
         ],
-        "exits": {}
+        "exits": {},
+        "forageable_items": [
+            { "item_id": "viridian_leaf", "item_name": "viridian leaf", "dc": 50 },
+            { "item_id": "althion_stem", "item_name": "althion stem", "dc": 85 }
+        ]
     },
     
     {"room_id": "ts_north", "name": "North Square", "is_outdoor": true, "description": "You are in the northern part of the town square. The main square is to the south.", "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}},
@@ -164,7 +168,7 @@
                 "shop_data": {
                     "type": "furrier",
                     "inventory": [],
-                    "will_buy": ["pelt_ruined", "monster_claw"]
+                    "will_buy": ["pelt_ruined", "monster_claw", "viridian_leaf", "althion_stem"]
                 }
             }
         ],

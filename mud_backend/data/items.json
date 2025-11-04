@@ -71,6 +71,32 @@
         "keywords": ["shield", "wooden shield"],
         "base_value": 75
     },
+    
+    "viridian_leaf": {
+        "name": "a viridian leaf",
+        "description": "A simple green leaf, prized by herbalists for its minor restorative properties.",
+        "item_type": "herb",
+        "keywords": ["leaf", "viridian leaf"],
+        "base_value": 20,
+        "max_value": 35,
+        "use_verb": "eat",
+        "effect_on_use": {
+            "heal_hp": 15
+        }
+    },
+    "althion_stem": {
+        "name": "an althion stem",
+        "description": "A thick, fibrous stem that pulses with a faint magical energy.",
+        "item_type": "herb",
+        "keywords": ["stem", "althion stem"],
+        "base_value": 75,
+        "max_value": 120,
+        "use_verb": "eat",
+        "effect_on_use": {
+            "heal_hp": 50
+        }
+    },
+
     "knuckle_dusters": {
         "name": "a set of knuckle dusters",
         "description": "A piece of metal shaped to fit around the knuckles.",

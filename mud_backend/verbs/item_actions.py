@@ -347,3 +347,45 @@ class Take(Get):
 
 class Put(Drop):
     pass
+
+# --- NEW VERB ---
+class Pour(BaseVerb):
+    """
+    Handles 'pour'
+    POUR <item> IN <target>
+    """
+    
+    def execute(self):
+        args_str = " ".join(self.args).lower()
+        target_item_name = ""
+        target_container_name = ""
+
+        if " in " in args_str:
+            parts = args_str.split(" in ", 1)
+            target_item_name = parts[0].strip()
+            target_container_name = parts[1].strip()
+        else:
+            self.player.send_message("Usage: POUR <item> IN <target>")
+            return
+
+        if not target_item_name or not target_container_name:
+            self.player.send_message("Usage: POUR <item> IN <target>")
+            return
+            
+        # 1. Find the item
+        item_id = _find_item_in_inventory(self.player, target_item_name)
+        if not item_id:
+            self.player.send_message(f"You don't have a '{target_item_name}'.")
+            return
+            
+        item_data = game_state.GAME_ITEMS.get(item_id)
+        if item_data.get("use_verb") not in ["drink", "pour"]:
+            self.player.send_message(f"You can't pour {item_data.get('name')}.")
+            return
+            
+        # 2. Find the target
+        # For now, we only check for other players
+        
+        # TODO: Add logic to find other players
+        
+        self.player.send_message(f"You can't seem to find '{target_container_name}' to pour into.")
