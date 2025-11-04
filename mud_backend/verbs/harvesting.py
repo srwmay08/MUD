@@ -41,24 +41,7 @@ def _spill_item_into_room(room_objects: list, item_id: str) -> str | None:
     return item_name
 
 
-class Absorb(BaseVerb):
-    """
-    Handles the 'absorb' command.
-    Absorbs any pooled experience in the room.
-    """
-    def execute(self):
-        exp_in_room = self.room.unabsorbed_social_exp
-        
-        if exp_in_room <= 0:
-            self.player.send_message("There is no experience here to absorb.")
-            return
-
-        # Use the Player's gain_exp method
-        self.player.gain_exp(exp_in_room)
-        
-        # Clear the experience from the room
-        # This modifies the live room data via self.room.db_data
-        self.room.unabsorbed_social_exp = 0
+# --- The Absorb Class is removed as EXP absorption is now passive. ---
 
 
 class Search(BaseVerb):

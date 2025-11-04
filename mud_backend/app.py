@@ -18,6 +18,20 @@ from mud_backend.core.game_loop_handler import check_and_run_game_tick # <-- CHA
 from mud_backend.core import game_state
 from mud_backend.core import db
 from mud_backend.core import combat_system 
+from mud_backend import config # <-- NEW IMPORT
+
+# --- NEW HELPER: Determine Absorption Room Type ---
+def _get_absorption_room_type(room_id: str) -> str:
+    """Determines the room type for experience absorption."""
+    # Check for "on node" (highest priority)
+    if room_id in getattr(config, 'NODE_ROOM_IDS', []):
+        return "on_node"
+    # Check for "in town"
+    if room_id in getattr(config, 'TOWN_ROOM_IDS', []):
+        return "in_town"
+    # Default to "other"
+    return "other"
+# --- END NEW HELPER ---
 
 # --- (Flask App Setup is Unchanged) ---
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
@@ -54,8 +68,7 @@ def game_tick_thread():
                         socketio.emit("message", message, to=sid)
             # ---
 
-            # --- THIS IS THE FIX ---
-            # Call the function we actually imported: 'check_and_run_game_tick'
+            # --- Call the function we actually imported: 'check_and_run_game_tick'
             check_and_run_game_tick(broadcast_to_room)
             # --- END FIX ---
             
@@ -74,7 +87,11 @@ def game_tick_thread():
 
                 # 1. Absorb XP (which also handles CON recovery)
                 if player_obj.unabsorbed_exp > 0:
-                    player_obj.absorb_exp_pulse()
+                    # --- MODIFIED: Pass the calculated room type to enable rate logic ---
+                    room_id = player_obj.current_room_id
+                    room_type = _get_absorption_room_type(room_id)
+                    player_obj.absorb_exp_pulse(room_type=room_type)
+                    # --- END MODIFIED ---
                     
                 # 2. Regenerate HP
                 if player_obj.hp < player_obj.max_hp:

@@ -1,4 +1,4 @@
-# core/command_executor.py
+# mud_backend/core/command_executor.py
 import importlib.util
 import os
 import time 
@@ -57,9 +57,9 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "investigate": ("observation", "Investigate"),
     "look": ("observation", "Look"),
 
-    # Harvesting/Resource Verbs
+# Harvesting/Resource Verbs
     "search": ("harvesting", "Search"), 
-    "absorb": ("harvesting", "Absorb"), 
+    # "absorb": ("harvesting", "Absorb"), // Removed: Absorption is now automatic
     "skin": ("harvesting", "Skin"),
     
     # Combat Verbs
@@ -72,6 +72,14 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "train": ("training", "Train"),
     "list": ("training", "List"),
     "done": ("training", "Done"),
+    
+    # --- NEW: Character Info Verbs ---
+    "stat": ("stats", "Stats"),
+    "stats": ("stats", "Stats"),
+    "skill": ("skills", "Skills"),
+    "skills": ("skills", "Skills"),
+    "health": ("health", "Health"),
+    "hp": ("health", "Health"),
     
     # --- NEW: Inventory & Equipment Verbs ---
     "inventory": ("inventory", "Inventory"),
@@ -94,6 +102,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "say": ("say", "Say"),
     "ping": ("tick", "Tick"),
 }
+
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",

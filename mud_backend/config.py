@@ -103,3 +103,11 @@ EQUIPMENT_SLOTS = {
     "pin": "Pin (General)",
     "shoulder_slung": "Shoulder (Slung)"
 }
+
+# --- NEW: EXP ABSORPTION ROOMS ---
+TOWN_ROOM_IDS = [
+    "town_square", "ts_south", "inn_room", "ts_north", "ts_east", "ts_west", 
+    "ts_northeast", "ts_northwest", "ts_southeast", "ts_southwest"
+]
+NODE_ROOM_IDS = ["town_square"] 
+# ---
