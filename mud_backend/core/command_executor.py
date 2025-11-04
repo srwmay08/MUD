@@ -50,6 +50,12 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "enter": ("movement", "Enter"),
     "climb": ("movement", "Climb"),
     
+    # --- UPDATED: Item Action Verbs ---
+    "get": ("item_actions", "Get"),
+    "take": ("item_actions", "Take"),
+    "drop": ("item_actions", "Drop"),
+    "put": ("item_actions", "Put"),
+    
     # Observation Verbs
     "examine": ("observation", "Examine"),
     "investigate": ("observation", "Investigate"),
@@ -57,7 +63,6 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
 
     # Harvesting/Resource Verbs
     "search": ("harvesting", "Search"), 
-    # "absorb": ("harvesting", "Absorb"), // Removed: Absorption is now automatic
     "skin": ("harvesting", "Skin"),
     
     # Combat Verbs
@@ -71,7 +76,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "list": ("training", "List"),
     "done": ("training", "Done"),
     
-    # --- NEW: Character Info Verbs ---
+    # Character Info Verbs
     "stat": ("stats", "Stats"),
     "stats": ("stats", "Stats"),
     "skill": ("skills", "Skills"),
@@ -79,14 +84,15 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "health": ("health", "Health"),
     "hp": ("health", "Health"),
     
-    # --- NEW: Inventory & Equipment Verbs ---
+    # --- UPDATED: Inventory & Equipment Verbs ---
     "inventory": ("inventory", "Inventory"),
     "inv": ("inventory", "Inventory"),
     "wealth": ("inventory", "Wealth"),
     "wear": ("equipment", "Wear"),
+    "wield": ("equipment", "Wear"), # 'wield' is an alias for 'wear'
     "remove": ("equipment", "Remove"),
     
-    # --- NEW: Trading Verbs ---
+    # Trading Verbs
     "give": ("trading", "Give"),
     "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"),
@@ -100,6 +106,9 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "say": ("say", "Say"),
     "ping": ("tick", "Tick"),
 }
+
+
+
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",

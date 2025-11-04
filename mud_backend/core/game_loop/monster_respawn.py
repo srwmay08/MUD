@@ -5,24 +5,11 @@ import datetime
 import pytz     
 import copy 
 
-try:
-    # This will be used by your IDE, but the mock is fine for runtime
-    from mud_backend.core import config
-    from mud_backend.core import game_state 
-except ImportError as e:
-    # (MockConfig and MockGameState)
-    class MockConfig:
-        DEBUG_MODE = True
-        EQUIPMENT_SLOTS = {"torso": "Torso", "mainhand": "Main Hand", "offhand": "Off Hand"}
-        NPC_DEFAULT_RESPAWN_CHANCE = 0.2
-    config = MockConfig()
-    class MockGameState:
-        RUNTIME_MONSTER_HP = {}
-        DEFEATED_MONSTERS = {}
-        GAME_ROOMS = {}
-        GAME_MONSTER_TEMPLATES = {} # <-- Add mock
-    game_state = MockGameState()
-    pass
+# --- THIS IS THE FIX ---
+# 'config' is in 'mud_backend', not 'mud_backend.core'
+from mud_backend import config
+# --- END FIX ---
+from mud_backend.core import game_state 
 
 
 def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_equipment_tables, game_items):

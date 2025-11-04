@@ -3,14 +3,39 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import game_state
 from mud_backend.core import loot_system
 from typing import Dict, Any
-from mud_backend.core import db # <--- NEW IMPORT
+from mud_backend.core import db 
 
 def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] | None:
-    """Helper function to find a corpse object by keywords."""
+    """
+    Helper function to find a corpse object by name or keywords.
+    It prioritizes finding an un-searched corpse.
+    """
+    
+    unsearched_matches = []
+    searched_matches = []
+    
     for obj in room_objects:
-        if obj.get("is_corpse") and target_name in obj.get("keywords", []):
-            return obj
-    return None
+        if not obj.get("is_corpse"):
+            continue
+            
+        # Check if the target name matches the object's name OR is in its keywords
+        if (target_name == obj.get("name", "").lower() or 
+            target_name in obj.get("keywords", [])):
+            
+            if obj.get("searched_and_emptied", False):
+                searched_matches.append(obj)
+            else:
+                unsearched_matches.append(obj)
+
+    # Prioritize the unsearched list first
+    if unsearched_matches:
+        return unsearched_matches[0]
+    
+    # If no unsearched ones, return the first searched one (if any)
+    if searched_matches:
+        return searched_matches[0]
+
+    return None # No matches at all
 
 def _spill_item_into_room(room_objects: list, item_id: str) -> str | None:
     """
@@ -59,14 +84,13 @@ class Absorb(BaseVerb):
         
         # Clear the experience from the room
         self.room.unabsorbed_social_exp = 0
-        # --- NEW: Save the room state after modifying it ---
         db.save_room_state(self.room) 
 
 
 class Search(BaseVerb):
     """
     Handles the 'search' command.
-    Searches a corpse for items, spilling them onto the ground.
+    Searches a corpse for items, spilling them onto the ground, and removes the corpse.
     """
     def execute(self):
         if not self.args:
@@ -85,15 +109,19 @@ class Search(BaseVerb):
             self.player.send_message(f"The {corpse_obj['name']} has already been searched.")
             return
 
-        # Mark as searched immediately
+        # Mark as searched immediately (so it can't be searched again)
         corpse_obj["searched_and_emptied"] = True
         
         item_ids_to_drop = corpse_obj.get("inventory", [])
         
         if not item_ids_to_drop:
             self.player.send_message(f"You search the {corpse_obj['name']} but find nothing.")
-            corpse_obj["description"] = f"The lifeless body of {corpse_obj['original_name']}. It has been picked clean."
-            db.save_room_state(self.room) # Save the description change
+            
+            # --- THIS IS THE FIX ---
+            # Remove the empty corpse from the room
+            self.room.objects.remove(corpse_obj)
+            db.save_room_state(self.room) # Save the room state
+            # --- END FIX ---
             return
 
         self.player.send_message(f"You search the {corpse_obj['name']} and find:")
@@ -108,12 +136,15 @@ class Search(BaseVerb):
         for name in found_items_names:
             self.player.send_message(f"- {name}")
 
-        # Clear the corpse's inventory and update its description
+        # --- THIS IS THE FIX ---
+        # Clear the corpse's inventory (redundant, but good practice)
         corpse_obj["inventory"] = []
-        corpse_obj["description"] = f"The lifeless body of {corpse_obj['original_name']}. It has been picked clean."
+        # Remove the searched corpse from the room
+        self.room.objects.remove(corpse_obj)
         
-        # --- NEW: Save the room state after modifying it ---
+        # Save the room state *after* spilling items and removing corpse
         db.save_room_state(self.room)
+        # --- END FIX ---
 
 
 class Skin(BaseVerb):
@@ -183,5 +214,5 @@ class Skin(BaseVerb):
                 else:
                     self.player.send_message(f"You skillfully skin the {corpse_obj['original_name']}, producing {item_name}.")
         
-        # --- NEW: Save the room state after modifying it ---
+        # Save the room state after spilling items
         db.save_room_state(self.room)

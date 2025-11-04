@@ -22,14 +22,14 @@ class Examine(BaseVerb):
         if target_name.startswith("at "):
             target_name = target_name[3:]
             
-        # --- UPDATED: Find target by keyword ---
+        # --- UPDATED: Find target by name OR keyword ---
         found_object = None
         for obj in self.room.objects:
-            # Check keywords if they exist, fall back to name
-            if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
+            if (target_name == obj.get("name", "").lower() or 
+                target_name in obj.get("keywords", [])):
                 found_object = obj
                 break
-        # ---
+        # --- END UPDATED ---
 
         if not found_object:
             self.player.send_message(f"You do not see a **{target_name}** here.")
@@ -137,8 +137,11 @@ class Look(BaseVerb):
 
         # A. Check room objects
         for obj in self.room.objects:
-            # Check keywords if they exist, fall back to name
-            if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
+            # --- THIS IS THE FIX ---
+            # Check if the target name matches the object's name OR is in its keywords
+            if (target_name == obj.get("name", "").lower() or 
+                target_name in obj.get("keywords", [])):
+            # --- END FIX ---
                 self.player.send_message(f"You examine the **{obj['name']}**.")
                 self.player.send_message(obj.get('description', 'It is a nondescript object.'))
                 if 'verbs' in obj:

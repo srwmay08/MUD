@@ -151,7 +151,8 @@ def handle_command_event(data):
 
     new_player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
     new_room_id = new_player_info.get("current_room_id") if new_player_info else None
-
+    
+    # --- Movement Logic ---
     if new_room_id and old_room_id != new_room_id:
         if old_room_id:
             leave_room(old_room_id, sid=sid)
@@ -162,17 +163,40 @@ def handle_command_event(data):
         arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
         emit("message", arrives_message, to=new_room_id, skip_sid=sid)
         
-        # --- Aggro Check (unchanged) ---
+    # ---
+    # --- AGGRO CHECK (MOVED) ---
+    # This logic is now OUTSIDE the movement block.
+    # It will run on *every command* (look, inv, get, etc.)
+    # ---
+    
+    # Only check for aggro if the player is in a room and *not* already in combat
+    player_id = player_name.lower()
+    if new_room_id and new_player_info and player_id not in game_state.COMBAT_STATE:
+        
         room_data = game_state.GAME_ROOMS.get(new_room_id)
-        if room_data and new_player_info:
+        if room_data:
             player_obj = new_player_info.get("player_obj")
-            for obj in room_data.get("objects", []):
+            
+            # --- FIX: We must get the "live" room objects from the player object ---
+            # (Because execute_command() puts the filtered list in player.room.objects)
+            if player_obj and hasattr(player_obj, 'room'):
+                live_room_objects = player_obj.room.objects
+            else:
+                # Fallback, though less ideal
+                live_room_objects = room_data.get("objects", [])
+            # --- END FIX ---
+
+            for obj in live_room_objects:
                 if obj.get("is_aggressive") and obj.get("is_monster"):
                     monster_id = obj.get("monster_id")
+                    
+                    # Check if monster is alive and not already fighting
                     if monster_id and monster_id not in game_state.DEFEATED_MONSTERS and monster_id not in game_state.COMBAT_STATE:
+                        
+                        # --- START COMBAT ---
                         emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
                         current_time = time.time()
-                        player_id = player_name.lower()
+                        
                         game_state.COMBAT_STATE[player_id] = {
                             "target_id": monster_id,
                             "next_action_time": current_time + 1.0, 
@@ -181,12 +205,15 @@ def handle_command_event(data):
                         monster_rt = combat_system.calculate_roundtime(obj.get("stats", {}).get("AGI", 50))
                         game_state.COMBAT_STATE[monster_id] = {
                             "target_id": player_id,
-                            "next_action_time": current_time, 
+                            "next_action_time": current_time, # Monster attacks immediately
                             "current_room_id": new_room_id
                         }
                         if monster_id not in game_state.RUNTIME_MONSTER_HP:
                             game_state.RUNTIME_MONSTER_HP[monster_id] = obj.get("max_hp", 1)
+                        
+                        # Only aggro one monster at a time
                         break 
+    # --- END AGGRO CHECK ---
 
     emit("command_response", result_data, to=sid)
 
