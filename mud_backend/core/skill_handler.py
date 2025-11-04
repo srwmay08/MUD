@@ -1,6 +1,6 @@
 # mud_backend/core/skill_handler.py
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from mud_backend.core.game_objects import Player
 from mud_backend.core import game_state
 
@@ -162,51 +162,83 @@ def _show_all_skills_by_category(player: Player):
         "Lore Skills", "Mental Skills", "Spiritual Skills"
     ]
     
-    all_skills = sorted(game_state.GAME_SKILLS.values(), key=lambda s: s.get("name", "zzz"))
+    # --- NEW: Define custom skill ordering ---
+    SKILL_ORDERING = {
+        "Weapon Skills": [
+            "brawling", "small_edged", "edged_weapons", "two_handed_edged", 
+            "small_blunt", "blunt_weapons", "two_handed_blunt", "polearms", 
+            "bows", "crossbows", "small_thrown", "large_thrown", "slings", "staves"
+        ]
+        # You can add other categories here later if you want them reordered
+    }
     
-    # --- UPDATED: Define the header row without widths ---
+    # --- NEW: Get all skills as a dictionary for easy lookup ---
+    all_skills_dict = game_state.GAME_SKILLS
+    
     HEADER_ROW = "<tr><td>&nbsp;</td><td style='text-decoration: underline;'>PTPs / MTPs / STPs</td><td>&nbsp;</td></tr>"
 
     # --- Build Column 1 Lines (as HTML table rows) ---
     column_1_lines = []
     for category in COLUMN_1_CATEGORIES:
-        if column_1_lines:
-            column_1_lines.append("<tr><td>&nbsp;</td></tr>") # Spacer row
-            
+        # --- FIX: Removed spacer row that caused dead space ---
+        
         column_1_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
         column_1_lines.append(HEADER_ROW)
         
-        for skill_data in all_skills:
-            if skill_data.get("category", "Uncategorized") == category:
+        # --- NEW: Check for custom order ---
+        custom_order = SKILL_ORDERING.get(category)
+        if custom_order:
+            for skill_id in custom_order:
+                skill_data = all_skills_dict.get(skill_id)
+                # Check if skill exists and *also* matches the category (in case of bad config)
+                if skill_data and skill_data.get("category", "Uncategorized") == category:
+                    column_1_lines.append(_format_skill_line(player, skill_data))
+        else:
+            # --- Fallback to alphabetical order ---
+            category_skills = []
+            for skill_data in all_skills_dict.values():
+                if skill_data.get("category", "Uncategorized") == category:
+                    category_skills.append(skill_data)
+            
+            category_skills.sort(key=lambda s: s.get("name", "zzz"))
+            
+            for skill_data in category_skills:
                 column_1_lines.append(_format_skill_line(player, skill_data))
+        # --- END NEW LOGIC ---
 
     # --- Build Column 2 Lines (as HTML table rows) ---
     column_2_lines = []
     for category in COLUMN_2_CATEGORIES:
-        if column_2_lines:
-            column_2_lines.append("<tr><td>&nbsp;</td></tr>") # Spacer row
-            
+        # --- FIX: Removed spacer row that caused dead space ---
+        
         column_2_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
         column_2_lines.append(HEADER_ROW)
         
-        for skill_data in all_skills:
-            if skill_data.get("category", "Uncategorized") == category:
+        custom_order = SKILL_ORDERING.get(category)
+        if custom_order:
+            for skill_id in custom_order:
+                skill_data = all_skills_dict.get(skill_id)
+                if skill_data and skill_data.get("category", "Uncategorized") == category:
+                    column_2_lines.append(_format_skill_line(player, skill_data))
+        else:
+            category_skills = []
+            for skill_data in all_skills_dict.values():
+                if skill_data.get("category", "Uncategorized") == category:
+                    category_skills.append(skill_data)
+            
+            category_skills.sort(key=lambda s: s.get("name", "zzz"))
+            
+            for skill_data in category_skills:
                 column_2_lines.append(_format_skill_line(player, skill_data))
 
-    # ---
-    # Build the two columns as a single HTML string
-    # ---
+    # --- (HTML table assembly logic is unchanged) ---
     html_lines = []
-    # --- UPDATED: Set outer column width to 50% ---
     COL_1_WIDTH = "50%"
     
-    # Start the table
     html_lines.append("<table style='width:100%; border-spacing: 0;'>")
     html_lines.append("  <tr style='vertical-align: top;'>") # Align columns to the top
     html_lines.append(f"    <td style='width:{COL_1_WIDTH};'>")
     
-    # --- Print Column 1 ---
-    # --- UPDATED: Removed width:100% from inner table ---
     html_lines.append("      <table>")
     for line in column_1_lines:
         html_lines.append(f"        {line}")
@@ -215,8 +247,6 @@ def _show_all_skills_by_category(player: Player):
     html_lines.append("    </td>")
     html_lines.append("    <td>")
     
-    # --- Print Column 2 ---
-    # --- UPDATED: Removed width:100% from inner table ---
     html_lines.append("      <table>")
     for line in column_2_lines:
         html_lines.append(f"        {line}")
@@ -226,7 +256,6 @@ def _show_all_skills_by_category(player: Player):
     html_lines.append("  </tr>")
     html_lines.append("</table>")
 
-    # --- Send the entire block as one message ---
     player.send_message("\n".join(html_lines))
 
 
@@ -255,31 +284,196 @@ def show_skill_list(player: Player, category: str):
         
     player.send_message(f"--- **{category.upper()}** ---")
     
-    sorted_skills = sorted(game_state.GAME_SKILLS.values(), key=lambda s: s.get("name", "zzz"))
-    
+    # --- UPDATED: Sort alphabetically here for the single-category view ---
+    sorted_skills = []
+    for skill_data in game_state.GAME_SKILLS.values():
+        if skill_data.get("category", "Uncategorized").lower() == category_lower:
+            sorted_skills.append(skill_data)
+    sorted_skills.sort(key=lambda s: s.get("name", "zzz"))
     # ---
-    # --- ALSO FIX SINGLE COLUMN LIST ---
-    # Build as a single string
+    
     html_lines = []
     html_lines.append("<table>")
     
-    # --- UPDATED: Add header row without widths ---
     html_lines.append("<tr><td>&nbsp;</td><td style='text-decoration: underline;'>PTPs / MTPs / STPs</td><td>&nbsp;</td></tr>")
     
-    for skill_data in sorted_skills:
-        skill_cat = skill_data.get("category", "Uncategorized").lower()
-        if category_lower != skill_cat.lower():
-            continue
+    if not sorted_skills:
+        player.send_message("No skills are listed in this category.")
+        return
         
+    for skill_data in sorted_skills:
         html_lines.append(_format_skill_line(player, skill_data))
+        
     html_lines.append("</table>")
     player.send_message("\n".join(html_lines))
-    # --- END FIX ---
+
+
+# ---
+# --- (The TP Conversion and Training logic below is unchanged) ---
+# ---
+
+def _calculate_total_cost(player: Player, skill_data: Dict, ranks_to_train: int) -> Dict[str, int]:
+    """
+    Calculates the total PTP, MTP, and STP cost for training.
+    """
+    skill_id = skill_data["skill_id"]
+    ranks_already_trained = player.ranks_trained_this_level.get(skill_id, 0)
+    costs = get_skill_costs(player, skill_data)
+    
+    total_ptp = 0
+    total_mtp = 0
+    total_stp = 0
+    
+    for i in range(ranks_to_train):
+        multiplier = (ranks_already_trained + 1) + i
+        total_ptp += costs["ptp"] * multiplier
+        total_mtp += costs["mtp"] * multiplier
+        total_stp += costs["stp"] * multiplier
+        
+    return {"ptp": total_ptp, "mtp": total_mtp, "stp": total_stp}
+
+def _check_for_tp_conversion(player: Player, total_ptp: int, total_mtp: int, total_stp: int) -> Optional[Dict]:
+    """
+    Checks if TP conversion is possible and returns the conversion data.
+    """
+    ptp_needed = total_ptp - player.ptps
+    mtp_needed = total_mtp - player.mtps
+    stp_needed = total_stp - player.stps
+
+    # Track what we will convert
+    conversions = {
+        "ptp_from_convert": 0,
+        "mtp_from_convert": 0,
+        "stp_from_convert": 0,
+    }
+
+    # Use copies of TPs for calculation
+    temp_ptp = player.ptps
+    temp_mtp = player.mtps
+    temp_stp = player.stps
+    
+    msg = []
+
+    # 1. Check PTP needs
+    if ptp_needed > 0:
+        # Need to convert MTP+STP -> PTP
+        if temp_mtp >= ptp_needed and temp_stp >= ptp_needed:
+            conversions["ptp_from_convert"] = ptp_needed
+            temp_mtp -= ptp_needed # Cost to convert
+            temp_stp -= ptp_needed # Cost to convert
+            msg.append(f"convert {ptp_needed} MTP and {ptp_needed} STP into {ptp_needed} PTP")
+        else:
+            return None # Not enough points to convert for PTP
+
+    # 2. Check MTP needs
+    if mtp_needed > 0:
+        # Need to convert PTP+STP -> MTP
+        # Use temp_ptp (which *hasn't* been spent yet)
+        if temp_ptp >= mtp_needed and temp_stp >= mtp_needed:
+            conversions["mtp_from_convert"] = mtp_needed
+            temp_ptp -= mtp_needed # Cost to convert
+            temp_stp -= mtp_needed # Cost to convert
+            msg.append(f"convert {mtp_needed} PTP and {mtp_needed} STP into {mtp_needed} MTP")
+        else:
+            return None # Not enough points to convert for MTP
+
+    # 3. Check STP needs
+    if stp_needed > 0:
+        # Need to convert PTP+MTP -> STP
+        if temp_ptp >= stp_needed and temp_mtp >= stp_needed:
+            conversions["stp_from_convert"] = stp_needed
+            temp_ptp -= stp_needed # Cost to convert
+            temp_mtp -= stp_needed # Cost to convert
+            msg.append(f"convert {stp_needed} PTP and {stp_needed} MTP into {stp_needed} STP")
+        else:
+            return None # Not enough points to convert for STP
+
+    if not msg:
+        # This should not be hit if train_skill() logic is correct
+        return None 
+
+    # Final check: Do we have enough *after* conversion costs?
+    final_ptp = (player.ptps - (conversions["mtp_from_convert"] + conversions["stp_from_convert"]) 
+                 + conversions["ptp_from_convert"])
+    final_mtp = (player.mtps - (conversions["ptp_from_convert"] + conversions["stp_from_convert"])
+                 + conversions["mtp_from_convert"])
+    final_stp = (player.stps - (conversions["ptp_from_convert"] + conversions["mtp_from_convert"])
+                 + conversions["stp_from_convert"])
+
+    if final_ptp < total_ptp or final_mtp < total_mtp or final_stp < total_stp:
+        # This catches complex cases, e.g. needing PTP but spending PTP to make MTP
+        return None 
+
+    return {
+        "conversions": conversions,
+        "msg": f"You do not have enough TPs. This will {', '.join(msg)}."
+    }
+
+def _perform_conversion_and_train(player: Player, pending_data: Dict):
+    """
+    Applies TP conversions (if any) and then trains the skill.
+    """
+    skill_id = pending_data["skill_id"]
+    skill_name = pending_data["skill_name"]
+    ranks_to_train = pending_data["ranks_to_train"]
+    total_cost = pending_data["total_cost"]
+    conversion_data = pending_data.get("conversion_data") # Might be None
+
+    if conversion_data:
+        conversions = conversion_data["conversions"]
+        
+        # 1. Apply Conversions
+        # 1a. Spend TPs for PTP
+        ptp_gained = conversions["ptp_from_convert"]
+        if ptp_gained > 0:
+            player.mtps -= ptp_gained
+            player.stps -= ptp_gained
+            player.ptps += ptp_gained
+            player.send_message(f"You converted {ptp_gained} MTP and {ptp_gained} STP into {ptp_gained} PTP.")
+
+        # 1b. Spend TPs for MTP
+        mtp_gained = conversions["mtp_from_convert"]
+        if mtp_gained > 0:
+            player.ptps -= mtp_gained
+            player.stps -= mtp_gained
+            player.mtps += mtp_gained
+            player.send_message(f"You converted {mtp_gained} PTP and {mtp_gained} STP into {mtp_gained} MTP.")
+            
+        # 1c. Spend TPs for STP
+        stp_gained = conversions["stp_from_convert"]
+        if stp_gained > 0:
+            player.ptps -= stp_gained
+            player.mtps -= stp_gained
+            player.stps += stp_gained
+            player.send_message(f"You converted {stp_gained} PTP and {stp_gained} MTP into {stp_gained} STP.")
+
+    # 2. Spend TPs for the skill
+    player.ptps -= total_cost["ptp"]
+    player.mtps -= total_cost["mtp"]
+    player.stps -= total_cost["stp"]
+
+    # 3. Apply Skill Ranks
+    ranks_already_trained = player.ranks_trained_this_level.get(skill_id, 0)
+    new_rank = player.skills.get(skill_id, 0) + ranks_to_train
+    player.skills[skill_id] = new_rank
+    player.ranks_trained_this_level[skill_id] = ranks_already_trained + ranks_to_train
+    
+    player.send_message(f"You train **{skill_name}** to rank **{new_rank}**!")
+    
+    # 4. Clean up pending state
+    player.db_data.pop('_pending_training', None)
+
+    # 5. Show the menus
+    player.send_message("\n--- **All Skills** ---")
+    _show_all_skills_by_category(player)
+    show_training_menu(player)
 
 
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):
     """
     Attempts to train a skill a number of times, spending TPs.
+    This function will either train immediately, or set up a
+    pending training state if conversion is required.
     """
     if ranks_to_train <= 0:
         player.send_message("You must train at least 1 rank.")
@@ -292,8 +486,8 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
         
     skill_id = skill_data["skill_id"]
     
+    # 1. Check level-based rank limits
     ranks_already_trained = player.ranks_trained_this_level.get(skill_id, 0)
-    
     if ranks_already_trained >= 3:
         player.send_message(f"You have already trained **{skill_data['name']}** 3 times this level.")
         return
@@ -302,42 +496,46 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
         player.send_message(f"You can only train {3 - ranks_already_trained} more rank(s) in **{skill_data['name']}** this level.")
         return
     
-    costs = get_skill_costs(player, skill_data)
+    # 2. Calculate total cost
+    total_cost = _calculate_total_cost(player, skill_data, ranks_to_train)
+    total_ptp = total_cost["ptp"]
+    total_mtp = total_cost["mtp"]
+    total_stp = total_cost["stp"]
+
+    # 3. Check if player has enough TPs
+    has_enough_ptp = player.ptps >= total_ptp
+    has_enough_mtp = player.mtps >= total_mtp
+    has_enough_stp = player.stps >= total_stp
     
-    total_ptp = 0
-    total_mtp = 0
-    total_stp = 0
-    
-    for i in range(ranks_to_train):
-        multiplier = (ranks_already_trained + 1) + i
+    pending_data = {
+        "skill_id": skill_id,
+        "skill_name": skill_data["name"],
+        "ranks_to_train": ranks_to_train,
+        "total_cost": total_cost,
+        "conversion_data": None # Assume no conversion needed
+    }
+
+    if has_enough_ptp and has_enough_mtp and has_enough_stp:
+        # 4. SUCCESS: Train immediately
+        _perform_conversion_and_train(player, pending_data)
+    else:
+        # 5. FAILURE: Check for possible conversion
+        conversion_data = _check_for_tp_conversion(player, total_ptp, total_mtp, total_stp)
         
-        total_ptp += costs["ptp"] * multiplier
-        total_mtp += costs["mtp"] * multiplier
-        total_stp += costs["stp"] * multiplier
-    
-    if player.ptps < total_ptp:
-        player.send_message(f"You need {total_ptp} PTPs but only have {player.ptps}.")
-        return
-    if player.mtps < total_mtp:
-        player.send_message(f"You need {total_mtp} MTPs but only have {player.mtps}.")
-        return
-    if player.stps < total_stp:
-        player.send_message(f"You need {total_stp} STPs but only have {player.stps}.")
-        return
-        
-    player.ptps -= total_ptp
-    player.mtps -= total_mtp
-    player.stps -= total_stp
-    
-    new_rank = player.skills.get(skill_id, 0) + ranks_to_train
-    player.skills[skill_id] = new_rank
-    
-    player.ranks_trained_this_level[skill_id] = ranks_already_trained + ranks_to_train
-    
-    player.send_message(f"You train **{skill_data['name']}** to rank **{new_rank}**!")
-    
-    # --- UPDATED: Show list AND then menu (as requested) ---
-    player.send_message("\n--- **All Skills** ---")
-    _show_all_skills_by_category(player)
-    show_training_menu(player)
-    # ---
+        if conversion_data:
+            # 6. CONVERSION POSSIBLE: Set pending state
+            pending_data["conversion_data"] = conversion_data
+            player.db_data['_pending_training'] = pending_data
+            
+            # Send confirmation prompt
+            player.send_message(conversion_data['msg'])
+            player.send_message("Type '<span class='keyword' data-command='train CONFIRM'>TRAIN CONFIRM</span>' to proceed with the conversion and training.")
+            player.send_message("Type '<span class='keyword' data-command='train CANCEL'>TRAIN CANCEL</span>' to abort.")
+        else:
+            # 7. CONVERSION IMPOSSIBLE: Send error messages
+            if not has_enough_ptp:
+                player.send_message(f"You need {total_ptp} PTPs but only have {player.ptps} (and cannot convert).")
+            if not has_enough_mtp:
+                player.send_message(f"You need {total_mtp} MTPs but only have {player.mtps} (and cannot convert).")
+            if not has_enough_stp:
+                player.send_message(f"You need {total_stp} STPs but only have {player.stps} (and cannot convert).")
