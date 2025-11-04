@@ -3,7 +3,7 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import game_state
-from typing import Tuple, Optional
+from typing import Tuple, Optional # <-- NEW
 
 # --- NEW HELPER ---
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
@@ -31,7 +31,6 @@ def _set_action_roundtime(player, duration_seconds: float):
     rt_data["next_action_time"] = time.time() + duration_seconds
     # Put it back in the global state
     game_state.COMBAT_STATE[player_id] = rt_data
-
 
 class Forage(BaseVerb):
     """

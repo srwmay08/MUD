@@ -213,7 +213,8 @@ class Sell(BaseVerb):
             shop_will_buy_list = shop_data.get("will_buy", [])
             
             # Find all items in inventory that the shop will buy
-            for item_id in self.player.inventory:
+            # Iterate over a copy so we can modify the original
+            for item_id in self.player.inventory[:]:
                 if item_id in shop_will_buy_list:
                     items_to_sell.append(item_id)
             

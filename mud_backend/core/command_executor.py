@@ -133,8 +133,9 @@ DIRECTION_MAP = {
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
 
+# --- (Rest of file is unchanged...) ---
 
-# --- (_prune_active_players and _check_and_run_game_tick unchanged, omitting for brevity) ---
+# ... (omitting _prune_active_players and _check_and_run_game_tick for brevity) ...
 def _prune_active_players(log_prefix: str, broadcast_callback):
     current_time = time.time()
     stale_players = []
@@ -322,20 +323,17 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
 def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):
     try:
         verb_name, verb_class_name = verb_info
-        if verb_class_name == "Move":
-            if command in DIRECTION_MAP: args = [DIRECTION_MAP[command]]
-        elif verb_class_name == "Exit":
-            if command == "out": args = []
+        
+        # --- THIS IS THE FIX for STOW default ---
+        # We pass the original 'command' to the verb
+        verb_instance = VerbClass(player=player, room=room, args=args, command=command)
+        # --- END FIX ---
 
-        verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
-        verb_module_name = f"mud_backend.verbs.{verb_name}"
-        spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
-        if spec is None: 
-             raise FileNotFoundError(f"Verb file '{verb_name}.py' not found")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        VerbClass = getattr(module, verb_class_name)
-        verb_instance = VerbClass(player=player, room=room, args=args)
+        if verb_class_name == "Move":
+            if command in DIRECTION_MAP: verb_instance.args = [DIRECTION_MAP[command]]
+        elif verb_class_name == "Exit":
+            if command == "out": verb_instance.args = []
+
         verb_instance.execute()
     except Exception as e:
         player.send_message(f"An unexpected error occurred while running **{command}**: {e}")

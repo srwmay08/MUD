@@ -1,9 +1,8 @@
 # mud_backend/verbs/equipment.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import game_state
-# --- THIS IS THE FIX ---
 from typing import Dict, Any, Tuple
-# --- END FIX ---
+
 
 def _find_item_in_inventory(player, target_name: str) -> str | None:
     """Finds the first item_id in a player's inventory that matches."""
@@ -15,11 +14,7 @@ def _find_item_in_inventory(player, target_name: str) -> str | None:
                 return item_id
     return None
 
-# --- THIS IS THE FIX ---
-# Changed the return type hint from (str, str) | (None, None)
-# to the valid syntax: tuple[str, str] | tuple[None, None]
 def _find_item_worn(player, target_name: str) -> tuple[str, str] | tuple[None, None]:
-# --- END FIX ---
     """Finds the first item_id and slot on a player that matches."""
     for slot, item_id in player.worn_items.items():
         if item_id:
@@ -108,13 +103,33 @@ class Remove(BaseVerb):
             
         item_data = game_state.GAME_ITEMS.get(item_id, {})
         
-        # 2. Perform the action
-        self.player.worn_items[slot] = None # Free up the slot
-        self.player.inventory.append(item_id) # Add to pack
+        # --- THIS IS THE FIX ---
+        # 2. Find an empty hand
+        right_hand_slot = "mainhand"
+        left_hand_slot = "offhand"
+        target_hand_slot = None
         
-        verb = "remove"
-        if item_data.get("item_type") in ["weapon", "shield"]:
-            if slot == "mainhand": verb = "lower"
-            if slot == "offhand": verb = "unstrap"
-            
-        self.player.send_message(f"You {verb} {item_data.get('name')} and put it in your pack.")
+        if self.player.worn_items.get(right_hand_slot) is None:
+            target_hand_slot = right_hand_slot
+        elif self.player.worn_items.get(left_hand_slot) is None:
+            target_hand_slot = left_hand_slot
+
+        # 3. Perform the action
+        self.player.worn_items[slot] = None # Free up the worn slot
+        
+        if target_hand_slot:
+            # Move to empty hand
+            self.player.worn_items[target_hand_slot] = item_id
+            verb = "remove"
+            if item_data.get("item_type") in ["weapon", "shield"]:
+                verb = "lower"
+            self.player.send_message(f"You {verb} {item_data.get('name')} and hold it.")
+        else:
+            # Hands are full, move to pack
+            self.player.inventory.append(item_id) # Add to pack
+            verb = "remove"
+            if item_data.get("item_type") in ["weapon", "shield"]:
+                if slot == "mainhand": verb = "lower"
+                if slot == "offhand": verb = "unstrap"
+            self.player.send_message(f"You {verb} {item_data.get('name')} and put it in your pack.")
+        # --- END FIX ---
