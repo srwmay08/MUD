@@ -8,6 +8,9 @@ from mud_backend.core import game_state
 from mud_backend.core.game_objects import Player # Needed for type hinting
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
+# --- NEW IMPORT ---
+from mud_backend.core import loot_system
+# --- END NEW IMPORT ---
 
 # ---
 # This function is moved from command_executor.py
@@ -82,5 +85,15 @@ def check_and_run_game_tick(broadcast_callback: Callable):
         game_items_global=game_state.GAME_ITEMS # Pass the real items
     )
     # --- END FIX ---
+    
+    # --- 4. NEW: Process Corpse Decay ---
+    decay_messages_by_room = loot_system.process_corpse_decay(
+        game_rooms_dict=game_state.GAME_ROOMS,
+        log_time_prefix=log_prefix
+    )
+    for room_id, messages in decay_messages_by_room.items():
+        for msg in messages:
+            broadcast_callback(room_id, msg, "ambient_decay")
+    # --- END NEW BLOCK ---
     
     print(f"{log_prefix}: Global tick complete.")

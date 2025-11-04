@@ -7,6 +7,10 @@ from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config # <-- NEW IMPORT
 
+# --- NEW IMPORT ---
+from mud_backend.core import game_state
+# --- END NEW IMPORT ---
+
 if TYPE_CHECKING:
     from .game_objects import Player, Room
 
@@ -138,26 +142,33 @@ def save_game_state(player: 'Player'):
 def save_room_state(room: 'Room'):
     """Saves the current state of a room object to the database."""
     database = get_db()
+    
+    # --- GET DICTIONARY FIRST ---
+    room_data_dict = room.to_dict()
+    
     if database is None:
         print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
+        # --- FIX: Update cache even in mock mode ---
+        game_state.GAME_ROOMS[room.room_id] = room_data_dict
         return
         
-    room_data = room.to_dict()
-    
     # We must explicitly separate the query fields and the update fields
     query = {"room_id": room.room_id}
     
-    # Remove _id from the $set if it exists, use it in the query instead.
-    # Note: room_data.pop('_id', None) is critical if we plan to use $set
-    # and want the upsert mechanism to work correctly when the object moves
-    # from initial load to a modified state.
-    room_data.pop('_id', None)
+    # Use the dictionary we already created
+    room_data_dict.pop('_id', None)
 
     database.rooms.update_one(
         query, 
-        {"$set": room_data},       
+        {"$set": room_data_dict},       
         upsert=True
     )
+    
+    # --- THIS IS THE FIX ---
+    # After saving to DB, also update the in-memory cache.
+    game_state.GAME_ROOMS[room.room_id] = room.to_dict()
+    # --- END FIX ---
+    
     print(f"\n[DB SAVE] Room {room.name} state updated.")
 
 def fetch_all_rooms() -> dict:

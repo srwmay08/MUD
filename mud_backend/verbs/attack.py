@@ -7,6 +7,9 @@ from mud_backend.core.game_state import (
     DEFEATED_MONSTERS, GAME_MONSTER_TEMPLATES,
     GAME_ITEMS, GAME_LOOT_TABLES
 )
+# --- NEW IMPORT ---
+from mud_backend import config 
+# --- END NEW IMPORT ---
 from mud_backend.core import combat_system
 from mud_backend.core import loot_system
 from mud_backend.core import db # <--- NEW IMPORT
@@ -14,7 +17,7 @@ from mud_backend.core import db # <--- NEW IMPORT
 class Attack(BaseVerb):
     """
     Handles the 'attack' command.
-    - If not in combat, this *initiates* combat.
+    - If not in combat, this *initiates* combat AND performs the first attack.
     - If in combat, this *performs* an attack, subject to roundtime.
     """
     
@@ -54,7 +57,80 @@ class Attack(BaseVerb):
         
         current_time = time.time()
         
+        # --- (Helper function to resolve the attack and handle results) ---
+        # This avoids duplicating the large block of code
+        def _resolve_and_handle_attack():
+            attack_results = combat_system.resolve_attack(
+                self.player, target_monster_data, GAME_ITEMS
+            )
+            
+            self.player.send_message(attack_results['attacker_msg'])
+            self.player.send_message(attack_results['roll_string'])
+            
+            if attack_results['hit']:
+                damage = attack_results['damage']
+                if monster_id not in RUNTIME_MONSTER_HP:
+                    RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
+                
+                RUNTIME_MONSTER_HP[monster_id] -= damage
+                new_hp = RUNTIME_MONSTER_HP[monster_id]
+
+                if new_hp <= 0:
+                    self.player.send_message(f"**The {target_monster_data['name']} has been DEFEATED!**")
+                    
+                    # --- Grant Experience (Simplified) ---
+                    # (You can replace '1000' with your real formula later)
+                    nominal_xp = 1000 
+                    self.player.add_field_exp(nominal_xp)
+                    
+                    # --- Create Corpse ---
+                    corpse_data = loot_system.create_corpse_object_data(
+                        defeated_entity_template=target_monster_data, 
+                        defeated_entity_runtime_id=monster_id,
+                        game_items_data=GAME_ITEMS,
+                        game_loot_tables=GAME_LOOT_TABLES,
+                        game_equipment_tables_data={} 
+                    )
+                    self.room.objects.append(corpse_data)
+                    self.room.objects = [obj for obj in self.room.objects if obj.get("monster_id") != monster_id]
+                    
+                    # --- FIX: Save room state to make the corpse permanent and visible ---
+                    db.save_room_state(self.room) 
+                    
+                    self.player.send_message(f"The {corpse_data['name']} falls to the ground.")
+                    
+                    # --- MARK FOR RESPAWN (THIS IS THE UPDATED BLOCK) ---
+                    
+                    # 1. Get respawn time from template, default to 300
+                    respawn_time = target_monster_data.get("respawn_time_seconds", 300)
+                    
+                    # 2. Get respawn chance from template, default from config
+                    respawn_chance = target_monster_data.get(
+                        "respawn_chance_per_tick", 
+                        getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2)
+                    )
+
+                    DEFEATED_MONSTERS[monster_id] = {
+                        "room_id": self.room.room_id,
+                        "template_key": monster_id,
+                        "type": "monster",
+                        "eligible_at": time.time() + respawn_time,
+                        "chance": respawn_chance  # <-- Store the specific chance
+                    }
+                    # --- END UPDATED BLOCK ---
+                    
+                    # --- Stop Combat ---
+                    combat_system.stop_combat(player_id, monster_id)
+                    return False # Return False to signal combat ended
+                else:
+                    self.player.send_message(f"(The {target_monster_data['name']} has {new_hp} HP remaining)")
+            
+            return True # Return True to signal combat continues
+        # --- (End of helper function) ---
+
+
         if player_id in COMBAT_STATE:
+            # --- PLAYER IS ALREADY IN COMBAT ---
             combat_info = COMBAT_STATE[player_id]
             
             if combat_info["target_id"] != monster_id:
@@ -66,95 +142,37 @@ class Attack(BaseVerb):
                 self.player.send_message(f"You are not ready to attack yet. (Wait {wait_time:.1f}s)")
                 return
                 
-            # --- PLAYER IS READY TO ATTACK ---
-            # Removed redundant line: self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
+            # --- Player is ready, resolve the attack ---
+            combat_continues = _resolve_and_handle_attack()
             
-            attack_results = combat_system.resolve_attack(
-                self.player, target_monster_data, GAME_ITEMS
-            )
-            
-            # Send results to the player
-            self.player.send_message(attack_results['attacker_msg'])
-            
-            # --- THIS IS THE FIX ---
-            # Send the full roll string to the player
-            self.player.send_message(attack_results['roll_string'])
-            # --- END FIX ---
-            
-            if attack_results['hit']:
-                damage = attack_results['damage']
-                if monster_id not in RUNTIME_MONSTER_HP:
-                    RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
-                
-                RUNTIME_MONSTER_HP[monster_id] -= damage
-                new_hp = RUNTIME_MONSTER_HP[monster_id]
-
-                if new_hp <= 0:
-                    # --- (Monster death logic is unchanged) ---
-                    self.player.send_message(f"**The {target_monster_data['name']} has been DEFEATED!**")
-                    monster_level = target_monster_data.get("level", 1)
-                    level_diff = self.player.level - monster_level
-                    nominal_xp = 1000
-                    if level_diff >= 10: nominal_xp = 0
-                    elif level_diff > 0: nominal_xp = 100 - (level_diff * 10)
-                    elif level_diff <= -5: nominal_xp = 150
-                    elif level_diff < 0: nominal_xp = 100 + (abs(level_diff) * 10)
-                    if nominal_xp > 0:
-                        self.player.add_field_exp(nominal_xp)
-                    else:
-                        self.player.send_message("You learn nothing from this kill.")
-                    
-                    corpse_data = loot_system.create_corpse_object_data(
-                        defeated_entity_template=target_monster_data, 
-                        defeated_entity_runtime_id=monster_id,
-                        game_items_data=GAME_ITEMS,
-                        game_loot_tables=GAME_LOOT_TABLES,
-                        game_equipment_tables_data={} 
-                    )
-                    self.room.objects.append(corpse_data)
-                    self.room.objects = [obj for obj in self.room.objects if obj.get("monster_id") != monster_id]
-
-                    # --- FIX: Save room state to make the corpse permanent and visible ---
-                    db.save_room_state(self.room) 
-                    
-                    self.player.send_message(f"The {corpse_data['name']} falls to the ground.")
-                    
-                    DEFEATED_MONSTERS[monster_id] = {
-                        "room_id": self.room.room_id,
-                        "template_key": monster_id,
-                        "type": "monster",
-                        "eligible_at": time.time() + 300
-                    }
-                    combat_system.stop_combat(player_id, monster_id)
-                    return
-                else:
-                    self.player.send_message(f"(The {target_monster_data['name']} has {new_hp} HP remaining)")
-            
-            rt_seconds = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
-            combat_info["next_action_time"] = current_time + rt_seconds
+            if combat_continues:
+                rt_seconds = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
+                combat_info["next_action_time"] = current_time + rt_seconds
             
         else:
             # --- PLAYER IS INITIATING COMBAT ---
-            # This line should remain as it is the ONLY message when initiating combat.
             self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
             
             room_id = self.room.room_id
             
+            # --- Apply roundtime for this *first* attack ---
+            rt_seconds = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
+            
             COMBAT_STATE[player_id] = {
                 "target_id": monster_id,
-                "next_action_time": current_time,
+                "next_action_time": current_time + rt_seconds, # <-- FIX: Apply RT
                 "current_room_id": room_id
             }
             
             monster_rt = combat_system.calculate_roundtime(target_monster_data.get("stats", {}).get("AGI", 50))
             COMBAT_STATE[monster_id] = {
                 "target_id": player_id,
-                "next_action_time": current_time + (monster_rt / 2),
+                "next_action_time": current_time + (monster_rt / 2), # Monster attacks slightly after
                 "current_room_id": room_id
             }
             
             if monster_id not in RUNTIME_MONSTER_HP:
                 RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
             
-            # The game tick will handle the monster's first attack.
-            pass
+            # --- Resolve the *first* attack immediately ---
+            _resolve_and_handle_attack()

@@ -10,6 +10,10 @@
         "is_monster": true,
         "hp": 10,
         "max_hp": 10,
+
+        "respawn_time_seconds": 30,
+        "respawn_chance_per_tick": 1.0,
+
         "stats": {
             "STR": 30, "CON": 30, "DEX": 30, "AGI": 30,
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
