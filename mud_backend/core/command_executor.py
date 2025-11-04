@@ -25,7 +25,7 @@ from mud_backend.core.game_loop import monster_respawn
 # ---
 from mud_backend import config # <-- NEW IMPORT
 
-# (VERB_ALIASES and DIRECTION_MAP are updated)
+# --- UPDATED: VERB_ALIASES ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement Verbs (all in 'movement.py')
     "move": ("movement", "Move"),
@@ -55,7 +55,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "take": ("item_actions", "Take"),
     "drop": ("item_actions", "Drop"),
     "put": ("item_actions", "Put"),
-    "stow": ("item_actions", "Put"), # <-- THIS IS THE FIX
+    "stow": ("item_actions", "Put"), 
     
     # Observation Verbs
     "examine": ("observation", "Examine"),
@@ -74,7 +74,6 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "check": ("training", "CheckIn"),
     "checkin": ("training", "CheckIn"),
     "train": ("training", "Train"),
-    "list": ("training", "List"),
     "done": ("training", "Done"),
     
     # Character Info Verbs
@@ -90,7 +89,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "inv": ("inventory", "Inventory"),
     "wealth": ("inventory", "Wealth"),
     "wear": ("equipment", "Wear"),
-    "wield": ("equipment", "Wear"), # 'wield' is an alias for 'wear'
+    "wield": ("equipment", "Wear"), 
     "remove": ("equipment", "Remove"),
     
     # Trading Verbs
@@ -106,8 +105,19 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "out": ("movement", "Exit"),
     "say": ("say", "Say"),
     "ping": ("tick", "Tick"),
+    
+    # --- NEW: Banking Verbs ---
+    "deposit": ("banking", "Deposit"),
+    "withdraw": ("banking", "Withdraw"),
+    "balance": ("banking", "Balance"),
+    
+    # --- NEW: Shop Verbs ---
+    "list": ("shop", "List"), # This will be the shop list
+    "buy": ("shop", "Buy"),
+    "sell": ("shop", "Sell"),
+    "appraise": ("shop", "Appraise"),
 }
-
+# --- END UPDATED ---
 
 
 DIRECTION_MAP = {
@@ -166,7 +176,7 @@ def _check_and_run_game_tick(broadcast_callback):
     print(f"{log_prefix}: Global tick complete.")
 
 # ---
-# UPDATED EXECUTE_COMMAND (Room Object Filtering Fix)
+# EXECUTE_COMMAND
 # ---
 def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
     """
@@ -212,7 +222,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         db_data=room_db_data 
     )
 
-    # --- UPDATED: Monster and Corpse filtering logic (Fixes Persistence) ---
+    # --- (Monster and Corpse filtering logic is unchanged) ---
     live_room_objects = []
     all_objects = room_db_data.get("objects", []) 
     
@@ -249,7 +259,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         command = parts[0].lower()
         args = parts[1:]
         
-    # --- (Game state routing is unchanged) ---
+    # --- UPDATED: Game state routing ---
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command == "look":
             show_room_to_player(player, room)
@@ -259,21 +269,30 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             handle_chargen_input(player, command_line)
             
     elif player.game_state == "training":
-        if not parts:
-            player.send_message("Invalid command. Type 'list', 'train', or 'done'.")
-        verb_info = VERB_ALIASES.get(command)
-        if command in ["train", "list", "done", "look"]:
-            if command == "look":
-                verb_info = ("observation", "Look")
-                if args:
-                    player.send_message("You must 'done' training to interact with objects.")
-                    verb_info = None
-            if verb_info:
-                _run_verb(player, room, command, args, verb_info)
-            else:
-                player.send_message(f"Unknown command '{command}' in training mode.")
+        # --- THIS IS THE FIX ---
+        # Manually define verb_info for this state
+        # to avoid collision with shop 'list'
+        verb_info = None
+        if command == "list":
+            verb_info = ("training", "List")
+        elif command == "train":
+            verb_info = ("training", "Train")
+        elif command == "done":
+            verb_info = ("training", "Done")
+        elif command == "look":
+             verb_info = ("observation", "Look")
+             if args:
+                 player.send_message("You must 'done' training to interact with objects.")
+                 verb_info = None
+        
+        if verb_info:
+            _run_verb(player, room, command, args, verb_info)
         else:
-            player.send_message(f"You cannot '{command}' while training. Type 'done' to finish.")
+            if not parts:
+                 player.send_message("Invalid command. Type 'list', 'train', or 'done'.")
+            else:
+                 player.send_message(f"You cannot '{command}' while training. Type 'done' to finish.")
+        # --- END FIX ---
         
     elif player.game_state == "playing":
         if not parts:

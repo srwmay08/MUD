@@ -3,13 +3,17 @@
         "name": "a ruined pelt",
         "description": "A worthless, ruined pelt.",
         "item_type": "component",
-        "keywords": ["pelt", "ruined pelt"]
+        "keywords": ["pelt", "ruined pelt"],
+        "base_value": 5,
+        "max_value": 12
     },
     "monster_claw": {
         "name": "a monster claw",
         "description": "A sharp, wicked-looking claw.",
         "item_type": "component",
-        "keywords": ["claw", "monster claw"]
+        "keywords": ["claw", "monster claw"],
+        "base_value": 15,
+        "max_value": 25
     },
     "short_sword": {
         "name": "a short sword",
@@ -17,7 +21,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "edged_weapons",
-        "keywords": ["sword", "short sword"]
+        "keywords": ["sword", "short sword"],
+        "base_value": 100
     },
     "leather_tunic": {
         "name": "a leather tunic",
@@ -26,14 +31,16 @@
         "armor_type": "leather",
         "wearable_slot": "torso",
         "skill": "armor_use",
-        "keywords": ["tunic", "leather tunic"]
+        "keywords": ["tunic", "leather tunic"],
+        "base_value": 80
     },
     "gold_ring": {
         "name": "a gold ring",
         "description": "A simple gold ring.",
         "item_type": "jewelry",
         "wearable_slot": "finger_right",
-        "keywords": ["ring", "gold ring"]
+        "keywords": ["ring", "gold ring"],
+        "base_value": 250
     },
 
     "starter_backpack": {
@@ -42,7 +49,8 @@
         "item_type": "container",
         "wearable_slot": "back",
         "is_container": true,
-        "keywords": ["backpack", "starter backpack", "pack", "back"]
+        "keywords": ["backpack", "starter backpack", "pack", "back"],
+        "base_value": 50
     },
     "starter_leather_armor": {
         "name": "starter leather armor",
@@ -51,7 +59,8 @@
         "armor_type": "leather",
         "wearable_slot": "torso",
         "skill": "armor_use",
-        "keywords": ["armor", "leather armor", "starter armor"]
+        "keywords": ["armor", "leather armor", "starter armor"],
+        "base_value": 120
     },
     "starter_small_shield": {
         "name": "a small wooden shield",
@@ -59,7 +68,8 @@
         "item_type": "shield",
         "wearable_slot": "offhand",
         "skill": "shield_use",
-        "keywords": ["shield", "wooden shield"]
+        "keywords": ["shield", "wooden shield"],
+        "base_value": 75
     },
     "knuckle_dusters": {
         "name": "a set of knuckle dusters",
@@ -67,7 +77,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "brawling",
-        "keywords": ["knuckle dusters", "dusters"]
+        "keywords": ["knuckle dusters", "dusters"],
+        "base_value": 40
     },
     "starter_dagger": {
         "name": "a simple dagger",
@@ -75,7 +86,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "small_edged",
-        "keywords": ["dagger", "simple dagger"]
+        "keywords": ["dagger", "simple dagger"],
+        "base_value": 50
     },
     "starter_short_sword": {
         "name": "a basic short sword",
@@ -83,7 +95,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "edged_weapons",
-        "keywords": ["sword", "short sword"]
+        "keywords": ["sword", "short sword"],
+        "base_value": 100
     },
     "starter_bastard_sword": {
         "name": "a bastard sword",
@@ -91,7 +104,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "two_handed_edged",
-        "keywords": ["sword", "bastard sword"]
+        "keywords": ["sword", "bastard sword"],
+        "base_value": 150
     },
     "starter_club": {
         "name": "a wooden club",
@@ -99,7 +113,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "small_blunt",
-        "keywords": ["club", "wooden club"]
+        "keywords": ["club", "wooden club"],
+        "base_value": 30
     },
     "starter_mace": {
         "name": "a simple mace",
@@ -107,7 +122,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "blunt_weapons",
-        "keywords": ["mace", "simple mace"]
+        "keywords": ["mace", "simple mace"],
+        "base_value": 90
     },
     "starter_greatclub": {
         "name": "a greatclub",
@@ -115,7 +131,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "two_handed_blunt",
-        "keywords": ["greatclub", "club"]
+        "keywords": ["greatclub", "club"],
+        "base_value": 130
     },
     "starter_spear": {
         "name": "a simple spear",
@@ -123,7 +140,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "polearms",
-        "keywords": ["spear", "simple spear"]
+        "keywords": ["spear", "simple spear"],
+        "base_value": 110
     },
     "starter_bow": {
         "name": "a short bow",
@@ -131,7 +149,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "bows",
-        "keywords": ["bow", "short bow"]
+        "keywords": ["bow", "short bow"],
+        "base_value": 100
     },
     "starter_crossbow": {
         "name": "a light crossbow",
@@ -139,7 +158,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "crossbows",
-        "keywords": ["crossbow", "light crossbow"]
+        "keywords": ["crossbow", "light crossbow"],
+        "base_value": 120
     },
     "starter_throwing_knife": {
         "name": "a throwing knife",
@@ -147,7 +167,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "small_thrown",
-        "keywords": ["knife", "throwing knife"]
+        "keywords": ["knife", "throwing knife"],
+        "base_value": 20
     },
     "starter_javelin": {
         "name": "a javelin",
@@ -155,7 +176,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "large_thrown",
-        "keywords": ["javelin"]
+        "keywords": ["javelin"],
+        "base_value": 40
     },
     "starter_sling": {
         "name": "a leather sling",
@@ -163,7 +185,8 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "slings",
-        "keywords": ["sling", "leather sling"]
+        "keywords": ["sling", "leather sling"],
+        "base_value": 15
     },
     "starter_staff": {
         "name": "a wooden staff",
@@ -171,6 +194,7 @@
         "item_type": "weapon",
         "wearable_slot": "mainhand",
         "skill": "staves",
-        "keywords": ["staff", "wooden staff"]
+        "keywords": ["staff", "wooden staff"],
+        "base_value": 60
     }
 }

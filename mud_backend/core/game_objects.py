@@ -30,8 +30,8 @@ RACE_DATA = {
 }
 
 
+# --- (Player class is unchanged) ---
 class Player:
-    # ... (Player class is unchanged) ...
     def __init__(self, name: str, current_room_id: str, db_data: Optional[dict] = None):
         self.name = name
         self.current_room_id = current_room_id
@@ -40,7 +40,6 @@ class Player:
         
         self._id = self.db_data.get("_id") 
 
-        # --- (XP, Level, Stats fields are unchanged) ---
         self.experience: int = self.db_data.get("experience", 0)
         self.unabsorbed_exp: int = self.db_data.get("unabsorbed_exp", 0)
         self.level: int = self.db_data.get("level", 0)
@@ -61,37 +60,24 @@ class Player:
         self.hp: int = self.db_data.get("hp", 100)
         self.skills: Dict[str, int] = self.db_data.get("skills", {})
 
-        # --- MODIFIED: Inventory System ---
-        # (Replaces equipped_items)
-        
-        # All items carried but not worn (e.g., in your pack)
-        # Stored as a list of item_ids
         self.inventory: List[str] = self.db_data.get("inventory", [])
-        
-        # All items currently worn.
-        # Stored as { "slot_id": "item_id" }
-        # We initialize all possible slots from config as empty
         self.worn_items: Dict[str, Optional[str]] = self.db_data.get("worn_items", {})
         for slot_key in config.EQUIPMENT_SLOTS.keys():
             if slot_key not in self.worn_items:
                 self.worn_items[slot_key] = None
-        # --- END MODIFIED ---
 
-        # --- NEW: Wealth System ---
         self.wealth: Dict[str, Any] = self.db_data.get("wealth", {
             "silvers": 0,
-            "notes": [] # Can hold note objects/ids later
+            "notes": [], 
+            "bank_silvers": 0 
         })
-        # --- END NEW ---
 
-        # --- (Stance and Death's Sting fields are unchanged) ---
         self.stance: str = self.db_data.get("stance", "neutral")
         self.deaths_recent: int = self.db_data.get("deaths_recent", 0)
         self.death_sting_points: int = self.db_data.get("death_sting_points", 0)
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
 
-    # --- (All @property methods are unchanged) ---
     @property
     def con_bonus(self) -> int:
         return (self.stats.get("CON", 50) - 50)
@@ -147,7 +133,6 @@ class Player:
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
-    # --- (add_field_exp is unchanged) ---
     def add_field_exp(self, nominal_amount: int):
         if self.death_sting_points > 0:
             original_nominal = nominal_amount
@@ -183,7 +168,6 @@ class Player:
             self.unabsorbed_exp += actual_gained
             self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
 
-    # --- (absorb_exp_pulse is unchanged) ---
     def absorb_exp_pulse(self, room_type: str = "other") -> bool:
         if self.unabsorbed_exp <= 0:
             return False
@@ -217,7 +201,6 @@ class Player:
         self._check_for_level_up()
         return True
 
-    # --- (_get_xp_target_for_level, _calculate_tps_per_level, _check_for_level_up, send_message... are unchanged) ---
     def _get_xp_target_for_level(self, level: int) -> int:
         table = game_state.GAME_LEVEL_TABLE
         if not table:
@@ -265,16 +248,13 @@ class Player:
     def send_message(self, message: str):
         self.messages.append(message)
 
-    # --- (get_equipped_item_data is unchanged) ---
     def get_equipped_item_data(self, slot: str, game_items_global: dict) -> Optional[dict]:
         """Gets the item data for an equipped item."""
-        item_id = self.worn_items.get(slot) # <-- CHANGED
+        item_id = self.worn_items.get(slot) 
         if item_id:
             return game_items_global.get(item_id)
         return None
-    # --- END MODIFIED ---
 
-    # --- (get_armor_type is unchanged) ---
     def get_armor_type(self, game_items_global: dict) -> str:
         DEFAULT_UNARMORED_TYPE = "unarmored" 
         armor_data = self.get_equipped_item_data("torso", game_items_global)
@@ -282,7 +262,6 @@ class Player:
             return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
         return DEFAULT_UNARMORED_TYPE
     
-    # --- MODIFIED: to_dict (unchanged) ---
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
         
@@ -291,44 +270,29 @@ class Player:
         
         data = {
             **self.db_data,
-            
             "name": self.name,
             "current_room_id": self.current_room_id,
-            
             "experience": self.experience, 
             "unabsorbed_exp": self.unabsorbed_exp,
             "level": self.level,           
-            
             "strength": self.strength,
             "agility": self.agility,
-            
             "stats": self.stats,
-            
             "current_stat_pool": self.current_stat_pool,
             "best_stat_pool": self.best_stat_pool,
             "stats_to_assign": self.stats_to_assign,
-            
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
-            
             "hp": self.hp,
             "skills": self.skills,
-            
-            # --- NEW: Save new inventory fields ---
             "inventory": self.inventory,
             "worn_items": self.worn_items,
-            "wealth": self.wealth,
-            # --- END NEW ---
-            
-            # --- (equipped_items is removed) ---
-            
+            "wealth": self.wealth, 
             "ptps": self.ptps,
             "mtps": self.mtps,
             "stps": self.stps,
-            
             "ranks_trained_this_level": self.ranks_trained_this_level,
-            
             "stance": self.stance,
             "deaths_recent": self.deaths_recent,
             "death_sting_points": self.death_sting_points,
@@ -345,7 +309,7 @@ class Player:
         return f"<Player: {self.name}>"
 
 
-# --- (Room class is updated for save fix) ---
+# --- MODIFIED: Room class ---
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
@@ -354,7 +318,6 @@ class Room:
         self.db_data = db_data if db_data is not None else {}
         self._id = self.db_data.get("_id") 
         self.unabsorbed_social_exp = self.db_data.get("unabsorbed_social_exp", 0) 
-        # Crucial: Load objects directly from db_data for persistence
         self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
         self.exits: Dict[str, str] = self.db_data.get("exits", {})
 
@@ -369,10 +332,11 @@ class Room:
             "exits": self.exits,
         }
         
-        # --- FIX: Ensure _id is correctly set to self._id (the value), not the method ---
+        # --- THIS IS THE FIX ---
+        # Corrected the typo from `self.self._id` to `self._id`
         if self._id:
             data["_id"] = self._id
-        # Note: If self._id is None, it is intentionally omitted for MongoDB to assign one on first insert.
+        # --- END FIX ---
 
         return data
 

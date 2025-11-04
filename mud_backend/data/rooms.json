@@ -85,11 +85,62 @@
     
     {"room_id": "ts_north", "name": "North Square", "is_outdoor": true, "description": "You are in the northern part of the town square. The main square is to the south.", "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}},
     {"room_id": "ts_east", "name": "East Square", "is_outdoor": true, "description": "You are in the eastern part of the town square. The main square is to the west. The old well is here.", "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, "objects": [{"name": "well", "description": "A weathered stone well...", "verbs": ["CLIMB"], "target_room": "well_bottom", "perception_dc": 0, "keywords": ["well"]}]},
-    {"room_id": "ts_west", "name": "West Square", "is_outdoor": true, "description": "You are in the western part of the town square. The main square is to the east.", "exits": {"east": "town_square", "north": "ts_northwest", "south": "ts_southwest"}},
+    
+    {
+        "room_id": "ts_west", "name": "West Square", 
+        "is_outdoor": true, 
+        "description": "You are in the western part of the town square. The main square is to the east. A wide marble arch leads into the bank here.", 
+        "exits": {"east": "town_square", "north": "ts_northwest", "south": "ts_southwest"},
+        "objects": [
+            {
+                "name": "arch", 
+                "description": "A grand marble arch, polished and imposing, serving as the entrance to the bank.", 
+                "verbs": ["ENTER"], 
+                "target_room": "bank_lobby",
+                "perception_dc": 0,
+                "keywords": ["arch", "marble arch", "bank"]
+            }
+        ]
+    },
+    
     {"room_id": "ts_northeast", "name": "Northeast Square", "is_outdoor": true, "description": "You are in the northeast corner of the town square.", "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"}},
-    {"room_id": "ts_northwest", "name": "Northwest Square", "is_outdoor": true, "description": "You are in the northwest corner of the town square.", "exits": {"southeast": "town_square", "south": "ts_west", "east": "ts_north"}},
+    
+    {
+        "room_id": "ts_northwest", "name": "Northwest Square", 
+        "is_outdoor": true, 
+        "description": "You are in the northwest corner of the town square. A solid oak door with an iron anvil sigil marks the armory.", 
+        "exits": {"southeast": "town_square", "south": "ts_west", "east": "ts_north"},
+        "objects": [
+            {
+                "name": "door", 
+                "description": "A heavy oak door with a sigil of an anvil and hammer. This is the town armory.", 
+                "verbs": ["ENTER"], 
+                "target_room": "armory_shop",
+                "perception_dc": 0,
+                "keywords": ["door", "oak door", "armory"]
+            }
+        ]
+    },
+    
     {"room_id": "ts_southeast", "name": "Southeast Square", "is_outdoor": true, "description": "You are in the southeast corner of the town square.", "exits": {"northwest": "town_square", "north": "ts_east", "west": "ts_south"}},
-    {"room_id": "ts_southwest", "name": "Southwest Square", "is_outdoor": true, "description": "You are in the southwest corner of the town square.", "exits": {"northeast": "town_square", "north": "ts_west", "east": "ts_south"}},
+    
+    {
+        "room_id": "ts_southwest", "name": "Southwest Square", 
+        "is_outdoor": true, 
+        "description": "You are in the southwest corner of the town square. The door to a small furrier's shop is here, a crude sign of a pelt hanging above it.", 
+        "exits": {"northeast": "town_square", "north": "ts_west", "east": "ts_south"},
+        "objects": [
+            {
+                "name": "door", 
+                "description": "A simple wooden door under a sign of a stretched pelt. This appears to be the furrier.", 
+                "verbs": ["ENTER"], 
+                "target_room": "furrier_shop",
+                "perception_dc": 0,
+                "keywords": ["door", "wooden door", "furrier", "shop"]
+            }
+        ]
+    },
+    
     {
         "room_id": "inn_room",
         "name": "A Room at the Inn",
@@ -99,5 +150,73 @@
             {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"]}
         ],
         "exits": { "out": "ts_south" } 
+    },
+
+    {
+        "room_id": "furrier_shop",
+        "name": "The Furrier's Shop",
+        "description": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter.",
+        "objects": [
+            {
+                "name": "furrier",
+                "description": "A grizzled man skinning a small animal. He looks like he's seen better days.",
+                "keywords": ["furrier", "man", "shopkeep"],
+                "shop_data": {
+                    "type": "furrier",
+                    "inventory": [],
+                    "will_buy": ["pelt_ruined", "monster_claw"]
+                }
+            }
+        ],
+        "exits": { "out": "ts_southwest" }
+    },
+    
+    {
+        "room_id": "bank_lobby",
+        "name": "The Bank of MUD",
+        "description": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall.",
+        "objects": [
+            {
+                "name": "teller",
+                "description": "A sharply-dressed teller stands behind the counter, ready to assist you.",
+                "keywords": ["teller", "banker"],
+                "verbs": ["deposit", "withdraw", "balance", "look"]
+            },
+            {
+                "name": "counter",
+                "description": "A long, polished counter of dark wood.",
+                "keywords": ["counter"]
+            }
+        ],
+        "exits": { "out": "ts_west" }
+    },
+    
+    {
+        "room_id": "armory_shop",
+        "name": "The Town Armory",
+        "description": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow.",
+        "objects": [
+            {
+                "name": "armorer",
+                "description": "A large, muscular man with soot on his face. He nods at you.",
+                "keywords": ["armorer", "man", "shopkeep"],
+                "shop_data": {
+                    "type": "armory",
+                    "inventory": [
+                        "knuckle_dusters", "starter_dagger", "starter_short_sword", "starter_bastard_sword",
+                        "starter_club", "starter_mace", "starter_greatclub", "starter_spear",
+                        "starter_bow", "starter_crossbow", "starter_throwing_knife", "starter_javelin",
+                        "starter_sling", "starter_staff", "starter_leather_armor", "starter_small_shield"
+                    ],
+                    "will_buy": [
+                        "knuckle_dusters", "starter_dagger", "starter_short_sword", "starter_bastard_sword",
+                        "starter_club", "starter_mace", "starter_greatclub", "starter_spear",
+                        "starter_bow", "starter_crossbow", "starter_throwing_knife", "starter_javelin",
+                        "starter_sling", "starter_staff", "starter_leather_armor", "starter_small_shield"
+                    ]
+                }
+            }
+        ],
+        "exits": { "out": "ts_northwest" }
     }
 ]

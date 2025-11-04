@@ -256,6 +256,11 @@ class Drop(BaseVerb):
             target_item_name = parts[0].strip()
             target_container_name = parts[1].strip() # Treat 'table' as a container for now
             
+        # --- THIS IS THE FIX ---
+        if target_container_name and target_container_name.startswith("my "):
+            target_container_name = target_container_name[3:].strip()
+        # --- END FIX ---
+
         # 1. Find the item on the player (hands first, then inventory)
         item_id_to_drop = None
         item_location = None
