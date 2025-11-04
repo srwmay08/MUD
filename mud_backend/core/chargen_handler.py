@@ -23,7 +23,7 @@ def get_article(word: str) -> str:
         return "a"
     return "an" if word.lower().strip()[0] in 'aeiou' else "a"
 
-# --- Define all character creation questions ---
+# --- (CHARGEN_QUESTIONS list is unchanged) ---
 CHARGEN_QUESTIONS = [
     {
         "key": "race",
@@ -88,7 +88,7 @@ CHARGEN_QUESTIONS = [
 ]
 
 # ---
-# Step 1: Stat Rolling Logic
+# (Step 1: Stat Rolling Logic is unchanged)
 # ---
 
 def do_initial_stat_roll(player: Player):
@@ -172,7 +172,7 @@ def _handle_stat_roll_input(player: Player, command: str):
         send_stat_roll_prompt(player)
 
 # ---
-# Step 2: Stat Assignment Logic
+# (Step 2: Stat Assignment Logic is unchanged)
 # ---
 
 def send_assignment_prompt(player: Player, pool_name: str):
@@ -281,13 +281,13 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.send_message("\nCharacter creation complete! You must now train your initial skills.")
         
         # --- NEW: Automatically list all skills ---
-        player.send_message("\n--- **All Skills** ---")
+        # --- FIX: Removed the "All Skills" title ---
         show_skill_list(player, "all")
         # --- CHANGED: Show the training menu AT THE BOTTOM ---
         show_training_menu(player)
         
 # ---
-# Main Input Router
+# (Main Input Router is unchanged)
 # ---
 
 def handle_chargen_input(player: Player, text_input: str):
@@ -310,8 +310,7 @@ def handle_chargen_input(player: Player, text_input: str):
         player.game_state = "playing"
 
 
-# --- Helper function to format the 'look' description ---
-# (This function is unchanged)
+# --- (format_player_description helper function is unchanged) ---
 def format_player_description(player_data: dict) -> str:
     """
     Builds the formatted description string for a player

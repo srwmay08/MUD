@@ -179,11 +179,13 @@ def _show_all_skills_by_category(player: Player):
 
     # --- Build Column 1 Lines (as HTML table rows) ---
     column_1_lines = []
+    # --- FIX: Add header ONCE, *before* the loop ---
+    column_1_lines.append(HEADER_ROW)
+    
     for category in COLUMN_1_CATEGORIES:
-        # --- FIX: Removed spacer row that caused dead space ---
         
         column_1_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
-        column_1_lines.append(HEADER_ROW)
+        # --- FIX: Removed the repeating header from *inside* the loop ---
         
         # --- NEW: Check for custom order ---
         custom_order = SKILL_ORDERING.get(category)
@@ -208,11 +210,13 @@ def _show_all_skills_by_category(player: Player):
 
     # --- Build Column 2 Lines (as HTML table rows) ---
     column_2_lines = []
+    # --- FIX: Add header ONCE, *before* the loop ---
+    column_2_lines.append(HEADER_ROW)
+
     for category in COLUMN_2_CATEGORIES:
-        # --- FIX: Removed spacer row that caused dead space ---
         
         column_2_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
-        column_2_lines.append(HEADER_ROW)
+        # --- FIX: Removed the repeating header from *inside* the loop ---
         
         custom_order = SKILL_ORDERING.get(category)
         if custom_order:
@@ -464,7 +468,7 @@ def _perform_conversion_and_train(player: Player, pending_data: Dict):
     player.db_data.pop('_pending_training', None)
 
     # 5. Show the menus
-    player.send_message("\n--- **All Skills** ---")
+    # --- FIX: Removed the "All Skills" title ---
     _show_all_skills_by_category(player)
     show_training_menu(player)
 
