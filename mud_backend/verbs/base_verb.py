@@ -14,11 +14,13 @@ class BaseVerb:
     All verbs must override the execute method.
     """
     
+    # --- THIS IS THE FIX ---
     def __init__(self, player: Player, room: Room, args: List[str], command: str = ""):
         self.player = player
         self.room = room
         self.args = args
-        self.command = command # <-- NEW: Store the original command
+        self.command = command # <-- Store the original command
+    # --- END FIX ---
  
     def execute(self):
         """

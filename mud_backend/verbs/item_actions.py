@@ -234,7 +234,8 @@ class Drop(BaseVerb):
     """
     Handles 'drop' and 'put'.
     DROP <item>
-    DROP <item> IN <container>
+    PUT <item> IN <container>
+    STOW <item> (defaults to 'put in backpack')
     """
     
     def execute(self):
@@ -255,8 +256,16 @@ class Drop(BaseVerb):
             parts = args_str.split(" on ", 1)
             target_item_name = parts[0].strip()
             target_container_name = parts[1].strip() # Treat 'table' as a container for now
+        
+        # --- THIS IS THE FIX for STOW default ---
+        elif self.command == "stow":
+            target_item_name = args_str
+            # Find their main container
+            backpack = _find_container_on_player(self.player, "backpack")
+            if backpack:
+                target_container_name = "backpack"
+        # --- END FIX ---
             
-        # --- THIS IS THE FIX ---
         if target_container_name and target_container_name.startswith("my "):
             target_container_name = target_container_name[3:].strip()
         # --- END FIX ---
