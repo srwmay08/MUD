@@ -41,3 +41,8 @@ PLAYER_TIMEOUT_SECONDS = config.PLAYER_TIMEOUT_SECONDS # <-- CHANGED
 # Key: combatant_id (player_name.lower() or monster_id)
 # Value: {"target_id": "...", "next_action_time": 12345.67, "current_room_id": "..."}
 COMBAT_STATE = {}
+
+# --- NEW: PENDING TRADES ---
+# Key: target_player_name.lower()
+# Value: {"from_player": "...", "item_id": "...", "offer_time": 12345.67}
+PENDING_TRADES = {}

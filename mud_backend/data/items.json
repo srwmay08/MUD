@@ -1,10 +1,30 @@
 {
     "pelt_ruined": {
         "name": "a ruined pelt",
-        "description": "A worthless, ruined pelt."
+        "description": "A worthless, ruined pelt.",
+        "item_type": "component"
     },
     "monster_claw": {
         "name": "a monster claw",
-        "description": "A sharp, wicked-looking claw."
+        "description": "A sharp, wicked-looking claw.",
+        "item_type": "component"
+    },
+    "short_sword": {
+        "name": "a short sword",
+        "description": "A simple iron short sword.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand"
+    },
+    "leather_tunic": {
+        "name": "a leather tunic",
+        "description": "A tunic made of cured leather.",
+        "item_type": "armor",
+        "wearable_slot": "torso"
+    },
+    "gold_ring": {
+        "name": "a gold ring",
+        "description": "A simple gold ring.",
+        "item_type": "jewelry",
+        "wearable_slot": "finger_right"
     }
 }

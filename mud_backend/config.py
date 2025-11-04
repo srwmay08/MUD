@@ -61,27 +61,45 @@ WEATHER_SEVERITY_ORDER = [
     "clear", "light clouds", "overcast", "fog",
     "light rain", "rain", "heavy rain", "storm"
 ]
+# ... (Weather chances) ...
+WEATHER_STAY_CLEAR_BASE_CHANCE = 0.50
+WEATHER_WORSEN_FROM_CLEAR_START_CHANCE = 0.20
+WEATHER_WORSEN_ESCALATION = 0.05
+WEATHER_MAX_WORSEN_FROM_CLEAR_CHANCE = 0.85
+WEATHER_IMPROVE_BASE_CHANCE = 0.25
+WEATHER_STAY_SAME_BAD_CHANCE = 0.50
 
-# Make it less likely to stay clear
-WEATHER_STAY_CLEAR_BASE_CHANCE = 0.50 # (Was 0.65)
-
-# Make the starting chance to worsen from clear higher
-WEATHER_WORSEN_FROM_CLEAR_START_CHANCE = 0.20 # (Was 0.10)
-WEATHER_WORSEN_ESCALATION = 0.05 # (Was 0.03)
-WEATHER_MAX_WORSEN_FROM_CLEAR_CHANCE = 0.85 # (Was 0.75)
-
-# --- This is the MOST IMPORTANT change ---
-# Greatly reduce the chance to improve
-WEATHER_IMPROVE_BASE_CHANCE = 0.25 # (Was 0.50)
-
-# Increase the chance for bad weather to "stick"
-WEATHER_STAY_SAME_BAD_CHANCE = 0.50 # (Was 0.40)
-
-# (This implies a 1.0 - 0.25 - 0.50 = 0.25 chance to WORSEN)
-
-# --- Game Objects ---
+# --- NEW: Game Objects & Inventory ---
+# This defines all wearable locations.
+# key: slot_id, value: display_name
 EQUIPMENT_SLOTS = {
+    "mainhand": "Right Hand",
+    "offhand": "Left Hand",
     "torso": "Torso",
-    "mainhand": "Main Hand",
-    "offhand": "Off Hand"
+    "head": "Head",
+    "legs_pulled": "Legs (pulled over)",
+    "feet_put_on": "Feet (put on)",
+    "shoulders_draped": "Shoulders (draped)",
+    "back": "Back",
+    "waist": "Waist",
+    "belt": "Belt",
+    "neck": "Neck",
+    "wrist_right": "Right Wrist",
+    "wrist_left": "Left Wrist",
+    "finger_right": "Right Finger",
+    "finger_left": "Left Finger",
+    "arms": "Arms",
+    "legs_attached": "Legs (attached)",
+    "earlobe_right": "Right Earlobe",
+    "earlobe_left": "Left Earlobe",
+    "ankle_right": "Right Ankle",
+    "ankle_left": "Left Ankle",
+    "front": "Front",
+    "hands": "Hands",
+    "feet_slip_on": "Feet (slip on)",
+    "hair": "Hair",
+    "undershirt": "Undershirt",
+    "leggings": "Leggings",
+    "pin": "Pin (General)",
+    "shoulder_slung": "Shoulder (Slung)"
 }
