@@ -10,6 +10,7 @@
                 "name": "fountain", 
                 "description": "The fountain depicts the Goddess of Wealth pouring endless gold into the city. Its water is cool and clear.",
                 "perception_dc": 0,
+                "keywords": ["fountain"],
                 "details": [
                     {
                         "name": "water",
@@ -24,7 +25,8 @@
                 "description": "A weathered stone well. You can see a dark, winding rope tied to the lip, leading down. You could probably **CLIMB** the rope.", 
                 "verbs": ["CLIMB"], 
                 "target_room": "well_bottom",
-                "perception_dc": 0
+                "perception_dc": 0,
+                "keywords": ["well", "stone well"]
             }
         ],
         "exits": {
@@ -43,14 +45,15 @@
                 "description": "The sturdy wooden door to the inn. You could probably **ENTER** it.", 
                 "verbs": ["ENTER"], 
                 "target_room": "inn_room",
-                "perception_dc": 0
+                "perception_dc": 0,
+                "keywords": ["door", "wooden door", "inn"]
             }
         ]
     },
     {
         "room_id": "well_bottom", 
         "name": "The Bottom of the Well", 
-        "description": "It is dark and cramped down here. A monster is stirring in the corner!",
+        "description": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur.",
         "objects": [
             {
                 "name": "rope", 
@@ -58,6 +61,7 @@
                 "verbs": ["CLIMB"], 
                 "target_room": "town_square",
                 "perception_dc": 0,
+                "keywords": ["rope"],
                 "details": [
                     {
                         "name": "rope-fray",
@@ -72,7 +76,6 @@
                 "description": "A mass of shadows and wet fur, it huffs angrily.",
                 "verbs": ["look", "attack"],
                 "perception_dc": 15,
-                
                 "is_monster": true,
                 "monster_id": "well_bottom_stirring_monster"
             }
@@ -81,7 +84,7 @@
     },
     
     {"room_id": "ts_north", "name": "North Square", "is_outdoor": true, "description": "You are in the northern part of the town square. The main square is to the south.", "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}},
-    {"room_id": "ts_east", "name": "East Square", "is_outdoor": true, "description": "You are in the eastern part of the town square. The main square is to the west. The old well is here.", "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, "objects": [{"name": "well", "description": "A weathered stone well...", "verbs": ["CLIMB"], "target_room": "well_bottom", "perception_dc": 0}]},
+    {"room_id": "ts_east", "name": "East Square", "is_outdoor": true, "description": "You are in the eastern part of the town square. The main square is to the west. The old well is here.", "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, "objects": [{"name": "well", "description": "A weathered stone well...", "verbs": ["CLIMB"], "target_room": "well_bottom", "perception_dc": 0, "keywords": ["well"]}]},
     {"room_id": "ts_west", "name": "West Square", "is_outdoor": true, "description": "You are in the western part of the town square. The main square is to the east.", "exits": {"east": "town_square", "north": "ts_northwest", "south": "ts_southwest"}},
     {"room_id": "ts_northeast", "name": "Northeast Square", "is_outdoor": true, "description": "You are in the northeast corner of the town square.", "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"}},
     {"room_id": "ts_northwest", "name": "Northwest Square", "is_outdoor": true, "description": "You are in the northwest corner of the town square.", "exits": {"southeast": "town_square", "south": "ts_west", "east": "ts_north"}},
@@ -92,8 +95,8 @@
         "name": "A Room at the Inn",
         "description": "You are in a simple, comfortable room... You feel as though you just woke from a long, hazy dream...",
         "objects": [
-            {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0},
-            {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0}
+            {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"]},
+            {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"]}
         ],
         "exits": { "out": "ts_south" } 
     }

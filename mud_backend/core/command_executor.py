@@ -14,19 +14,13 @@ from mud_backend.core.chargen_handler import (
     do_initial_stat_roll
 )
 from mud_backend.core.room_handler import show_room_to_player
-
-# --- Import our new skill handler ---
-# --- FIX: Removed 'show_training_menu' as it no longer exists ---
 from mud_backend.core.skill_handler import show_skill_list 
-
-# --- Import our new game state and loop functions ---
 from mud_backend.core import game_state
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
-# ---
-from mud_backend import config # <-- NEW IMPORT
+from mud_backend import config
 
-# (VERB_ALIASES and DIRECTION_MAP are unchanged)
+# --- (VERB_ALIASES and DIRECTION_MAP are unchanged) ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement Verbs (all in 'movement.py')
     "move": ("movement", "Move"),
@@ -158,29 +152,21 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
     The main function to parse and execute a game command.
     """
     
-    # --- (State management logic is unchanged) ---
+    # --- (Player state logic is unchanged) ---
     player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
     if player_info and player_info.get("player_obj"):
         player = player_info["player_obj"]
         player.messages.clear()
     else:
         player_db_data = fetch_player_data(player_name)
-        
         if not player_db_data:
-            # 4. This is a NEW character
             start_room_id = config.CHARGEN_START_ROOM
             player = Player(player_name, start_room_id, {})
             player.game_state = "chargen"
             player.chargen_step = 0
-            
-            # --- THIS IS THE FIX ---
-            # Set HP to the *calculated* Max HP, not 100
             player.hp = player.max_hp 
-            # --- END FIX ---
-            
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
-            # 5. This is a RETURNING character
             player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             
     # --- (Room fetching logic is unchanged) ---
@@ -198,24 +184,40 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         db_data=room_db_data 
     )
 
-    # --- (Monster filtering logic is unchanged) ---
+    # ---
+    # --- THIS IS THE FIX ---
+    # ---
+    # Re-build the room's object list *correctly* every time
     active_monsters = []
     if "objects" in room_db_data:
-        for obj in room_db_data["objects"]:
-            monster_id = obj.get("monster_id")
-            if monster_id and monster_id in game_state.DEFEATED_MONSTERS:
-                pass
-            else:
-                if monster_id and "stats" not in obj:
-                    template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
-                    if template:
-                        obj.update(copy.deepcopy(template))
-                        active_monsters.append(obj)
-                    else:
-                        print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
+        # We must iterate a COPY, as we might modify the cache
+        for obj_stub in room_db_data["objects"]:
+            monster_id = obj_stub.get("monster_id")
+            
+            # Check if it's a monster
+            if monster_id:
+                # Check if it's dead
+                if monster_id in game_state.DEFEATED_MONSTERS:
+                    continue # Skip this monster, it's dead
+                    
+                # It's an alive monster, needs inflation
+                template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
+                if template:
+                    # Create a new object, starting with template...
+                    inflated_monster = copy.deepcopy(template)
+                    # ...then override with any specifics from the room stub
+                    inflated_monster.update(obj_stub)
+                    active_monsters.append(inflated_monster)
                 else:
-                    active_monsters.append(obj)
+                    print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
+            
+            else:
+                # It's a regular object (like 'rope'), just add it
+                active_monsters.append(obj_stub)
+                
     room.objects = active_monsters
+    # --- END FIX ---
+    
     
     # --- (Command parsing logic is unchanged) ---
     parts = command_line.strip().split()
