@@ -65,18 +65,26 @@ def game_tick_thread():
                 send_to_player_callback=send_to_player
             )
 
-            # --- REVISED: XP ABSORPTION LOGIC ---
+            # --- REVISED: XP ABSORPTION & HP REGEN LOGIC ---
             for player_name_lower, player_data in list(game_state.ACTIVE_PLAYERS.items()):
                 player_obj = player_data.get("player_obj")
                 
-                # Check if player is valid and has XP to absorb
-                if player_obj and player_obj.unabsorbed_exp > 0:
-                    
-                    # Call the player's internal absorption method
-                    # This will handle all calculations and leveling
+                if not player_obj:
+                    continue
+
+                # 1. Absorb XP (which also handles CON recovery)
+                if player_obj.unabsorbed_exp > 0:
                     player_obj.absorb_exp_pulse()
                     
-            # --- END REVISED XP LOGIC ---
+                # 2. Regenerate HP
+                if player_obj.hp < player_obj.max_hp:
+                    hp_to_regen = player_obj.hp_regeneration
+                    if hp_to_regen > 0:
+                        player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_to_regen)
+                        # We don't message the player on every tick,
+                        # it would be too spammy.
+                        
+            # --- END REVISED LOGIC ---
             
             socketio.emit('tick')
             

@@ -3,6 +3,33 @@ from typing import Optional, List, Dict, Any, Tuple
 import math
 from mud_backend.core import game_state
 
+# --- NEW: Racial Data (based on GSIV tables) ---
+# We'll use 'Human' as the default for calculations
+RACE_DATA = {
+    "Human": {
+        "base_hp_max": 150,
+        "hp_gain_per_pf_rank": 6,
+        "base_hp_regen": 2
+    },
+    "Elf": {
+        "base_hp_max": 130,
+        "hp_gain_per_pf_rank": 5,
+        "base_hp_regen": 1
+    },
+    "Dwarf": {
+        "base_hp_max": 140,
+        "hp_gain_per_pf_rank": 6,
+        "base_hp_regen": 3
+    },
+    "Dark Elf": {
+        "base_hp_max": 120,
+        "hp_gain_per_pf_rank": 5,
+        "base_hp_regen": 1
+    }
+}
+# --- END NEW ---
+
+
 class Player:
     def __init__(self, name: str, current_room_id: str, db_data: Optional[dict] = None):
         self.name = name
@@ -46,10 +73,91 @@ class Player:
         self.chargen_step: int = self.db_data.get("chargen_step", 0)
         self.appearance: Dict[str, str] = self.db_data.get("appearance", {})
         
+        # --- MODIFIED: HP is now dynamically calculated ---
         self.hp: int = self.db_data.get("hp", 100)
-        self.max_hp: int = self.db_data.get("max_hp", 100)
+        # self.max_hp is now a @property (see below)
+        # --- END MODIFIED ---
+        
         self.skills: Dict[str, int] = self.db_data.get("skills", {})
         self.equipped_items: Dict[str, str] = self.db_data.get("equipped_items", {"mainhand": None, "offhand": None, "torso": None})
+
+        # --- NEW: Stance and Death's Sting Fields ---
+        self.stance: str = self.db_data.get("stance", "neutral") # offensive, forward, neutral, guarded, defensive
+        self.deaths_recent: int = self.db_data.get("deaths_recent", 0)
+        self.death_sting_points: int = self.db_data.get("death_sting_points", 0) # XP debt for 0.25x multiplier
+        self.con_lost: int = self.db_data.get("con_lost", 0) # How many CON points are missing
+        self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0) # XP pool to regain CON
+        # --- END NEW ---
+
+    # --- NEW: Helper for CON bonus (GSIV style) ---
+    @property
+    def con_bonus(self) -> int:
+        """
+        Calculates the Constitution *bonus* (assuming 50 is baseline).
+        This is for GSIV formulas, not combat.
+        """
+        return (self.stats.get("CON", 50) - 50)
+        
+    # --- NEW: Helper for Race ---
+    @property
+    def race(self) -> str:
+        """Gets the player's race from appearance, default to Human."""
+        return self.appearance.get("race", "Human")
+        
+    @property
+    def race_data(self) -> dict:
+        """Gets the data block for the player's race."""
+        return RACE_DATA.get(self.race, RACE_DATA["Human"])
+
+    # --- NEW: Base HP (Level 0) ---
+    @property
+    def base_hp(self) -> int:
+        """GSIV-style Base HP (Level 0) = (STR + CON) / 10"""
+        return math.trunc((self.stats.get("STR", 0) + self.stats.get("CON", 0)) / 10)
+
+    # --- MODIFIED: Max HP is now a dynamic property ---
+    @property
+    def max_hp(self) -> int:
+        """
+        Calculates Max HP based on GSIV-style formula:
+        Max = (Racial Max + CON Bonus + Bonus from PF)
+        """
+        pf_ranks = self.skills.get("physical_fitness", 0)
+        
+        # 1. Get Race Base Max HP
+        racial_base_max = self.race_data.get("base_hp_max", 150)
+        
+        # 2. Get CON Bonus (adds directly, per GSIV)
+        con_bonus = self.con_bonus
+        
+        # 3. Get HP from Physical Fitness
+        # Formula: HP per PF rank = Race HP gain rate + trunc(Constitution bonus / 10)
+        hp_gain_rate = self.race_data.get("hp_gain_per_pf_rank", 6)
+        pf_bonus_per_rank = hp_gain_rate + math.trunc(con_bonus / 10)
+        hp_from_pf = pf_ranks * pf_bonus_per_rank
+        
+        # Total
+        # Note: We use self.base_hp (from STR/CON) instead of racial_base_max
+        # to match the GSIV "Base HP" formula.
+        return self.base_hp + con_bonus + hp_from_pf
+
+    # --- NEW: HP Regeneration Property ---
+    @property
+    def hp_regeneration(self) -> int:
+        """
+        Calculates HP recovered per "pulse" (tick)
+        Formula: Base Regen + trunc(PF ranks / 20)
+        """
+        pf_ranks = self.skills.get("physical_fitness", 0)
+        base_regen = self.race_data.get("base_hp_regen", 2)
+        
+        regen = base_regen + math.trunc(pf_ranks / 20)
+        
+        # Apply death sting penalty (reduced recovery)
+        if self.death_sting_points > 0:
+            regen = math.trunc(regen * 0.5) # Example: 50% reduction
+            
+        return max(0, regen) # Ensure it's not negative
 
     # --- Field Exp Pool Properties ---
     @property
@@ -79,11 +187,32 @@ class Player:
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
-    # --- Add to Field Exp (with diminishing returns) ---
+    # --- MODIFIED: Add Field Exp (to handle Death's Sting) ---
     def add_field_exp(self, nominal_amount: int):
         """
-        Adds experience to the field pool, applying diminishing returns.
+        Adds experience to the field pool, applying diminishing returns
+        and "Death's Sting" penalty.
         """
+        
+        # --- NEW: Apply Death's Sting 0.25x Multiplier ---
+        if self.death_sting_points > 0:
+            original_nominal = nominal_amount
+            nominal_amount = math.trunc(original_nominal * 0.25)
+            
+            # The 75% that "vanished" is used to pay down the XP debt
+            points_worked_off = original_nominal - nominal_amount
+            
+            old_sting = self.death_sting_points
+            self.death_sting_points -= points_worked_off
+            
+            if self.death_sting_points <= 0:
+                self.death_sting_points = 0
+                if old_sting > 0: # Only show if it *just* got cleared
+                    self.send_message("You feel the last of death's sting fade.")
+            else:
+                 self.send_message(f"(You work off {points_worked_off} of death's sting.)")
+        # --- END NEW ---
+
         pool_cap = self.field_exp_capacity
         current_pool = self.unabsorbed_exp
         
@@ -96,7 +225,10 @@ class Player:
         actual_gained = math.trunc(nominal_amount * accrual_decline_factor)
         
         if actual_gained <= 0:
-            self.send_message("You learn nothing new from this.")
+            if nominal_amount > 0: # Check if we had points but DR reduced them
+                self.send_message("Your mind is too full to learn from this.")
+            else:
+                self.send_message("You learn nothing new from this.")
             return
 
         # Check if the gain would oversaturate
@@ -108,7 +240,7 @@ class Player:
             self.unabsorbed_exp += actual_gained
             self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
 
-    # --- Absorb from Field Exp (on tick) ---
+    # --- MODIFIED: Absorb from Field Exp (to handle CON loss recovery) ---
     def absorb_exp_pulse(self, room_type: str = "other") -> bool:
         """
         Absorbs one pulse of experience from the field pool.
@@ -151,6 +283,21 @@ class Player:
         self.experience += amount_to_absorb
         
         self.send_message(f"You absorb {amount_to_absorb} experience. ({self.unabsorbed_exp} remaining)")
+        
+        # --- NEW: Check for CON Recovery ---
+        # GSIV: "it takes 2000 experience points to recover 1 point of constitution"
+        if self.con_lost > 0:
+            self.con_recovery_pool += amount_to_absorb
+            points_to_regain = self.con_recovery_pool // 2000 # 2000 XP per CON point
+            
+            if points_to_regain > 0:
+                regained = min(points_to_regain, self.con_lost)
+                self.stats["CON"] = self.stats.get("CON", 50) + regained
+                self.con_lost -= regained
+                self.con_recovery_pool -= (regained * 2000)
+                
+                self.send_message(f"You feel some of your vitality return! (Recovered {regained} CON)")
+        # --- END NEW ---
         
         # --- Check for Level Up ---
         self._check_for_level_up()
@@ -293,7 +440,7 @@ class Player:
             "appearance": self.appearance,
             
             "hp": self.hp,
-            "max_hp": self.max_hp,
+            # max_hp is not saved, it's calculated
             "skills": self.skills,
             "equipped_items": self.equipped_items,
             
@@ -301,8 +448,14 @@ class Player:
             "mtps": self.mtps,
             "stps": self.stps,
             
-            # --- NEW: Save ranks trained ---
             "ranks_trained_this_level": self.ranks_trained_this_level,
+            
+            # --- NEW: Save stance and death penalties ---
+            "stance": self.stance,
+            "deaths_recent": self.deaths_recent,
+            "death_sting_points": self.death_sting_points,
+            "con_lost": self.con_lost,
+            "con_recovery_pool": self.con_recovery_pool,
             # ---
         }
         

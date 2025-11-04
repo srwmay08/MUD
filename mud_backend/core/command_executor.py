@@ -50,7 +50,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     
     # Object Interaction Verbs
     "enter": ("movement", "Enter"),
-    "climb": ("movement", "Climb"),
+    "climb": ("movement", "Climb"), # <-- FIX 1: Removed 'CHOMP'
     
     # Observation Verbs (all in 'observation.py')
     "examine": ("observation", "Examine"),
@@ -82,6 +82,9 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Other Verbs
     "say": ("say", "Say"),
     "ping": ("tick", "Tick"),
+    
+    # --- NEW STANCE VERB ---
+    "stance": ("stance", "Stance"),
 }
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
@@ -183,7 +186,8 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             player.game_state = "chargen"
             player.chargen_step = 0
             player.hp = 100
-            player.max_hp = 100
+            # --- FIX 2: Removed player.max_hp = 100 ---
+            # (This is now a dynamic property and cannot be set)
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
             # 5. This is a RETURNING character

@@ -25,6 +25,22 @@ class MockConfigCombat:
     DEBUG_COMBAT_ROLLS = True
 config = MockConfigCombat()
 
+# --- NEW: Stance Modifiers ---
+# These values mimic the GSIV intent.
+# 'offensive': 100% AS, but reduced defense
+# 'defensive': 50% AS (per GSIV), but full defense
+STANCE_MODIFIERS = {
+    # stance: {"as_mod": %, "ds_mod": %}
+    "offensive": {"as_mod": 1.0,  "ds_mod": 0.5}, # Max AS, Min DS
+    "advance":   {"as_mod": 0.9,  "ds_mod": 0.6},
+    "forward":   {"as_mod": 0.8,  "ds_mod": 0.7},
+    "neutral":   {"as_mod": 0.75, "ds_mod": 0.75}, # Balanced
+    "guarded":   {"as_mod": 0.6,  "ds_mod": 0.9},
+    "defensive": {"as_mod": 0.5,  "ds_mod": 1.0}  # Min AS (GSIV 50%), Max DS
+}
+# --- END NEW ---
+
+
 def parse_and_roll_dice(dice_string: str) -> int:
     # ... (function unchanged)
     if not isinstance(dice_string, str): return 0
@@ -64,7 +80,8 @@ def get_entity_armor_type(entity, game_items_global: dict) -> str:
     return config.DEFAULT_UNARMORED_TYPE
 
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict, 
-                              weapon_item_data: dict | None, target_armor_type: str) -> int:
+                              weapon_item_data: dict | None, target_armor_type: str,
+                              attacker_stance: str) -> int: # <-- ADDED attacker_stance
     # ... (function unchanged)
     as_val = 0; as_components_log = [] 
     weapon_name_display = "Barehanded"
@@ -97,12 +114,20 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
         avd_bonus = avd_mods.get(target_armor_type, avd_mods.get(config.DEFAULT_UNARMORED_TYPE, 0))
         as_val += avd_bonus 
         if avd_bonus != 0: as_components_log.append(f"ItemAvD({avd_bonus})")
+        
+    # --- NEW: Apply Stance Modifier ---
+    stance_mod = STANCE_MODIFIERS.get(attacker_stance, STANCE_MODIFIERS["neutral"])["as_mod"]
+    final_as = int(as_val * stance_mod)
+    # --- END NEW ---
+
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val}")
-    return as_val
+        print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Stance: {attacker_stance}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {stance_mod} = {final_as}")
+        
+    return final_as # <-- Return modified value
 
 def calculate_defense_strength(defender_name: str, defender_stats: dict, defender_skills: dict, 
-                               armor_item_data: dict | None, shield_item_data: dict | None) -> int:
+                               armor_item_data: dict | None, shield_item_data: dict | None,
+                               defender_stance: str) -> int: # <-- ADDED defender_stance
     # ... (function unchanged)
     ds_val = 0; ds_components_log = []
     armor_name_display = "Unarmored"; shield_name_display = "No Shield"
@@ -129,9 +154,16 @@ def calculate_defense_strength(defender_name: str, defender_stats: dict, defende
         shield_skill_bonus = get_skill_bonus(shield_skill_rank, shield_skill_divisor)
         ds_val += shield_skill_bonus
         if shield_skill_bonus !=0: ds_components_log.append(f"ShSkill({shield_skill_bonus})")
+        
+    # --- NEW: Apply Stance Modifier ---
+    stance_mod = STANCE_MODIFIERS.get(defender_stance, STANCE_MODIFIERS["neutral"])["ds_mod"]
+    final_ds = int(ds_val * stance_mod)
+    # --- END NEW ---
+
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG DS CALC for {defender_name if defender_name else 'entity'} (Armor: {armor_name_display}, Shield: {shield_name_display}): Factors = {' + '.join(ds_components_log)} => Raw DS = {ds_val}")
-    return ds_val
+        print(f"DEBUG DS CALC for {defender_name if defender_name else 'entity'} (Armor: {armor_name_display}, Shield: {shield_name_display}, Stance: {defender_stance}): Factors = {' + '.join(ds_components_log)} => Raw DS = {ds_val} * {stance_mod} = {final_ds}")
+        
+    return final_ds # <-- Return modified value
 
 # --- (Flavorful Combat Messaging is unchanged) ---
 HIT_MESSAGES = {
@@ -214,7 +246,8 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     # --- FIX: Use .get() for dictionaries ---
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
     attacker_skills = attacker.skills if is_attacker_player else attacker.get("skills", {})
-    # ---
+    # --- NEW: Get Stance ---
+    attacker_stance = attacker.stance if is_attacker_player else attacker.get("stance", "neutral")
     
     if is_attacker_player:
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand", game_items_global)
@@ -232,7 +265,8 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     # --- FIX: Use .get() for dictionaries ---
     defender_stats = defender.stats if is_defender_player else defender.get("stats", {})
     defender_skills = defender.skills if is_defender_player else defender.get("skills", {})
-    # ---
+    # --- NEW: Get Stance ---
+    defender_stance = defender.stance if is_defender_player else defender.get("stance", "neutral")
 
     if is_defender_player:
         defender_armor_data = defender.get_equipped_item_data("torso", game_items_global)
@@ -245,14 +279,18 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         defender_shield_data = game_items_global.get(offhand_id) if offhand_id else None
         defender_armor_type_str = get_entity_armor_type(defender, game_items_global)
 
+    # --- MODIFIED: Pass stance to calculation ---
     attacker_as = calculate_attack_strength(
         attacker_name, attacker_stats, attacker_skills, 
-        attacker_weapon_data, defender_armor_type_str
+        attacker_weapon_data, defender_armor_type_str,
+        attacker_stance # <-- Pass stance
     )
     defender_ds = calculate_defense_strength(
         defender_name, defender_stats, defender_skills, 
-        defender_armor_data, defender_shield_data
+        defender_armor_data, defender_shield_data,
+        defender_stance # <-- Pass stance
     )
+    # --- END MODIFIED ---
     
     d100_roll = random.randint(1, 100)
     combat_roll_result = (attacker_as - defender_ds) + config.COMBAT_ADVANTAGE_FACTOR + d100_roll
@@ -397,14 +435,37 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             if is_defender_player:
                 defender.hp -= damage
                 if defender.hp <= 0:
-                    defender.hp = 0
+                    # --- NEW: PLAYER DEATH LOGIC (GSIV-Style) ---
+                    defender.hp = 1 # Set to 1 HP
                     broadcast_callback(room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     
+                    # 1. Move to death room
                     defender.current_room_id = config.PLAYER_DEATH_ROOM_ID
-                    defender.hp = 1
+                    
+                    # 2. Apply "Recent Death" penalty
+                    # (GSIV: caps at 5)
+                    defender.deaths_recent = min(5, defender.deaths_recent + 1)
+                    
+                    # 3. Calculate CON loss
+                    # (GSIV: "Decay... 3, +1 per recent death")
+                    con_loss = 3 + defender.deaths_recent
+                    con_loss = min(con_loss, 25 - defender.con_lost) # Cap total loss at 25
+                    
+                    if con_loss > 0:
+                        defender.stats["CON"] = defender.stats.get("CON", 50) - con_loss
+                        defender.con_lost += con_loss
+                        send_to_player_callback(defender.name, f"You have lost {con_loss} Constitution from this death.", "system_error")
+                        
+                    # 4. Apply "Experience Absorption" penalty
+                    # (GSIV: "Decay... 2000")
+                    defender.death_sting_points += 2000
+                    send_to_player_callback(defender.name, "You feel the sting of death... (XP gain is reduced)", "system_error")
+
+                    # 5. Save and stop combat
                     save_game_state(defender)
                     stop_combat(combatant_id, state["target_id"])
                     continue
+                    # --- END NEW DEATH LOGIC ---
                 else:
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
                     save_game_state(defender)
