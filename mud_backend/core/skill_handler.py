@@ -95,21 +95,8 @@ def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
 # Training Menu / "GUI" Logic
 # ---
 
-def show_training_menu(player: Player):
-    """
-    Displays the main training menu and TP totals to the player.
-    """
-    # --- UPDATED: Use non-breaking spaces for alignment ---
-    player.send_message("\n--- **Skill Training** ---")
-    player.send_message(f"&nbsp;Physical TPs: {player.ptps}")
-    player.send_message(f"&nbsp;Mental TPs:&nbsp;&nbsp; {player.mtps}")
-    player.send_message(f"&nbsp;Spiritual TPs: {player.stps}")
-    # ---
-    player.send_message("---")
-    player.send_message("Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
-    player.send_message("Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.")
-    player.send_message("Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")
-    player.send_message("Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.")
+# --- FIX: Removed the show_training_menu function ---
+# (Its logic is now in _show_all_skills_by_category)
 
 
 def _format_skill_line(player: Player, skill_data: Dict) -> str:
@@ -208,6 +195,22 @@ def _show_all_skills_by_category(player: Player):
                 column_1_lines.append(_format_skill_line(player, skill_data))
         # --- END NEW LOGIC ---
 
+    # ---
+    # --- FIX: ADD THE TRAINING MENU TO THE END OF COLUMN 1 ---
+    # ---
+    column_1_lines.append("<tr><td colspan='3'>&nbsp;</td></tr>") # Spacer
+    column_1_lines.append("<tr><td colspan='3'>--- **Skill Training** ---</td></tr>")
+    column_1_lines.append(f"<tr><td colspan='3'>&nbsp;Physical TPs: {player.ptps}</td></tr>")
+    column_1_lines.append(f"<tr><td colspan='3'>&nbsp;Mental TPs:&nbsp;&nbsp; {player.mtps}</td></tr>")
+    column_1_lines.append(f"<tr><td colspan='3'>&nbsp;Spiritual TPs: {player.stps}</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>---</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.</td></tr>")
+    # --- END FIX ---
+
+
     # --- Build Column 2 Lines (as HTML table rows) ---
     column_2_lines = []
     # --- FIX: Add header ONCE, *before* the loop ---
@@ -279,11 +282,16 @@ def show_skill_list(player: Player, category: str):
         player.send_message("--- **Skill Categories** ---")
         for cat in all_categories:
             player.send_message(f"- <span class='keyword' data-command='list {cat}'>{cat}</span>")
+        # --- FIX: We must now *manually* show the menu here ---
+        # (This is a new function just for this purpose)
+        _show_simple_training_menu(player) 
         return
 
     if category.lower() not in [cat.lower() for cat in all_categories]:
         player.send_message(f"No skills found for category '{category}'.")
         player.send_message("Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see all categories.")
+        # --- FIX: We must now *manually* show the menu here ---
+        _show_simple_training_menu(player)
         return
         
     player.send_message(f"--- **{category.upper()}** ---")
@@ -303,6 +311,8 @@ def show_skill_list(player: Player, category: str):
     
     if not sorted_skills:
         player.send_message("No skills are listed in this category.")
+        # --- FIX: We must now *manually* show the menu here ---
+        _show_simple_training_menu(player)
         return
         
     for skill_data in sorted_skills:
@@ -310,6 +320,24 @@ def show_skill_list(player: Player, category: str):
         
     html_lines.append("</table>")
     player.send_message("\n".join(html_lines))
+    # --- FIX: We must now *manually* show the menu here ---
+    _show_simple_training_menu(player)
+
+
+# --- NEW HELPER FUNCTION ---
+def _show_simple_training_menu(player: Player):
+    """
+    Shows *only* the training menu, without the skill list.
+    Used for 'list categories' or 'list <single>'.
+    """
+    player.send_message("\n--- **Skill Training** ---")
+    player.send_message(f"--- Physical TPs: {player.ptps} / Mental TPs: {player.mtps} / Spiritual TPs: {player.stps}")
+    player.send_message("---")
+    player.send_message("Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
+    player.send_message("Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.")
+    player.send_message("Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")
+    player.send_message("Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.")
+# --- END NEW HELPER ---
 
 
 # ---
@@ -470,7 +498,8 @@ def _perform_conversion_and_train(player: Player, pending_data: Dict):
     # 5. Show the menus
     # --- FIX: Removed the "All Skills" title ---
     _show_all_skills_by_category(player)
-    show_training_menu(player)
+    # --- FIX: Removed call to show_training_menu ---
+    # (It's now part of the function above)
 
 
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):

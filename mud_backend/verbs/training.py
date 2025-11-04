@@ -6,10 +6,10 @@ from mud_backend.core.db import fetch_room_data
 from mud_backend.core.room_handler import show_room_to_player
 from mud_backend import config
 from mud_backend.core.skill_handler import (
-    show_training_menu, 
+    # --- FIX: Removed show_training_menu ---
     show_skill_list, 
     train_skill,
-    _perform_conversion_and_train # <-- NEW IMPORT
+    _perform_conversion_and_train
 )
 
 class CheckIn(BaseVerb):
@@ -28,10 +28,10 @@ class CheckIn(BaseVerb):
         self.player.send_message("You approach the front desk to review your skills...")
         
         # --- MODIFIED: Show list FIRST, then menu ---
-        self.player.send_message("\n--- **All Skills** ---")
+        # --- FIX: Removed the "All Skills" title ---
         show_skill_list(self.player, "all")
-        show_training_menu(self.player)
-        # ---
+        # --- FIX: Removed call to show_training_menu ---
+        
         
 
 class List(BaseVerb):
@@ -51,8 +51,8 @@ class List(BaseVerb):
         
         # --- MODIFIED: Show list FIRST, then menu ---
         show_skill_list(self.player, category)
-        show_training_menu(self.player)
-        # ---
+        # --- FIX: Removed call to show_training_menu ---
+        
 
 class Train(BaseVerb):
     """
@@ -75,13 +75,15 @@ class Train(BaseVerb):
                 self.player.send_message("> TRAIN CONFIRM")
                 
                 # Perform the conversion and training
+                # This will call _show_all_skills_by_category internally
                 _perform_conversion_and_train(self.player, pending_training)
                 
             elif action == "cancel":
                 self.player.send_message("> TRAIN CANCEL")
                 self.player.send_message("Training cancelled.")
                 self.player.db_data.pop('_pending_training', None)
-                show_training_menu(self.player)
+                # --- FIX: Refresh the skill list (which includes the menu) ---
+                show_skill_list(self.player, "all")
             
             else:
                 self.player.send_message(f"You must confirm or cancel the pending training. (TRAIN CONFIRM/TRAIN CANCEL)")

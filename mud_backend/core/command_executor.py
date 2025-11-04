@@ -16,7 +16,8 @@ from mud_backend.core.chargen_handler import (
 from mud_backend.core.room_handler import show_room_to_player
 
 # --- Import our new skill handler ---
-from mud_backend.core.skill_handler import show_training_menu
+# --- FIX: Removed 'show_training_menu' as it no longer exists ---
+from mud_backend.core.skill_handler import show_skill_list 
 
 # --- Import our new game state and loop functions ---
 from mud_backend.core import game_state

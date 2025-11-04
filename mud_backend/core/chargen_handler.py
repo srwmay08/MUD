@@ -5,7 +5,8 @@ from mud_backend import config
 
 # --- NEW IMPORTS ---
 from mud_backend.core.room_handler import show_room_to_player
-from mud_backend.core.skill_handler import show_training_menu, show_skill_list # <-- UPDATED
+# --- FIX: Removed show_training_menu ---
+from mud_backend.core.skill_handler import show_skill_list
 # ---
 
 from mud_backend.core.stat_roller import (
@@ -283,8 +284,8 @@ def _handle_appearance_input(player: Player, text_input: str):
         # --- NEW: Automatically list all skills ---
         # --- FIX: Removed the "All Skills" title ---
         show_skill_list(player, "all")
-        # --- CHANGED: Show the training menu AT THE BOTTOM ---
-        show_training_menu(player)
+        # --- FIX: Removed call to show_training_menu ---
+        # (It is now part of show_skill_list)
         
 # ---
 # (Main Input Router is unchanged)
