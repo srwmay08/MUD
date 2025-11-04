@@ -46,10 +46,7 @@ def process_respawns(log_time_prefix,
     This function now reads its state from the global 'game_state' module.
     """
     
-    # --- THIS IS THE FIX ---
-    # Get the current time as a float, just like the timestamps we are comparing
     current_time_float = time.time()
-    # --- END FIX ---
     
     # --- Get state from the global game_state module ---
     tracked_defeated_entities_dict = game_state.DEFEATED_MONSTERS
@@ -69,19 +66,28 @@ def process_respawns(log_time_prefix,
         
         # --- FIX: Ensure respawn_info is a dict ---
         if not isinstance(respawn_info, dict):
-            print(f"{log_time_prefix} - RESPAWN_WARN: Skipping invalid respawn entry for {runtime_id}")
+            if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_WARN: Skipping invalid respawn entry for {runtime_id}")
             continue
         # ---
         
-        # --- THIS IS THE FIX ---
-        # Compare float to float
-        is_eligible = current_time_float >= respawn_info.get("eligible_at", current_time_float)
-        # --- END FIX ---
-        
+        eligible_at = respawn_info.get("eligible_at", current_time_float)
+        is_eligible = current_time_float >= eligible_at
+
+        # --- NEW DEBUG FEATURE ---
+        if config.DEBUG_MODE and getattr(config, 'DEBUG_GAME_TICK_RESPAWN_PHASE', True):
+            print(f"{log_time_prefix} - RESPAWN_DEBUG: Entity {runtime_id} (Template: {entity_template_key}). Eligible: {is_eligible} (at {eligible_at:.0f}s).")
+        # --- END NEW DEBUG FEATURE ---
+
         if is_eligible:
             respawn_chance = respawn_info.get("chance", getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2))
             roll_for_respawn = random.random()
             should_respawn_by_chance = roll_for_respawn < respawn_chance
+
+            # --- NEW DEBUG FEATURE ---
+            if config.DEBUG_MODE and getattr(config, 'DEBUG_GAME_TICK_RESPAWN_PHASE', True):
+                 print(f"{log_time_prefix} - RESPAWN_DEBUG: Chance Check: Roll={roll_for_respawn:.2f} vs Chance={respawn_chance:.2f}. Respawn: {should_respawn_by_chance}")
+            # --- END NEW DEBUG FEATURE ---
+
 
             if should_respawn_by_chance:
                 room_id_to_respawn_in = respawn_info["room_id"]
@@ -131,6 +137,8 @@ def process_respawns(log_time_prefix,
                     
                     broadcast_callback(room_id_to_respawn_in, f"{entity_display_name} has appeared.", "ambient_spawn")
                     respawned_entity_runtime_ids_to_remove.append(runtime_id)
+                elif config.DEBUG_MODE:
+                     print(f"{log_time_prefix} - RESPAWN_ACTION: Skipping unique monster {entity_template_key} as one already exists in the room.")
     
     for runtime_id_key_to_remove in respawned_entity_runtime_ids_to_remove:
         if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_SYSTEM_CLEANUP: Removing '{runtime_id_key_to_remove}' from DEFEATED_MONSTERS.")

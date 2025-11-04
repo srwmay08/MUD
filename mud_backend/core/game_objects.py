@@ -31,6 +31,7 @@ RACE_DATA = {
 
 
 class Player:
+    # ... (Player class is unchanged) ...
     def __init__(self, name: str, current_room_id: str, db_data: Optional[dict] = None):
         self.name = name
         self.current_room_id = current_room_id
@@ -90,7 +91,7 @@ class Player:
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
 
-    # --- (All @property methods (con_bonus, race, max_hp, etc) are unchanged) ---
+    # --- (All @property methods are unchanged) ---
     @property
     def con_bonus(self) -> int:
         return (self.stats.get("CON", 50) - 50)
@@ -264,8 +265,7 @@ class Player:
     def send_message(self, message: str):
         self.messages.append(message)
 
-    # --- MODIFIED: get_equipped_item_data ---
-    # Now uses self.worn_items
+    # --- (get_equipped_item_data is unchanged) ---
     def get_equipped_item_data(self, slot: str, game_items_global: dict) -> Optional[dict]:
         """Gets the item data for an equipped item."""
         item_id = self.worn_items.get(slot) # <-- CHANGED
@@ -282,7 +282,7 @@ class Player:
             return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
         return DEFAULT_UNARMORED_TYPE
     
-    # --- MODIFIED: to_dict ---
+    # --- MODIFIED: to_dict (unchanged) ---
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
         
@@ -345,9 +345,8 @@ class Player:
         return f"<Player: {self.name}>"
 
 
-# --- (Room class is unchanged) ---
+# --- (Room class is updated for save fix) ---
 class Room:
-    # ... (Room class is unchanged) ...
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
         self.name = name
@@ -355,6 +354,7 @@ class Room:
         self.db_data = db_data if db_data is not None else {}
         self._id = self.db_data.get("_id") 
         self.unabsorbed_social_exp = self.db_data.get("unabsorbed_social_exp", 0) 
+        # Crucial: Load objects directly from db_data for persistence
         self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
         self.exits: Dict[str, str] = self.db_data.get("exits", {})
 
@@ -368,8 +368,12 @@ class Room:
             "objects": self.objects,
             "exits": self.exits,
         }
+        
+        # --- FIX: Ensure _id is correctly set to self._id (the value), not the method ---
         if self._id:
-            data["_id"] = self.to_dict
+            data["_id"] = self._id
+        # Note: If self._id is None, it is intentionally omitted for MongoDB to assign one on first insert.
+
         return data
 
     def __repr__(self):

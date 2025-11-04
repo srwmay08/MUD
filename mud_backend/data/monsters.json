@@ -4,25 +4,25 @@
         "name": "stirring monster",
         "keywords": ["monster", "stirring", "stirring monster"],
         "is_aggressive": true,
-        "description": "A mass of shadows and wet fur, it huffs angrily.",
+        "description": "A pathetic, whimpering mass of shadows and wet fur, easily overlooked.",
         "verbs": ["look", "attack"],
         "perception_dc": 15,
         "is_monster": true,
-        "hp": 50,
-        "max_hp": 50,
+        "hp": 10,
+        "max_hp": 10,
         "stats": {
-            "STR": 60, "CON": 70, "DEX": 50, "AGI": 30,
+            "STR": 30, "CON": 30, "DEX": 30, "AGI": 30,
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
             "ZEA": 10, "ESS": 10, "DIS": 10, "AUR": 10
         },
-        "skills": { "brawling": 30 },
+        "skills": { "brawling": 10 },
         "loot_table_id": "well_monster_loot",
         "details": [
             {
                 "name": "monster-wounds",
-                "description": "It's covered in matted fur and old scars. It looks tough.",
+                "description": "It's barely holding itself together. A simple push could defeat it.",
                 "skill_check": "LOG",
-                "dc": 50
+                "dc": 10
             }
         ]
     }
