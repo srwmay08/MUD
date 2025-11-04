@@ -99,10 +99,12 @@ def show_training_menu(player: Player):
     """
     Displays the main training menu and TP totals to the player.
     """
+    # --- UPDATED: Use non-breaking spaces for alignment ---
     player.send_message("\n--- **Skill Training** ---")
-    player.send_message(f" <span class='keyword' data-command='list physical tps'>Physical TPs: {player.ptps}</span>")
-    player.send_message(f" <span class='keyword' data-command='list mental tps'>Mental TPs:   {player.mtps}</span>")
-    player.send_message(f" <span class='keyword' data-command='list spiritual tps'>Spiritual TPs: {player.stps}</span>")
+    player.send_message(f"&nbsp;Physical TPs: {player.ptps}")
+    player.send_message(f"&nbsp;Mental TPs:&nbsp;&nbsp; {player.mtps}")
+    player.send_message(f"&nbsp;Spiritual TPs: {player.stps}")
+    # ---
     player.send_message("---")
     player.send_message("Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
     player.send_message("Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.")
@@ -120,31 +122,30 @@ def _format_skill_line(player: Player, skill_data: Dict) -> str:
     
     ranks_trained_this_lvl = player.ranks_trained_this_level.get(skill_id, 0)
     
-    # Use <td> for table cells
-    rank_str = f"<td>(Rank: {current_rank:<3})</td>"
+    # --- UPDATED: Removed all width styles ---
+    rank_str = f"<td>(Rank: {current_rank})</td>"
     cost_str = ""
     skill_name_str = ""
 
     if ranks_trained_this_lvl >= 3:
-        cost_str = "<td>[Maxed for level]</td>"
+        cost_str = "<td>[Maxed]</td>"
         skill_name_str = f"<td>- {skill_name}</td>"
     else:
         costs = get_skill_costs(player, skill_data)
         multiplier = ranks_trained_this_lvl + 1
         cost_str = (
-            f"<td>[Cost: {costs['ptp'] * multiplier}p / "
-            f"{costs['mtp'] * multiplier}m / "
-            f"{costs['stp'] * multiplier}s]</td>"
+            f"<td>{costs['ptp'] * multiplier} / "
+            f"{costs['mtp'] * multiplier} / "
+            f"{costs['stp'] * multiplier}</td>"
         )
-        # --- UPDATED: Use data-command for direct clicking ---
         skill_name_str = (
             f"<td>- <span class='keyword' data-command='train {skill_name} 1'>"
             f"{skill_name}</span></td>"
         )
         # ---
     
-    # Return as a table row
-    return f"<tr>{skill_name_str}{rank_str}{cost_str}</tr>"
+    # Re-ordered columns (Cost before Rank)
+    return f"<tr>{skill_name_str}{cost_str}{rank_str}</tr>"
 
 
 def _show_all_skills_by_category(player: Player):
@@ -163,6 +164,9 @@ def _show_all_skills_by_category(player: Player):
     
     all_skills = sorted(game_state.GAME_SKILLS.values(), key=lambda s: s.get("name", "zzz"))
     
+    # --- UPDATED: Define the header row without widths ---
+    HEADER_ROW = "<tr><td>&nbsp;</td><td style='text-decoration: underline;'>PTPs / MTPs / STPs</td><td>&nbsp;</td></tr>"
+
     # --- Build Column 1 Lines (as HTML table rows) ---
     column_1_lines = []
     for category in COLUMN_1_CATEGORIES:
@@ -170,6 +174,7 @@ def _show_all_skills_by_category(player: Player):
             column_1_lines.append("<tr><td>&nbsp;</td></tr>") # Spacer row
             
         column_1_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
+        column_1_lines.append(HEADER_ROW)
         
         for skill_data in all_skills:
             if skill_data.get("category", "Uncategorized") == category:
@@ -182,39 +187,47 @@ def _show_all_skills_by_category(player: Player):
             column_2_lines.append("<tr><td>&nbsp;</td></tr>") # Spacer row
             
         column_2_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
+        column_2_lines.append(HEADER_ROW)
         
         for skill_data in all_skills:
             if skill_data.get("category", "Uncategorized") == category:
                 column_2_lines.append(_format_skill_line(player, skill_data))
 
-    # --- Print the two columns side-by-side using a table ---
-    
-    # Set a width for the left column's table
-    COL_1_WIDTH = "60%"
+    # ---
+    # Build the two columns as a single HTML string
+    # ---
+    html_lines = []
+    # --- UPDATED: Set outer column width to 50% ---
+    COL_1_WIDTH = "50%"
     
     # Start the table
-    player.send_message("<table style='width:100%; border-spacing: 0;'>")
-    player.send_message("  <tr style='vertical-align: top;'>") # Align columns to the top
-    player.send_message(f"    <td style='width:{COL_1_WIDTH};'>")
+    html_lines.append("<table style='width:100%; border-spacing: 0;'>")
+    html_lines.append("  <tr style='vertical-align: top;'>") # Align columns to the top
+    html_lines.append(f"    <td style='width:{COL_1_WIDTH};'>")
     
     # --- Print Column 1 ---
-    player.send_message("      <table style='width:100%;'>")
+    # --- UPDATED: Removed width:100% from inner table ---
+    html_lines.append("      <table>")
     for line in column_1_lines:
-        player.send_message(f"        {line}")
-    player.send_message("      </table>")
+        html_lines.append(f"        {line}")
+    html_lines.append("      </table>")
     
-    player.send_message("    </td>")
-    player.send_message("    <td>")
+    html_lines.append("    </td>")
+    html_lines.append("    <td>")
     
     # --- Print Column 2 ---
-    player.send_message("      <table style='width:100%;'>")
+    # --- UPDATED: Removed width:100% from inner table ---
+    html_lines.append("      <table>")
     for line in column_2_lines:
-        player.send_message(f"        {line}")
-    player.send_message("      </table>")
+        html_lines.append(f"        {line}")
+    html_lines.append("      </table>")
     
-    player.send_message("    </td>")
-    player.send_message("  </tr>")
-    player.send_message("</table>")
+    html_lines.append("    </td>")
+    html_lines.append("  </tr>")
+    html_lines.append("</table>")
+
+    # --- Send the entire block as one message ---
+    player.send_message("\n".join(html_lines))
 
 
 def show_skill_list(player: Player, category: str):
@@ -244,15 +257,24 @@ def show_skill_list(player: Player, category: str):
     
     sorted_skills = sorted(game_state.GAME_SKILLS.values(), key=lambda s: s.get("name", "zzz"))
     
-    # Use a simple table for single-column lists too
-    player.send_message("<table>")
+    # ---
+    # --- ALSO FIX SINGLE COLUMN LIST ---
+    # Build as a single string
+    html_lines = []
+    html_lines.append("<table>")
+    
+    # --- UPDATED: Add header row without widths ---
+    html_lines.append("<tr><td>&nbsp;</td><td style='text-decoration: underline;'>PTPs / MTPs / STPs</td><td>&nbsp;</td></tr>")
+    
     for skill_data in sorted_skills:
         skill_cat = skill_data.get("category", "Uncategorized").lower()
         if category_lower != skill_cat.lower():
             continue
         
-        player.send_message(_format_skill_line(player, skill_data))
-    player.send_message("</table>")
+        html_lines.append(_format_skill_line(player, skill_data))
+    html_lines.append("</table>")
+    player.send_message("\n".join(html_lines))
+    # --- END FIX ---
 
 
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):
@@ -314,8 +336,8 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
     
     player.send_message(f"You train **{skill_data['name']}** to rank **{new_rank}**!")
     
-    # --- UPDATED: Show menu AND list ---
-    show_training_menu(player)
+    # --- UPDATED: Show list AND then menu (as requested) ---
     player.send_message("\n--- **All Skills** ---")
     _show_all_skills_by_category(player)
+    show_training_menu(player)
     # ---

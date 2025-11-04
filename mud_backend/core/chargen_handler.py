@@ -280,13 +280,11 @@ def _handle_appearance_input(player: Player, text_input: str):
         
         player.send_message("\nCharacter creation complete! You must now train your initial skills.")
         
-        # --- CHANGED: Show the training menu ---
-        show_training_menu(player)
-        
         # --- NEW: Automatically list all skills ---
         player.send_message("\n--- **All Skills** ---")
         show_skill_list(player, "all")
-        # ---
+        # --- CHANGED: Show the training menu AT THE BOTTOM ---
+        show_training_menu(player)
         
 # ---
 # Main Input Router
