@@ -3,6 +3,7 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import game_state
 from mud_backend.core import loot_system
 from typing import Dict, Any
+from mud_backend.core import db # <--- NEW IMPORT
 
 def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] | None:
     """Helper function to find a corpse object by keywords."""
@@ -41,7 +42,25 @@ def _spill_item_into_room(room_objects: list, item_id: str) -> str | None:
     return item_name
 
 
-# --- The Absorb Class is removed as EXP absorption is now passive. ---
+class Absorb(BaseVerb):
+    """
+    Handles the 'absorb' command. (Redundant now, but kept for alias list consistency)
+    """
+    def execute(self):
+        exp_in_room = self.room.unabsorbed_social_exp
+        
+        if exp_in_room <= 0:
+            self.player.send_message("There is no experience here to absorb.")
+            return
+
+        # Uses the passive absorption function
+        # We call it here manually if a player uses the command, even though it's now tick-based
+        self.player.absorb_exp_pulse()
+        
+        # Clear the experience from the room
+        self.room.unabsorbed_social_exp = 0
+        # --- NEW: Save the room state after modifying it ---
+        db.save_room_state(self.room) 
 
 
 class Search(BaseVerb):
@@ -74,6 +93,7 @@ class Search(BaseVerb):
         if not item_ids_to_drop:
             self.player.send_message(f"You search the {corpse_obj['name']} but find nothing.")
             corpse_obj["description"] = f"The lifeless body of {corpse_obj['original_name']}. It has been picked clean."
+            db.save_room_state(self.room) # Save the description change
             return
 
         self.player.send_message(f"You search the {corpse_obj['name']} and find:")
@@ -91,6 +111,9 @@ class Search(BaseVerb):
         # Clear the corpse's inventory and update its description
         corpse_obj["inventory"] = []
         corpse_obj["description"] = f"The lifeless body of {corpse_obj['original_name']}. It has been picked clean."
+        
+        # --- NEW: Save the room state after modifying it ---
+        db.save_room_state(self.room)
 
 
 class Skin(BaseVerb):
@@ -126,11 +149,13 @@ class Skin(BaseVerb):
         template_key = corpse_obj.get("original_template_key")
         if not template_key:
             self.player.send_message("You try to skin it, but the corpse is unidentifiable.")
+            db.save_room_state(self.room) # Save the 'skinned' flag
             return
             
         monster_template = game_state.GAME_MONSTER_TEMPLATES.get(template_key)
         if not monster_template:
             self.player.send_message("You can't seem to find a way to skin this creature.")
+            db.save_room_state(self.room) # Save the 'skinned' flag
             return
 
         # Get player's skinning skill
@@ -145,6 +170,7 @@ class Skin(BaseVerb):
         
         if not item_ids_to_drop:
             self.player.send_message("You try to skin the creature, but fail to produce anything of use.")
+            db.save_room_state(self.room) # Save the 'skinned' flag
             return
             
         for item_id in item_ids_to_drop:
@@ -156,3 +182,6 @@ class Skin(BaseVerb):
                     self.player.send_message(f"You try to skin the {corpse_obj['original_name']} but ruin it, producing {item_name}.")
                 else:
                     self.player.send_message(f"You skillfully skin the {corpse_obj['original_name']}, producing {item_name}.")
+        
+        # --- NEW: Save the room state after modifying it ---
+        db.save_room_state(self.room)

@@ -1,4 +1,4 @@
-# mud_backend/core/command_executor.py
+# core/command_executor.py
 import importlib.util
 import os
 import time 
@@ -16,7 +16,6 @@ from mud_backend.core.chargen_handler import (
 from mud_backend.core.room_handler import show_room_to_player
 
 # --- Import our new skill handler ---
-# --- FIX: Removed 'show_training_menu' as it no longer exists ---
 from mud_backend.core.skill_handler import show_skill_list 
 
 # --- Import our new game state and loop functions ---
@@ -26,7 +25,7 @@ from mud_backend.core.game_loop import monster_respawn
 # ---
 from mud_backend import config # <-- NEW IMPORT
 
-# (VERB_ALIASES and DIRECTION_MAP are unchanged)
+# (VERB_ALIASES and DIRECTION_MAP are updated)
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement Verbs (all in 'movement.py')
     "move": ("movement", "Move"),
@@ -41,12 +40,11 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "west": ("movement", "Move"),
     "ne": ("movement", "Move"),
     "northeast": ("movement", "Move"),
-    "nw": ("movement", "Move"),
-    "northwest": ("movement", "Move"),
+    "nw": ("movement", "Northwest"),
     "se": ("movement", "Move"),
     "southeast": ("movement", "Move"),
     "sw": ("movement", "Move"),
-    "southwest": ("movement", "Move"),
+    "southwest": ("movement", "Southwest"),
     
     # Object Interaction Verbs
     "enter": ("movement", "Enter"),
@@ -57,7 +55,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "investigate": ("observation", "Investigate"),
     "look": ("observation", "Look"),
 
-# Harvesting/Resource Verbs
+    # Harvesting/Resource Verbs
     "search": ("harvesting", "Search"), 
     # "absorb": ("harvesting", "Absorb"), // Removed: Absorption is now automatic
     "skin": ("harvesting", "Skin"),
@@ -102,7 +100,6 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "say": ("say", "Say"),
     "ping": ("tick", "Tick"),
 }
-
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
@@ -111,7 +108,7 @@ DIRECTION_MAP = {
 }
 
 
-# --- (Prune Stale Players function is unchanged) ---
+# --- (_prune_active_players and _check_and_run_game_tick unchanged, omitting for brevity) ---
 def _prune_active_players(log_prefix: str, broadcast_callback):
     current_time = time.time()
     stale_players = []
@@ -127,7 +124,6 @@ def _prune_active_players(log_prefix: str, broadcast_callback):
                 broadcast_callback(room_id, disappears_message, "ambient")
                 print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
 
-# --- (Game Tick function is unchanged) ---
 def _check_and_run_game_tick(broadcast_callback):
     current_time = time.time()
     if (current_time - game_state.LAST_GAME_TICK_TIME) < game_state.TICK_INTERVAL_SECONDS:
@@ -160,7 +156,7 @@ def _check_and_run_game_tick(broadcast_callback):
     print(f"{log_prefix}: Global tick complete.")
 
 # ---
-# UPDATED EXECUTE_COMMAND
+# UPDATED EXECUTE_COMMAND (Room Object Filtering Fix)
 # ---
 def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
     """
@@ -182,8 +178,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             player.game_state = "chargen"
             player.chargen_step = 0
             
-            # --- THIS IS THE FIX ---
-            # Set HP to the *calculated* Max HP, not 100
+            # --- FIX: Set HP to Max HP ---
             player.hp = player.max_hp 
             # --- END FIX ---
             
@@ -207,24 +202,34 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         db_data=room_db_data 
     )
 
-    # --- (Monster filtering logic is unchanged) ---
-    active_monsters = []
-    if "objects" in room_db_data:
-        for obj in room_db_data["objects"]:
+    # --- UPDATED: Monster and Corpse filtering logic (Fixes Persistence) ---
+    live_room_objects = []
+    all_objects = room_db_data.get("objects", []) 
+    
+    if all_objects:
+        for obj in all_objects:
             monster_id = obj.get("monster_id")
-            if monster_id and monster_id in game_state.DEFEATED_MONSTERS:
-                pass
-            else:
-                if monster_id and "stats" not in obj:
-                    template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
-                    if template:
-                        obj.update(copy.deepcopy(template))
-                        active_monsters.append(obj)
+            
+            # 1. If it has a monster_id: check if it is active (not defeated)
+            if monster_id:
+                if monster_id not in game_state.DEFEATED_MONSTERS:
+                    # Logic to re-inject template if monster object is missing stats/etc. (e.g., just respawned)
+                    if "stats" not in obj:
+                        template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
+                        if template:
+                            obj.update(copy.deepcopy(template))
+                            live_room_objects.append(obj)
+                        else:
+                            print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
                     else:
-                        print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
-                else:
-                    active_monsters.append(obj)
-    room.objects = active_monsters
+                        live_room_objects.append(obj)
+            
+            # 2. If it does NOT have a monster_id (e.g., fountain, well, CORPSE, or ITEM): KEEP IT
+            else:
+                live_room_objects.append(obj)
+
+    room.objects = live_room_objects
+    # --- END UPDATED ---
     
     # --- (Command parsing logic is unchanged) ---
     parts = command_line.strip().split()
@@ -289,7 +294,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         "game_state": player.game_state
     }
 
-# --- (_run_verb and get_player_object are unchanged) ---
+# --- (_run_verb and get_player_object are unchanged, omitting for brevity) ---
 def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):
     try:
         verb_name, verb_class_name = verb_info

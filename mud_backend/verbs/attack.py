@@ -9,6 +9,7 @@ from mud_backend.core.game_state import (
 )
 from mud_backend.core import combat_system
 from mud_backend.core import loot_system
+from mud_backend.core import db # <--- NEW IMPORT
 
 class Attack(BaseVerb):
     """
@@ -66,7 +67,7 @@ class Attack(BaseVerb):
                 return
                 
             # --- PLAYER IS READY TO ATTACK ---
-            self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
+            # Removed redundant line: self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
             
             attack_results = combat_system.resolve_attack(
                 self.player, target_monster_data, GAME_ITEMS
@@ -112,6 +113,10 @@ class Attack(BaseVerb):
                     )
                     self.room.objects.append(corpse_data)
                     self.room.objects = [obj for obj in self.room.objects if obj.get("monster_id") != monster_id]
+
+                    # --- FIX: Save room state to make the corpse permanent and visible ---
+                    db.save_room_state(self.room) 
+                    
                     self.player.send_message(f"The {corpse_data['name']} falls to the ground.")
                     
                     DEFEATED_MONSTERS[monster_id] = {
@@ -130,6 +135,7 @@ class Attack(BaseVerb):
             
         else:
             # --- PLAYER IS INITIATING COMBAT ---
+            # This line should remain as it is the ONLY message when initiating combat.
             self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
             
             room_id = self.room.room_id
@@ -150,4 +156,5 @@ class Attack(BaseVerb):
             if monster_id not in RUNTIME_MONSTER_HP:
                 RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
             
-            self.execute()
+            # The game tick will handle the monster's first attack.
+            pass

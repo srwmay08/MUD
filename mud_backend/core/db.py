@@ -136,14 +136,25 @@ def save_game_state(player: 'Player'):
         print(f"\n[DB SAVE] Player {player.name} state updated.")
 
 def save_room_state(room: 'Room'):
-    # (function is unchanged)
+    """Saves the current state of a room object to the database."""
     database = get_db()
     if database is None:
         print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
         return
+        
     room_data = room.to_dict()
+    
+    # We must explicitly separate the query fields and the update fields
+    query = {"room_id": room.room_id}
+    
+    # Remove _id from the $set if it exists, use it in the query instead.
+    # Note: room_data.pop('_id', None) is critical if we plan to use $set
+    # and want the upsert mechanism to work correctly when the object moves
+    # from initial load to a modified state.
+    room_data.pop('_id', None)
+
     database.rooms.update_one(
-        {"room_id": room.room_id}, 
+        query, 
         {"$set": room_data},       
         upsert=True
     )
@@ -169,10 +180,7 @@ def fetch_all_rooms() -> dict:
         print(f"[DB ERROR] Failed to fetch all rooms: {e}")
         return {}
 
-# ---
-# NEW FUNCTIONS TO LOAD DATA FILES
-# ---
-
+# --- (Other fetch functions are unchanged) ---
 def _load_json_data(filename: str) -> dict:
     """Helper to load a JSON file from the 'data' directory."""
     try:
@@ -219,7 +227,6 @@ def fetch_all_levels() -> list:
     print("[DB ERROR] 'leveling.json' is not a valid list.")
     return []
 
-# --- NEW FUNCTION ---
 def fetch_all_skills() -> dict:
     """Loads skills.json and keys it by skill_id."""
     print("[DB INIT] Caching all skills from skills.json...")
@@ -230,7 +237,6 @@ def fetch_all_skills() -> dict:
     skill_templates = {s["skill_id"]: s for s in skill_list if s.get("skill_id")}
     print(f"[DB INIT] ...Cached {len(skill_templates)} skills.")
     return skill_templates
-# --- END NEW FUNCTION ---
 
 # ---
 get_db()

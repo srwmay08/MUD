@@ -5,10 +5,9 @@ from mud_backend.core.game_objects import Player
 from mud_backend.core import game_state
 
 # ---
-# Skill Cost Calculation Logic
+# Skill Cost Calculation Logic (UNCHANGED)
 # ---
 
-# (This function is unchanged)
 def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attrs: List[str]) -> int:
     """
     Calculates the final, discounted cost for one TP type (PTP, MTP, or STP).
@@ -53,7 +52,6 @@ def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attr
     
     return int(final_cost)
 
-# (This function is unchanged)
 def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
     """
     Gets the final PTP, MTP, and STP costs for a skill for a specific player.
@@ -80,7 +78,6 @@ def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
     
     return {"ptp": final_ptp, "mtp": final_mtp, "stp": final_stp}
 
-# (This function is unchanged)
 def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
     """Finds a skill in the global state by its name or keywords."""
     skill_name_lower = skill_name.lower()
@@ -95,13 +92,10 @@ def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
 # Training Menu / "GUI" Logic
 # ---
 
-# --- FIX: Removed the show_training_menu function ---
-# (Its logic is now in _show_all_skills_by_category)
-
 
 def _format_skill_line(player: Player, skill_data: Dict) -> str:
     """
-    Formats a single skill line as a <tr> for the HTML table.
+    Formats a single skill line as a <tr> for the HTML table, condensed.
     """
     skill_id = skill_data["skill_id"]
     skill_name = skill_data["name"]
@@ -109,30 +103,29 @@ def _format_skill_line(player: Player, skill_data: Dict) -> str:
     
     ranks_trained_this_lvl = player.ranks_trained_this_level.get(skill_id, 0)
     
-    # --- UPDATED: Removed all width styles ---
-    rank_str = f"<td>(Rank: {current_rank})</td>"
+    rank_str = f"({current_rank})"
     cost_str = ""
-    skill_name_str = ""
 
     if ranks_trained_this_lvl >= 3:
-        cost_str = "<td>[Maxed]</td>"
-        skill_name_str = f"<td>- {skill_name}</td>"
+        cost_str = "[Maxed]"
+        # Align left/center for maximum condensation
+        return f"<tr><td style='white-space:nowrap;'>- {skill_name}</td><td style='text-align:center;'>{cost_str}</td><td>{rank_str}</td></tr>"
     else:
         costs = get_skill_costs(player, skill_data)
         multiplier = ranks_trained_this_lvl + 1
+        
+        # Use simple slash separation and minimal space
         cost_str = (
-            f"<td>{costs['ptp'] * multiplier} / "
-            f"{costs['mtp'] * multiplier} / "
-            f"{costs['stp'] * multiplier}</td>"
+            f"{costs['ptp'] * multiplier}/{costs['mtp'] * multiplier}/{costs['stp'] * multiplier}"
         )
-        skill_name_str = (
-            f"<td>- <span class='keyword' data-command='train {skill_name} 1'>"
-            f"{skill_name}</span></td>"
+        
+        clickable_name = (
+            f"<span class='keyword' data-command='train {skill_name} 1'>"
+            f"{skill_name}</span>"
         )
-        # ---
-    
-    # Re-ordered columns (Cost before Rank)
-    return f"<tr>{skill_name_str}{cost_str}{rank_str}</tr>"
+        
+        # Use white-space:nowrap to ensure the name doesn't break
+        return f"<tr><td style='white-space:nowrap;'>- {clickable_name}</td><td style='text-align:center; white-space:nowrap;'>{cost_str}</td><td style='text-align:right;'>{rank_str}</td></tr>"
 
 
 def _show_all_skills_by_category(player: Player):
@@ -162,7 +155,8 @@ def _show_all_skills_by_category(player: Player):
     # --- NEW: Get all skills as a dictionary for easy lookup ---
     all_skills_dict = game_state.GAME_SKILLS
     
-    HEADER_ROW = "<tr><td>&nbsp;</td><td style='text-decoration: underline;'>PTPs / MTPs / STPs</td><td>&nbsp;</td></tr>"
+    # --- UPDATED: TIGHTER HEADER ROW ---
+    HEADER_ROW = "<tr><td></td><td style='text-decoration: underline; text-align:center;'>PTP/MTP/STP</td><td>Rank</td></tr>"
 
     # --- Build Column 1 Lines (as HTML table rows) ---
     column_1_lines = []
@@ -171,8 +165,8 @@ def _show_all_skills_by_category(player: Player):
     
     for category in COLUMN_1_CATEGORIES:
         
+        # --- UPDATED: Remove extra space/formatting from category header ---
         column_1_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
-        # --- FIX: Removed the repeating header from *inside* the loop ---
         
         # --- NEW: Check for custom order ---
         custom_order = SKILL_ORDERING.get(category)
@@ -199,16 +193,15 @@ def _show_all_skills_by_category(player: Player):
     # --- FIX: ADD THE TRAINING MENU TO THE END OF COLUMN 1 ---
     # ---
     column_1_lines.append("<tr><td colspan='3'>&nbsp;</td></tr>") # Spacer
-    column_1_lines.append("<tr><td colspan='3'>--- **Skill Training** ---</td></tr>")
-    column_1_lines.append(f"<tr><td colspan='3'>&nbsp;Physical TPs: {player.ptps}</td></tr>")
-    column_1_lines.append(f"<tr><td colspan='3'>&nbsp;Mental TPs:&nbsp;&nbsp; {player.mtps}</td></tr>")
-    column_1_lines.append(f"<tr><td colspan='3'>&nbsp;Spiritual TPs: {player.stps}</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>--- **SKILL TRAINING** ---</td></tr>")
+    # --- UPDATED: CONDENSED TP LINES ---
+    column_1_lines.append(f"<tr><td colspan='3'>TPs: P:{player.ptps} / M:{player.mtps} / S:{player.stps}</td></tr>")
     column_1_lines.append("<tr><td colspan='3'>---</td></tr>")
-    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.</td></tr>")
-    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.</td></tr>")
-    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)</td></tr>")
-    column_1_lines.append("<tr><td colspan='3'>Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.</td></tr>")
-    # --- END FIX ---
+    column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>'</td></tr>")
+    column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.</td></tr>")
+    # --- END UPDATED ---
 
 
     # --- Build Column 2 Lines (as HTML table rows) ---
@@ -218,8 +211,8 @@ def _show_all_skills_by_category(player: Player):
 
     for category in COLUMN_2_CATEGORIES:
         
+        # --- UPDATED: Remove extra space/formatting from category header ---
         column_2_lines.append(f"<tr><td colspan='3'>--- **{category.upper()}** ---</td></tr>")
-        # --- FIX: Removed the repeating header from *inside* the loop ---
         
         custom_order = SKILL_ORDERING.get(category)
         if custom_order:
@@ -238,15 +231,15 @@ def _show_all_skills_by_category(player: Player):
             for skill_data in category_skills:
                 column_2_lines.append(_format_skill_line(player, skill_data))
 
-    # --- (HTML table assembly logic is unchanged) ---
+    # --- (HTML table assembly logic) ---
     html_lines = []
     COL_1_WIDTH = "50%"
     
     html_lines.append("<table style='width:100%; border-spacing: 0;'>")
     html_lines.append("  <tr style='vertical-align: top;'>") # Align columns to the top
-    html_lines.append(f"    <td style='width:{COL_1_WIDTH};'>")
+    html_lines.append(f"    <td style='width:{COL_1_WIDTH}; padding-right:10px;'>") # Added right padding
     
-    html_lines.append("      <table>")
+    html_lines.append("      <table style='width:100%;'>") # Set inner table to 100% width
     for line in column_1_lines:
         html_lines.append(f"        {line}")
     html_lines.append("      </table>")
@@ -254,7 +247,7 @@ def _show_all_skills_by_category(player: Player):
     html_lines.append("    </td>")
     html_lines.append("    <td>")
     
-    html_lines.append("      <table>")
+    html_lines.append("      <table style='width:100%;'>") # Set inner table to 100% width
     for line in column_2_lines:
         html_lines.append(f"        {line}")
     html_lines.append("      </table>")
@@ -266,6 +259,21 @@ def _show_all_skills_by_category(player: Player):
     player.send_message("\n".join(html_lines))
 
 
+def _show_simple_training_menu(player: Player):
+    """
+    Shows *only* the training menu, without the skill list.
+    Used for 'list categories' or 'list <single>'.
+    """
+    player.send_message("\n--- **SKILL TRAINING** ---")
+    player.send_message(f"--- TPs: P:{player.ptps} / M:{player.mtps} / S:{player.stps} ---")
+    player.send_message("- Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
+    player.send_message("- Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.")
+    player.send_message("- Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")
+    player.send_message("- Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.")
+# --- END NEW HELPER ---
+
+
+# --- (The rest of the file is unchanged) ---
 def show_skill_list(player: Player, category: str):
     """
     Lists all skills, filtered by category, showing ranks and costs.
@@ -305,9 +313,9 @@ def show_skill_list(player: Player, category: str):
     # ---
     
     html_lines = []
-    html_lines.append("<table>")
+    html_lines.append("<table style='width:100%;'>")
     
-    html_lines.append("<tr><td>&nbsp;</td><td style='text-decoration: underline;'>PTPs / MTPs / STPs</td><td>&nbsp;</td></tr>")
+    html_lines.append("<tr><td></td><td style='text-decoration: underline; text-align:center;'>PTP/MTP/STP</td><td>Rank</td></tr>")
     
     if not sorted_skills:
         player.send_message("No skills are listed in this category.")
@@ -323,26 +331,6 @@ def show_skill_list(player: Player, category: str):
     # --- FIX: We must now *manually* show the menu here ---
     _show_simple_training_menu(player)
 
-
-# --- NEW HELPER FUNCTION ---
-def _show_simple_training_menu(player: Player):
-    """
-    Shows *only* the training menu, without the skill list.
-    Used for 'list categories' or 'list <single>'.
-    """
-    player.send_message("\n--- **Skill Training** ---")
-    player.send_message(f"--- Physical TPs: {player.ptps} / Mental TPs: {player.mtps} / Spiritual TPs: {player.stps}")
-    player.send_message("---")
-    player.send_message("Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
-    player.send_message("Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.")
-    player.send_message("Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")
-    player.send_message("Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.")
-# --- END NEW HELPER ---
-
-
-# ---
-# --- (The TP Conversion and Training logic below is unchanged) ---
-# ---
 
 def _calculate_total_cost(player: Player, skill_data: Dict, ranks_to_train: int) -> Dict[str, int]:
     """
