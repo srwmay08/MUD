@@ -14,12 +14,19 @@ from mud_backend.core.chargen_handler import (
     do_initial_stat_roll
 )
 from mud_backend.core.room_handler import show_room_to_player
+
+# --- Import our new skill handler ---
+# --- FIX: Removed 'show_training_menu' as it no longer exists ---
 from mud_backend.core.skill_handler import show_skill_list 
+
+# --- Import our new game state and loop functions ---
 from mud_backend.core import game_state
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
-from mud_backend import config
+# ---
+from mud_backend import config # <-- NEW IMPORT
 
+# (VERB_ALIASES and DIRECTION_MAP are unchanged)
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement Verbs (all in 'movement.py')
     "move": ("movement", "Move"),
@@ -40,6 +47,8 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "southeast": ("movement", "Move"),
     "sw": ("movement", "Move"),
     "southwest": ("movement", "Move"),
+    
+    # Object Interaction Verbs
     "enter": ("movement", "Enter"),
     "climb": ("movement", "Climb"),
     
@@ -76,7 +85,6 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"),
     "cancel": ("trading", "Cancel"),
-    # 'exchange' is more complex (with silver), so we'll skip it for now
 
     # Other Verbs
     "experience": ("experience", "Experience"),
@@ -86,7 +94,6 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "say": ("say", "Say"),
     "ping": ("tick", "Tick"),
 }
-# --- (Rest of file is unchanged) ---
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
@@ -94,6 +101,8 @@ DIRECTION_MAP = {
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
 
+
+# --- (Prune Stale Players function is unchanged) ---
 def _prune_active_players(log_prefix: str, broadcast_callback):
     current_time = time.time()
     stale_players = []
@@ -109,6 +118,7 @@ def _prune_active_players(log_prefix: str, broadcast_callback):
                 broadcast_callback(room_id, disappears_message, "ambient")
                 print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
 
+# --- (Game Tick function is unchanged) ---
 def _check_and_run_game_tick(broadcast_callback):
     current_time = time.time()
     if (current_time - game_state.LAST_GAME_TICK_TIME) < game_state.TICK_INTERVAL_SECONDS:
@@ -140,23 +150,40 @@ def _check_and_run_game_tick(broadcast_callback):
     )
     print(f"{log_prefix}: Global tick complete.")
 
+# ---
+# UPDATED EXECUTE_COMMAND
+# ---
 def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
+    """
+    The main function to parse and execute a game command.
+    """
+    
+    # --- (State management logic is unchanged) ---
     player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
     if player_info and player_info.get("player_obj"):
         player = player_info["player_obj"]
         player.messages.clear()
     else:
         player_db_data = fetch_player_data(player_name)
+        
         if not player_db_data:
+            # 4. This is a NEW character
             start_room_id = config.CHARGEN_START_ROOM
             player = Player(player_name, start_room_id, {})
             player.game_state = "chargen"
             player.chargen_step = 0
-            player.hp = 100
+            
+            # --- THIS IS THE FIX ---
+            # Set HP to the *calculated* Max HP, not 100
+            player.hp = player.max_hp 
+            # --- END FIX ---
+            
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
+            # 5. This is a RETURNING character
             player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             
+    # --- (Room fetching logic is unchanged) ---
     room_db_data = game_state.GAME_ROOMS.get(player.current_room_id)
     if not room_db_data:
         print(f"[WARN] Room {player.current_room_id} not in cache! Fetching from DB.")
@@ -171,6 +198,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         db_data=room_db_data 
     )
 
+    # --- (Monster filtering logic is unchanged) ---
     active_monsters = []
     if "objects" in room_db_data:
         for obj in room_db_data["objects"]:
@@ -187,9 +215,9 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                         print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
                 else:
                     active_monsters.append(obj)
-                
     room.objects = active_monsters
     
+    # --- (Command parsing logic is unchanged) ---
     parts = command_line.strip().split()
     command = ""
     args = []
@@ -197,6 +225,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         command = parts[0].lower()
         args = parts[1:]
         
+    # --- (Game state routing is unchanged) ---
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command == "look":
             show_room_to_player(player, room)
@@ -237,6 +266,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                 else:
                     _run_verb(player, room, command, args, verb_info)
     
+    # --- (Save and return logic is unchanged) ---
     game_state.ACTIVE_PLAYERS[player.name.lower()] = {
         "sid": sid,
         "player_name": player.name, 
@@ -250,6 +280,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         "game_state": player.game_state
     }
 
+# --- (_run_verb and get_player_object are unchanged) ---
 def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):
     try:
         verb_name, verb_class_name = verb_info

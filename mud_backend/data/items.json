@@ -2,29 +2,175 @@
     "pelt_ruined": {
         "name": "a ruined pelt",
         "description": "A worthless, ruined pelt.",
-        "item_type": "component"
+        "item_type": "component",
+        "keywords": ["pelt", "ruined pelt"]
     },
     "monster_claw": {
         "name": "a monster claw",
         "description": "A sharp, wicked-looking claw.",
-        "item_type": "component"
+        "item_type": "component",
+        "keywords": ["claw", "monster claw"]
     },
     "short_sword": {
         "name": "a short sword",
         "description": "A simple iron short sword.",
         "item_type": "weapon",
-        "wearable_slot": "mainhand"
+        "wearable_slot": "mainhand",
+        "skill": "edged_weapons",
+        "keywords": ["sword", "short sword"]
     },
     "leather_tunic": {
         "name": "a leather tunic",
         "description": "A tunic made of cured leather.",
         "item_type": "armor",
-        "wearable_slot": "torso"
+        "armor_type": "leather",
+        "wearable_slot": "torso",
+        "skill": "armor_use",
+        "keywords": ["tunic", "leather tunic"]
     },
     "gold_ring": {
         "name": "a gold ring",
         "description": "A simple gold ring.",
         "item_type": "jewelry",
-        "wearable_slot": "finger_right"
+        "wearable_slot": "finger_right",
+        "keywords": ["ring", "gold ring"]
+    },
+
+    "starter_backpack": {
+        "name": "a starter backpack",
+        "description": "A simple but sturdy leather backpack.",
+        "item_type": "container",
+        "wearable_slot": "back",
+        "is_container": true,
+        "keywords": ["backpack", "starter backpack", "pack"]
+    },
+    "starter_leather_armor": {
+        "name": "starter leather armor",
+        "description": "A suit of boiled leather armor. It's better than nothing.",
+        "item_type": "armor",
+        "armor_type": "leather",
+        "wearable_slot": "torso",
+        "skill": "armor_use",
+        "keywords": ["armor", "leather armor", "starter armor"]
+    },
+    "starter_small_shield": {
+        "name": "a small wooden shield",
+        "description": "A round wooden shield with a simple iron boss.",
+        "item_type": "shield",
+        "wearable_slot": "offhand",
+        "skill": "shield_use",
+        "keywords": ["shield", "wooden shield"]
+    },
+    "knuckle_dusters": {
+        "name": "a set of knuckle dusters",
+        "description": "A piece of metal shaped to fit around the knuckles.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "brawling",
+        "keywords": ["knuckle dusters", "dusters"]
+    },
+    "starter_dagger": {
+        "name": "a simple dagger",
+        "description": "A small, sharp dagger. Good for a quick stab.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "small_edged",
+        "keywords": ["dagger", "simple dagger"]
+    },
+    "starter_short_sword": {
+        "name": "a basic short sword",
+        "description": "A standard-issue short sword.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "edged_weapons",
+        "keywords": ["sword", "short sword"]
+    },
+    "starter_bastard_sword": {
+        "name": "a bastard sword",
+        "description": "A long, heavy sword that can be used with one or two hands.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "two_handed_edged",
+        "keywords": ["sword", "bastard sword"]
+    },
+    "starter_club": {
+        "name": "a wooden club",
+        "description": "A solid piece of wood, heavier at one end.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "small_blunt",
+        "keywords": ["club", "wooden club"]
+    },
+    "starter_mace": {
+        "name": "a simple mace",
+        "description": "A basic mace with a flanged head.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "blunt_weapons",
+        "keywords": ["mace", "simple mace"]
+    },
+    "starter_greatclub": {
+        "name": "a greatclub",
+        "description": "A hefty, two-handed club.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "two_handed_blunt",
+        "keywords": ["greatclub", "club"]
+    },
+    "starter_spear": {
+        "name": "a simple spear",
+        "description": "A long wooden shaft topped with a sharp metal point.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "polearms",
+        "keywords": ["spear", "simple spear"]
+    },
+    "starter_bow": {
+        "name": "a short bow",
+        "description": "A simple wooden short bow.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "bows",
+        "keywords": ["bow", "short bow"]
+    },
+    "starter_crossbow": {
+        "name": "a light crossbow",
+        "description": "A small, easy-to-load crossbow.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "crossbows",
+        "keywords": ["crossbow", "light crossbow"]
+    },
+    "starter_throwing_knife": {
+        "name": "a throwing knife",
+        "description": "A small, balanced knife designed to be thrown.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "small_thrown",
+        "keywords": ["knife", "throwing knife"]
+    },
+    "starter_javelin": {
+        "name": "a javelin",
+        "description": "A light spear designed for throwing.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "large_thrown",
+        "keywords": ["javelin"]
+    },
+    "starter_sling": {
+        "name": "a leather sling",
+        "description": "A simple leather sling for hurling stones.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "slings",
+        "keywords": ["sling", "leather sling"]
+    },
+    "starter_staff": {
+        "name": "a wooden staff",
+        "description": "A smooth, sturdy wooden staff.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "staves",
+        "keywords": ["staff", "wooden staff"]
     }
 }

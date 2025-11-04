@@ -60,66 +60,118 @@ class Examine(BaseVerb):
             # Player failed all checks
             self.player.send_message("You don't notice anything else unusual about it.")
 
-# --- Class from look.py ---
+# ---
+# --- NEW: Helper function to find items on player
+# ---
+def _find_item_on_player(player, target_name):
+    """Checks worn items and inventory for a match."""
+    # Check worn items
+    for slot, item_id in player.worn_items.items():
+        if item_id:
+            item_data = game_state.GAME_ITEMS.get(item_id)
+            if item_data:
+                # Check keywords first, then the item's name
+                if target_name in item_data.get("keywords", []) or target_name == item_data['name'].lower():
+                    return item_data, "worn"
+                    
+    # Check inventory (pack)
+    for item_id in player.inventory:
+        item_data = game_state.GAME_ITEMS.get(item_id)
+        if item_data:
+            if target_name in item_data.get("keywords", []) or target_name == item_data['name'].lower():
+                return item_data, "inventory"
+                
+    return None, None
+
+# ---
+# --- MODIFIED: Look verb
+# ---
 class Look(BaseVerb):
     """Handles the 'look' command."""
     
     def execute(self):
+        
+        # --- 1. LOOK (no args) ---
         if not self.args:
-            # --- 1. LOOK (at room) ---
             show_room_to_player(self.player, self.room)
-                
-        else:
-            # --- 2. LOOK <TARGET> ---
-            target_name = " ".join(self.args).lower() 
-            if target_name.startswith("at "):
-                target_name = target_name[3:]
+            return
 
-            # --- UPDATED: Find target by keyword ---
-            found_object = None
-            for obj in self.room.objects:
-                # Check keywords if they exist, fall back to name
-                if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
-                    found_object = obj
-                    break
-            # ---
+        full_command = " ".join(self.args).lower()
 
-            if found_object:
-                self.player.send_message(f"You examine the **{found_object['name']}**.")
-                self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
+        # --- 2. LOOK IN <CONTAINER> ---
+        if full_command.startswith("in "):
+            container_name = full_command[3:].strip()
+            
+            # Find the container (on player or in room)
+            container_data, location = _find_item_on_player(self.player, container_name)
+            
+            # TODO: Add logic to find container in room
+            
+            if not container_data or not container_data.get("is_container"):
+                self.player.send_message(f"You don't see a container called '{container_name}' here.")
+                return
+
+            # Special case: 'backpack' is the player's main inventory
+            # We treat the "back" slot as the main inventory container
+            if container_data.get("wearable_slot") == "back":
+                if not self.player.inventory:
+                    self.player.send_message(f"Your {container_data['name']} is empty.")
+                    return
                 
-                if 'verbs' in found_object:
-                    verb_list = ", ".join([f'<span class="keyword">{v}</span>' for v in found_object['verbs']])
+                self.player.send_message(f"You look in your {container_data['name']}:")
+                for item_id in self.player.inventory:
+                    item_data = game_state.GAME_ITEMS.get(item_id)
+                    self.player.send_message(f"- {item_data.get('name', 'an item')}")
+                return
+            else:
+                # Logic for other containers (e.g., a pouch)
+                self.player.send_message(f"You look in {container_data['name']}.")
+                # (We would add logic here to list items *inside* that item)
+                self.player.send_message("It is empty.")
+                return
+                
+        # --- 3. LOOK <TARGET> ---
+        target_name = full_command
+        if target_name.startswith("at "):
+            target_name = target_name[3:]
+
+        # A. Check room objects
+        for obj in self.room.objects:
+            # Check keywords if they exist, fall back to name
+            if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
+                self.player.send_message(f"You examine the **{obj['name']}**.")
+                self.player.send_message(obj.get('description', 'It is a nondescript object.'))
+                if 'verbs' in obj:
+                    verb_list = ", ".join([f'<span class="keyword">{v}</span>' for v in obj['verbs']])
                     self.player.send_message(f"You could try: {verb_list}")
                 return 
 
-            # B. Check if target is 'self'
-            if target_name == self.player.name.lower():
-                self.player.send_message(f"You see **{self.player.name}** (that's you!).")
-                self.player.send_message(format_player_description(self.player.to_dict()))
+        # B. Check player's own items (worn or inventory)
+        item_data, location = _find_item_on_player(self.player, target_name)
+        if item_data:
+            self.player.send_message(f"You look at your **{item_data['name']}**.")
+            self.player.send_message(item_data.get('description', 'It is a nondescript object.'))
+            return
+
+        # C. Check if target is 'self'
+        if target_name == self.player.name.lower() or target_name == "self":
+            self.player.send_message(f"You see **{self.player.name}** (that's you!).")
+            self.player.send_message(format_player_description(self.player.to_dict()))
+            return
+                
+        # D. Check if target is another player
+        target_player_state = game_state.ACTIVE_PLAYERS.get(target_name)
+        if target_player_state and target_player_state["current_room_id"] == self.room.room_id:
+            target_case_correct_name = target_player_state["player_name"]
+            target_player_data = fetch_player_data(target_case_correct_name)
+            if target_player_data:
+                self.player.send_message(f"You see **{target_player_data['name']}**.")
+                description = format_player_description(target_player_data)
+                self.player.send_message(description)
                 return
-                
-            # --- C. (REVISED) Check if target is another player *in the room* ---
             
-            # Find the player in the global active list by lowercase name
-            target_player_state = game_state.ACTIVE_PLAYERS.get(target_name)
-            
-            # Check if they are online AND in the same room
-            if target_player_state and target_player_state["current_room_id"] == self.room.room_id:
-                # They are here! Get their case-correct name
-                target_case_correct_name = target_player_state["player_name"]
-                
-                # Fetch their full data for description
-                target_player_data = fetch_player_data(target_case_correct_name)
-                
-                if target_player_data:
-                    self.player.send_message(f"You see **{target_player_data['name']}**.")
-                    description = format_player_description(target_player_data)
-                    self.player.send_message(description)
-                    return
-            
-            # --- D. Not found ---
-            self.player.send_message(f"You do not see a **{target_name}** here.")
+        # --- E. Not found ---
+        self.player.send_message(f"You do not see a **{target_name}** here.")
 
 # --- Class from investigate.py ---
 class Investigate(Examine):
