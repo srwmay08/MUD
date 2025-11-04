@@ -122,7 +122,9 @@ def process_respawns(log_time_prefix,
                         game_state.RUNTIME_MONSTER_HP.pop(runtime_id, None)
                     # ---
                     
-                    broadcast_callback(room_id_to_respawn_in, f"{entity_display_name} has appeared.", "ambient_spawn")
+                    # --- THIS IS THE FIX: Remove noisy broadcast ---
+                    # broadcast_callback(room_id_to_respawn_in, f"{entity_display_name} has appeared.", "ambient_spawn")
+                    # --- END FIX ---
                     respawned_entity_runtime_ids_to_remove.append(runtime_id)
                 elif config.DEBUG_MODE:
                      print(f"{log_time_prefix} - RESPAWN_ACTION: Skipping unique monster {entity_template_key} as one already exists in the room.")

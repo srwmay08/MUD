@@ -266,7 +266,12 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         
         results['attacker_msg'] = (flavor_msg + f" You hit for **{total_damage}** damage!").format(**msg_vars)
         results['defender_msg'] = (flavor_msg + f" You are hit for **{total_damage}** damage!").format(**msg_vars)
-        results['broadcast_msg'] = (flavor_msg + f" It hits for **{total_damage}** damage!").format(**msg_vars)
+        
+        # --- FIX: Use attacker-aware broadcast message ---
+        # We need the "monster_hit" flavor for broadcast, even if player attacks
+        broadcast_flavor_msg = get_flavor_message(msg_key_hit.replace("player", "monster"), d100_roll, combat_roll_result)
+        results['broadcast_msg'] = (broadcast_flavor_msg + f" {attacker_name} hits for **{total_damage}** damage!").format(**msg_vars)
+        # --- END FIX ---
 
     else:
         results['hit'] = False
@@ -274,7 +279,11 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         
         results['attacker_msg'] = flavor_msg.format(**msg_vars)
         results['defender_msg'] = flavor_msg.format(**msg_vars)
-        results['broadcast_msg'] = flavor_msg.format(**msg_vars)
+        
+        # --- FIX: Use attacker-aware broadcast message ---
+        broadcast_flavor_msg = get_flavor_message(msg_key_miss.replace("player", "monster"), d100_roll, combat_roll_result)
+        results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
+        # --- END FIX ---
 
     return results
 
@@ -330,16 +339,26 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
 
         attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS) 
         
+        # --- THIS IS THE FIX ---
+        sid_to_skip = None
+        
         # --- Send messages to correct recipients ---
         if is_attacker_player:
             send_to_player_callback(attacker.name, attack_results['attacker_msg'], "combat_self")
+            attacker_info = game_state.ACTIVE_PLAYERS.get(attacker.name.lower())
+            if attacker_info:
+                sid_to_skip = attacker_info.get("sid")
+
         if is_defender_player:
             send_to_player_callback(defender.name, attack_results['defender_msg'], "combat_other")
+            defender_info = game_state.ACTIVE_PLAYERS.get(defender.name.lower())
+            if defender_info:
+                sid_to_skip = defender_info.get("sid")
         
-        broadcast_callback(room_id, attack_results['broadcast_msg'], "combat_broadcast")
+        # Pass the sid_to_skip to the broadcast function
+        broadcast_callback(room_id, attack_results['broadcast_msg'], "combat_broadcast", skip_sid=sid_to_skip)
         
-        # --- THIS IS THE FIX ---
-        # Send the full roll string to the room
+        # Send the full roll string to the room (no skip)
         broadcast_callback(room_id, attack_results['roll_string'], "combat_roll")
         # --- END FIX ---
 

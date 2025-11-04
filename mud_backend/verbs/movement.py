@@ -4,6 +4,8 @@ from mud_backend.core.db import fetch_room_data
 from mud_backend.core.game_objects import Room
 from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core.command_executor import DIRECTION_MAP
+# --- NEW IMPORT ---
+from mud_backend.core import game_state
 
 # --- Class from enter.py ---
 class Enter(BaseVerb):
@@ -31,7 +33,10 @@ class Enter(BaseVerb):
             return
 
         # 2. Fetch new room data
-        new_room_data = fetch_room_data(target_room_id)
+        # --- FIX: Get from live game_state cache, not stale DB ---
+        new_room_data = game_state.GAME_ROOMS.get(target_room_id)
+        # --- END FIX ---
+        
         if not new_room_data or new_room_data.get("room_id") == "void":
             self.player.send_message("You try to enter, but find only an endless void. You quickly scramble back.")
             return
@@ -76,7 +81,10 @@ class Climb(BaseVerb):
             return
             
         # 2. Fetch new room data
-        new_room_data = fetch_room_data(target_room_id)
+        # --- FIX: Get from live game_state cache, not stale DB ---
+        new_room_data = game_state.GAME_ROOMS.get(target_room_id)
+        # --- END FIX ---
+        
         if not new_room_data or new_room_data.get("room_id") == "void":
             self.player.send_message("You climb, but find only an endless void. You quickly scramble back.")
             return
@@ -120,7 +128,10 @@ class Move(BaseVerb):
         
         if target_room_id:
             # --- Found a cardinal exit ---
-            new_room_data = fetch_room_data(target_room_id)
+            # --- FIX: Get from live game_state cache, not stale DB ---
+            new_room_data = game_state.GAME_ROOMS.get(target_room_id)
+            # --- END FIX ---
+            
             if not new_room_data or new_room_data.get("room_id") == "void":
                 self.player.send_message("You move, but find only an endless void.")
                 return
@@ -170,7 +181,10 @@ class Exit(BaseVerb):
 
             if target_room_id:
                 # --- Found the "out" exit ---
-                new_room_data = fetch_room_data(target_room_id)
+                # --- FIX: Get from live game_state cache, not stale DB ---
+                new_room_data = game_state.GAME_ROOMS.get(target_room_id)
+                # --- END FIX ---
+                
                 if not new_room_data or new_room_data.get("room_id") == "void":
                     self.player.send_message("You try to leave, but find only an endless void.")
                     return

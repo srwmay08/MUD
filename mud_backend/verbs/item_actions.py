@@ -54,7 +54,7 @@ def _find_container_on_player(player, target_name: str) -> Dict[str, Any] | None
 class Get(BaseVerb):
     """
     Handles 'get' and 'take'.
-    GET <item> (from room)
+    GET <item> (from ground first, then inventory)
     GET <item> FROM <container>
     """
     
@@ -72,6 +72,10 @@ class Get(BaseVerb):
             parts = args_str.split(" from ", 1)
             target_item_name = parts[0].strip()
             target_container_name = parts[1].strip()
+            # --- THIS IS THE FIX ---
+            if target_container_name.startswith("my "):
+                target_container_name = target_container_name[3:].strip()
+            # --- END FIX ---
         # --- END NEW PARSER ---
 
         # 1. Determine which hand to put it in (helper logic)
@@ -121,6 +125,16 @@ class Get(BaseVerb):
                  if self.player.worn_items.get(right_hand_slot) is None:
                     target_hand_slot = right_hand_slot
                 # If preferred slot (right) is full, it will use the other (left) if free.
+            
+            # Re-check target_hand_slot after preferred logic
+            if target_hand_slot is None:
+                if self.player.worn_items.get(right_hand_slot) is None:
+                    target_hand_slot = right_hand_slot
+                elif self.player.worn_items.get(left_hand_slot) is None:
+                    target_hand_slot = left_hand_slot
+                else:
+                    self.player.send_message("Your hands are full. You must free a hand to get that.")
+                    return
 
             # Move from inventory to hand
             self.player.inventory.remove(item_id)
@@ -128,52 +142,92 @@ class Get(BaseVerb):
             self.player.send_message(f"You get {item_name} from your {container.get('name')} and hold it.")
             
         # ---
-        # BRANCH 2: GET <item> (from ground)
+        # BRANCH 2: GET <item> (from GROUND first, then inventory)
         # ---
         else:
-            # Find the item in the room
+            # --- THIS IS THE FIX: Check ground first ---
             item_obj = _find_item_in_room(self.room.objects, target_item_name)
-            if not item_obj:
-                self.player.send_message(f"You don't see a **{target_item_name}** here.")
-                return
-
-            item_id = item_obj.get("item_id")
-            item_name = item_obj.get("name", "an item")
-            item_data = game_state.GAME_ITEMS.get(item_id, {})
-
-            if not item_id:
-                self.player.send_message(f"You can't seem to pick up the {item_name}.")
-                return
-
-            # Determine target slot (again, with item-specific logic)
-            target_hand_slot_ground = None # Re-check for ground logic
-            item_type = item_data.get("item_type")
             
+            if item_obj:
+                # Found it on the ground!
+                item_id = item_obj.get("item_id")
+                item_name = item_obj.get("name", "an item")
+                item_data = game_state.GAME_ITEMS.get(item_id, {})
+
+                if not item_id:
+                    self.player.send_message(f"You can't seem to pick up the {item_name}.")
+                    return
+
+                # Determine target slot (again, with item-specific logic)
+                target_hand_slot_ground = None # Re-check for ground logic
+                item_type = item_data.get("item_type")
+                
+                if item_type in ["shield"] or item_data.get("skill") in ["bows", "crossbows"]:
+                    if self.player.worn_items.get(left_hand_slot) is None:
+                        target_hand_slot_ground = left_hand_slot
+                    elif self.player.worn_items.get(right_hand_slot) is None:
+                        target_hand_slot_ground = right_hand_slot
+                else:
+                    if self.player.worn_items.get(right_hand_slot) is None:
+                        target_hand_slot_ground = right_hand_slot
+                    elif self.player.worn_items.get(left_hand_slot) is None:
+                        target_hand_slot_ground = left_hand_slot
+                
+                # Add to the free hand (if one was found)
+                if target_hand_slot_ground:
+                    self.player.worn_items[target_hand_slot_ground] = item_id
+                    self.player.send_message(f"You get {item_name} and hold it in your {target_hand_slot_ground.replace('hand', ' hand')}.")
+                else:
+                    # Both hands are full, put it in the pack
+                    self.player.inventory.append(item_id)
+                    self.player.send_message(f"Both hands are full. You get {item_name} and put it in your pack.")
+                
+                # --- BUG FIX: Remove from the live room.objects list ---
+                self.room.objects.remove(item_obj)
+                
+                # Save the room state
+                db.save_room_state(self.room)
+                return # <-- IMPORTANT: Stop here
+            # --- END GROUND CHECK ---
+
+            # If not on ground, try to find item in inventory
+            item_id_from_pack = _find_item_in_inventory(self.player, target_item_name)
+            if not item_id_from_pack:
+                self.player.send_message(f"You don't see a **{target_item_name}** here or in your pack.")
+                return
+
+            # Found it in the pack! Treat as "get from backpack"
+            item_data = game_state.GAME_ITEMS.get(item_id_from_pack, {})
+            item_name = item_data.get("name", "an item")
+
+            # Check for free hands
+            if not target_hand_slot:
+                self.player.send_message("Your hands are full. You must free a hand to get that.")
+                return
+            
+            # Special check for shield/bow (left hand)
+            item_type = item_data.get("item_type")
             if item_type in ["shield"] or item_data.get("skill") in ["bows", "crossbows"]:
                 if self.player.worn_items.get(left_hand_slot) is None:
-                    target_hand_slot_ground = left_hand_slot
-                elif self.player.worn_items.get(right_hand_slot) is None:
-                    target_hand_slot_ground = right_hand_slot
+                    target_hand_slot = left_hand_slot
             else:
                 if self.player.worn_items.get(right_hand_slot) is None:
-                    target_hand_slot_ground = right_hand_slot
+                    target_hand_slot = right_hand_slot
+            
+            # Re-check target_hand_slot after preferred logic
+            if target_hand_slot is None:
+                if self.player.worn_items.get(right_hand_slot) is None:
+                    target_hand_slot = right_hand_slot
                 elif self.player.worn_items.get(left_hand_slot) is None:
-                    target_hand_slot_ground = left_hand_slot
-            
-            # Add to the free hand (if one was found)
-            if target_hand_slot_ground:
-                self.player.worn_items[target_hand_slot_ground] = item_id
-                self.player.send_message(f"You get {item_name} and hold it in your {target_hand_slot_ground.replace('hand', ' hand')}.")
-            else:
-                # Both hands are full, put it in the pack
-                self.player.inventory.append(item_id)
-                self.player.send_message(f"Both hands are full. You get {item_name} and put it in your pack.")
-            
-            # Remove the item object from the room's object list
-            self.room.objects.remove(item_obj)
-            
-            # Save the room state
-            db.save_room_state(self.room)
+                    target_hand_slot = left_hand_slot
+                else:
+                    self.player.send_message("Your hands are full. You must free a hand to get that.")
+                    return
+
+            # Move from inventory to hand
+            self.player.inventory.remove(item_id_from_pack)
+            self.player.worn_items[target_hand_slot] = item_id_from_pack
+            self.player.send_message(f"You get {item_name} from your pack and hold it.")
 
 
 class Drop(BaseVerb):
@@ -256,9 +310,29 @@ class Drop(BaseVerb):
                 self.player.inventory.remove(item_id_to_drop)
             else:
                 self.player.worn_items[item_location] = None # Empty hand
+            
+            # --- FIX for persistence ---
+            item_data = game_state.GAME_ITEMS.get(item_id_to_drop)
+            item_name = item_data.get("name", "an unknown item")
+            item_keywords = [
+                item_name.lower(), 
+                item_id_to_drop.lower()
+            ] + item_name.lower().split()
 
-            # Add to room
-            _spill_item_into_room(self.room.objects, item_id_to_drop)
+            new_item_obj = {
+                "name": item_name,
+                "description": item_data.get("description", "It's an item."),
+                "keywords": list(set(item_keywords)),
+                "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                "is_item": True,
+                "item_id": item_id_to_drop,
+                "perception_dc": 0
+            }
+            
+            # Add to the live room.objects list
+            self.room.objects.append(new_item_obj)
+            # --- END FIX ---
+
             db.save_room_state(self.room)
             self.player.send_message(f"You drop {item_name}.")
 

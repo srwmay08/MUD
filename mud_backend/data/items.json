@@ -42,7 +42,7 @@
         "item_type": "container",
         "wearable_slot": "back",
         "is_container": true,
-        "keywords": ["backpack", "starter backpack", "pack"]
+        "keywords": ["backpack", "starter backpack", "pack", "back"]
     },
     "starter_leather_armor": {
         "name": "starter leather armor",

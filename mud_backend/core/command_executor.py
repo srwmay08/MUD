@@ -55,6 +55,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "take": ("item_actions", "Take"),
     "drop": ("item_actions", "Drop"),
     "put": ("item_actions", "Put"),
+    "stow": ("item_actions", "Put"), # <-- THIS IS THE FIX
     
     # Observation Verbs
     "examine": ("observation", "Examine"),

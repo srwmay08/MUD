@@ -56,8 +56,13 @@ def game_tick_thread():
     with app.app_context():
         while True:
             # --- Broadcast to a room (for weather, etc.) ---
-            def broadcast_to_room(room_id, message, msg_type):
-                socketio.emit("message", message, to=room_id)
+            # --- THIS IS THE FIX 1 ---
+            def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
+                if skip_sid:
+                    socketio.emit("message", message, to=room_id, skip_sid=skip_sid)
+                else:
+                    socketio.emit("message", message, to=room_id)
+            # --- END FIX 1 ---
                 
             # --- NEW: Send a message to a specific player ---
             def send_to_player(player_name, message, msg_type):
@@ -164,6 +169,13 @@ def handle_command_event(data):
         emit("message", arrives_message, to=new_room_id, skip_sid=sid)
         
     # ---
+    # --- THIS IS THE FIX 2: Send command response *before* checking aggro
+    # ---
+    emit("command_response", result_data, to=sid)
+    # --- END FIX 2 ---
+
+
+    # ---
     # --- AGGRO CHECK (MOVED) ---
     # This logic is now OUTSIDE the movement block.
     # It will run on *every command* (look, inv, get, etc.)
@@ -194,7 +206,10 @@ def handle_command_event(data):
                     if monster_id and monster_id not in game_state.DEFEATED_MONSTERS and monster_id not in game_state.COMBAT_STATE:
                         
                         # --- START COMBAT ---
-                        emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
+                        # --- THIS IS THE FIX 3: Removed aggro message ---
+                        # emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
+                        # --- END FIX 3 ---
+                        
                         current_time = time.time()
                         
                         game_state.COMBAT_STATE[player_id] = {
@@ -215,7 +230,8 @@ def handle_command_event(data):
                         break 
     # --- END AGGRO CHECK ---
 
-    emit("command_response", result_data, to=sid)
+    # --- MOVED: This is now sent *before* the aggro check ---
+    # emit("command_response", result_data, to=sid)
 
 
 if __name__ == "__main__":
