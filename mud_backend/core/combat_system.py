@@ -11,7 +11,7 @@ from mud_backend.core.game_objects import Player
 from mud_backend.core.db import save_game_state
 from mud_backend.core import loot_system
 
-# --- (MockConfigCombat, STANCE_MODIFIERS, and helper functions are unchanged) ---
+# --- (MockConfigCombat, STANCE_MODIFIERS, and parse_and_roll_dice are unchanged) ---
 class MockConfigCombat:
     DEBUG_MODE = True; STAT_BONUS_BASELINE = 50; MELEE_AS_STAT_BONUS_DIVISOR = 20
     WEAPON_SKILL_AS_BONUS_DIVISOR = 50; BAREHANDED_BASE_AS = 0; DEFAULT_UNARMORED_TYPE = "unarmored"
@@ -43,12 +43,56 @@ def parse_and_roll_dice(dice_string: str) -> int:
     modifier = int(match.group(3)) if match.group(3) else 0
     if num_dice <= 0 or dice_sides <= 0: return modifier
     return sum(random.randint(1, dice_sides) for _ in range(num_dice)) + modifier
+# --- (get_stat_bonus is unchanged) ---
 def get_stat_bonus(stat_value: int, baseline: int, divisor: int) -> int:
     if divisor == 0: return 0
     return (stat_value - baseline) // divisor 
+
+# --- (get_skill_bonus is unchanged, it is used by DS) ---
 def get_skill_bonus(skill_value: int, divisor: int) -> int:
     if divisor == 0: return 0
     return skill_value // divisor 
+
+# ---
+# --- NEW FUNCTION ---
+# ---
+def calculate_skill_bonus(skill_rank: int) -> int:
+    """
+    Calculates the skill *bonus* based on the diminishing returns chart.
+    - Ranks 1-10: +5 per rank
+    - Ranks 11-20: +4 per rank
+    - Ranks 21-30: +3 per rank
+    - Ranks 31-40: +2 per rank
+    - Ranks 41+: +1 per rank (bonus = rank + 100)
+    """
+    if skill_rank <= 0:
+        return 0
+    
+    if skill_rank <= 10:
+        # Ranks 1-10: +5 bonus per rank
+        return skill_rank * 5
+    
+    if skill_rank <= 20:
+        # 50 from first 10 ranks, +4 for ranks 11-20
+        return 50 + (skill_rank - 10) * 4
+        
+    if skill_rank <= 30:
+        # 90 from first 20 ranks (50 + 40), +3 for ranks 21-30
+        return 90 + (skill_rank - 20) * 3
+        
+    if skill_rank <= 40:
+        # 120 from first 30 ranks (90 + 30), +2 for ranks 31-40
+        return 120 + (skill_rank - 30) * 2
+        
+    # Ranks 41+
+    # 140 from first 40 ranks (120 + 20), +1 for ranks 41+
+    # This simplifies to the user's provided formula: rank + 100
+    return 140 + (skill_rank - 40) * 1
+# ---
+# --- END NEW FUNCTION ---
+# ---
+
+# --- (get_entity_armor_type is unchanged) ---
 def get_entity_armor_type(entity, game_items_global: dict) -> str:
     equipped_items_dict = {}
     if hasattr(entity, 'equipped_items') and hasattr(entity, 'get_armor_type'):
@@ -63,6 +107,10 @@ def get_entity_armor_type(entity, game_items_global: dict) -> str:
                 return chest_item_data.get("armor_type", config.DEFAULT_UNARMORED_TYPE)
         return entity.get("innate_armor_type", config.DEFAULT_UNARMORED_TYPE)
     return config.DEFAULT_UNARMORED_TYPE
+
+# ---
+# --- MODIFIED: calculate_attack_strength ---
+# ---
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict, 
                               weapon_item_data: dict | None, target_armor_type: str,
                               attacker_stance: str) -> int:
@@ -72,8 +120,13 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
         strength_barehanded = attacker_stats.get("STR", config.STAT_BONUS_BASELINE)
         str_bonus_barehanded = get_stat_bonus(strength_barehanded, config.STAT_BONUS_BASELINE, config.MELEE_AS_STAT_BONUS_DIVISOR)
         as_val += str_bonus_barehanded; as_components_log.append(f"Str({str_bonus_barehanded})")
-        brawling_skill = attacker_skills.get("brawling", 0)
-        brawling_bonus = get_skill_bonus(brawling_skill, config.WEAPON_SKILL_AS_BONUS_DIVISOR)
+        
+        # --- THIS IS THE FIX 1 ---
+        # Brawling skill also uses the new diminishing returns bonus
+        brawling_skill_rank = attacker_skills.get("brawling", 0)
+        brawling_bonus = calculate_skill_bonus(brawling_skill_rank)
+        # --- END FIX 1 ---
+        
         as_val += brawling_bonus; as_components_log.append(f"Brawl({brawling_bonus})")
         base_barehanded_as = getattr(config, 'BAREHANDED_BASE_AS', 0)
         as_val += base_barehanded_as
@@ -83,11 +136,18 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
         strength = attacker_stats.get("STR", config.STAT_BONUS_BASELINE)
         str_bonus = get_stat_bonus(strength, config.STAT_BONUS_BASELINE, config.MELEE_AS_STAT_BONUS_DIVISOR)
         as_val += str_bonus; as_components_log.append(f"Str({str_bonus})")
+        
         weapon_skill_name = weapon_item_data.get("skill"); skill_bonus_val = 0
         if weapon_skill_name:
             skill_rank = attacker_skills.get(weapon_skill_name, 0)
-            skill_bonus_val = get_skill_bonus(skill_rank, config.WEAPON_SKILL_AS_BONUS_DIVISOR)
+            
+            # --- THIS IS THE FIX 2 ---
+            # Use the new diminishing returns formula for AS, as per user docs
+            skill_bonus_val = calculate_skill_bonus(skill_rank) 
+            # --- END FIX 2 ---
+            
             as_val += skill_bonus_val; as_components_log.append(f"Skill({skill_bonus_val})")
+            
         weapon_base_as = weapon_item_data.get("weapon_as_bonus", 0) 
         as_val += weapon_base_as; as_components_log.append(f"WpnAS({weapon_base_as})")
         enchant_as = weapon_item_data.get("enchantment_as_bonus", 0)
@@ -97,11 +157,16 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
         avd_bonus = avd_mods.get(target_armor_type, avd_mods.get(config.DEFAULT_UNARMORED_TYPE, 0))
         as_val += avd_bonus 
         if avd_bonus != 0: as_components_log.append(f"ItemAvD({avd_bonus})")
+        
     stance_mod = STANCE_MODIFIERS.get(attacker_stance, STANCE_MODIFIERS["neutral"])["as_mod"]
     final_as = int(as_val * stance_mod)
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
         print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Stance: {attacker_stance}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {stance_mod} = {final_as}")
     return final_as
+
+# --- (calculate_defense_strength is unchanged) ---
+# It correctly uses get_skill_bonus for the shield skill, matching your
+# "Skill Rank Mechanics" rule for Defensive Strength.
 def calculate_defense_strength(defender_name: str, defender_stats: dict, defender_skills: dict, 
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                defender_stance: str) -> int:
@@ -136,6 +201,7 @@ def calculate_defense_strength(defender_name: str, defender_stats: dict, defende
         print(f"DEBUG DS CALC for {defender_name if defender_name else 'entity'} (Armor: {armor_name_display}, Shield: {shield_name_display}, Stance: {defender_stance}): Factors = {' + '.join(ds_components_log)} => Raw DS = {ds_val} * {stance_mod} = {final_ds}")
     return final_ds
 
+# --- (The rest of combat_system.py is unchanged) ---
 # --- (HIT_MESSAGES are unchanged) ---
 HIT_MESSAGES = {
     "player_hit": ["You swing {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
@@ -164,10 +230,6 @@ def get_roll_descriptor(roll_result):
     elif roll_result > 0: return "a minor hit"
     elif roll_result > -25: return "a near miss"
     else: return "a total miss"
-
-# ---
-# MODIFIED: resolve_attack
-# ---
 
 def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dict:
     is_attacker_player = isinstance(attacker, Player)
@@ -214,13 +276,10 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     d100_roll = random.randint(1, 100)
     combat_roll_result = (attacker_as - defender_ds) + config.COMBAT_ADVANTAGE_FACTOR + d100_roll
     
-    # --- THIS IS THE FIX ---
-    # Create the full roll string
     roll_string = (
         f"  AS: +{attacker_as} vs DS: +{defender_ds} "
         f"+ d100: +{d100_roll} = +{combat_roll_result}"
     )
-    # --- END FIX ---
     
     if is_attacker_player:
         weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
@@ -239,7 +298,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
 
     results = {
         'hit': False, 'damage': 0, 
-        'roll_string': roll_string, # <-- Pass the new string
+        'roll_string': roll_string, 
         'attacker_msg': "", 'defender_msg': "", 'broadcast_msg': ""
     }
 
@@ -267,11 +326,8 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         results['attacker_msg'] = (flavor_msg + f" You hit for **{total_damage}** damage!").format(**msg_vars)
         results['defender_msg'] = (flavor_msg + f" You are hit for **{total_damage}** damage!").format(**msg_vars)
         
-        # --- FIX: Use attacker-aware broadcast message ---
-        # We need the "monster_hit" flavor for broadcast, even if player attacks
         broadcast_flavor_msg = get_flavor_message(msg_key_hit.replace("player", "monster"), d100_roll, combat_roll_result)
         results['broadcast_msg'] = (broadcast_flavor_msg + f" {attacker_name} hits for **{total_damage}** damage!").format(**msg_vars)
-        # --- END FIX ---
 
     else:
         results['hit'] = False
@@ -280,15 +336,12 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         results['attacker_msg'] = flavor_msg.format(**msg_vars)
         results['defender_msg'] = flavor_msg.format(**msg_vars)
         
-        # --- FIX: Use attacker-aware broadcast message ---
         broadcast_flavor_msg = get_flavor_message(msg_key_miss.replace("player", "monster"), d100_roll, combat_roll_result)
         results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
-        # --- END FIX ---
 
     return results
 
-
-# --- (calculate_roundtime and _find_combatant are unchanged) ---
+# --- (calculate_roundtime, _find_combatant, stop_combat, and process_combat_tick are all unchanged) ---
 def calculate_roundtime(agility: int) -> float:
     agi_bonus_seconds = (agility - 50.0) / 20.0
     return max(2.0, 6.0 - agi_bonus_seconds)
@@ -307,14 +360,7 @@ def _find_combatant(entity_id: str) -> Optional[Any]:
 def stop_combat(combatant_id: str, target_id: str):
     game_state.COMBAT_STATE.pop(combatant_id, None)
     game_state.COMBAT_STATE.pop(target_id, None)
-
-# ---
-# MODIFIED: process_combat_tick
-# ---
 def process_combat_tick(broadcast_callback, send_to_player_callback):
-    """
-    This is the main combat loop, run by the global game tick.
-    """
     current_time = time.time()
     
     for combatant_id, state in list(game_state.COMBAT_STATE.items()):
@@ -339,10 +385,8 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
 
         attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS) 
         
-        # --- THIS IS THE FIX ---
         sid_to_skip = None
         
-        # --- Send messages to correct recipients ---
         if is_attacker_player:
             send_to_player_callback(attacker.name, attack_results['attacker_msg'], "combat_self")
             attacker_info = game_state.ACTIVE_PLAYERS.get(attacker.name.lower())
@@ -355,21 +399,16 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             if defender_info:
                 sid_to_skip = defender_info.get("sid")
         
-        # Pass the sid_to_skip to the broadcast function
         broadcast_callback(room_id, attack_results['broadcast_msg'], "combat_broadcast", skip_sid=sid_to_skip)
         
-        # Send the full roll string to the room (no skip)
         broadcast_callback(room_id, attack_results['roll_string'], "combat_roll")
-        # --- END FIX ---
 
-        # 6. Apply damage and check for death
         if attack_results['hit']:
             damage = attack_results['damage']
             
             if is_defender_player:
                 defender.hp -= damage
                 if defender.hp <= 0:
-                    # --- (Player Death Logic is unchanged) ---
                     defender.hp = 1
                     broadcast_callback(room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     defender.current_room_id = config.PLAYER_DEATH_ROOM_ID
@@ -386,12 +425,9 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                     stop_combat(combatant_id, state["target_id"])
                     continue
                 else:
-                    # --- MODIFIED: Show player's HP/MaxHP ---
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
-                    # --- END MODIFIED ---
                     save_game_state(defender)
             else:
-                # --- (Monster Death Logic is unchanged) ---
                 monster_id = defender.get("monster_id")
                 if monster_id not in game_state.RUNTIME_MONSTER_HP:
                     game_state.RUNTIME_MONSTER_HP[monster_id] = defender.get("max_hp", 1)
@@ -431,7 +467,6 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                     if is_attacker_player:
                          send_to_player_callback(attacker.name, f"(The {defender.get('name')} has {new_hp} HP remaining)", "system_info")
         
-        # --- (Roundtime logic is unchanged) ---
         attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
         rt_seconds = calculate_roundtime(attacker_stats.get("AGI", 50))
         state["next_action_time"] = current_time + rt_seconds
