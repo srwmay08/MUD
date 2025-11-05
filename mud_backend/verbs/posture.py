@@ -1,0 +1,108 @@
+# mud_backend/verbs/posture.py
+import random
+import math
+import time
+from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core import game_state
+
+# We import these helpers from other files
+# This helper applies roundtime
+from mud_backend.verbs.foraging import _set_action_roundtime
+# This helper calculates stat bonuses
+from mud_backend.core.combat_system import get_stat_bonus
+
+VALID_POSTURES = ["standing", "sitting", "kneeling", "prone"]
+
+class Posture(BaseVerb):
+    """
+    Handles the 'sit', 'stand', 'kneel', and 'prone' commands.
+    Allows the player to change their physical posture.
+    
+    The command itself (e.g., 'sit') is passed in self.command.
+    """
+
+    def _handle_stand(self, from_posture: str):
+        """Handles the logic and RT roll for moving to a standing position."""
+        
+        chance = 0.0
+        if from_posture in ["sitting", "kneeling"]:
+            chance = 0.20
+        elif from_posture == "prone":
+            chance = 0.40
+        
+        # Check for existing roundtime
+        player_id = self.player.name.lower()
+        current_time = time.time()
+        if player_id in game_state.COMBAT_STATE:
+            rt_data = game_state.COMBAT_STATE[player_id]
+            if current_time < rt_data.get("next_action_time", 0):
+                wait_time = rt_data["next_action_time"] - current_time
+                self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
+                return
+
+        # Roll to see if RT is applied
+        if random.random() < chance:
+            # Failure! Apply roundtime.
+            roll = random.randint(1, 100)
+            
+            # Calculate stat reduction based on DEX/AGI
+            dex_bonus = get_stat_bonus(self.player.stats.get("DEX", 50), "DEX", self.player.race)
+            agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", self.player.race)
+            
+            # Average bonus / 20.0 = seconds reduction
+            # e.g., (25 + 25) / 20.0 = 2.5s reduction
+            stat_reduction = (dex_bonus + agi_bonus) / 20.0 
+            
+            base_rt = 1.0
+            if roll <= 10: # "Awful roll" (10% chance on a failed check)
+                base_rt = 3.0 # A "couple seconds"
+            elif roll <= 40:
+                base_rt = 2.0
+            
+            # Final RT is 0.5s minimum
+            final_rt = max(0.5, base_rt - stat_reduction) 
+            
+            self.player.send_message(f"You stumble slightly while trying to stand. (Roundtime: {final_rt:.1f}s)")
+            _set_action_roundtime(self.player, final_rt)
+        else:
+            # Success! No roundtime.
+            self.player.send_message("You move to a standing position.")
+        
+        self.player.posture = "standing"
+
+    def execute(self):
+        # The command is 'sit', 'stand', 'kneel', or 'prone'
+        # We get it from self.command (passed by command_executor)
+        target_posture = self.command.lower()
+        
+        if target_posture not in VALID_POSTURES:
+            # This should not happen if aliased correctly
+            self.player.send_message("That is not a valid posture.")
+            return
+
+        current_posture = self.player.posture
+        
+        if target_posture == current_posture:
+            self.player.send_message(f"You are already {current_posture}.")
+            return
+
+        # Check for existing roundtime
+        player_id = self.player.name.lower()
+        current_time = time.time()
+        
+        if player_id in game_state.COMBAT_STATE:
+            rt_data = game_state.COMBAT_STATE[player_id]
+            if current_time < rt_data.get("next_action_time", 0):
+                wait_time = rt_data["next_action_time"] - current_time
+                self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
+                return
+
+        if target_posture == "standing":
+            # Handle standing logic (which includes RT rolls)
+            self._handle_stand(current_posture)
+        else:
+            # Moving between sit/kneel/prone (or from stand to one)
+            # This is always allowed and has a minimal RT
+            self.player.posture = target_posture
+            self.player.send_message(f"You move into a **{target_posture}** position.")
+            _set_action_roundtime(self.player, 0.5) # 0.5s RT for changing posture

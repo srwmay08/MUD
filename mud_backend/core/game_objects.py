@@ -76,13 +76,15 @@ class Player:
             "bank_silvers": 0 
         })
 
-        self.stance: str = self.db_data.get("stance", "neutral")
+        # --- UPDATED: POSTURE vs STANCE ---
+        self.stance: str = self.db_data.get("stance", "neutral") # For combat
+        self.posture: str = self.db_data.get("posture", "standing") # For physical position
+        # --- END UPDATED ---
+
         self.deaths_recent: int = self.db_data.get("deaths_recent", 0)
         self.death_sting_points: int = self.db_data.get("death_sting_points", 0)
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
-        
-        self.status_effects: List[str] = self.db_data.get("status_effects", [])
 
     @property
     def con_bonus(self) -> int:
@@ -303,6 +305,7 @@ class Player:
         self.messages.append(message)
 
     def get_equipped_item_data(self, slot: str, game_items_global: dict) -> Optional[dict]:
+        """Gets the item data for an equipped item."""
         item_id = self.worn_items.get(slot) 
         if item_id:
             return game_items_global.get(item_id)
@@ -347,11 +350,15 @@ class Player:
             "stps": self.stps,
             "ranks_trained_this_level": self.ranks_trained_this_level,
             "stance": self.stance,
+            
+            # --- NEW PROPERTY ---
+            "posture": self.posture,
+            # --- END NEW ---
+
             "deaths_recent": self.deaths_recent,
             "death_sting_points": self.death_sting_points,
             "con_lost": self.con_lost,
             "con_recovery_pool": self.con_recovery_pool,
-            "status_effects": self.status_effects,
         }
         
         if self._id:
@@ -363,7 +370,7 @@ class Player:
         return f"<Player: {self.name}>"
 
 
-# --- (Room class is unchanged) ---
+# --- MODIFIED: Room class ---
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
@@ -386,8 +393,11 @@ class Room:
             "exits": self.exits,
         }
         
+        # --- THIS IS THE FIX ---
+        # Corrected the typo from `self.self._id` to `self._id`
         if self._id:
             data["_id"] = self._id
+        # --- END FIX ---
 
         return data
 

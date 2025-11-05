@@ -53,7 +53,7 @@
     {
         "room_id": "well_bottom", 
         "name": "The Bottom of the Well", 
-        "description": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur. You notice some strange plants growing in the muck near the wall.",
+        "description": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur. You notice some strange plants growing in the muck near the wall. Dark passages lead east and west.",
         "objects": [
             {
                 "name": "rope", 
@@ -81,8 +81,8 @@
             }
         ],
         "exits": {
-            "east": "well_east_dark",
-            "west": "well_west_foggy"
+            "east": "cave_east",
+            "west": "cave_west"
         },
         "forageable_items": [
             { "item_id": "viridian_leaf", "item_name": "viridian leaf", "dc": 50 },
@@ -90,23 +90,35 @@
         ]
     },
     {
-        "room_id": "well_east_dark",
-        "name": "A Dark Crevice",
-        "description": "A narrow crack in the well's wall leads to this small, dark chamber. It is rather dark here, and the air is stale.",
-        "is_outdoor": false,
-        "is_underground": true,
-        "lighting": "dark", 
-        "objects": [],
+        "room_id": "cave_east",
+        "name": "A Dark Cave",
+        "description": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in.",
+        "objects": [
+            {
+                "name": "stirring monster",
+                "description": "A mass of shadows and wet fur, it huffs angrily.",
+                "verbs": ["look", "attack"],
+                "perception_dc": 15,
+                "is_monster": true,
+                "monster_id": "well_bottom_stirring_monster"
+            }
+        ],
         "exits": { "west": "well_bottom" }
     },
     {
-        "room_id": "well_west_foggy",
-        "name": "A Foggy Cavern",
-        "description": "This small cavern is filled with a thick, soupy mist that clings to the ground. It's pretty foggy, making it hard to see.",
-        "is_outdoor": false,
-        "is_underground": true,
-        "lighting": "foggy", 
-        "objects": [],
+        "room_id": "cave_west",
+        "name": "A Dark Cave",
+        "description": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in.",
+        "objects": [
+            {
+                "name": "stirring monster",
+                "description": "A mass of shadows and wet fur, it huffs angrily.",
+                "verbs": ["look", "attack"],
+                "perception_dc": 15,
+                "is_monster": true,
+                "monster_id": "well_bottom_stirring_monster"
+            }
+        ],
         "exits": { "east": "well_bottom" }
     },
     
