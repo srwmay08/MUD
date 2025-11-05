@@ -79,7 +79,10 @@ class Player:
         # --- UPDATED: POSTURE vs STANCE ---
         self.stance: str = self.db_data.get("stance", "neutral") # For combat
         self.posture: str = self.db_data.get("posture", "standing") # For physical position
-        # --- END UPDATED ---
+        
+        # --- NEW: Status Effects List ---
+        self.status_effects: List[str] = self.db_data.get("status_effects", [])
+        # --- END NEW ---
 
         self.deaths_recent: int = self.db_data.get("deaths_recent", 0)
         self.death_sting_points: int = self.db_data.get("death_sting_points", 0)
@@ -350,9 +353,10 @@ class Player:
             "stps": self.stps,
             "ranks_trained_this_level": self.ranks_trained_this_level,
             "stance": self.stance,
+            "posture": self.posture,
             
             # --- NEW PROPERTY ---
-            "posture": self.posture,
+            "status_effects": self.status_effects,
             # --- END NEW ---
 
             "deaths_recent": self.deaths_recent,

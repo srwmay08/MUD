@@ -4,7 +4,7 @@ import re
 import math
 import time
 import copy
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from mud_backend.core import game_state
 from mud_backend.core.game_objects import Player
@@ -26,22 +26,26 @@ class MockConfigCombat:
     DEBUG_COMBAT_ROLLS = True
 config = MockConfigCombat()
 
-# --- THIS IS THE FIX: Using posture, not stance, for combat bonuses ---
-# We will map postures to the old stance modifiers for now.
-# Standing is neutral, kneeling/sitting are defensive, prone is very defensive.
+# --- Posture Modifiers (Physical Position) ---
+# This controls the *base* AS from a physical position.
+# DS is now handled by flat penalties and percentage reductions.
 POSTURE_MODIFIERS = {
-    "standing":  {"as_mod": 0.75, "ds_mod": 0.75}, # Neutral
-    "sitting":   {"as_mod": 0.5,  "ds_mod": 1.0},  # Defensive
-    "kneeling":  {"as_mod": 0.6,  "ds_mod": 0.9},  # Guarded
-    "prone":     {"as_mod": 0.2,  "ds_mod": 1.2}   # Very Defensive (hard to hit, hard to attack from)
+    "standing":  {"as_mod": 1.0}, # Standing is the baseline
+    "sitting":   {"as_mod": 0.5}, # Hard to attack from
+    "kneeling":  {"as_mod": 0.6}, # Slightly better than sitting
+    "prone":     {"as_mod": 0.2}  # Very hard to attack from
 }
-POSTURE_PERCENTAGE = {
-    "standing":  0.70, # Neutral
-    "sitting":   1.00, # Defensive
-    "kneeling":  0.80, # Guarded
-    "prone":     1.20  # (Custom value for prone, very defensive)
+
+# --- Stance Modifiers (Combat Focus) ---
+# These stack with posture modifiers.
+STANCE_MODIFIERS = {
+    "offensive": {"as_mod": 1.20, "ds_mod": 0.80}, # +20% AS, -20% DS
+    "advance":   {"as_mod": 1.15, "ds_mod": 0.90}, # +15% AS, -10% DS
+    "forward":   {"as_mod": 1.10, "ds_mod": 0.95}, # +10% AS, -5% DS
+    "neutral":   {"as_mod": 1.00, "ds_mod": 1.00}, # No change
+    "guarded":   {"as_mod": 0.90, "ds_mod": 1.10}, # -10% AS, +10% DS
+    "defensive": {"as_mod": 0.75, "ds_mod": 1.25}, # -25% AS, +25% DS
 }
-# --- END FIX ---
 
 SHIELD_DATA = {
     "starter_small_shield": {
@@ -105,7 +109,8 @@ def get_entity_armor_type(entity, game_items_global: dict) -> str:
 # --- UPDATED: calculate_attack_strength ---
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict, 
                               weapon_item_data: dict | None, target_armor_type: str,
-                              attacker_posture: str, attacker_race: str) -> int: # <-- CHANGED: stance to posture
+                              attacker_posture: str, attacker_race: str,
+                              attacker_stance: str) -> int: # <-- Added stance
     as_val = 0; as_components_log = [] 
     weapon_name_display = "Barehanded"
     
@@ -138,11 +143,18 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     as_val += cman_bonus
     if cman_bonus != 0: as_components_log.append(f"CMan({cman_bonus})")
     
-    # --- THIS IS THE FIX: Use POSTURE_MODIFIERS ---
+    # --- THIS IS THE FIX: Apply both posture and stance ---
+    # 1. Apply Posture Modifier (Physical position)
     posture_mod = POSTURE_MODIFIERS.get(attacker_posture, POSTURE_MODIFIERS["standing"])["as_mod"]
-    final_as = int(as_val * posture_mod)
+    posture_adjusted_as = int(as_val * posture_mod)
+    
+    # 2. Apply Stance Modifier (Combat focus)
+    stance_mod_data = STANCE_MODIFIERS.get(attacker_stance, STANCE_MODIFIERS["neutral"])
+    stance_mod = stance_mod_data["as_mod"]
+    final_as = int(posture_adjusted_as * stance_mod)
+    
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Posture: {attacker_posture}, Race: {attacker_race}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {posture_mod} = {final_as}")
+        print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Posture: {attacker_posture}, Stance: {attacker_stance}, Race: {attacker_race}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {posture_mod} (posture) * {stance_mod} (stance) = {final_as}")
     # --- END FIX ---
     return final_as
 
@@ -180,7 +192,14 @@ def _get_weapon_type(weapon_item_data: dict | None) -> str:
 # --- UPDATED: calculate_evade_defense ---
 def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defender_race: str, 
                             armor_data: dict | None, shield_data: dict | None, 
-                            posture_percent: float, is_ranged_attack: bool) -> int: # <-- CHANGED: stance to posture
+                            defender_posture: str, defender_statuses: List[str], # <-- NEW
+                            is_ranged_attack: bool) -> int:
+    
+    # --- NEW: Check for conditions that prevent evasion ---
+    if "immobilized" in defender_statuses or "webbed" in defender_statuses:
+        return 0
+    # --- END NEW ---
+    
     dodging_ranks = defender_skills.get("dodging", 0)
     agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_race)
     int_bonus = get_stat_bonus(defender_stats.get("INT", 50), "INT", defender_race)
@@ -194,27 +213,34 @@ def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defende
         shield_factor = shield_props["factor"]
         if not is_ranged_attack:
             shield_size_penalty = shield_props["size_penalty_melee"]
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-    posture_modifier = 0.75 + (posture_percent / 4)
-    ds = (base_value * armor_hindrance * shield_factor - shield_size_penalty) * posture_modifier
-    # --- END FIX ---
+
+    ds = (base_value * armor_hindrance * shield_factor - shield_size_penalty)
+    
     if is_ranged_attack:
         ds *= 1.5
+
+    # --- NEW: Apply posture/status percentage reductions ---
+    if defender_posture == "prone" or "stunned" in defender_statuses:
+        ds *= 0.50 # 50% reduction
+    elif defender_posture in ["sitting", "kneeling"]:
+        ds *= 0.75 # 25% reduction
+    # --- END NEW ---
+    
     return math.floor(ds)
 
 # --- UPDATED: calculate_block_defense ---
 def calculate_block_defense(defender_stats: dict, defender_skills: dict, defender_race: str, 
                             shield_data: dict | None, 
-                            posture_percent: float, is_ranged_attack: bool) -> int: # <-- CHANGED: stance to posture
+                            defender_posture: str, defender_statuses: List[str], # <-- NEW
+                            is_ranged_attack: bool) -> int: 
     if not shield_data:
         return 0 
+        
     shield_ranks = defender_skills.get("shield_use", 0)
     str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
     base_value = shield_ranks + math.floor(str_bonus / 4) + math.floor(dex_bonus / 4)
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-    posture_modifier = 0.50 + (posture_percent / 2)
-    # --- END FIX ---
+
     enchant_bonus = 0 
     ds = 0
     shield_id = "starter_small_shield"
@@ -222,21 +248,33 @@ def calculate_block_defense(defender_stats: dict, defender_skills: dict, defende
     if is_ranged_attack:
         size_mod = shield_props["size_mod_ranged"]
         size_bonus = shield_props["size_bonus_ranged"]
-        ds = (base_value * size_mod + size_bonus) * posture_modifier * (2/3) + 20 + enchant_bonus
+        ds = (base_value * size_mod + size_bonus) * (2/3) + 20 + enchant_bonus
     else:
         size_mod = shield_props["size_mod_melee"]
-        ds = (base_value * size_mod) * posture_modifier * (2/3) + 20 + enchant_bonus
+        ds = (base_value * size_mod) * (2/3) + 20 + enchant_bonus
+        
+    # --- NEW: Apply posture/status percentage reductions ---
+    if defender_posture == "prone" or "stunned" in defender_statuses:
+        ds *= 0.50 # 50% reduction
+    elif defender_posture in ["sitting", "kneeling"]:
+        ds *= 0.75 # 25% reduction
+    # --- END NEW ---
+        
     return math.floor(ds)
 
 # --- UPDATED: calculate_parry_defense ---
 def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defender_race: str, 
                             weapon_data: dict | None, offhand_data: dict | None, defender_level: int,
-                            posture_percent: float, is_ranged_attack: bool) -> int: # <-- CHANGED: stance to posture
+                            defender_posture: str, defender_statuses: List[str], # <-- NEW
+                            is_ranged_attack: bool) -> int: 
     if not weapon_data:
         return 0 
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-    posture_bonus = posture_percent * 50
-    # --- END FIX ---
+        
+    # --- NEW: Check for conditions that prevent parrying ---
+    if "immobilized" in defender_statuses or "webbed" in defender_statuses:
+        return 0
+    # --- END NEW ---
+
     enchant_bonus = 0
     str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
@@ -245,48 +283,50 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
     weapon_skill_name = weapon_data.get("skill", "brawling")
     weapon_ranks = defender_skills.get(weapon_skill_name, 0)
     ds = 0
+    
+    # NOTE: The "posture_percent" logic here was complex and likely from a specific
+    # game design. I am replacing it with the simpler "standing" (1.0) multiplier
+    # for base calculation, as the *real* posture penalty is applied at the end.
+    posture_mod_baseline = 1.0 
+    
     if is_ranged_attack:
         if weapon_type == "runestaff":
             ds = calculate_parry_defense(defender_stats, defender_skills, defender_race,
                                          weapon_data, offhand_data, defender_level,
-                                         posture_percent, is_ranged_attack=False)
+                                         defender_posture, defender_statuses, is_ranged_attack=False)
             ds = ds / 2 
         else:
             ds = 0 
         return math.floor(ds)
+        
     if weapon_type == "1H":
         base_value = weapon_ranks + stat_bonus + (enchant_bonus / 2)
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-        posture_mod = 0.20 + (posture_percent / 2)
-        ds = base_value * posture_mod + posture_bonus
-        # --- END FIX ---
+        posture_mod = 0.20 + (posture_mod_baseline / 2)
+        ds = base_value * posture_mod
+        
         if offhand_data and _get_weapon_type(offhand_data) != "shield":
             twc_ranks = defender_skills.get("two_weapon_combat", 0)
             twc_base = twc_ranks + stat_bonus
-            # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-            twc_posture_mod = 0.10 + (posture_percent / 4)
+            twc_posture_mod = 0.10 + (posture_mod_baseline / 4)
             twc_bonus = 5 
             ds += (twc_base * twc_posture_mod) + twc_bonus
-            # --- END FIX ---
+            
     elif weapon_type == "2H":
         base_value = weapon_ranks + stat_bonus + enchant_bonus
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-        posture_mod = 0.30 + (posture_percent * 0.75)
-        ds = base_value * posture_mod + posture_bonus
-        # --- END FIX ---
+        posture_mod = 0.30 + (posture_mod_baseline * 0.75)
+        ds = base_value * posture_mod
+        
     elif weapon_type == "polearm":
         base_value = weapon_ranks + stat_bonus + enchant_bonus
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-        posture_mod = 0.27 + (posture_percent * 0.67)
-        polearm_bonus = 15 + (posture_percent * 65)
-        ds = (base_value * posture_mod) + posture_bonus + polearm_bonus
-        # --- END FIX ---
+        posture_mod = 0.27 + (posture_mod_baseline * 0.67)
+        polearm_bonus = 15 + (posture_mod_baseline * 65)
+        ds = (base_value * posture_mod) + polearm_bonus
+        
     elif weapon_type == "bow":
         base_value = weapon_ranks + 0 + 0
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-        posture_mod = 0.15 + (posture_percent * 0.30)
-        ds = (base_value * posture_mod) + posture_bonus + enchant_bonus
-        # --- END FIX ---
+        posture_mod = 0.15 + (posture_mod_baseline * 0.30)
+        ds = (base_value * posture_mod) + enchant_bonus
+        
     elif weapon_type == "runestaff":
         magic_ranks = 0
         magic_skills = ["arcane_symbols", "harness_power", "magic_item_use", 
@@ -303,10 +343,16 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
         else: 
             parry_ranks = 10 + (1.3 + 0.05 * (magic_ranks_per_level - 11)) * (defender_level if defender_level > 0 else 1)
         base_value = parry_ranks + stat_bonus
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-        posture_mod = 0.20 + (posture_percent / 2)
-        ds = (base_value * posture_mod * 1.5) + posture_bonus + enchant_bonus
-        # --- END FIX ---
+        posture_mod = 0.20 + (posture_mod_baseline / 2)
+        ds = (base_value * posture_mod * 1.5) + enchant_bonus
+
+    # --- NEW: Apply posture/status percentage reductions ---
+    if defender_posture == "prone" or "stunned" in defender_statuses:
+        ds *= 0.50 # 50% reduction
+    elif defender_posture in ["sitting", "kneeling"]:
+        ds *= 0.75 # 25% reduction
+    # --- END NEW ---
+
     return math.floor(ds)
 
 # --- UPDATED: calculate_defense_strength ---
@@ -314,59 +360,85 @@ def calculate_defense_strength(defender: Any,
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                weapon_item_data: dict | None, offhand_item_data: dict | None,
                                is_ranged_attack: bool) -> int:
+                               
+    defender_statuses = [] # NEW: For statuses like 'stunned'
+    
     if isinstance(defender, Player):
         defender_name = defender.name
         defender_stats = defender.stats
         defender_skills = defender.skills
         defender_race = defender.race
-        # --- THIS IS THE FIX: Use posture, not stance ---
         defender_posture = defender.posture
-        # --- END FIX ---
+        defender_stance = defender.stance
         defender_level = defender.level
-        
-        # --- THIS IS THE FIX: The line that caused the crash is REMOVED ---
-        # defender_status = defender.status_effects # <-- REMOVED
-        # --- END FIX ---
+        defender_statuses = defender.status_effects # <-- NEW
         
     elif isinstance(defender, dict):
         defender_name = defender.get("name", "Creature")
         defender_stats = defender.get("stats", {})
         defender_skills = defender.get("skills", {})
         defender_race = defender.get("race", "Human")
-        # --- THIS IS THE FIX: Use posture, not stance ---
         defender_posture = defender.get("posture", "standing")
-        # --- END FIX ---
+        defender_stance = defender.get("stance", "neutral")
         defender_level = defender.get("level", 1) 
+        defender_statuses = defender.get("status_effects", []) # <-- NEW
     else:
         return 0 
     
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
-    posture_percent = POSTURE_PERCENTAGE.get(defender_posture, 0.70) 
-    # --- END FIX ---
     ds_components_log = []
+    
     generic_ds = 0 
     ds_components_log.append(f"Generic({generic_ds})")
+    
     evade_ds = calculate_evade_defense(
         defender_stats, defender_skills, defender_race,
-        armor_item_data, shield_item_data, posture_percent, is_ranged_attack
+        armor_item_data, shield_item_data, 
+        defender_posture, defender_statuses, # <-- NEW
+        is_ranged_attack
     )
     ds_components_log.append(f"Evade({evade_ds})")
+    
     block_ds = calculate_block_defense(
         defender_stats, defender_skills, defender_race,
-        shield_item_data, posture_percent, is_ranged_attack
+        shield_item_data, 
+        defender_posture, defender_statuses, # <-- NEW
+        is_ranged_attack
     )
     ds_components_log.append(f"Block({block_ds})")
+    
     parry_ds = calculate_parry_defense(
         defender_stats, defender_skills, defender_race,
         weapon_item_data, offhand_item_data, defender_level,
-        posture_percent, is_ranged_attack
+        defender_posture, defender_statuses, # <-- NEW
+        is_ranged_attack
     )
     ds_components_log.append(f"Parry({parry_ds})")
-    final_ds = generic_ds + evade_ds + block_ds + parry_ds
+    
+    # --- COMBINE ALL DS COMPONENTS ---
+    # This is the "subtotal" before stance and flat penalties
+    total_ds = generic_ds + evade_ds + block_ds + parry_ds
+    
+    # --- APPLY MODIFIERS ---
+    
+    # 1. Apply Stance Modifier (Combat Focus Percentage)
+    stance_mod_data = STANCE_MODIFIERS.get(defender_stance, STANCE_MODIFIERS["neutral"])
+    stance_mod = stance_mod_data["ds_mod"]
+    stanced_ds = int(total_ds * stance_mod)
+
+    # 2. Apply Posture & Status Flat Penalties
+    flat_ds_penalty = 0
+    if defender_posture in ["sitting", "kneeling", "prone"]:
+        flat_ds_penalty -= 50
+    if "stunned" in defender_statuses:
+        flat_ds_penalty -= 20
+    if "immobilized" in defender_statuses or "webbed" in defender_statuses:
+        flat_ds_penalty -= 50
+        
+    final_ds = stanced_ds + flat_ds_penalty # Apply the flat penalty
+    
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        # --- THIS IS THE FIX: Use posture, not stance ---
-        print(f"DEBUG DS CALC for {defender_name} (Posture: {defender_posture} ({posture_percent*100}%)): Factors = {' + '.join(ds_components_log)} => Final DS = {final_ds}")
-        # --- END FIX ---
+        print(f"DEBUG DS CALC for {defender_name} (Posture: {defender_posture}, Stance: {defender_stance}): Factors = {' + '.join(ds_components_log)} => Base DS = {total_ds} * {stance_mod} (stance) + ({flat_ds_penalty}) (penalties) = {final_ds}")
+        
     return final_ds
 # --- END UPDATED FUNCTION ---
 
@@ -413,8 +485,9 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
     attacker_skills = attacker.skills if is_attacker_player else attacker.get("skills", {})
     
-    # --- THIS IS THE FIX: Use posture, not stance ---
+    # --- THIS IS THE FIX: Get both posture and stance ---
     attacker_posture = attacker.posture if is_attacker_player else attacker.get("posture", "standing")
+    attacker_stance = attacker.stance if is_attacker_player else attacker.get("stance", "neutral")
     # --- END FIX ---
     attacker_race = get_entity_race(attacker)
     
@@ -453,11 +526,13 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     if defender_offhand_data and defender_offhand_data.get("type") == "shield":
         defender_offhand_data = None 
 
+    # --- THIS IS THE FIX: Pass attacker_stance and posture to the function ---
     attacker_as = calculate_attack_strength(
         attacker_name, attacker_stats, attacker_skills, 
         attacker_weapon_data, defender_armor_type_str,
-        attacker_posture, attacker_race # <-- CHANGED: stance to posture
+        attacker_posture, attacker_race, attacker_stance # <-- PASS NEW PARAMS
     )
+    # --- END FIX ---
     
     defender_ds = calculate_defense_strength(
         defender, 
@@ -586,11 +661,8 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             
         is_attacker_player = isinstance(attacker, Player)
         
-        # --- THIS IS THE FIX: Allow players to attack in combat tick ---
-        # (This was preventing monsters from *starting* combat)
         # if is_attacker_player:
         #     continue
-        # --- END FIX ---
             
         is_defender_player = isinstance(defender, Player)
         
@@ -607,9 +679,7 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                 continue
         # --- END NEW CHECK ---
 
-        # --- THIS IS THE FIX: Removed the extra 'room_data' argument ---
         attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS) 
-        # --- END FIX ---
         
         sid_to_skip = None
         
@@ -652,9 +722,7 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             if is_defender_player:
                 defender.hp -= damage
                 if defender.hp <= 0:
-                    # --- THIS IS THE FIX: Set HP to 0, not 1 ---
                     defender.hp = 0 
-                    # --- END FIX ---
                     broadcast_callback(room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     defender.current_room_id = config.PLAYER_DEATH_ROOM_ID
                     defender.deaths_recent = min(5, defender.deaths_recent + 1)
@@ -667,8 +735,9 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                     defender.death_sting_points += 2000
                     send_to_player_callback(defender.name, "You feel the sting of death... (XP gain is reduced)", "system_error")
                     
-                    # --- NEW: Force player to stand on death ---
                     defender.posture = "standing"
+                    # --- NEW: Clear temporary statuses on death ---
+                    defender.status_effects = []
                     # --- END NEW ---
                     
                     save_game_state(defender)
@@ -721,10 +790,12 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
         # --- Calculate and set next action time ---
         rt_seconds = 0.0
         if is_attacker_player:
-            base_rt = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
-            armor_penalty = self.player.armor_rt_penalty
+            # --- FIX: Use 'attacker' object, not 'self.player' ---
+            base_rt = calculate_roundtime(attacker.stats.get("AGI", 50))
+            armor_penalty = attacker.armor_rt_penalty
+            # --- END FIX ---
             rt_seconds = base_rt + armor_penalty
         else:
-             rt_seconds = combat_system.calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
+             rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
              
         state["next_action_time"] = current_time + rt_seconds
