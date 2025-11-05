@@ -5,7 +5,8 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.game_state import (
     COMBAT_STATE, RUNTIME_MONSTER_HP, 
     DEFEATED_MONSTERS, GAME_MONSTER_TEMPLATES,
-    GAME_ITEMS, GAME_LOOT_TABLES
+    GAME_ITEMS, GAME_LOOT_TABLES,
+    COMBAT_LOCK # <-- NEW IMPORT
 )
 from mud_backend import config 
 from mud_backend.core import combat_system
@@ -29,12 +30,20 @@ class Attack(BaseVerb):
         
         # 1. Find the target
         target_monster_data = None
+        
         for obj in self.room.objects:
             monster_id_check = obj.get("monster_id")
-            if monster_id_check and monster_id_check not in DEFEATED_MONSTERS:
-                if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
-                    target_monster_data = obj
-                    break
+            if monster_id_check:
+                # --- ADD LOCK ---
+                is_defeated = False
+                with COMBAT_LOCK:
+                    is_defeated = monster_id_check in DEFEATED_MONSTERS
+                # --- END LOCK ---
+                
+                if not is_defeated:
+                    if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
+                        target_monster_data = obj
+                        break
 
         if not target_monster_data:
             self.player.send_message(f"You don't see a **{target_name}** here to attack.")
@@ -45,16 +54,21 @@ class Attack(BaseVerb):
             self.player.send_message("That creature cannot be attacked.")
             return
             
-        if monster_id in DEFEATED_MONSTERS:
-            self.player.send_message(f"The {target_monster_data['name']} is already dead.")
-            return
+        # --- ADD LOCK ---
+        with COMBAT_LOCK:
+            if monster_id in DEFEATED_MONSTERS:
+                self.player.send_message(f"The {target_monster_data['name']} is already dead.")
+                return
+        # --- END LOCK ---
         
         current_time = time.time()
         
         def _resolve_and_handle_attack():
-            # --- THIS IS THE FIX: Pass self.room.db_data ---
+            # --- THIS IS THE FIX ---
+            # resolve_attack() takes 3 arguments, not 4.
+            # (attacker, defender, game_items_global)
             attack_results = combat_system.resolve_attack(
-                self.player, target_monster_data, self.room.db_data, GAME_ITEMS
+                self.player, target_monster_data, GAME_ITEMS
             )
             # --- END FIX ---
             
@@ -70,11 +84,16 @@ class Attack(BaseVerb):
                 
                 # 4. Consequences (HP, Death)
                 damage = attack_results['damage']
-                if monster_id not in RUNTIME_MONSTER_HP:
-                    RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
+                new_hp = 0
                 
-                RUNTIME_MONSTER_HP[monster_id] -= damage
-                new_hp = RUNTIME_MONSTER_HP[monster_id]
+                # --- ADD LOCK ---
+                with COMBAT_LOCK:
+                    if monster_id not in RUNTIME_MONSTER_HP:
+                        RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
+                    
+                    RUNTIME_MONSTER_HP[monster_id] -= damage
+                    new_hp = RUNTIME_MONSTER_HP[monster_id]
+                # --- END LOCK ---
 
                 if new_hp <= 0:
                     self.player.send_message(f"**The {target_monster_data['name']} has been DEFEATED!**")
@@ -102,13 +121,16 @@ class Attack(BaseVerb):
                         getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2)
                     )
 
-                    DEFEATED_MONSTERS[monster_id] = {
-                        "room_id": self.room.room_id,
-                        "template_key": monster_id,
-                        "type": "monster",
-                        "eligible_at": time.time() + respawn_time,
-                        "chance": respawn_chance
-                    }
+                    # --- ADD LOCK ---
+                    with COMBAT_LOCK:
+                        DEFEATED_MONSTERS[monster_id] = {
+                            "room_id": self.room.room_id,
+                            "template_key": monster_id,
+                            "type": "monster",
+                            "eligible_at": time.time() + respawn_time,
+                            "chance": respawn_chance
+                        }
+                    # --- END LOCK ---
                     
                     combat_system.stop_combat(player_id, monster_id)
                     return False 
@@ -119,14 +141,25 @@ class Attack(BaseVerb):
         # --- (End of helper function) ---
 
 
-        combat_info = COMBAT_STATE.get(player_id)
+        combat_info = None
+        # --- ADD LOCK ---
+        with COMBAT_LOCK:
+            combat_info = COMBAT_STATE.get(player_id)
+        # --- END LOCK ---
+        
         is_in_active_combat = combat_info and combat_info.get("target_id")
 
         if is_in_active_combat:
             # --- PLAYER IS ALREADY IN COMBAT ---
             
             if combat_info["target_id"] != monster_id:
-                self.player.send_message(f"You are already fighting the {combat_info['target_id']}!")
+                # --- ADD LOCK ---
+                target_id = "something"
+                with COMBAT_LOCK:
+                    if player_id in COMBAT_STATE:
+                         target_id = COMBAT_STATE[player_id].get("target_id", "something")
+                # --- END LOCK ---
+                self.player.send_message(f"You are already fighting the {target_id}!")
                 return
                 
             if current_time < combat_info["next_action_time"]:
@@ -140,7 +173,11 @@ class Attack(BaseVerb):
                 base_rt = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
                 armor_penalty = self.player.armor_rt_penalty
                 rt_seconds = base_rt + armor_penalty
-                combat_info["next_action_time"] = current_time + rt_seconds
+                # --- ADD LOCK ---
+                with COMBAT_LOCK:
+                    if player_id in COMBAT_STATE: # Check it still exists
+                        COMBAT_STATE[player_id]["next_action_time"] = current_time + rt_seconds
+                # --- END LOCK ---
             
         else:
             # --- PLAYER IS INITIATING COMBAT ---
@@ -153,20 +190,23 @@ class Attack(BaseVerb):
             armor_penalty = self.player.armor_rt_penalty
             rt_seconds = base_rt + armor_penalty
             
-            COMBAT_STATE[player_id] = {
-                "target_id": monster_id,
-                "next_action_time": current_time + rt_seconds, 
-                "current_room_id": room_id
-            }
-            
-            monster_rt = combat_system.calculate_roundtime(target_monster_data.get("stats", {}).get("AGI", 50))
-            COMBAT_STATE[monster_id] = {
-                "target_id": player_id,
-                "next_action_time": current_time + (monster_rt / 2), 
-                "current_room_id": room_id
-            }
-            
-            if monster_id not in RUNTIME_MONSTER_HP:
-                RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
+            # --- ADD LOCK ---
+            with COMBAT_LOCK:
+                COMBAT_STATE[player_id] = {
+                    "target_id": monster_id,
+                    "next_action_time": current_time + rt_seconds, 
+                    "current_room_id": room_id
+                }
+                
+                monster_rt = combat_system.calculate_roundtime(target_monster_data.get("stats", {}).get("AGI", 50))
+                COMBAT_STATE[monster_id] = {
+                    "target_id": player_id,
+                    "next_action_time": current_time + (monster_rt / 2), 
+                    "current_room_id": room_id
+                }
+                
+                if monster_id not in RUNTIME_MONSTER_HP:
+                    RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
+            # --- END LOCK ---
             
             _resolve_and_handle_attack()

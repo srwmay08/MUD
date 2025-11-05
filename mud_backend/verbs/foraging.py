@@ -25,12 +25,16 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
 def _set_action_roundtime(player, duration_seconds: float):
     """Sets a non-combat action roundtime for the player."""
     player_id = player.name.lower()
-    # Get existing state (could be combat RT) or a new dict
-    rt_data = game_state.COMBAT_STATE.get(player_id, {})
-    # Set the next action time
-    rt_data["next_action_time"] = time.time() + duration_seconds
-    # Put it back in the global state
-    game_state.COMBAT_STATE[player_id] = rt_data
+    
+    # --- ADD LOCK ---
+    with game_state.COMBAT_LOCK:
+        # Get existing state (could be combat RT) or a new dict
+        rt_data = game_state.COMBAT_STATE.get(player_id, {})
+        # Set the next action time
+        rt_data["next_action_time"] = time.time() + duration_seconds
+        # Put it back in the global state
+        game_state.COMBAT_STATE[player_id] = rt_data
+    # --- END LOCK ---
 
 class Forage(BaseVerb):
     """
@@ -44,12 +48,15 @@ class Forage(BaseVerb):
         player_id = self.player.name.lower()
         current_time = time.time()
         
-        if player_id in game_state.COMBAT_STATE:
-            rt_data = game_state.COMBAT_STATE[player_id]
-            if current_time < rt_data.get("next_action_time", 0):
-                wait_time = rt_data["next_action_time"] - current_time
-                self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
-                return
+        # --- ADD LOCK ---
+        with game_state.COMBAT_LOCK:
+            if player_id in game_state.COMBAT_STATE:
+                rt_data = game_state.COMBAT_STATE[player_id]
+                if current_time < rt_data.get("next_action_time", 0):
+                    wait_time = rt_data["next_action_time"] - current_time
+                    self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
+                    return
+        # --- END LOCK ---
         # --- END RT Check ---
 
         if not self.args:

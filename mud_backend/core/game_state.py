@@ -1,5 +1,6 @@
 # mud_backend/core/game_state.py
 import time
+import threading  # <-- NEW IMPORT
 from mud_backend import config # <-- NEW IMPORT
 
 # Holds the current, non-max HP of all active monsters
@@ -46,3 +47,21 @@ COMBAT_STATE = {}
 # Key: target_player_name.lower()
 # Value: {"from_player": "...", "item_id": "...", "offer_time": 12345.67}
 PENDING_TRADES = {}
+
+# --- NEW: THREADING LOCKS ---
+# We use RLock (Re-Entrant Lock) to allow a thread that already
+# holds a lock to acquire it again. This prevents deadlocks in
+# functions like process_combat_tick() calling stop_combat().
+
+# Lock for ACTIVE_PLAYERS
+PLAYER_LOCK = threading.RLock()
+
+# Lock for all combat/monster data (COMBAT_STATE, RUNTIME_MONSTER_HP, DEFEATED_MONSTERS)
+# We group them since they are almost always modified together.
+COMBAT_LOCK = threading.RLock()
+
+# Lock for PENDING_TRADES
+TRADE_LOCK = threading.RLock()
+
+# Lock for GAME_ROOMS, specifically when modifying a room's object list
+ROOM_LOCK = threading.RLock()

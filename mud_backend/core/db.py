@@ -149,7 +149,10 @@ def save_room_state(room: 'Room'):
     if database is None:
         print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
         # --- FIX: Update cache even in mock mode ---
-        game_state.GAME_ROOMS[room.room_id] = room_data_dict
+        # --- ADD LOCK ---
+        with game_state.ROOM_LOCK:
+            game_state.GAME_ROOMS[room.room_id] = room_data_dict
+        # --- END LOCK ---
         return
         
     # We must explicitly separate the query fields and the update fields
@@ -166,7 +169,10 @@ def save_room_state(room: 'Room'):
     
     # --- THIS IS THE FIX ---
     # After saving to DB, also update the in-memory cache.
-    game_state.GAME_ROOMS[room.room_id] = room.to_dict()
+    # --- ADD LOCK ---
+    with game_state.ROOM_LOCK:
+        game_state.GAME_ROOMS[room.room_id] = room.to_dict()
+    # --- END LOCK ---
     # --- END FIX ---
     
     print(f"\n[DB SAVE] Room {room.name} state updated.")

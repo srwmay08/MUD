@@ -19,15 +19,27 @@ def _prune_active_players(log_prefix: str, broadcast_callback: Callable):
     """Prunes players who have timed out from the active list."""
     current_time = time.time()
     stale_players = []
+    player_list = []
+    
+    # --- ADD LOCK (for read) ---
+    with game_state.PLAYER_LOCK:
+        # Create a snapshot to iterate over safely
+        player_list = list(game_state.ACTIVE_PLAYERS.items())
+    # --- END LOCK ---
     
     # Reads timeout from game_state (which gets it from config)
-    for player_name, data in game_state.ACTIVE_PLAYERS.items():
+    for player_name, data in player_list:
         if (current_time - data["last_seen"]) > game_state.PLAYER_TIMEOUT_SECONDS:
             stale_players.append(player_name)
             
     if stale_players:
         for player_name in stale_players:
-            player_info = game_state.ACTIVE_PLAYERS.pop(player_name, None)
+            player_info = None
+            # --- ADD LOCK (for write) ---
+            with game_state.PLAYER_LOCK:
+                player_info = game_state.ACTIVE_PLAYERS.pop(player_name, None)
+            # --- END LOCK ---
+            
             if player_info:
                 room_id = player_info.get("current_room_id", "unknown")
                 disappears_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> disappears.'
@@ -53,7 +65,14 @@ def check_and_run_game_tick(broadcast_callback: Callable):
     
     # Get *all* active players for the environment check
     temp_active_players = {}
-    for player_name, data in game_state.ACTIVE_PLAYERS.items():
+    
+    active_players_list = []
+    # --- ADD LOCK ---
+    with game_state.PLAYER_LOCK:
+        active_players_list = list(game_state.ACTIVE_PLAYERS.items())
+    # --- END LOCK ---
+    
+    for player_name, data in active_players_list:
         player_obj = data.get("player_obj")
         if not player_obj:
             # Create a temporary lightweight Player object if full one isn't in state
@@ -61,7 +80,13 @@ def check_and_run_game_tick(broadcast_callback: Callable):
         temp_active_players[player_name] = player_obj
     
     log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    
+    # --- THIS IS THE FIX ---
+    # The error was: log_prefix = f"{log_prefix} - GAME_TICK..."
+    # You must use log_time, which was just defined.
     log_prefix = f"{log_time} - GAME_TICK ({game_state.GAME_TICK_COUNTER})" 
+    # --- END FIX ---
+    
     print(f"{log_prefix}: Running global tick...")
 
     # --- 1. Prune stale players ---

@@ -66,7 +66,12 @@ def game_tick_thread():
                 
             # --- NEW: Send a message to a specific player ---
             def send_to_player(player_name, message, msg_type):
-                player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+                player_info = None
+                # --- ADD LOCK ---
+                with game_state.PLAYER_LOCK:
+                    player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+                # --- END LOCK ---
+                
                 if player_info:
                     sid = player_info.get("sid")
                     if sid:
@@ -78,13 +83,24 @@ def game_tick_thread():
             # --- END FIX ---
             
             # --- Run the combat tick with *both* callbacks ---
+            # This function will manage its own locks internally
             combat_system.process_combat_tick(
                 broadcast_callback=broadcast_to_room,
                 send_to_player_callback=send_to_player
             )
 
             # --- REVISED: XP ABSORPTION & HP REGEN LOGIC ---
-            for player_name_lower, player_data in list(game_state.ACTIVE_PLAYERS.items()):
+            
+            # Create a snapshot of the player list to iterate over
+            # This prevents holding the lock during the entire (slow) loop
+            active_players_list = []
+            # --- ADD LOCK ---
+            with game_state.PLAYER_LOCK:
+                active_players_list = list(game_state.ACTIVE_PLAYERS.items())
+            # --- END LOCK ---
+            
+            # Now we iterate over the safe snapshot
+            for player_name_lower, player_data in active_players_list:
                 player_obj = player_data.get("player_obj")
                 
                 if not player_obj:
@@ -126,13 +142,20 @@ def handle_disconnect():
     sid = request.sid
     player_name_to_remove = None
     player_info = None
-    for name, data in game_state.ACTIVE_PLAYERS.items():
-        if data["sid"] == sid:
-            player_name_to_remove = name
-            player_info = data
-            break
+
+    # --- ADD LOCK ---
+    with game_state.PLAYER_LOCK:
+        for name, data in game_state.ACTIVE_PLAYERS.items():
+            if data["sid"] == sid:
+                player_name_to_remove = name
+                player_info = data
+                break
+        
+        if player_name_to_remove and player_info:
+            game_state.ACTIVE_PLAYERS.pop(player_name_to_remove, None)
+    # --- END LOCK ---
+            
     if player_name_to_remove and player_info:
-        game_state.ACTIVE_PLAYERS.pop(player_name_to_remove, None)
         room_id = player_info["current_room_id"]
         print(f"[CONNECTION] Player {player_name_to_remove} disconnected: {sid}")
         disappears_message = f'<span class="keyword" data-name="{player_name_to_remove}" data-verbs="look">{player_name_to_remove}</span> disappears.'
@@ -149,13 +172,23 @@ def handle_command_event(data):
         emit("message", "Error: No player name received.", to=sid)
         return
 
-    old_player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
-    old_room_id = old_player_info.get("current_room_id") if old_player_info else None
+    old_player_info = None
+    old_room_id = None
+    # --- ADD LOCK ---
+    with game_state.PLAYER_LOCK:
+        old_player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+        old_room_id = old_player_info.get("current_room_id") if old_player_info else None
+    # --- END LOCK ---
     
     result_data = execute_command(player_name, command_line, sid)
 
-    new_player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
-    new_room_id = new_player_info.get("current_room_id") if new_player_info else None
+    new_player_info = None
+    new_room_id = None
+    # --- ADD LOCK ---
+    with game_state.PLAYER_LOCK:
+        new_player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+        new_room_id = new_player_info.get("current_room_id") if new_player_info else None
+    # --- END LOCK ---
     
     # --- Movement Logic ---
     if new_room_id and old_room_id != new_room_id:
@@ -183,7 +216,14 @@ def handle_command_event(data):
     
     # Only check for aggro if the player is in a room and *not* already in combat
     player_id = player_name.lower()
-    if new_room_id and new_player_info and player_id not in game_state.COMBAT_STATE:
+    
+    player_in_combat = False
+    # --- ADD LOCK ---
+    with game_state.COMBAT_LOCK:
+        player_in_combat = player_id in game_state.COMBAT_STATE
+    # --- END LOCK ---
+    
+    if new_room_id and new_player_info and not player_in_combat:
         
         room_data = game_state.GAME_ROOMS.get(new_room_id)
         if room_data:
@@ -201,33 +241,42 @@ def handle_command_event(data):
             for obj in live_room_objects:
                 if obj.get("is_aggressive") and obj.get("is_monster"):
                     monster_id = obj.get("monster_id")
-                    
-                    # Check if monster is alive and not already fighting
-                    if monster_id and monster_id not in game_state.DEFEATED_MONSTERS and monster_id not in game_state.COMBAT_STATE:
+                    if not monster_id:
+                        continue
+
+                    # --- ADD LOCK ---
+                    # We must check and update combat state atomically
+                    with game_state.COMBAT_LOCK:
+                        is_defeated = monster_id in game_state.DEFEATED_MONSTERS
+                        monster_in_combat = monster_id in game_state.COMBAT_STATE
                         
-                        # --- START COMBAT ---
-                        # --- THIS IS THE FIX 3: Removed aggro message ---
-                        # emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
-                        # --- END FIX 3 ---
-                        
-                        current_time = time.time()
-                        
-                        game_state.COMBAT_STATE[player_id] = {
-                            "target_id": monster_id,
-                            "next_action_time": current_time + 1.0, 
-                            "current_room_id": new_room_id
-                        }
-                        monster_rt = combat_system.calculate_roundtime(obj.get("stats", {}).get("AGI", 50))
-                        game_state.COMBAT_STATE[monster_id] = {
-                            "target_id": player_id,
-                            "next_action_time": current_time, # Monster attacks immediately
-                            "current_room_id": new_room_id
-                        }
-                        if monster_id not in game_state.RUNTIME_MONSTER_HP:
-                            game_state.RUNTIME_MONSTER_HP[monster_id] = obj.get("max_hp", 1)
-                        
-                        # Only aggro one monster at a time
-                        break 
+                        # Check if monster is alive and not already fighting
+                        if monster_id and not is_defeated and not monster_in_combat:
+                            
+                            # --- START COMBAT ---
+                            # --- THIS IS THE FIX 3: Removed aggro message ---
+                            # emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
+                            # --- END FIX 3 ---
+                            
+                            current_time = time.time()
+                            
+                            game_state.COMBAT_STATE[player_id] = {
+                                "target_id": monster_id,
+                                "next_action_time": current_time + 1.0, 
+                                "current_room_id": new_room_id
+                            }
+                            monster_rt = combat_system.calculate_roundtime(obj.get("stats", {}).get("AGI", 50))
+                            game_state.COMBAT_STATE[monster_id] = {
+                                "target_id": player_id,
+                                "next_action_time": current_time, # Monster attacks immediately
+                                "current_room_id": new_room_id
+                            }
+                            if monster_id not in game_state.RUNTIME_MONSTER_HP:
+                                game_state.RUNTIME_MONSTER_HP[monster_id] = obj.get("max_hp", 1)
+                            
+                            # Only aggro one monster at a time
+                            break 
+                    # --- END LOCK ---
     # --- END AGGRO CHECK ---
 
     # --- MOVED: This is now sent *before* the aggro check ---
