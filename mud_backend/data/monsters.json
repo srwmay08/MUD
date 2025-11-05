@@ -19,7 +19,7 @@
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
             "ZEA": 10, "ESS": 10, "DIS": 10, "AUR": 10
         },
-        "skills": { "brawling": 10 },
+        "skills": { "brawling": 0 },
         "loot_table_id": "well_monster_loot",
         "details": [
             {

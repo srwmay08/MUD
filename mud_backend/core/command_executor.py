@@ -40,11 +40,11 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "west": ("movement", "Move"),
     "ne": ("movement", "Move"),
     "northeast": ("movement", "Move"),
-    "nw": ("movement", "Move"), # <-- THIS IS THE FIX
+    "nw": ("movement", "Move"), 
     "se": ("movement", "Move"),
     "southeast": ("movement", "Move"),
-    "sw": ("movement", "Move"), # <-- THIS IS THE FIX
-    "southwest": ("movement", "Move"), # <-- THIS IS THE FIX
+    "sw": ("movement", "Move"), 
+    "southwest": ("movement", "Move"), 
     
     # Object Interaction Verbs
     "enter": ("movement", "Enter"),
@@ -71,6 +71,13 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Combat Verbs
     "attack": ("attack", "Attack"),
     "stance": ("stance", "Stance"),
+    
+    # --- NEW: Stance Action Verbs ---
+    "sit": ("stance_actions", "Sit"),
+    "kneel": ("stance_actions", "Kneel"),
+    "prone": ("stance_actions", "Prone"),
+    "stand": ("stance_actions", "Stand"),
+    # --- END NEW ---
     
     # Training Verbs
     "check": ("training", "CheckIn"),
@@ -133,8 +140,7 @@ DIRECTION_MAP = {
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
 
-
-# --- (_prune_active_players and _check_and_run_game_tick unchanged, omitting for brevity) ---
+# --- (Functions _prune_active_players and _check_and_run_game_tick are unchanged) ---
 def _prune_active_players(log_prefix: str, broadcast_callback):
     current_time = time.time()
     stale_players = []
@@ -181,9 +187,7 @@ def _check_and_run_game_tick(broadcast_callback):
     )
     print(f"{log_prefix}: Global tick complete.")
 
-# ---
-# EXECUTE_COMMAND
-# ---
+
 def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
     """
     The main function to parse and execute a game command.
@@ -254,7 +258,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         command = parts[0].lower()
         args = parts[1:]
         
-    # --- UPDATED: Game state routing ---
+    # --- (Game state routing is unchanged) ---
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command == "look":
             show_room_to_player(player, room)
@@ -264,9 +268,6 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             handle_chargen_input(player, command_line)
             
     elif player.game_state == "training":
-        # --- THIS IS THE FIX ---
-        # Manually define verb_info for this state
-        # to avoid collision with shop 'list'
         verb_info = None
         if command == "list":
             verb_info = ("training", "List")
@@ -287,7 +288,6 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                  player.send_message("Invalid command. Type 'list', 'train', or 'done'.")
             else:
                  player.send_message(f"You cannot '{command}' while training. Type 'done' to finish.")
-        # --- END FIX ---
         
     elif player.game_state == "playing":
         if not parts:
@@ -318,9 +318,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         "game_state": player.game_state
     }
 
-# ---
-# --- MODIFIED: _run_verb
-# ---
+# --- (_run_verb and get_player_object are unchanged) ---
 def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):
     """
     Loads and executes the appropriate verb class.
@@ -333,19 +331,15 @@ def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_in
         
         spec = importlib.util.spec_from_file_location(verb_module_name, verb_file_path)
         
-        # --- THIS IS THE FIX for NameError: 'VerbClass' not defined ---
         if spec is None: 
              raise FileNotFoundError(f"Verb file '{verb_name}.py' not found")
              
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         VerbClass = getattr(module, verb_class_name)
-        # --- END FIX ---
         
-        # We pass the original 'command' to the verb
         verb_instance = VerbClass(player=player, room=room, args=args, command=command)
         
-        # --- Alias argument handling ---
         if verb_class_name == "Move":
             if command in DIRECTION_MAP: verb_instance.args = [DIRECTION_MAP[command]]
         elif verb_class_name == "Exit":

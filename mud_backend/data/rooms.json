@@ -80,11 +80,34 @@
                 "monster_id": "well_bottom_stirring_monster"
             }
         ],
-        "exits": {},
+        "exits": {
+            "east": "well_east_dark",
+            "west": "well_west_foggy"
+        },
         "forageable_items": [
             { "item_id": "viridian_leaf", "item_name": "viridian leaf", "dc": 50 },
             { "item_id": "althion_stem", "item_name": "althion stem", "dc": 85 }
         ]
+    },
+    {
+        "room_id": "well_east_dark",
+        "name": "A Dark Crevice",
+        "description": "A narrow crack in the well's wall leads to this small, dark chamber. It is rather dark here, and the air is stale.",
+        "is_outdoor": false,
+        "is_underground": true,
+        "lighting": "dark", 
+        "objects": [],
+        "exits": { "west": "well_bottom" }
+    },
+    {
+        "room_id": "well_west_foggy",
+        "name": "A Foggy Cavern",
+        "description": "This small cavern is filled with a thick, soupy mist that clings to the ground. It's pretty foggy, making it hard to see.",
+        "is_outdoor": false,
+        "is_underground": true,
+        "lighting": "foggy", 
+        "objects": [],
+        "exits": { "east": "well_bottom" }
     },
     
     {"room_id": "ts_north", "name": "North Square", "is_outdoor": true, "description": "You are in the northern part of the town square. The main square is to the south.", "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}},

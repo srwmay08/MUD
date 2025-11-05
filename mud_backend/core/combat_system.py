@@ -12,7 +12,7 @@ from mud_backend.core.db import save_game_state
 from mud_backend.core import loot_system
 from mud_backend.core.skill_handler import calculate_skill_bonus
 
-# --- (Config, Stances, Shield, Race data, and helper functions up to resolve_attack are unchanged) ---
+# --- (Config, Stances, Shield, Race data, and helper functions up to calculate_defense_strength are unchanged) ---
 class MockConfigCombat:
     DEBUG_MODE = True; STAT_BONUS_BASELINE = 50; MELEE_AS_STAT_BONUS_DIVISOR = 20
     WEAPON_SKILL_AS_BONUS_DIVISOR = 50; BAREHANDED_BASE_AS = 0; DEFAULT_UNARMORED_TYPE = "unarmored"
@@ -25,7 +25,6 @@ class MockConfigCombat:
     BAREHANDED_FLAT_DAMAGE = 1
     DEBUG_COMBAT_ROLLS = True
 config = MockConfigCombat()
-
 STANCE_MODIFIERS = {
     "offensive": {"as_mod": 1.0,  "ds_mod": 0.5},
     "advance":   {"as_mod": 0.9,  "ds_mod": 0.6},
@@ -61,7 +60,6 @@ RACE_MODIFIERS = {
     "Troll": {"STR": 15, "CON": 20, "DEX": -10, "AGI": -15, "LOG": -10, "INT": 0, "WIS": -5, "INF": -5, "ZEA": -10, "ESS": -10, "DIS": 10, "AUR": -15},
 }
 DEFAULT_RACE_MODS = {"STR": 0, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 0, "INT": 0, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 0, "AUR": 0}
-
 def parse_and_roll_dice(dice_string: str) -> int:
     if not isinstance(dice_string, str): return 0
     match = re.match(r"(\d+)d(\d+)([+-]\d+)?", dice_string.lower())
@@ -140,7 +138,6 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
         print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Stance: {attacker_stance}, Race: {attacker_race}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {stance_mod} = {final_as}")
     return final_as
-
 def _get_armor_hindrance(armor_item_data: dict | None, defender_skills: dict) -> float:
     if not armor_item_data:
         return 1.0 
@@ -279,10 +276,17 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
         stance_mod = 0.20 + (stance_percent / 2)
         ds = (base_value * stance_mod * 1.5) + stance_bonus + enchant_bonus
     return math.floor(ds)
+
+# ---
+# --- MODIFIED: calculate_defense_strength ---
+# ---
 def calculate_defense_strength(defender: Any, 
+                               room_data: dict, # <-- NEW
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                weapon_item_data: dict | None, offhand_item_data: dict | None,
                                is_ranged_attack: bool) -> int:
+    
+    # Get common defender properties
     if isinstance(defender, Player):
         defender_name = defender.name
         defender_stats = defender.stats
@@ -290,6 +294,7 @@ def calculate_defense_strength(defender: Any,
         defender_race = defender.race
         defender_stance = defender.stance
         defender_level = defender.level
+        defender_status = defender.status_effects # <-- NEW
     elif isinstance(defender, dict):
         defender_name = defender.get("name", "Creature")
         defender_stats = defender.get("stats", {})
@@ -297,36 +302,73 @@ def calculate_defense_strength(defender: Any,
         defender_race = defender.get("race", "Human")
         defender_stance = defender.get("stance", "neutral")
         defender_level = defender.get("level", 1) 
+        defender_status = defender.get("status_effects", []) # <-- NEW
     else:
         return 0 
+
     stance_percent = STANCE_PERCENTAGE.get(defender_stance, 0.70) 
     ds_components_log = []
+
+    # --- THIS IS THE FIX 1: Calculate Generic DS ---
     generic_ds = 0 
+    
+    # 1. Environmental Conditions
+    room_lighting = room_data.get("lighting", "average")
+    if room_lighting == "bright":
+        generic_ds -= 10
+    elif room_lighting == "dark":
+        generic_ds += 20
+    elif room_lighting == "foggy":
+        generic_ds += 30
+        
+    # 2. Status Conditions
+    if any(s in defender_status for s in ["sitting", "kneeling", "prone"]):
+        generic_ds -= 50
+    if "stunned" in defender_status:
+        generic_ds -= 20
+    if any(s in defender_status for s in ["immobilized", "webbed"]):
+        generic_ds -= 50
+    # --- END FIX 1 ---
+    
     ds_components_log.append(f"Generic({generic_ds})")
+
+    # 3. Evade Defense
     evade_ds = calculate_evade_defense(
         defender_stats, defender_skills, defender_race,
         armor_item_data, shield_item_data, stance_percent, is_ranged_attack
     )
+    # TODO: Add reductions for prone/stunned
     ds_components_log.append(f"Evade({evade_ds})")
+
+    # 4. Block Defense
     block_ds = calculate_block_defense(
         defender_stats, defender_skills, defender_race,
         shield_item_data, stance_percent, is_ranged_attack
     )
+    # TODO: Add reductions for prone/stunned
     ds_components_log.append(f"Block({block_ds})")
+
+    # 5. Parry Defense
     parry_ds = calculate_parry_defense(
         defender_stats, defender_skills, defender_race,
         weapon_item_data, offhand_item_data, defender_level,
         stance_percent, is_ranged_attack
     )
+    # TODO: Add reductions for prone/stunned
     ds_components_log.append(f"Parry({parry_ds})")
+    
     final_ds = generic_ds + evade_ds + block_ds + parry_ds
+
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
         print(f"DEBUG DS CALC for {defender_name} (Stance: {defender_stance} ({stance_percent*100}%)): Factors = {' + '.join(ds_components_log)} => Final DS = {final_ds}")
+    
     return final_ds
+# ---
+# --- END MODIFIED FUNCTION ---
+# ---
 
-# ---
-# --- THIS IS THE FIX: Re-adding the missing functions ---
-# ---
+
+# --- (HIT_MESSAGES, get_flavor_message, get_roll_descriptor are unchanged) ---
 HIT_MESSAGES = {
     "player_hit": ["You swing {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
     "monster_hit": ["{attacker} swings {weapon_display} and strikes {defender}!", "{attacker}'s {weapon_display} finds its mark on {defender}!", "A solid blow from {attacker}'s {weapon_display} connects with {defender}!"],
@@ -354,14 +396,11 @@ def get_roll_descriptor(roll_result):
     elif roll_result > 0: return "a minor hit"
     elif roll_result > -25: return "a near miss"
     else: return "a total miss"
-# ---
-# --- END FIX ---
-# ---
 
 # ---
-# --- MODIFIED: resolve_attack
+# --- MODIFIED: resolve_attack ---
 # ---
-def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dict:
+def resolve_attack(attacker: Any, defender: Any, room_data: dict, game_items_global: dict) -> dict: # <-- Added room_data
     is_attacker_player = isinstance(attacker, Player)
     attacker_name = attacker.name if is_attacker_player else attacker.get("name", "Creature")
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
@@ -410,14 +449,17 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         attacker_stance, attacker_race
     )
     
+    # --- THIS IS THE FIX 2: Pass room_data to DS calculation ---
     defender_ds = calculate_defense_strength(
         defender, 
+        room_data, # <-- PASS ROOM DATA
         defender_armor_data,
         defender_shield_data,
         defender_weapon_data,   
         defender_offhand_data,  
         is_ranged_attack
     )
+    # --- END FIX 2 ---
     
     d100_roll = random.randint(1, 100)
     combat_roll_result = (attacker_as - defender_ds) + config.COMBAT_ADVANTAGE_FACTOR + d100_roll
@@ -442,14 +484,12 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         "weapon_display": weapon_display
     }
 
-    # --- THIS IS THE FIX 1: Initialize new message keys ---
     results = {
         'hit': False, 'damage': 0, 
         'roll_string': roll_string, 
         'attacker_msg': "", 'defender_msg': "", 'broadcast_msg': "",
         'damage_msg': "", 'defender_damage_msg': "", 'broadcast_damage_msg': ""
     }
-    # --- END FIX 1 ---
 
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
@@ -472,7 +512,6 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
 
         flavor_msg = get_flavor_message(msg_key_hit, d100_roll, combat_roll_result)
         
-        # --- THIS IS THE FIX 2: Separate flavor and damage messages ---
         results['attacker_msg'] = flavor_msg.format(**msg_vars)
         results['defender_msg'] = flavor_msg.format(**msg_vars)
         results['damage_msg'] = f"You hit for **{total_damage}** damage!"
@@ -481,7 +520,6 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         broadcast_flavor_msg = get_flavor_message(msg_key_hit.replace("player", "monster"), d100_roll, combat_roll_result)
         results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
         results['broadcast_damage_msg'] = f"{attacker_name} hits for **{total_damage}** damage!"
-        # --- END FIX 2 ---
 
     else:
         results['hit'] = False
@@ -541,12 +579,14 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             continue
             
         is_defender_player = isinstance(defender, Player)
+        
+        # --- THIS IS THE FIX 3: Get room data for DS calc ---
+        room_data = game_state.GAME_ROOMS.get(room_id, {})
+        # --- END FIX 3 ---
 
-        attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS) 
+        attack_results = resolve_attack(attacker, defender, room_data, game_items_global=game_state.GAME_ITEMS) 
         
         sid_to_skip = None
-        
-        # --- THIS IS THE FIX 3: Re-order message sending ---
         
         # --- Message 1: Flavor Text ---
         if is_attacker_player:
@@ -621,10 +661,10 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                         game_loot_tables=game_state.GAME_LOOT_TABLES,
                         game_equipment_tables_data={} 
                     )
-                    room_data = game_state.GAME_ROOMS.get(room_id)
-                    if room_data:
-                        room_data["objects"].append(corpse_data)
-                        room_data["objects"] = [obj for obj in room_data["objects"] if obj.get("monster_id") != monster_id]
+                    room_data_obj = game_state.GAME_ROOMS.get(room_id)
+                    if room_data_obj:
+                        room_data_obj["objects"].append(corpse_data)
+                        room_data_obj["objects"] = [obj for obj in room_data_obj["objects"] if obj.get("monster_id") != monster_id]
                         broadcast_callback(room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
                     
                     game_state.DEFEATED_MONSTERS[monster_id] = {
@@ -638,7 +678,6 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                 else:
                     if is_attacker_player:
                          send_to_player_callback(attacker.name, f"(The {defender.get('name')} has {new_hp} HP remaining)", "system_info")
-        # --- END FIX 3 ---
         
         attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
         rt_seconds = calculate_roundtime(attacker_stats.get("AGI", 50))

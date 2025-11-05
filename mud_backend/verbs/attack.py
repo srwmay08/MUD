@@ -51,15 +51,12 @@ class Attack(BaseVerb):
         
         current_time = time.time()
         
-        # ---
-        # --- MODIFIED: _resolve_and_handle_attack
-        # ---
         def _resolve_and_handle_attack():
+            # --- THIS IS THE FIX: Pass self.room.db_data ---
             attack_results = combat_system.resolve_attack(
-                self.player, target_monster_data, GAME_ITEMS
+                self.player, target_monster_data, self.room.db_data, GAME_ITEMS
             )
-            
-            # --- THIS IS THE FIX: Send messages in the new order ---
+            # --- END FIX ---
             
             # 1. Flavor Text
             self.player.send_message(attack_results['attacker_msg'])
@@ -114,11 +111,11 @@ class Attack(BaseVerb):
                     }
                     
                     combat_system.stop_combat(player_id, monster_id)
-                    return False # Return False to signal combat ended
+                    return False 
                 else:
                     self.player.send_message(f"(The {target_monster_data['name']} has {new_hp} HP remaining)")
             
-            return True # Return True to signal combat continues
+            return True 
         # --- (End of helper function) ---
 
 
