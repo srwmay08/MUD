@@ -4,8 +4,9 @@ import math
 from mud_backend.core import game_state
 # --- NEW IMPORT ---
 from mud_backend import config
-from mud_backend.core.skill_handler import calculate_skill_bonus # <-- NEW
-# --- END NEW IMPORT ---
+# --- REMOVED IMPORT: This was causing the circular dependency ---
+# from mud_backend.core.skill_handler import calculate_skill_bonus 
+# ---
 
 # --- (RACE_DATA dictionary is unchanged) ---
 RACE_DATA = {
@@ -117,7 +118,7 @@ class Player:
         return max(0, regen)
         
     # ---
-    # --- NEW PROPERTY: armor_rt_penalty ---
+    # --- MODIFIED PROPERTY: armor_rt_penalty ---
     # ---
     @property
     def armor_rt_penalty(self) -> float:
@@ -125,6 +126,11 @@ class Player:
         Calculates the final armor roundtime penalty after
         applying reduction from Armor Use skill bonus.
         """
+        # --- THIS IS THE FIX ---
+        # Import here to avoid circular dependency
+        from mud_backend.core.skill_handler import calculate_skill_bonus
+        # --- END FIX ---
+
         armor_id = self.worn_items.get("torso")
         if not armor_id:
             return 0.0
@@ -156,17 +162,15 @@ class Player:
         final_penalty = max(0.0, base_rt - penalty_removed)
         return final_penalty
     # ---
-    # --- END NEW PROPERTY ---
+    # --- END MODIFIED PROPERTY ---
     # ---
 
     @property
     def field_exp_capacity(self) -> int:
         return 800 + self.stats.get("LOG", 0) + self.stats.get("DIS", 0)
 
-    # ... (rest of Player class is unchanged) ...
     @property
     def mind_status(self) -> str:
-    # ... (function contents unchanged) ...
         if self.unabsorbed_exp <= 0:
             return "clear as a bell"
         capacity = self.field_exp_capacity
@@ -182,7 +186,6 @@ class Player:
         return "fresh and clear"
 
     def add_field_exp(self, nominal_amount: int):
-    # ... (function contents unchanged) ...
         if self.death_sting_points > 0:
             original_nominal = nominal_amount
             nominal_amount = math.trunc(original_nominal * 0.25)
@@ -218,7 +221,6 @@ class Player:
             self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
 
     def absorb_exp_pulse(self, room_type: str = "other") -> bool:
-    # ... (function contents unchanged) ...
         if self.unabsorbed_exp <= 0:
             return False
         base_rate = 19
@@ -252,7 +254,6 @@ class Player:
         return True
 
     def _get_xp_target_for_level(self, level: int) -> int:
-    # ... (function contents unchanged) ...
         table = game_state.GAME_LEVEL_TABLE
         if not table:
             return (level + 1) * 1000
@@ -265,7 +266,6 @@ class Player:
              return self.experience + 999999
 
     def _calculate_tps_per_level(self) -> Tuple[int, int, int]:
-    # ... (function contents unchanged) ...
         s = self.stats
         hybrid_bonus = (s.get("AUR", 0) + s.get("DIS", 0)) / 2
         mtp_calc = 25 + ((s.get("LOG", 0) + s.get("INT", 0) + s.get("WIS", 0) + s.get("INF", 0) + hybrid_bonus) / 20)
@@ -274,7 +274,6 @@ class Player:
         return int(ptp_calc), int(mtp_calc), int(stp_calc)
 
     def _check_for_level_up(self):
-    # ... (function contents unchanged) ...
         if self.level_xp_target == 0:
            self.level_xp_target = self._get_xp_target_for_level(self.level)
         while self.experience >= self.level_xp_target:
@@ -299,18 +298,16 @@ class Player:
                 self.level_xp_target = self._get_xp_target_for_level(self.level)
 
     def send_message(self, message: str):
-    # ... (function contents unchanged) ...
         self.messages.append(message)
 
     def get_equipped_item_data(self, slot: str, game_items_global: dict) -> Optional[dict]:
-    # ... (function contents unchanged) ...
+        """Gets the item data for an equipped item."""
         item_id = self.worn_items.get(slot) 
         if item_id:
             return game_items_global.get(item_id)
         return None
 
     def get_armor_type(self, game_items_global: dict) -> str:
-    # ... (function contents unchanged) ...
         DEFAULT_UNARMORED_TYPE = "unarmored" 
         armor_data = self.get_equipped_item_data("torso", game_items_global)
         if armor_data and armor_data.get("type") == "armor":
@@ -318,7 +315,7 @@ class Player:
         return DEFAULT_UNARMORED_TYPE
     
     def to_dict(self) -> dict:
-    # ... (function contents unchanged) ...
+        """Converts player state to a dictionary ready for MongoDB insertion/update."""
         
         self.strength = self.stats.get("STR", self.strength)
         self.agility = self.stats.get("AGI", self.agility)
@@ -361,13 +358,11 @@ class Player:
         return data
 
     def __repr__(self):
-    # ... (function contents unchanged) ...
         return f"<Player: {self.name}>"
 
 
-# --- (Room class is unchanged) ---
+# --- MODIFIED: Room class ---
 class Room:
-# ... (class contents unchanged) ...
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
         self.name = name
@@ -397,5 +392,5 @@ class Room:
 
         return data
 
-    def __repr__(selfS):
+    def __repr__(self):
         return f"<Room: {self.name}>"
