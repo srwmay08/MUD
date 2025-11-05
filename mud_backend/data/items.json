@@ -32,7 +32,9 @@
         "wearable_slot": "torso",
         "skill": "armor_use",
         "keywords": ["tunic", "leather tunic"],
-        "base_value": 80
+        "base_value": 80,
+        "armor_rt": 0,
+        "armor_ap": 0
     },
     "gold_ring": {
         "name": "a gold ring",
@@ -60,7 +62,9 @@
         "wearable_slot": "torso",
         "skill": "armor_use",
         "keywords": ["armor", "leather armor", "starter armor"],
-        "base_value": 120
+        "base_value": 120,
+        "armor_rt": 1,
+        "armor_ap": -1
     },
     "starter_small_shield": {
         "name": "a small wooden shield",

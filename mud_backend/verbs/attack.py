@@ -22,6 +22,7 @@ class Attack(BaseVerb):
     """
     
     def execute(self):
+        # ... (find target logic unchanged) ...
         if not self.args:
             self.player.send_message("Attack what?")
             return
@@ -57,8 +58,7 @@ class Attack(BaseVerb):
         
         current_time = time.time()
         
-        # --- (Helper function to resolve the attack and handle results) ---
-        # This avoids duplicating the large block of code
+        # --- (Helper function _resolve_and_handle_attack unchanged) ---
         def _resolve_and_handle_attack():
             attack_results = combat_system.resolve_attack(
                 self.player, target_monster_data, GAME_ITEMS
@@ -129,9 +129,13 @@ class Attack(BaseVerb):
         # --- (End of helper function) ---
 
 
-        if player_id in COMBAT_STATE:
+        # --- (Combat state check unchanged) ---
+        combat_info = COMBAT_STATE.get(player_id)
+        is_in_active_combat = combat_info and combat_info.get("target_id")
+
+
+        if is_in_active_combat:
             # --- PLAYER IS ALREADY IN COMBAT ---
-            combat_info = COMBAT_STATE[player_id]
             
             if combat_info["target_id"] != monster_id:
                 self.player.send_message(f"You are already fighting the {combat_info['target_id']}!")
@@ -146,21 +150,31 @@ class Attack(BaseVerb):
             combat_continues = _resolve_and_handle_attack()
             
             if combat_continues:
-                rt_seconds = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
+                # --- THIS IS THE FIX ---
+                # Add armor penalty to roundtime
+                base_rt = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
+                armor_penalty = self.player.armor_rt_penalty
+                rt_seconds = base_rt + armor_penalty
+                # --- END FIX ---
                 combat_info["next_action_time"] = current_time + rt_seconds
             
         else:
             # --- PLAYER IS INITIATING COMBAT ---
+            
             self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
             
             room_id = self.room.room_id
             
-            # --- Apply roundtime for this *first* attack ---
-            rt_seconds = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
+            # --- THIS IS THE FIX ---
+            # Add armor penalty to roundtime
+            base_rt = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
+            armor_penalty = self.player.armor_rt_penalty
+            rt_seconds = base_rt + armor_penalty
+            # --- END FIX ---
             
             COMBAT_STATE[player_id] = {
                 "target_id": monster_id,
-                "next_action_time": current_time + rt_seconds, # <-- FIX: Apply RT
+                "next_action_time": current_time + rt_seconds, 
                 "current_room_id": room_id
             }
             

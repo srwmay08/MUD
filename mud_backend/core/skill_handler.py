@@ -5,13 +5,52 @@ from mud_backend.core.game_objects import Player
 from mud_backend.core import game_state
 
 # ---
-# Skill Cost Calculation Logic (UNCHANGED)
+# --- NEW FUNCTION (MOVED FROM combat_system.py) ---
+# ---
+def calculate_skill_bonus(skill_rank: int) -> int:
+    """
+    Calculates the skill *bonus* based on the diminishing returns chart.
+    - Ranks 1-10: +5 per rank
+    - Ranks 11-20: +4 per rank
+    - Ranks 21-30: +3 per rank
+    - Ranks 31-40: +2 per rank
+    - Ranks 41+: +1 per rank (bonus = rank + 100)
+    """
+    if skill_rank <= 0:
+        return 0
+    
+    if skill_rank <= 10:
+        # Ranks 1-10: +5 bonus per rank
+        return skill_rank * 5
+    
+    if skill_rank <= 20:
+        # 50 from first 10 ranks, +4 for ranks 11-20
+        return 50 + (skill_rank - 10) * 4
+        
+    if skill_rank <= 30:
+        # 90 from first 20 ranks (50 + 40), +3 for ranks 21-30
+        return 90 + (skill_rank - 20) * 3
+        
+    if skill_rank <= 40:
+        # 120 from first 30 ranks (90 + 30), +2 for ranks 31-40
+        return 120 + (skill_rank - 30) * 2
+        
+    # Ranks 41+
+    # 140 from first 40 ranks (120 + 20), +1 for ranks 41+
+    # This simplifies to the user's provided formula: rank + 100
+    return 140 + (skill_rank - 40) * 1
+# ---
+# --- END NEW FUNCTION ---
 # ---
 
+# ---
+# Skill Cost Calculation Logic (UNCHANGED)
+# ---
 def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attrs: List[str]) -> int:
     """
     Calculates the final, discounted cost for one TP type (PTP, MTP, or STP).
     """
+    # ... (function contents unchanged) ...
     if base_cost == 0:
         return 0
         
@@ -52,10 +91,9 @@ def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attr
     
     return int(final_cost)
 
+# ... (rest of skill_handler.py is unchanged) ...
 def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
-    """
-    Gets the final PTP, MTP, and STP costs for a skill for a specific player.
-    """
+# ... (function contents unchanged) ...
     player_stats = player.stats
     base_costs = skill_data.get("base_cost", {})
     key_attrs = skill_data.get("key_attributes", {})
@@ -79,7 +117,7 @@ def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
     return {"ptp": final_ptp, "mtp": final_mtp, "stp": final_stp}
 
 def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
-    """Finds a skill in the global state by its name or keywords."""
+# ... (function contents unchanged) ...
     skill_name_lower = skill_name.lower()
     for skill_id, skill_data in game_state.GAME_SKILLS.items():
         if skill_name_lower == skill_data.get("name", "").lower():
@@ -88,15 +126,8 @@ def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
             return skill_data
     return None
 
-# ---
-# Training Menu / "GUI" Logic
-# ---
-
-
 def _format_skill_line(player: Player, skill_data: Dict) -> str:
-    """
-    Formats a single skill line as a <tr> for the HTML table, condensed.
-    """
+# ... (function contents unchanged) ...
     skill_id = skill_data["skill_id"]
     skill_name = skill_data["name"]
     current_rank = player.skills.get(skill_id, 0)
@@ -127,11 +158,8 @@ def _format_skill_line(player: Player, skill_data: Dict) -> str:
         # Use white-space:nowrap to ensure the name doesn't break
         return f"<tr><td style='white-space:nowrap;'>- {clickable_name}</td><td style='text-align:center; white-space:nowrap;'>{cost_str}</td><td style='text-align:right;'>{rank_str}</td></tr>"
 
-
 def _show_all_skills_by_category(player: Player):
-    """
-    Internal helper to list all skills, grouped by category, in two columns.
-    """
+# ... (function contents unchanged) ...
     # Your custom category order
     COLUMN_1_CATEGORIES = [
         "Armor Skills", "Weapon Skills", "Combat Skills", 
@@ -258,26 +286,17 @@ def _show_all_skills_by_category(player: Player):
 
     player.send_message("\n".join(html_lines))
 
-
 def _show_simple_training_menu(player: Player):
-    """
-    Shows *only* the training menu, without the skill list.
-    Used for 'list categories' or 'list <single>'.
-    """
+# ... (function contents unchanged) ...
     player.send_message("\n--- **SKILL TRAINING** ---")
     player.send_message(f"--- TPs: P:{player.ptps} / M:{player.mtps} / S:{player.stps} ---")
     player.send_message("- Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
     player.send_message("- Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.")
     player.send_message("- Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")
     player.send_message("- Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.")
-# --- END NEW HELPER ---
 
-
-# --- (The rest of the file is unchanged) ---
 def show_skill_list(player: Player, category: str):
-    """
-    Lists all skills, filtered by category, showing ranks and costs.
-    """
+# ... (function contents unchanged) ...
     category_lower = category.lower()
     
     all_categories = sorted(list(set(s.get("category", "Uncategorized") for s in game_state.GAME_SKILLS.values())))
@@ -328,14 +347,11 @@ def show_skill_list(player: Player, category: str):
         
     html_lines.append("</table>")
     player.send_message("\n".join(html_lines))
-    # --- FIX: We must now *manually* show the menu here ---
+    # --- FIX: We must now *manUally* show the menu here ---
     _show_simple_training_menu(player)
 
-
 def _calculate_total_cost(player: Player, skill_data: Dict, ranks_to_train: int) -> Dict[str, int]:
-    """
-    Calculates the total PTP, MTP, and STP cost for training.
-    """
+# ... (function contents unchanged) ...
     skill_id = skill_data["skill_id"]
     ranks_already_trained = player.ranks_trained_this_level.get(skill_id, 0)
     costs = get_skill_costs(player, skill_data)
@@ -353,9 +369,7 @@ def _calculate_total_cost(player: Player, skill_data: Dict, ranks_to_train: int)
     return {"ptp": total_ptp, "mtp": total_mtp, "stp": total_stp}
 
 def _check_for_tp_conversion(player: Player, total_ptp: int, total_mtp: int, total_stp: int) -> Optional[Dict]:
-    """
-    Checks if TP conversion is possible and returns the conversion data.
-    """
+# ... (function contents unchanged) ...
     ptp_needed = total_ptp - player.ptps
     mtp_needed = total_mtp - player.mtps
     stp_needed = total_stp - player.stps
@@ -430,9 +444,7 @@ def _check_for_tp_conversion(player: Player, total_ptp: int, total_mtp: int, tot
     }
 
 def _perform_conversion_and_train(player: Player, pending_data: Dict):
-    """
-    Applies TP conversions (if any) and then trains the skill.
-    """
+# ... (function contents unchanged) ...
     skill_id = pending_data["skill_id"]
     skill_name = pending_data["skill_name"]
     ranks_to_train = pending_data["ranks_to_train"]
@@ -489,13 +501,8 @@ def _perform_conversion_and_train(player: Player, pending_data: Dict):
     # --- FIX: Removed call to show_training_menu ---
     # (It's now part of the function above)
 
-
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):
-    """
-    Attempts to train a skill a number of times, spending TPs.
-    This function will either train immediately, or set up a
-    pending training state if conversion is required.
-    """
+# ... (function contents unchanged) ...
     if ranks_to_train <= 0:
         player.send_message("You must train at least 1 rank.")
         return
