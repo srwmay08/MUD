@@ -11,7 +11,7 @@ from mud_backend.core.game_objects import Player
 from mud_backend.core.db import save_game_state
 from mud_backend.core import loot_system
 
-# --- (MockConfigCombat, STANCE_MODIFIERS, and parse_and_roll_dice are unchanged) ---
+# --- (MockConfigCombat and STANCE_MODIFIERS are unchanged) ---
 class MockConfigCombat:
     DEBUG_MODE = True; STAT_BONUS_BASELINE = 50; MELEE_AS_STAT_BONUS_DIVISOR = 20
     WEAPON_SKILL_AS_BONUS_DIVISOR = 50; BAREHANDED_BASE_AS = 0; DEFAULT_UNARMORED_TYPE = "unarmored"
@@ -33,6 +33,7 @@ STANCE_MODIFIERS = {
     "guarded":   {"as_mod": 0.6,  "ds_mod": 0.9},
     "defensive": {"as_mod": 0.5,  "ds_mod": 1.0}
 }
+# --- (parse_and_roll_dice is unchanged) ---
 def parse_and_roll_dice(dice_string: str) -> int:
     if not isinstance(dice_string, str): return 0
     match = re.match(r"(\d+)d(\d+)([+-]\d+)?", dice_string.lower())
@@ -43,19 +44,38 @@ def parse_and_roll_dice(dice_string: str) -> int:
     modifier = int(match.group(3)) if match.group(3) else 0
     if num_dice <= 0 or dice_sides <= 0: return modifier
     return sum(random.randint(1, dice_sides) for _ in range(num_dice)) + modifier
-# --- (get_stat_bonus is unchanged) ---
-def get_stat_bonus(stat_value: int, baseline: int, divisor: int) -> int:
-    if divisor == 0: return 0
-    return (stat_value - baseline) // divisor 
+
+# ---
+# --- NEW: Race Modifier Data ---
+# ---
+RACE_MODIFIERS = {
+    "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
+    "Elf": {"STR": 0, "CON": 0, "DEX": 5, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 10, "ZEA": 0, "ESS": 5, "DIS": -15, "AUR": 5},
+    "Dwarf": {"STR": 10, "CON": 15, "DEX": 0, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 0, "INF": -10, "ZEA": 5, "ESS": 5, "DIS": 10, "AUR": -10},
+    "Dark Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 5, "LOG": 0, "INT": 5, "WIS": 5, "INF": -5, "ZEA": -5, "ESS": 0, "DIS": -10, "AUR": 10},
+    "Troll": {"STR": 15, "CON": 20, "DEX": -10, "AGI": -15, "LOG": -10, "INT": 0, "WIS": -5, "INF": -5, "ZEA": -10, "ESS": -10, "DIS": 10, "AUR": -15},
+}
+DEFAULT_RACE_MODS = {"STR": 0, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 0, "INT": 0, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 0, "AUR": 0}
+
+# ---
+# --- MODIFIED: get_stat_bonus ---
+# ---
+def get_stat_bonus(stat_value: int, stat_name: str, race: str) -> int:
+    """
+    Calculates the stat bonus using the new formula:
+    Bonus = floor((RawStat - 50) / 2) + RaceModifier
+    """
+    base_bonus = math.floor((stat_value - 50) / 2)
+    race_mods = RACE_MODIFIERS.get(race, DEFAULT_RACE_MODS)
+    race_bonus = race_mods.get(stat_name, 0)
+    return base_bonus + race_bonus
 
 # --- (get_skill_bonus is unchanged, it is used by DS) ---
 def get_skill_bonus(skill_value: int, divisor: int) -> int:
     if divisor == 0: return 0
     return skill_value // divisor 
 
-# ---
-# --- NEW FUNCTION ---
-# ---
+# --- (calculate_skill_bonus is unchanged, it is used by AS) ---
 def calculate_skill_bonus(skill_rank: int) -> int:
     """
     Calculates the skill *bonus* based on the diminishing returns chart.
@@ -67,30 +87,26 @@ def calculate_skill_bonus(skill_rank: int) -> int:
     """
     if skill_rank <= 0:
         return 0
-    
     if skill_rank <= 10:
-        # Ranks 1-10: +5 bonus per rank
         return skill_rank * 5
-    
     if skill_rank <= 20:
-        # 50 from first 10 ranks, +4 for ranks 11-20
         return 50 + (skill_rank - 10) * 4
-        
     if skill_rank <= 30:
-        # 90 from first 20 ranks (50 + 40), +3 for ranks 21-30
         return 90 + (skill_rank - 20) * 3
-        
     if skill_rank <= 40:
-        # 120 from first 30 ranks (90 + 30), +2 for ranks 31-40
         return 120 + (skill_rank - 30) * 2
-        
-    # Ranks 41+
-    # 140 from first 40 ranks (120 + 20), +1 for ranks 41+
-    # This simplifies to the user's provided formula: rank + 100
     return 140 + (skill_rank - 40) * 1
+
 # ---
-# --- END NEW FUNCTION ---
+# --- NEW: get_entity_race ---
 # ---
+def get_entity_race(entity: Any) -> str:
+    """Helper to get the race of a player or monster."""
+    if isinstance(entity, Player):
+        return entity.appearance.get("race", "Human")
+    elif isinstance(entity, dict):
+        return entity.get("race", "Human") # Monsters default to Human mods for now
+    return "Human"
 
 # --- (get_entity_armor_type is unchanged) ---
 def get_entity_armor_type(entity, game_items_global: dict) -> str:
@@ -113,19 +129,20 @@ def get_entity_armor_type(entity, game_items_global: dict) -> str:
 # ---
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict, 
                               weapon_item_data: dict | None, target_armor_type: str,
-                              attacker_stance: str) -> int:
+                              attacker_stance: str, attacker_race: str) -> int: # Added attacker_race
     as_val = 0; as_components_log = [] 
     weapon_name_display = "Barehanded"
+    
+    # --- THIS IS THE FIX 1: Use new STR Bonus formula ---
+    strength_stat = attacker_stats.get("STR", 50)
+    str_bonus = get_stat_bonus(strength_stat, "STR", attacker_race)
+    as_val += str_bonus; as_components_log.append(f"Str({str_bonus})")
+    # --- END FIX 1 ---
+    
     if not weapon_item_data or weapon_item_data.get("type") != "weapon":
-        strength_barehanded = attacker_stats.get("STR", config.STAT_BONUS_BASELINE)
-        str_bonus_barehanded = get_stat_bonus(strength_barehanded, config.STAT_BONUS_BASELINE, config.MELEE_AS_STAT_BONUS_DIVISOR)
-        as_val += str_bonus_barehanded; as_components_log.append(f"Str({str_bonus_barehanded})")
-        
-        # --- THIS IS THE FIX 1 ---
-        # Brawling skill also uses the new diminishing returns bonus
+        # Brawling skill uses the diminishing returns bonus
         brawling_skill_rank = attacker_skills.get("brawling", 0)
         brawling_bonus = calculate_skill_bonus(brawling_skill_rank)
-        # --- END FIX 1 ---
         
         as_val += brawling_bonus; as_components_log.append(f"Brawl({brawling_bonus})")
         base_barehanded_as = getattr(config, 'BAREHANDED_BASE_AS', 0)
@@ -133,48 +150,54 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
         if base_barehanded_as != 0: as_components_log.append(f"BaseAS({base_barehanded_as})")
     else:
         weapon_name_display = weapon_item_data.get("name", "Unknown Weapon")
-        strength = attacker_stats.get("STR", config.STAT_BONUS_BASELINE)
-        str_bonus = get_stat_bonus(strength, config.STAT_BONUS_BASELINE, config.MELEE_AS_STAT_BONUS_DIVISOR)
-        as_val += str_bonus; as_components_log.append(f"Str({str_bonus})")
         
         weapon_skill_name = weapon_item_data.get("skill"); skill_bonus_val = 0
         if weapon_skill_name:
             skill_rank = attacker_skills.get(weapon_skill_name, 0)
-            
-            # --- THIS IS THE FIX 2 ---
-            # Use the new diminishing returns formula for AS, as per user docs
+            # Use the diminishing returns formula for AS
             skill_bonus_val = calculate_skill_bonus(skill_rank) 
-            # --- END FIX 2 ---
-            
             as_val += skill_bonus_val; as_components_log.append(f"Skill({skill_bonus_val})")
             
-        weapon_base_as = weapon_item_data.get("weapon_as_bonus", 0) 
-        as_val += weapon_base_as; as_components_log.append(f"WpnAS({weapon_base_as})")
-        enchant_as = weapon_item_data.get("enchantment_as_bonus", 0)
-        as_val += enchant_as
-        if enchant_as != 0: as_components_log.append(f"EnchAS({enchant_as})")
+        # --- THIS IS THE FIX 2: Remove weapon_as_bonus and enchantment_as_bonus ---
+        # weapon_base_as = weapon_item_data.get("weapon_as_bonus", 0) 
+        # as_val += weapon_base_as; as_components_log.append(f"WpnAS({weapon_base_as})")
+        # enchant_as = weapon_item_data.get("enchantment_as_bonus", 0)
+        # as_val += enchant_as
+        # if enchant_as != 0: as_components_log.append(f"EnchAS({enchant_as})")
+        # --- END FIX 2 ---
+            
         avd_mods = weapon_item_data.get("avd_modifiers", {})
         avd_bonus = avd_mods.get(target_armor_type, avd_mods.get(config.DEFAULT_UNARMORED_TYPE, 0))
         as_val += avd_bonus 
         if avd_bonus != 0: as_components_log.append(f"ItemAvD({avd_bonus})")
         
+    # --- THIS IS THE FIX 3: Add Combat Maneuvers Bonus ---
+    cman_ranks = attacker_skills.get("combat_maneuvers", 0)
+    cman_bonus = math.floor(cman_ranks / 2)
+    as_val += cman_bonus
+    if cman_bonus != 0: as_components_log.append(f"CMan({cman_bonus})")
+    # --- END FIX 3 ---
+        
     stance_mod = STANCE_MODIFIERS.get(attacker_stance, STANCE_MODIFIERS["neutral"])["as_mod"]
     final_as = int(as_val * stance_mod)
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Stance: {attacker_stance}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {stance_mod} = {final_as}")
+        print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Stance: {attacker_stance}, Race: {attacker_race}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {stance_mod} = {final_as}")
     return final_as
 
-# --- (calculate_defense_strength is unchanged) ---
-# It correctly uses get_skill_bonus for the shield skill, matching your
-# "Skill Rank Mechanics" rule for Defensive Strength.
+# ---
+# --- MODIFIED: calculate_defense_strength ---
+# ---
 def calculate_defense_strength(defender_name: str, defender_stats: dict, defender_skills: dict, 
                                armor_item_data: dict | None, shield_item_data: dict | None,
-                               defender_stance: str) -> int:
+                               defender_stance: str, defender_race: str) -> int: # Added defender_race
     ds_val = 0; ds_components_log = []
     armor_name_display = "Unarmored"; shield_name_display = "No Shield"
-    agility_stat = defender_stats.get("AGI", config.STAT_BONUS_BASELINE)
-    ds_stat_divisor = getattr(config, 'MELEE_DS_STAT_BONUS_DIVISOR', 10) 
-    agi_bonus = get_stat_bonus(agility_stat, config.STAT_BONUS_BASELINE, ds_stat_divisor)
+    
+    # --- THIS IS THE FIX 4: Use new AGI Bonus formula ---
+    agility_stat = defender_stats.get("AGI", 50)
+    agi_bonus = get_stat_bonus(agility_stat, "AGI", defender_race)
+    # --- END FIX 4 ---
+    
     ds_val += agi_bonus; ds_components_log.append(f"Agi({agi_bonus})")
     armor_ds_bonus = 0
     if armor_item_data and armor_item_data.get("type") == "armor":
@@ -190,18 +213,21 @@ def calculate_defense_strength(defender_name: str, defender_stats: dict, defende
         shield_base_bonus = shield_item_data.get("shield_ds_bonus", 0)
         shield_name_display = shield_item_data.get("name", "Unknown Shield")
         ds_val += shield_base_bonus; ds_components_log.append(f"Shield({shield_base_bonus})")
+        
+        # Shield DS uses Skill Ranks (linear), so this is correct
         shield_skill_rank = defender_skills.get("shield_use", 0)
         shield_skill_divisor = getattr(config, 'SHIELD_SKILL_DS_BONUS_DIVISOR', 10)
         shield_skill_bonus = get_skill_bonus(shield_skill_rank, shield_skill_divisor)
+        
         ds_val += shield_skill_bonus
         if shield_skill_bonus !=0: ds_components_log.append(f"ShSkill({shield_skill_bonus})")
+        
     stance_mod = STANCE_MODIFIERS.get(defender_stance, STANCE_MODIFIERS["neutral"])["ds_mod"]
     final_ds = int(ds_val * stance_mod)
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG DS CALC for {defender_name if defender_name else 'entity'} (Armor: {armor_name_display}, Shield: {shield_name_display}, Stance: {defender_stance}): Factors = {' + '.join(ds_components_log)} => Raw DS = {ds_val} * {stance_mod} = {final_ds}")
+        print(f"DEBUG DS CALC for {defender_name if defender_name else 'entity'} (Armor: {armor_name_display}, Shield: {shield_name_display}, Stance: {defender_stance}, Race: {defender_race}): Factors = {' + '.join(ds_components_log)} => Raw DS = {ds_val} * {stance_mod} = {final_ds}")
     return final_ds
 
-# --- (The rest of combat_system.py is unchanged) ---
 # --- (HIT_MESSAGES are unchanged) ---
 HIT_MESSAGES = {
     "player_hit": ["You swing {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
@@ -214,6 +240,7 @@ HIT_MESSAGES = {
     "monster_fumble": ["{attacker} swings wildly and loses its balance, fumbling the attack!", "{attacker}'s {weapon_display} slips! It completely misses {defender}."]
 }
 
+# --- (get_flavor_message and get_roll_descriptor are unchanged) ---
 def get_flavor_message(key, d100_roll, combat_roll_result):
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         if d100_roll >= 95: return random.choice(HIT_MESSAGES[key.replace("hit", "crit")])
@@ -231,12 +258,19 @@ def get_roll_descriptor(roll_result):
     elif roll_result > -25: return "a near miss"
     else: return "a total miss"
 
+# ---
+# --- MODIFIED: resolve_attack ---
+# ---
 def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dict:
     is_attacker_player = isinstance(attacker, Player)
     attacker_name = attacker.name if is_attacker_player else attacker.get("name", "Creature")
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
     attacker_skills = attacker.skills if is_attacker_player else attacker.get("skills", {})
     attacker_stance = attacker.stance if is_attacker_player else attacker.get("stance", "neutral")
+    
+    # --- THIS IS THE FIX 5: Get Attacker Race ---
+    attacker_race = get_entity_race(attacker)
+    # --- END FIX 5 ---
     
     if is_attacker_player:
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand", game_items_global)
@@ -250,6 +284,10 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     defender_stats = defender.stats if is_defender_player else defender.get("stats", {})
     defender_skills = defender.skills if is_defender_player else defender.get("skills", {})
     defender_stance = defender.stance if is_defender_player else defender.get("stance", "neutral")
+    
+    # --- THIS IS THE FIX 6: Get Defender Race ---
+    defender_race = get_entity_race(defender)
+    # --- END FIX 6 ---
 
     if is_defender_player:
         defender_armor_data = defender.get_equipped_item_data("torso", game_items_global)
@@ -262,16 +300,18 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         defender_shield_data = game_items_global.get(offhand_id) if offhand_id else None
         defender_armor_type_str = get_entity_armor_type(defender, game_items_global)
 
+    # --- THIS IS THE FIX 7: Pass race to AS/DS functions ---
     attacker_as = calculate_attack_strength(
         attacker_name, attacker_stats, attacker_skills, 
         attacker_weapon_data, defender_armor_type_str,
-        attacker_stance
+        attacker_stance, attacker_race # Pass race
     )
     defender_ds = calculate_defense_strength(
         defender_name, defender_stats, defender_skills, 
         defender_armor_data, defender_shield_data,
-        defender_stance
+        defender_stance, defender_race # Pass race
     )
+    # --- END FIX 7 ---
     
     d100_roll = random.randint(1, 100)
     combat_roll_result = (attacker_as - defender_ds) + config.COMBAT_ADVANTAGE_FACTOR + d100_roll
@@ -305,13 +345,16 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
         
+        # --- THIS IS THE FIX 8: Remove weapon/enchant bonus from damage ---
         flat_base_damage_component = 0
         if attacker_weapon_data and attacker_weapon_data.get("type") == "weapon":
-            flat_base_damage_component = attacker_weapon_data.get("weapon_as_bonus", 0) + attacker_weapon_data.get("enchantment_as_bonus", 0)
+            # flat_base_damage_component = attacker_weapon_data.get("weapon_as_bonus", 0) + attacker_weapon_data.get("enchantment_as_bonus", 0)
+            flat_base_damage_component = getattr(config, 'BAREHANDED_FLAT_DAMAGE', 1) # All weapons do base damage for now
         else:
             flat_base_damage_component = getattr(config, 'BAREHANDED_FLAT_DAMAGE', 1)
             if not is_attacker_player:
                 flat_base_damage_component += attacker.get("natural_attack_bonus_damage", 0)
+        # --- END FIX 8 ---
         
         damage_bonus_from_roll = max(0, (combat_roll_result - config.COMBAT_HIT_THRESHOLD) // config.COMBAT_DAMAGE_MODIFIER_DIVISOR)
         total_damage = max(1, flat_base_damage_component + damage_bonus_from_roll)
