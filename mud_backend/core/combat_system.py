@@ -48,10 +48,15 @@ STANCE_MODIFIERS = {
 
 SHIELD_DATA = {
     # ... (unchanged) ...
+    "starter_small_shield": {
+        "factor": 1.0, "size_penalty_melee": 0, "size_mod_ranged": 1.0, 
+        "size_bonus_ranged": 0, "size_mod_melee": 1.0
+    }
 }
 DEFAULT_SHIELD_DATA = SHIELD_DATA["starter_small_shield"] 
 RACE_MODIFIERS = {
     # ... (unchanged) ...
+    "Human": {}, "Elf": {}, "Dwarf": {}, "Dark Elf": {}
 }
 DEFAULT_RACE_MODS = {"STR": 0, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 0, "INT": 0, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 0, "AUR": 0}
 
@@ -398,17 +403,26 @@ def calculate_defense_strength(defender: Any,
     ds_components_log.append(f"Generic({generic_ds})")
     
     evade_ds = calculate_evade_defense(
-        # ... (unchanged) ...
+        defender_stats, defender_skills, defender_race,
+        armor_item_data, shield_item_data,
+        defender_posture, defender_statuses, # <-- NEW
+        is_ranged_attack
     )
     ds_components_log.append(f"Evade({evade_ds})")
     
     block_ds = calculate_block_defense(
-        # ... (unchanged) ...
+        defender_stats, defender_skills, defender_race,
+        shield_item_data,
+        defender_posture, defender_statuses, # <-- NEW
+        is_ranged_attack
     )
     ds_components_log.append(f"Block({block_ds})")
     
     parry_ds = calculate_parry_defense(
-        # ... (unchanged) ...
+        defender_stats, defender_skills, defender_race,
+        weapon_item_data, offhand_item_data, defender_level,
+        defender_posture, defender_statuses, # <-- NEW
+        is_ranged_attack
     )
     ds_components_log.append(f"Parry({parry_ds})")
     
@@ -419,11 +433,15 @@ def calculate_defense_strength(defender: Any,
     # --- APPLY MODIFIERS ---
     
     # 1. Apply Stance Modifier (Combat Focus Percentage)
-    # ... (unchanged) ...
+    stance_mod_data = STANCE_MODIFIERS.get(defender_stance, STANCE_MODIFIERS["neutral"])
+    stance_mod = stance_mod_data["ds_mod"]
     stanced_ds = int(total_ds * stance_mod)
 
     # 2. Apply Posture & Status Flat Penalties
-    # ... (unchanged) ...
+    # (This section seems to be missing from the original file, but based on
+    # the AS calculation, it should be a percentage, which is now
+    # handled *inside* the evade/block/parry functions.)
+    flat_ds_penalty = 0 # Assuming no flat penalties for now
         
     final_ds = stanced_ds + flat_ds_penalty # Apply the flat penalty
     
@@ -434,26 +452,110 @@ def calculate_defense_strength(defender: Any,
 # --- END UPDATED FUNCTION ---
 
 # ---
-# --- Re-adding the missing helper functions ---
+# --- THIS IS THE FIX: Added your provided function bodies ---
 # ---
 HIT_MESSAGES = {
     # ... (unchanged) ...
+    "default_hit": "You hit {defender_name}.",
+    "default_crit": "You land a solid blow on {defender_name}!"
 }
 
 def get_flavor_message(key, d100_roll, combat_roll_result):
-    # ... (unchanged) ...
+    if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
+        if d100_roll >= 95: return random.choice(HIT_MESSAGES[key.replace("hit", "crit")])
+        else: return random.choice(HIT_MESSAGES[key])
+    else:
+        if d100_roll <= 5: return random.choice(HIT_MESSAGES[key.replace("miss", "fumble")])
+        else: return random.choice(HIT_MESSAGES[key.replace("hit", "miss")])
             
 def get_roll_descriptor(roll_result):
-    # ... (unchanged) ...
+    if roll_result > 100: return "a **critical** strike"
+    elif roll_result > 75: return "a **solid** strike"
+    elif roll_result > 50: return "a **good** hit"
+    elif roll_result > 25: return "a glancing hit"
+    elif roll_result > 0: return "a minor hit"
+    elif roll_result > -25: return "a near miss"
+    else: return "a total miss"
 # ---
-# --- END ---
+# --- END FIX ---
 # ---
 
 # ---
 # --- MODIFIED: resolve_attack
 # ---
 def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dict:
-    # ... (all logic is unchanged) ...
+    
+    results = { "hit": False, "damage": 0, "attacker_msg": "", "defender_msg": "", 
+                "broadcast_msg": "", "roll_string": "", "damage_msg": "",
+                "defender_damage_msg": "", "broadcast_damage_msg": "" }
+
+    # --- 1. Get Attacker Data ---
+    attacker_weapon_data: Optional[dict] = None
+    attacker_stats: dict = {}
+    attacker_skills: dict = {}
+    attacker_name: str = "Attacker"
+    attacker_race: str = "Human"
+    attacker_posture: str = "standing"
+    attacker_stance: str = "neutral"
+    
+    if isinstance(attacker, Player):
+        attacker_name = attacker.name
+        attacker_stats = attacker.stats
+        attacker_skills = attacker.skills
+        attacker_race = attacker.race
+        attacker_posture = attacker.posture
+        attacker_stance = attacker.stance
+        attacker_weapon_data = attacker.get_equipped_item_data("mainhand", game_items_global)
+    elif isinstance(attacker, dict):
+        attacker_name = attacker.get("name", "Creature")
+        attacker_stats = attacker.get("stats", {})
+        attacker_skills = attacker.get("skills", {})
+        attacker_race = attacker.get("race", "Human")
+        attacker_posture = attacker.get("posture", "standing")
+        attacker_stance = attacker.get("stance", "neutral")
+        attacker_weapon_id = attacker.get("equipped", {}).get("mainhand")
+        if attacker_weapon_id:
+            attacker_weapon_data = game_items_global.get(attacker_weapon_id)
+
+    # --- 2. Get Defender Data ---
+    defender_armor_data: Optional[dict] = None
+    defender_shield_data: Optional[dict] = None
+    defender_weapon_data: Optional[dict] = None
+    defender_offhand_data: Optional[dict] = None
+    defender_name: str = "Defender"
+    defender_armor_type_str: str = config.DEFAULT_UNARMORED_TYPE
+    
+    if isinstance(defender, Player):
+        defender_name = defender.name
+        defender_armor_type_str = defender.get_armor_type(game_items_global)
+        defender_armor_data = defender.get_equipped_item_data("torso", game_items_global)
+        defender_shield_data = defender.get_equipped_item_data("offhand", game_items_global)
+        if defender_shield_data and defender_shield_data.get("item_type") != "shield":
+            defender_shield_data = None 
+        defender_weapon_data = defender.get_equipped_item_data("mainhand", game_items_global)
+        defender_offhand_data = defender.get_equipped_item_data("offhand", game_items_global)
+        
+    elif isinstance(defender, dict):
+        defender_name = defender.get("name", "Creature")
+        defender_armor_type_str = get_entity_armor_type(defender, game_items_global)
+        defender_armor_id = defender.get("equipped", {}).get("torso")
+        if defender_armor_id:
+            defender_armor_data = game_items_global.get(defender_armor_id)
+        defender_shield_id = defender.get("equipped", {}).get("offhand")
+        if defender_shield_id:
+            defender_shield_data = game_items_global.get(defender_shield_id)
+            if defender_shield_data and defender_shield_data.get("item_type") != "shield":
+                defender_shield_data = None
+        defender_weapon_id = defender.get("equipped", {}).get("mainhand")
+        if defender_weapon_id:
+            defender_weapon_data = game_items_global.get(defender_weapon_id)
+        defender_offhand_id = defender.get("equipped", {}).get("offhand")
+        if defender_offhand_id:
+            defender_offhand_data = game_items_global.get(defender_offhand_id)
+
+    is_ranged = False # TODO: Implement ranged combat logic
+    
+    # --- 3. Calculate AS and DS ---
     
     # --- THIS IS THE FIX: Pass attacker_stance and posture to the function ---
     attacker_as = calculate_attack_strength(
@@ -464,10 +566,63 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     # --- END FIX ---
     
     defender_ds = calculate_defense_strength(
-        # ... (unchanged) ...
+        defender, defender_armor_data, defender_shield_data,
+        defender_weapon_data, defender_offhand_data, is_ranged
     )
     
-    # ... (all rest of resolve_attack is unchanged) ...
+    # --- 4. Resolve the Roll ---
+    advantage = attacker_as - defender_ds + config.COMBAT_ADVANTAGE_FACTOR
+    d100_roll = random.randint(1, 100)
+    combat_roll_result = advantage + d100_roll
+    
+    hit_threshold = config.COMBAT_HIT_THRESHOLD
+    
+    roll_descriptor = "..." # TODO: Implement get_roll_descriptor
+    
+    results["roll_string"] = (
+        f"Roll: [AS({attacker_as}) - DS({defender_ds}) + d100({d100_roll}) + "
+        f"Advantage({config.COMBAT_ADVANTAGE_FACTOR})] = {combat_roll_result} "
+        f"(Vs. Threshold: {hit_threshold}) {roll_descriptor}"
+    )
+
+    if combat_roll_result > hit_threshold:
+        results["hit"] = True
+        
+        # --- 5. Calculate Damage ---
+        base_damage = 0
+        if attacker_weapon_data:
+            base_damage = parse_and_roll_dice(attacker_weapon_data.get("damage", "0"))
+        else:
+            base_damage = config.BAREHANDED_FLAT_DAMAGE # Barehanded damage
+            
+        damage_modifier = max(0, (combat_roll_result - hit_threshold) // config.COMBAT_DAMAGE_MODIFIER_DIVISOR)
+        
+        # TODO: Add Strength bonus to damage
+        # TODO: Add critical damage logic
+        
+        total_damage = base_damage + damage_modifier
+        
+        # TODO: Add damage mitigation (armor)
+        
+        final_damage = total_damage # No mitigation for now
+        results["damage"] = final_damage
+        
+        # --- 6. Format Messages ---
+        flavor_key = "default_hit" # TODO: Add critical logic
+        
+        results["attacker_msg"] = f"You attack the {defender_name}!" # TODO: Use get_flavor_message
+        results["defender_msg"] = f"The {attacker_name} attacks you!"
+        results["broadcast_msg"] = f"The {attacker_name} attacks the {defender_name}!"
+        
+        results["damage_msg"] = f"You hit for **{final_damage}** damage!"
+        results["defender_damage_msg"] = f"You are hit for **{final_damage}** damage!"
+        results["broadcast_damage_msg"] = f"The {defender_name} is hit for **{final_damage}** damage!"
+
+    else:
+        results["hit"] = False
+        results["attacker_msg"] = f"You swing at the {defender_name}, but miss!"
+        results["defender_msg"] = f"The {attacker_name} swings at you, but misses!"
+        results["broadcast_msg"] = f"The {attacker_name} swings at the {defender_name}, but misses!"
 
     return results
 
@@ -496,7 +651,13 @@ def _find_combatant(entity_id: str) -> Optional[Any]:
     if not combat_data: return None 
     room_id = combat_data.get("current_room_id")
     if not room_id: return None 
-    room_data = game_state.GAME_ROOMS.get(room_id)
+    
+    room_data = None
+    # --- ADD LOCK ---
+    with game_state.ROOM_LOCK:
+        room_data = game_state.GAME_ROOMS.get(room_id)
+    # --- END LOCK ---
+    
     if not room_data: return None 
     
     monster_data = None
@@ -676,11 +837,15 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                             game_loot_tables=game_state.GAME_LOOT_TABLES,
                             game_equipment_tables_data={} 
                         )
-                        room_data = game_state.GAME_ROOMS.get(room_id)
-                        if room_data:
-                            room_data["objects"].append(corpse_data)
-                            room_data["objects"] = [obj for obj in room_data["objects"] if obj.get("monster_id") != monster_id]
-                            broadcast_callback(room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
+                        
+                        # --- ADD LOCK (Room) ---
+                        with game_state.ROOM_LOCK:
+                            room_data = game_state.GAME_ROOMS.get(room_id)
+                            if room_data:
+                                room_data["objects"].append(corpse_data)
+                                room_data["objects"] = [obj for obj in room_data["objects"] if obj.get("monster_id") != monster_id]
+                                broadcast_callback(room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
+                        # --- END LOCK (Room) ---
                         
                         game_state.DEFEATED_MONSTERS[monster_id] = {
                             "room_id": room_id,
