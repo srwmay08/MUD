@@ -1,5 +1,6 @@
 # mud_backend/core/game_loop/monster_ai.py
 import random
+import copy
 from typing import Callable, Tuple, List, Dict
 from mud_backend.core import game_state
 from mud_backend import config
@@ -13,22 +14,35 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
     
     potential_movers: List[Tuple[Dict, str]] = []
 
-    # Lock rooms while we scan for monsters to avoid iteration errors if a room is deleted (rare, but safe)
+    # Lock rooms while we scan to prevent concurrent modification issues
     with game_state.ROOM_LOCK:
         for room_id, room_data in game_state.GAME_ROOMS.items():
             if not room_data or "objects" not in room_data:
                 continue
                 
             for obj in room_data["objects"]:
-                if obj.get("is_monster") and obj.get("movement_rules"):
+                if obj.get("is_monster"):
                     monster_id = obj.get("monster_id")
-                    # Don't move if in combat
-                    in_combat = False
-                    with game_state.COMBAT_LOCK:
-                         if monster_id and game_state.COMBAT_STATE.get(monster_id, {}).get("state_type") == "combat":
-                             in_combat = True
-                    if not in_combat:
-                        potential_movers.append((obj, room_id))
+                    
+                    # --- HYDRATION CHECK ---
+                    # If the monster is a 'stub' from rooms.json and missing its full template data (like stats/movement),
+                    # we must hydrate it from the master template before processing AI.
+                    if monster_id and "movement_rules" not in obj:
+                         template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
+                         if template:
+                             # We use update so we don't lose any specific overrides that might be on the object instance
+                             # We use deepcopy to ensure this monster gets its OWN copy of the stats
+                             obj.update(copy.deepcopy(template))
+                    # -----------------------
+
+                    if obj.get("movement_rules"):
+                        # Don't move if in combat
+                        in_combat = False
+                        with game_state.COMBAT_LOCK:
+                             if monster_id and game_state.COMBAT_STATE.get(monster_id, {}).get("state_type") == "combat":
+                                 in_combat = True
+                        if not in_combat:
+                            potential_movers.append((obj, room_id))
 
     moved_monster_ids = set()
 
@@ -44,10 +58,10 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
         roll = random.random()
         should_move = roll < wander_chance
 
-        # Only log if it ACTUALLY tries to move to reduce spam, or if ultra-verbose debug is on
+        # Debug log for movement decision
         if config.DEBUG_MODE and should_move:
              monster_name = monster.get("name", "Unknown")
-             # print(f"{log_time_prefix} - MONSTER_AI: {monster_name} decided to move (Roll {roll:.2f} < {wander_chance:.2f})")
+             # print(f"{log_time_prefix} - MONSTER_AI: {monster_name} in {current_room_id} decided to move (Roll {roll:.2f} < {wander_chance:.2f})")
 
         if should_move:
             current_room = game_state.GAME_ROOMS.get(current_room_id)
@@ -60,8 +74,11 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
             chosen_exit = None
             destination_room_id = None
             
+            # Find a valid exit based on allowed_rooms
             for direction, target_room_id in exits:
-                if target_room_id in allowed_rooms:
+                # If allowed_rooms is empty, ANY exit is okay (dangerous for generic mobs!)
+                # If allowed_rooms has entries, target must be in it.
+                if not allowed_rooms or target_room_id in allowed_rooms:
                     chosen_exit = direction
                     destination_room_id = target_room_id
                     break
@@ -79,6 +96,8 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                         moved_monster_ids.add(id(monster))
                         
                         monster_name = monster.get("name", "something")
+                        
+                        # Broadcast arrival/departure
                         broadcast_callback(current_room_id, f"The {monster_name} slinks off towards the {chosen_exit}.", "ambient_move")
                         broadcast_callback(destination_room_id, f"A {monster_name} slinks in.", "ambient_move")
                         

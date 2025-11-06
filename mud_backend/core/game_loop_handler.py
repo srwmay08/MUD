@@ -3,15 +3,12 @@ import time
 import datetime
 from typing import Callable
 
-# --- Imports for tick logic ---
 from mud_backend.core import game_state
 from mud_backend.core.game_objects import Player 
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 from mud_backend.core import loot_system
-# --- NEW IMPORT ---
 from mud_backend.core.game_loop import monster_ai
-# --- END NEW IMPORT ---
 
 def _prune_active_players(log_prefix: str, broadcast_callback: Callable):
     """Prunes players who have timed out from the active list."""
@@ -86,12 +83,11 @@ def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callbac
         game_items_global=game_state.GAME_ITEMS 
     )
     
-    # --- 4. NEW: Process Monster AI (Movement) ---
+    # 4. Process Monster AI (Movement)
     monster_ai.process_monster_ai(
         log_time_prefix=log_prefix,
         broadcast_callback=broadcast_callback
     )
-    # --- END NEW BLOCK ---
 
     # 5. Process Corpse Decay
     decay_messages_by_room = loot_system.process_corpse_decay(

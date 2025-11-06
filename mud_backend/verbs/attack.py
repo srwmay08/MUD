@@ -108,7 +108,12 @@ class Attack(BaseVerb):
                         game_equipment_tables_data={} 
                     )
                     self.room.objects.append(corpse_data)
-                    self.room.objects = [obj for obj in self.room.objects if obj.get("monster_id") != monster_id]
+                    
+                    # --- THIS IS THE FIX ---
+                    # Only remove the specific object instance we just killed.
+                    if target_monster_data in self.room.objects:
+                        self.room.objects.remove(target_monster_data)
+                    # --- END FIX ---
                     
                     db.save_room_state(self.room) 
                     
@@ -131,7 +136,6 @@ class Attack(BaseVerb):
                         combat_system.stop_combat(player_id, monster_id)
                     
                     return False # Combat has ended
-                # --- FIX: Removed the 'else' block that showed remaining HP ---
             
             return True # Combat continues
         # --- (End of helper function) ---
@@ -192,3 +196,4 @@ class Attack(BaseVerb):
                     }
                     if monster_id not in RUNTIME_MONSTER_HP:
                          RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
+}
