@@ -28,18 +28,14 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                 if obj.get("is_monster") and obj.get("movement_rules"):
                     # Check if the monster is currently in combat.
                     # We can use its monster_id to check COMBAT_STATE.
-                    # Note: If multiple generic monsters are in a room, they share a monster_id in the template,
-                    # but the COMBAT_STATE uses that ID. This is a limitation of the current system 
-                    # (generic monsters don't have unique runtime IDs yet).
-                    # For now, if *any* monster of that type is fighting, we might accidentally stop *all* from moving,
-                    # or conversely, allow a fighting one to move.
-                    # Assuming for now that low-level monsters don't have complex unique IDs yet.
-                    
                     monster_id = obj.get("monster_id")
                     in_combat = False
+                    
+                    # --- FIX: Use game_state.COMBAT_STATE ---
                     with game_state.COMBAT_LOCK:
-                         if monster_id and COMBAT_STATE.get(monster_id, {}).get("state_type") == "combat":
+                         if monster_id and game_state.COMBAT_STATE.get(monster_id, {}).get("state_type") == "combat":
                              in_combat = True
+                    # ---------------------------------------
 
                     if not in_combat:
                         potential_movers.append((obj, room_id))
@@ -58,10 +54,21 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
         wander_chance = movement_rules.get("wander_chance", 0.0)
         allowed_rooms = movement_rules.get("allowed_rooms", [])
 
-        if random.random() < wander_chance:
+        # --- NEW: Debug Roll ---
+        roll = random.random()
+        should_move = roll < wander_chance
+
+        if config.DEBUG_MODE:
+             monster_name = monster.get("name", "Unknown")
+             print(f"{log_time_prefix} - MONSTER_AI: {monster_name} (in {current_room_id}) rolled {roll:.2f} vs chance {wander_chance:.2f}. Moving: {should_move}")
+        # -----------------------
+
+        if should_move:
             # It wants to move! Pick a random exit.
             current_room = game_state.GAME_ROOMS.get(current_room_id)
             if not current_room or not current_room.get("exits"):
+                if config.DEBUG_MODE:
+                    print(f"{log_time_prefix} - MONSTER_AI: {monster_name} wanted to move, but room {current_room_id} has no exits.")
                 continue
                 
             exits = list(current_room["exits"].items()) # [(dir, room_id), ...]
@@ -99,4 +106,7 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                         broadcast_callback(destination_room_id, f"A {monster_name} wanders in.", "ambient_move")
                         
                         if config.DEBUG_MODE:
-                            print(f"{log_time_prefix} - MONSTER_AI: {monster_name} moved from {current_room_id} to {destination_room_id}.")
+                            print(f"{log_time_prefix} - MONSTER_AI: SUCCESS - {monster_name} moved from {current_room_id} to {destination_room_id}.")
+            else:
+                 if config.DEBUG_MODE:
+                    print(f"{log_time_prefix} - MONSTER_AI: {monster_name} wanted to move, but no allowed exits were found from {current_room_id}.")
