@@ -11,13 +11,17 @@ from mud_backend.core import game_state
 def _stop_player_combat(player):
     """Stops any combat the player is involved in."""
     player_id = player.name.lower()
-    if player_id in game_state.COMBAT_STATE:
-        combat_data = game_state.COMBAT_STATE.pop(player_id, None)
-        if combat_data and combat_data.get("target_id"):
-            target_id = combat_data["target_id"]
-            # Stop the monster from fighting too
-            game_state.COMBAT_STATE.pop(target_id, None)
-            player.send_message(f"You flee from the {target_id}!")
+    
+    # --- ADD LOCK ---
+    with game_state.COMBAT_LOCK:
+        if player_id in game_state.COMBAT_STATE:
+            combat_data = game_state.COMBAT_STATE.pop(player_id, None)
+            if combat_data and combat_data.get("target_id"):
+                target_id = combat_data["target_id"]
+                # Stop the monster from fighting too
+                game_state.COMBAT_STATE.pop(target_id, None)
+                player.send_message(f"You flee from the {target_id}!")
+    # --- END LOCK ---
 # --- END NEW HELPER ---
 
 

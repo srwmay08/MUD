@@ -142,50 +142,12 @@ DIRECTION_MAP = {
 
 # --- (_prune_active_players and _check_and_run_game_tick unchanged, omitting for brevity) ---
 def _prune_active_players(log_prefix: str, broadcast_callback):
-    current_time = time.time()
-    stale_players = []
-    for player_name, data in game_state.ACTIVE_PLAYERS.items():
-        if (current_time - data["last_seen"]) > game_state.PLAYER_TIMEOUT_SECONDS:
-            stale_players.append(player_name)
-    if stale_players:
-        for player_name in stale_players:
-            player_info = game_state.ACTIVE_PLAYERS.pop(player_name, None)
-            if player_info:
-                room_id = player_info.get("current_room_id", "unknown")
-                disappears_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> disappears.'
-                broadcast_callback(room_id, disappears_message, "ambient")
-                print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
+    # This function is now in game_loop_handler.py
+    pass
 
 def _check_and_run_game_tick(broadcast_callback):
-    current_time = time.time()
-    if (current_time - game_state.LAST_GAME_TICK_TIME) < game_state.TICK_INTERVAL_SECONDS:
-        return
-    game_state.LAST_GAME_TICK_TIME = current_time
-    game_state.GAME_TICK_COUNTER += 1
-    temp_active_players = {}
-    for player_name, data in game_state.ACTIVE_PLAYERS.items():
-        player_obj = data.get("player_obj")
-        if not player_obj:
-            player_obj = Player(player_name, data["current_room_id"])
-        temp_active_players[player_name] = player_obj
-    log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-    log_prefix = f"{log_time} - GAME_TICK ({game_state.GAME_TICK_COUNTER})" 
-    print(f"{log_prefix}: Running global tick...")
-    _prune_active_players(log_prefix, broadcast_callback)
-    environment.update_environment_state(
-        game_tick_counter=game_state.GAME_TICK_COUNTER,
-        active_players_dict=temp_active_players,
-        log_time_prefix=log_prefix,
-        broadcast_callback=broadcast_callback
-    )
-    monster_respawn.process_respawns(
-        log_time_prefix=log_prefix,
-        broadcast_callback=broadcast_callback,
-        game_npcs_dict={},
-        game_equipment_tables_global={},
-        game_items_global=game_state.GAME_ITEMS
-    )
-    print(f"{log_prefix}: Global tick complete.")
+    # This function is now in game_loop_handler.py
+    pass
 
 # ---
 # EXECUTE_COMMAND
@@ -196,7 +158,12 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
     """
     
     # --- (State management logic is unchanged) ---
-    player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+    player_info = None
+    # --- ADD LOCK ---
+    with game_state.PLAYER_LOCK:
+        player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+    # --- END LOCK ---
+    
     if player_info and player_info.get("player_obj"):
         player = player_info["player_obj"]
         player.messages.clear()
@@ -214,18 +181,28 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             
     # --- (Room fetching logic is unchanged) ---
-    room_db_data = game_state.GAME_ROOMS.get(player.current_room_id)
+    room_db_data = None
+    # --- ADD LOCK ---
+    with game_state.ROOM_LOCK:
+        # We lock reading the room cache, as another thread might be modifying it
+        room_db_data = copy.deepcopy(game_state.GAME_ROOMS.get(player.current_room_id))
+    # --- END LOCK ---
+
     if not room_db_data:
         print(f"[WARN] Room {player.current_room_id} not in cache! Fetching from DB.")
         room_db_data = fetch_room_data(player.current_room_id)
         if room_db_data and room_db_data.get("room_id") != "void":
-            game_state.GAME_ROOMS[player.current_room_id] = room_db_data
+            # --- ADD LOCK ---
+            with game_state.ROOM_LOCK:
+                game_state.GAME_ROOMS[player.current_room_id] = room_db_data
+            # --- END LOCK ---
+            room_db_data = copy.deepcopy(room_db_data) # Use a copy to avoid thread issues
             
     room = Room(
         room_id=room_db_data.get("room_id", "void"), 
         name=room_db_data.get("name", "The Void"), 
         description=room_db_data.get("description", "..."), 
-        db_data=room_db_data 
+        db_data=room_db_data # This db_data is now a copy, safe for this thread
     )
 
     # --- (Monster and Corpse filtering logic is unchanged) ---
@@ -237,7 +214,13 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             monster_id = obj.get("monster_id")
             
             if monster_id:
-                if monster_id not in game_state.DEFEATED_MONSTERS:
+                is_defeated = False
+                # --- ADD LOCK ---
+                with game_state.COMBAT_LOCK:
+                    is_defeated = monster_id in game_state.DEFEATED_MONSTERS
+                # --- END LOCK ---
+
+                if not is_defeated:
                     if "stats" not in obj:
                         template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
                         if template:
@@ -250,7 +233,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
             else:
                 live_room_objects.append(obj)
 
-    room.objects = live_room_objects
+    room.objects = live_room_objects # This is the thread-safe copy
     
     # --- (Command parsing logic is unchanged) ---
     parts = command_line.strip().split()
@@ -311,13 +294,17 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                     _run_verb(player, room, command, args, verb_info)
     
     # --- (Save and return logic is unchanged) ---
-    game_state.ACTIVE_PLAYERS[player.name.lower()] = {
-        "sid": sid,
-        "player_name": player.name, 
-        "current_room_id": player.current_room_id,
-        "last_seen": time.time(),
-        "player_obj": player 
-    }
+    # --- ADD LOCK ---
+    with game_state.PLAYER_LOCK:
+        game_state.ACTIVE_PLAYERS[player.name.lower()] = {
+            "sid": sid,
+            "player_name": player.name, 
+            "current_room_id": player.current_room_id,
+            "last_seen": time.time(),
+            "player_obj": player 
+        }
+    # --- END LOCK ---
+
     save_game_state(player)
     return {
         "messages": player.messages,
@@ -366,9 +353,15 @@ def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_in
         traceback.print_exc()
 
 def get_player_object(player_name: str) -> Optional[Player]:
-    player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+    player_info = None
+    # --- ADD LOCK ---
+    with game_state.PLAYER_LOCK:
+        player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+    # --- END LOCK ---
+    
     if player_info and player_info.get("player_obj"):
         return player_info["player_obj"]
+        
     player_db_data = fetch_player_data(player_name)
     if not player_db_data:
         return None
