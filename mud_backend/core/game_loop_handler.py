@@ -8,7 +8,7 @@ from mud_backend.core.game_objects import Player
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 from mud_backend.core import loot_system
-# REMOVED: from mud_backend.core.game_loop import monster_ai
+from mud_backend import config # <-- ADDED MISSING IMPORT
 
 def _prune_active_players(log_prefix: str, broadcast_callback: Callable):
     """Prunes players who have timed out from the active list."""
@@ -85,8 +85,7 @@ def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callbac
         game_items_global=game_state.GAME_ITEMS 
     )
     
-    # 4. [REMOVED] Monster AI is now independent
-    # monster_ai.process_monster_ai(...)
+    # 4. Monster AI is now independent (handled in app.py loop)
 
     # 5. Process Corpse Decay
     decay_messages_by_room = loot_system.process_corpse_decay(

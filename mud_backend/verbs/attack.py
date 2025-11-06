@@ -109,11 +109,9 @@ class Attack(BaseVerb):
                     )
                     self.room.objects.append(corpse_data)
                     
-                    # --- THIS IS THE FIX ---
                     # Only remove the specific object instance we just killed.
                     if target_monster_data in self.room.objects:
                         self.room.objects.remove(target_monster_data)
-                    # --- END FIX ---
                     
                     db.save_room_state(self.room) 
                     
@@ -196,4 +194,3 @@ class Attack(BaseVerb):
                     }
                     if monster_id not in RUNTIME_MONSTER_HP:
                          RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
-}
