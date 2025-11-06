@@ -189,25 +189,26 @@ def handle_command_event(data):
 
             for obj in live_room_objects:
                 if obj.get("is_aggressive") and obj.get("is_monster"):
-                    monster_id = obj.get("monster_id")
-                    if not monster_id: continue
+                    # --- NEW: Use UID for aggro combat state ---
+                    monster_uid = obj.get("uid")
+                    if not monster_uid: continue
 
                     with game_state.COMBAT_LOCK:
-                        is_defeated = monster_id in game_state.DEFEATED_MONSTERS
-                        monster_state = game_state.COMBAT_STATE.get(monster_id)
+                        is_defeated = monster_uid in game_state.DEFEATED_MONSTERS
+                        monster_state = game_state.COMBAT_STATE.get(monster_uid)
                         monster_in_combat = monster_state and monster_state.get("state_type") == "combat"
                         
-                        if monster_id and not is_defeated and not monster_in_combat:
+                        if monster_uid and not is_defeated and not monster_in_combat:
                             emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
                             current_time = time.time()
-                            game_state.COMBAT_STATE[monster_id] = {
+                            game_state.COMBAT_STATE[monster_uid] = {
                                 "state_type": "combat", 
                                 "target_id": player_id,
                                 "next_action_time": current_time,
                                 "current_room_id": new_room_id
                             }
-                            if monster_id not in game_state.RUNTIME_MONSTER_HP:
-                                game_state.RUNTIME_MONSTER_HP[monster_id] = obj.get("max_hp", 1)
+                            if monster_uid not in game_state.RUNTIME_MONSTER_HP:
+                                game_state.RUNTIME_MONSTER_HP[monster_uid] = obj.get("max_hp", 1)
                             break 
 
 if __name__ == "__main__":

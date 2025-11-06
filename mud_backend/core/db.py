@@ -2,20 +2,19 @@
 import socket 
 import json
 import os
+import uuid # <-- NEW IMPORT
 from typing import TYPE_CHECKING, Optional, Any
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
-from mud_backend import config # <-- NEW IMPORT
+from mud_backend import config
 
-# --- NEW IMPORT ---
 from mud_backend.core import game_state
-# --- END NEW IMPORT ---
 
 if TYPE_CHECKING:
     from .game_objects import Player, Room
 
-MONGO_URI = config.MONGO_URI # <-- CHANGED
-DATABASE_NAME = config.DATABASE_NAME # <-- CHANGED
+MONGO_URI = config.MONGO_URI
+DATABASE_NAME = config.DATABASE_NAME
 
 client: Optional[MongoClient] = None
 db = None
@@ -47,7 +46,6 @@ def ensure_initial_data():
         with open(json_path, 'r') as f:
             room_data_list = json.load(f)
         
-        # (Rest of room loading logic is unchanged)
         upsert_count = 0
         update_count = 0
         for room_data in room_data_list:
@@ -60,10 +58,10 @@ def ensure_initial_data():
                 upsert=True
             )
             if result.upserted_id:
-                print(f"[DB DEBUG] Inserted new room: {room_id}")
+                # print(f"[DB DEBUG] Inserted new room: {room_id}")
                 upsert_count += 1
             elif result.modified_count > 0:
-                print(f"[DB DEBUG] Updated existing room: {room_id}")
+                # print(f"[DB DEBUG] Updated existing room: {room_id}")
                 update_count += 1
         
         if upsert_count > 0 or update_count > 0:
@@ -78,13 +76,13 @@ def ensure_initial_data():
     except Exception as e:
         print(f"[DB ERROR] An error occurred loading rooms: {e}")
 
-    # 2. Test Player 'Alice' (Unchanged)
+    # 2. Test Player 'Alice'
     if database.players.count_documents({"name": "Alice"}) == 0:
         database.players.insert_one(
             {
                 "name": "Alice", 
                 "current_room_id": "town_square",
-                "level": 0, "experience": 0, "game_state": "playing", "chargen_step": 99, # <-- CHANGED
+                "level": 0, "experience": 0, "game_state": "playing", "chargen_step": 99,
                 "stats": {
                     "STR": 75, "CON": 70, "DEX": 80, "AGI": 72, "LOG": 85, "INT": 88, "WIS": 65, "INF": 60,
                     "ZEA": 50, "ESS": 55, "DIS": 68, "AUR": 78
@@ -102,7 +100,6 @@ def ensure_initial_data():
 
 
 def fetch_player_data(player_name: str) -> dict:
-    # (function is unchanged)
     database = get_db()
     if database is None: return {} 
     player_data = database.players.find_one({"name": {"$regex": f"^{player_name}$", "$options": "i"}})
@@ -110,7 +107,6 @@ def fetch_player_data(player_name: str) -> dict:
 
 
 def fetch_room_data(room_id: str) -> dict:
-    # (function is unchanged)
     database = get_db()
     if database is None:
         if room_id == "town_square":
@@ -122,7 +118,6 @@ def fetch_room_data(room_id: str) -> dict:
     return room_data
 
 def save_game_state(player: 'Player'):
-    # (function is unchanged)
     database = get_db()
     if database is None:
         print(f"\n[DB SAVE MOCK] Player {player.name} state saved (Mock).")
@@ -137,28 +132,21 @@ def save_game_state(player: 'Player'):
         player._id = result.upserted_id
         print(f"\n[DB SAVE] Player {player.name} created with ID: {player._id}")
     else:
-        print(f"\n[DB SAVE] Player {player.name} state updated.")
+        # print(f"\n[DB SAVE] Player {player.name} state updated.")
+        pass
 
 def save_room_state(room: 'Room'):
     """Saves the current state of a room object to the database."""
     database = get_db()
-    
-    # --- GET DICTIONARY FIRST ---
     room_data_dict = room.to_dict()
     
     if database is None:
         print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
-        # --- FIX: Update cache even in mock mode ---
-        # --- ADD LOCK ---
         with game_state.ROOM_LOCK:
             game_state.GAME_ROOMS[room.room_id] = room_data_dict
-        # --- END LOCK ---
         return
         
-    # We must explicitly separate the query fields and the update fields
     query = {"room_id": room.room_id}
-    
-    # Use the dictionary we already created
     room_data_dict.pop('_id', None)
 
     database.rooms.update_one(
@@ -167,18 +155,15 @@ def save_room_state(room: 'Room'):
         upsert=True
     )
     
-    # --- THIS IS THE FIX ---
-    # After saving to DB, also update the in-memory cache.
-    # --- ADD LOCK ---
     with game_state.ROOM_LOCK:
         game_state.GAME_ROOMS[room.room_id] = room.to_dict()
-    # --- END LOCK ---
-    # --- END FIX ---
     
-    print(f"\n[DB SAVE] Room {room.name} state updated.")
+    # print(f"\n[DB SAVE] Room {room.name} state updated.")
 
 def fetch_all_rooms() -> dict:
-    # (function is unchanged)
+    """
+    Fetches all rooms and ensures every monster has a unique runtime ID (uid).
+    """
     database = get_db()
     if database is None:
         print("[DB WARN] No database connection, cannot fetch all rooms.")
@@ -190,6 +175,12 @@ def fetch_all_rooms() -> dict:
         for room_data in database.rooms.find():
             room_id = room_data.get("room_id")
             if room_id:
+                # --- NEW: Ensure all monsters have a unique runtime ID (uid) ---
+                if "objects" in room_data:
+                    for obj in room_data["objects"]:
+                        if obj.get("is_monster") and "uid" not in obj:
+                            obj["uid"] = uuid.uuid4().hex
+                # ------------------------------------------------------------
                 rooms_dict[room_id] = room_data
         print(f"[DB INIT] ...Cached {len(rooms_dict)} rooms.")
         return rooms_dict
@@ -197,7 +188,6 @@ def fetch_all_rooms() -> dict:
         print(f"[DB ERROR] Failed to fetch all rooms: {e}")
         return {}
 
-# --- (Other fetch functions are unchanged) ---
 def _load_json_data(filename: str) -> dict:
     """Helper to load a JSON file from the 'data' directory."""
     try:
@@ -213,7 +203,6 @@ def _load_json_data(filename: str) -> dict:
     return {}
 
 def fetch_all_monsters() -> dict:
-    """Loads monsters.json and keys it by monster_id."""
     print("[DB INIT] Caching all monsters from monsters.json...")
     monster_list = _load_json_data("monsters.json")
     monster_templates = {m["monster_id"]: m for m in monster_list if m.get("monster_id")}
@@ -221,21 +210,18 @@ def fetch_all_monsters() -> dict:
     return monster_templates
 
 def fetch_all_loot_tables() -> dict:
-    """Loads loot.json."""
     print("[DB INIT] Caching all loot tables from loot.json...")
     loot_tables = _load_json_data("loot.json")
     print(f"[DB INIT] ...Cached {len(loot_tables)} loot tables.")
     return loot_tables
 
 def fetch_all_items() -> dict:
-    """Loads items.json."""
     print("[DB INIT] Caching all items from items.json...")
     items = _load_json_data("items.json")
     print(f"[DB INIT] ...Cached {len(items)} items.")
     return items
 
 def fetch_all_levels() -> list:
-    """Loads leveling.json."""
     print("[DB INIT] Caching level table from leveling.json...")
     level_data = _load_json_data("leveling.json")
     if isinstance(level_data, list):
@@ -245,7 +231,6 @@ def fetch_all_levels() -> list:
     return []
 
 def fetch_all_skills() -> dict:
-    """Loads skills.json and keys it by skill_id."""
     print("[DB INIT] Caching all skills from skills.json...")
     skill_list = _load_json_data("skills.json")
     if not isinstance(skill_list, list):
@@ -254,6 +239,3 @@ def fetch_all_skills() -> dict:
     skill_templates = {s["skill_id"]: s for s in skill_list if s.get("skill_id")}
     print(f"[DB INIT] ...Cached {len(skill_templates)} skills.")
     return skill_templates
-
-# ---
-get_db()

@@ -4,6 +4,7 @@ import os
 import time 
 import datetime 
 import copy 
+import uuid # <-- NEW IMPORT
 from typing import List, Tuple, Dict, Any, Optional 
 
 from mud_backend.core.game_objects import Player, Room
@@ -105,7 +106,7 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         room_db_data = copy.deepcopy(game_state.GAME_ROOMS.get(player.current_room_id))
 
     if not room_db_data:
-        print(f"[WARN] Room {player.current_room_id} not in cache! Fetching from DB.")
+        # print(f"[WARN] Room {player.current_room_id} not in cache! Fetching from DB.")
         room_db_data = fetch_room_data(player.current_room_id)
         if room_db_data and room_db_data.get("room_id") != "void":
             with game_state.ROOM_LOCK: game_state.GAME_ROOMS[player.current_room_id] = room_db_data
@@ -119,16 +120,27 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         for obj in all_objects:
             monster_id = obj.get("monster_id")
             if monster_id:
+                # --- NEW: Ensure UID and use it for defeated check ---
+                if "uid" not in obj:
+                     obj["uid"] = uuid.uuid4().hex
+                uid = obj["uid"]
+
                 is_defeated = False
-                with game_state.COMBAT_LOCK: is_defeated = monster_id in game_state.DEFEATED_MONSTERS
+                with game_state.COMBAT_LOCK: is_defeated = uid in game_state.DEFEATED_MONSTERS
+                
                 if not is_defeated:
                     if "stats" not in obj:
                         template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
                         if template:
+                            # Update with template but KEEP the UID we just verified
+                            current_uid = obj["uid"]
                             obj.update(copy.deepcopy(template))
+                            obj["uid"] = current_uid 
                             live_room_objects.append(obj)
-                        else: print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
+                        else: 
+                             pass # print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
                     else: live_room_objects.append(obj)
+                # -----------------------------------------------------
             else: live_room_objects.append(obj)
     room.objects = live_room_objects
     

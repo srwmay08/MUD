@@ -403,7 +403,8 @@ def _find_combatant(entity_id: str) -> Optional[Any]:
         room_data = game_state.GAME_ROOMS.get(room_id)
     if not room_data: return None
 
-    return next((obj for obj in room_data.get("objects", []) if obj.get("monster_id") == entity_id), None)
+    # --- NEW: Look for UID instead of monster_id ---
+    return next((obj for obj in room_data.get("objects", []) if obj.get("uid") == entity_id), None)
 
 def stop_combat(combatant_id: str, target_id: str):
     game_state.COMBAT_STATE.pop(combatant_id, None)

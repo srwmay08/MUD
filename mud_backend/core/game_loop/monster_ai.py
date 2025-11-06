@@ -25,30 +25,31 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                     monster_id = obj.get("monster_id")
                     
                     # --- HYDRATION CHECK ---
-                    # If the monster is a 'stub' from rooms.json and missing its full template data (like stats/movement),
-                    # we must hydrate it from the master template before processing AI.
                     if monster_id and "movement_rules" not in obj:
                          template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
                          if template:
-                             # We use update so we don't lose any specific overrides that might be on the object instance
-                             # We use deepcopy to ensure this monster gets its OWN copy of the stats
                              obj.update(copy.deepcopy(template))
                     # -----------------------
 
                     if obj.get("movement_rules"):
                         # Don't move if in combat
                         in_combat = False
-                        with game_state.COMBAT_LOCK:
-                             if monster_id and game_state.COMBAT_STATE.get(monster_id, {}).get("state_type") == "combat":
-                                 in_combat = True
+                        # --- NEW: Use UID for combat check ---
+                        monster_uid = obj.get("uid")
+                        if monster_uid:
+                            with game_state.COMBAT_LOCK:
+                                 if game_state.COMBAT_STATE.get(monster_uid, {}).get("state_type") == "combat":
+                                     in_combat = True
+                        
                         if not in_combat:
                             potential_movers.append((obj, room_id))
 
-    moved_monster_ids = set()
+    # Use UIDs to track who has moved to prevent double-moves
+    moved_monster_uids = set()
 
     for monster, current_room_id in potential_movers:
-        # Ensure we don't move the same monster instance twice in one tick
-        if id(monster) in moved_monster_ids:
+        monster_uid = monster.get("uid")
+        if monster_uid and monster_uid in moved_monster_uids:
             continue
             
         movement_rules = monster.get("movement_rules", {})
@@ -58,7 +59,6 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
         roll = random.random()
         should_move = roll < wander_chance
 
-        # Debug log for movement decision
         if config.DEBUG_MODE and should_move:
              monster_name = monster.get("name", "Unknown")
              # print(f"{log_time_prefix} - MONSTER_AI: {monster_name} in {current_room_id} decided to move (Roll {roll:.2f} < {wander_chance:.2f})")
@@ -76,28 +76,24 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
             
             # Find a valid exit based on allowed_rooms
             for direction, target_room_id in exits:
-                # If allowed_rooms is empty, ANY exit is okay (dangerous for generic mobs!)
-                # If allowed_rooms has entries, target must be in it.
                 if not allowed_rooms or target_room_id in allowed_rooms:
                     chosen_exit = direction
                     destination_room_id = target_room_id
                     break
             
             if chosen_exit and destination_room_id:
-                # Re-acquire lock to perform the actual move
                 with game_state.ROOM_LOCK:
                     source_room = game_state.GAME_ROOMS.get(current_room_id)
                     dest_room = game_state.GAME_ROOMS.get(destination_room_id)
                     
-                    # Double check monster is still there (race condition protection)
                     if source_room and dest_room and monster in source_room["objects"]:
                         source_room["objects"].remove(monster)
                         dest_room["objects"].append(monster)
-                        moved_monster_ids.add(id(monster))
+                        if monster_uid:
+                            moved_monster_uids.add(monster_uid)
                         
                         monster_name = monster.get("name", "something")
                         
-                        # Broadcast arrival/departure
                         broadcast_callback(current_room_id, f"The {monster_name} slinks off towards the {chosen_exit}.", "ambient_move")
                         broadcast_callback(destination_room_id, f"A {monster_name} slinks in.", "ambient_move")
                         
