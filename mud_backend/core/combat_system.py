@@ -571,7 +571,20 @@ def stop_combat(combatant_id: str, target_id: str):
 def process_combat_tick(broadcast_callback, send_to_player_callback):
     current_time = time.time()
     
-    for combatant_id, state in list(game_state.COMBAT_STATE.items()):
+    # --- THIS IS THE FIX: Lock the iteration ---
+    combatant_list = []
+    with game_state.COMBAT_LOCK:
+        combatant_list = list(game_state.COMBAT_STATE.items())
+    # --- END FIX ---
+
+    for combatant_id, state in combatant_list:
+        
+        # --- THIS IS THE FIX: Check if state still exists, as it might
+        # have been removed by a previous attacker in this same loop
+        with game_state.COMBAT_LOCK:
+            if combatant_id not in game_state.COMBAT_STATE:
+                continue
+        # --- END FIX ---
         
         if current_time < state["next_action_time"]:
             continue 
@@ -581,16 +594,20 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
         room_id = state.get("current_room_id")
 
         if not attacker or not defender or not room_id:
-            stop_combat(combatant_id, state["target_id"])
+            # --- ADD LOCK ---
+            with game_state.COMBAT_LOCK:
+                stop_combat(combatant_id, state["target_id"])
+            # --- END LOCK ---
             continue
             
         is_attacker_player = isinstance(attacker, Player)
         
-        # --- THIS IS THE FIX 2: Allow players to attack in combat tick ---
-        # (This was preventing monsters from *starting* combat)
-        # if is_attacker_player:
-        #     continue
-        # --- END FIX 2 ---
+        # ---
+        # --- THIS IS THE FIX: Players only attack via 'attack' verb. ---
+        # --- The combat tick only processes MONSTER actions. ---
+        if is_attacker_player:
+            continue
+        # --- END FIX ---
             
         is_defender_player = isinstance(defender, Player)
         
@@ -603,7 +620,11 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                 if attacker_posture in ["sitting", "prone", "kneeling"]:
                     send_to_player_callback(attacker.name, f"You must be standing to attack! (You are {attacker_posture})", "system_error")
                 # Give a small RT for the failed attempt
-                state["next_action_time"] = current_time + 1.0
+                # --- ADD LOCK ---
+                with game_state.COMBAT_LOCK:
+                    if combatant_id in game_state.COMBAT_STATE:
+                        state["next_action_time"] = current_time + 1.0
+                # --- END LOCK ---
                 continue
         # --- END NEW CHECK ---
 
@@ -670,17 +691,24 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                     # --- END NEW ---
                     
                     save_game_state(defender)
-                    stop_combat(combatant_id, state["target_id"])
+                    # --- ADD LOCK ---
+                    with game_state.COMBAT_LOCK:
+                        stop_combat(combatant_id, state["target_id"])
+                    # --- END LOCK ---
                     continue
                 else:
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
                     save_game_state(defender)
             else:
                 monster_id = defender.get("monster_id")
-                if monster_id not in game_state.RUNTIME_MONSTER_HP:
-                    game_state.RUNTIME_MONSTER_HP[monster_id] = defender.get("max_hp", 1)
-                game_state.RUNTIME_MONSTER_HP[monster_id] -= damage
-                new_hp = game_state.RUNTIME_MONSTER_HP[monster_id]
+                # --- ADD LOCK ---
+                new_hp = 0
+                with game_state.COMBAT_LOCK:
+                    if monster_id not in game_state.RUNTIME_MONSTER_HP:
+                        game_state.RUNTIME_MONSTER_HP[monster_id] = defender.get("max_hp", 1)
+                    game_state.RUNTIME_MONSTER_HP[monster_id] -= damage
+                    new_hp = game_state.RUNTIME_MONSTER_HP[monster_id]
+                # --- END LOCK ---
                 
                 if new_hp <= 0:
                     broadcast_callback(room_id, f"**The {defender.get('name')} has been DEFEATED!**", "combat_death")
@@ -697,19 +725,25 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                         game_loot_tables=game_state.GAME_LOOT_TABLES,
                         game_equipment_tables_data={} 
                     )
-                    room_data = game_state.GAME_ROOMS.get(room_id)
-                    if room_data:
-                        room_data["objects"].append(corpse_data)
-                        room_data["objects"] = [obj for obj in room_data["objects"] if obj.get("monster_id") != monster_id]
-                        broadcast_callback(room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
+                    # --- THIS IS THE FIX: Need to lock room access ---
+                    with game_state.ROOM_LOCK:
+                        room_data = game_state.GAME_ROOMS.get(room_id)
+                        if room_data:
+                            room_data["objects"].append(corpse_data)
+                            room_data["objects"] = [obj for obj in room_data["objects"] if obj.get("monster_id") != monster_id]
+                            broadcast_callback(room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
+                    # --- END FIX ---
                     
-                    game_state.DEFEATED_MONSTERS[monster_id] = {
-                        "room_id": room_id,
-                        "template_key": monster_id,
-                        "type": "monster",
-                        "eligible_at": time.time() + 300 # 5 min respawn
-                    }
-                    stop_combat(combatant_id, state["target_id"])
+                    # --- ADD LOCK ---
+                    with game_state.COMBAT_LOCK:
+                        game_state.DEFEATED_MONSTERS[monster_id] = {
+                            "room_id": room_id,
+                            "template_key": monster_id,
+                            "type": "monster",
+                            "eligible_at": time.time() + 300 # 5 min respawn
+                        }
+                        stop_combat(combatant_id, state["target_id"])
+                    # --- END LOCK ---
                     continue
                 else:
                     if is_attacker_player:
@@ -728,5 +762,9 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
         else:
              # Monster's roundtime
              rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
-             
-        state["next_action_time"] = current_time + rt_seconds
+        
+        # --- ADD LOCK ---
+        with game_state.COMBAT_LOCK:
+            if combatant_id in game_state.COMBAT_STATE:
+                state["next_action_time"] = current_time + rt_seconds
+        # --- END LOCK ---

@@ -253,18 +253,18 @@ def handle_command_event(data):
                         # Check if monster is alive and not already fighting
                         if monster_id and not is_defeated and not monster_in_combat:
                             
-                            # --- START COMBAT ---
-                            # --- THIS IS THE FIX 3: Removed aggro message ---
-                            # emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
-                            # --- END FIX 3 ---
+                            # ---
+                            # --- START COMBAT (MODIFIED) ---
+                            # ---
+                            
+                            # --- THIS IS THE FIX: Notify player of aggro ---
+                            emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
+                            # --- END FIX ---
                             
                             current_time = time.time()
                             
-                            game_state.COMBAT_STATE[player_id] = {
-                                "target_id": monster_id,
-                                "next_action_time": current_time + 1.0, 
-                                "current_room_id": new_room_id
-                            }
+                            # --- THIS IS THE FIX: ONLY add the monster to combat. ---
+                            # --- The player will not auto-attack. ---
                             monster_rt = combat_system.calculate_roundtime(obj.get("stats", {}).get("AGI", 50))
                             game_state.COMBAT_STATE[monster_id] = {
                                 "target_id": player_id,
@@ -273,6 +273,8 @@ def handle_command_event(data):
                             }
                             if monster_id not in game_state.RUNTIME_MONSTER_HP:
                                 game_state.RUNTIME_MONSTER_HP[monster_id] = obj.get("max_hp", 1)
+                            
+                            # --- END FIX ---
                             
                             # Only aggro one monster at a time
                             break 
