@@ -15,6 +15,7 @@ from mud_backend.core.game_loop_handler import check_and_run_game_tick
 from mud_backend.core import game_state
 from mud_backend.core import db
 from mud_backend.core import combat_system 
+from mud_backend.core.game_loop import monster_ai # <-- NEW IMPORT for independent AI
 from mud_backend import config
 
 def _get_absorption_room_type(room_id: str) -> str:
@@ -37,11 +38,13 @@ def index():
 
 def game_tick_thread():
     """
-    A background thread that runs the game tick every N seconds.
+    A background thread that runs various game loops at different intervals.
     """
     print("[SERVER START] Game Tick thread started.")
     with app.app_context():
         while True:
+            current_time = time.time()
+
             def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
                 if skip_sid:
                     socketio.emit("message", message, to=room_id, skip_sid=skip_sid)
@@ -58,38 +61,55 @@ def game_tick_thread():
                     if sid:
                         socketio.emit("message", message, to=sid)
 
-            check_and_run_game_tick(
-                broadcast_callback=broadcast_to_room,
-                send_to_player_callback=send_to_player 
-            )
-            
+            # --- 1. FAST TICK: Combat (approx every 1s via sleep at end) ---
             combat_system.process_combat_tick(
                 broadcast_callback=broadcast_to_room,
                 send_to_player_callback=send_to_player
             )
-
-            # --- XP ABSORPTION & HP REGEN ---
-            active_players_list = []
-            with game_state.PLAYER_LOCK:
-                active_players_list = list(game_state.ACTIVE_PLAYERS.items())
             
-            for player_name_lower, player_data in active_players_list:
-                player_obj = player_data.get("player_obj")
-                if not player_obj:
-                    continue
+            # --- 2. INDEPENDENT TICK: Monster AI Movement ---
+            # Runs on its own interval, unrelated to the global 30s tick.
+            if current_time - game_state.LAST_MONSTER_TICK_TIME >= config.MONSTER_TICK_INTERVAL_SECONDS:
+                game_state.LAST_MONSTER_TICK_TIME = current_time
+                # We can use a generic log prefix here as it's independent
+                log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+                monster_ai.process_monster_ai(
+                    log_time_prefix=f"{log_time} - MONSTER_TICK",
+                    broadcast_callback=broadcast_to_room
+                )
 
-                if player_obj.unabsorbed_exp > 0:
-                    room_id = player_obj.current_room_id
-                    room_type = _get_absorption_room_type(room_id)
-                    player_obj.absorb_exp_pulse(room_type=room_type)
-                    
-                if player_obj.hp < player_obj.max_hp:
-                    hp_to_regen = player_obj.hp_regeneration
-                    if hp_to_regen > 0:
-                        player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_to_regen)
+            # --- 3. SLOW TICK: Global Game Tick (30s) ---
+            # Handles Environment, Respawns, Decay, and Player Regens
+            did_global_tick = check_and_run_game_tick(
+                broadcast_callback=broadcast_to_room,
+                send_to_player_callback=send_to_player 
+            )
+
+            if did_global_tick:
+                # --- XP ABSORPTION & HP REGEN (Now tied strictly to the 30s tick) ---
+                active_players_list = []
+                with game_state.PLAYER_LOCK:
+                    active_players_list = list(game_state.ACTIVE_PLAYERS.items())
+                
+                for player_name_lower, player_data in active_players_list:
+                    player_obj = player_data.get("player_obj")
+                    if not player_obj:
+                        continue
+
+                    if player_obj.unabsorbed_exp > 0:
+                        room_id = player_obj.current_room_id
+                        room_type = _get_absorption_room_type(room_id)
+                        player_obj.absorb_exp_pulse(room_type=room_type)
                         
-            socketio.emit('tick')
-            time.sleep(1.0) # Check every second, but only run tick if interval passed
+                    if player_obj.hp < player_obj.max_hp:
+                        hp_to_regen = player_obj.hp_regeneration
+                        if hp_to_regen > 0:
+                            player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_to_regen)
+                
+                # --- Emit the visual tick '>' to clients only when this 30s tick happens ---
+                socketio.emit('tick')
+
+            time.sleep(1.0) # Main loop heartbeat
 
 @socketio.on('connect')
 def handle_connect():

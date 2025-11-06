@@ -8,7 +8,7 @@ from mud_backend.core.game_objects import Player
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 from mud_backend.core import loot_system
-from mud_backend.core.game_loop import monster_ai
+# REMOVED: from mud_backend.core.game_loop import monster_ai
 
 def _prune_active_players(log_prefix: str, broadcast_callback: Callable):
     """Prunes players who have timed out from the active list."""
@@ -35,14 +35,15 @@ def _prune_active_players(log_prefix: str, broadcast_callback: Callable):
                 broadcast_callback(room_id, disappears_message, "ambient")
                 print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
 
-def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callback: Callable):
+def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callback: Callable) -> bool:
     """
     Checks if enough time has passed and runs the global game tick.
+    Returns True if a tick ran, False otherwise.
     """
     current_time = time.time()
     
     if (current_time - game_state.LAST_GAME_TICK_TIME) < game_state.TICK_INTERVAL_SECONDS:
-        return 
+        return False
         
     game_state.LAST_GAME_TICK_TIME = current_time
     game_state.GAME_TICK_COUNTER += 1
@@ -60,7 +61,8 @@ def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callbac
     
     log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     log_prefix = f"{log_time} - GAME_TICK ({game_state.GAME_TICK_COUNTER})" 
-    print(f"{log_prefix}: Running global tick...")
+    if config.DEBUG_MODE:
+         print(f"{log_prefix}: Running global tick...")
 
     # 1. Prune stale players
     _prune_active_players(log_prefix, broadcast_callback)
@@ -83,11 +85,8 @@ def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callbac
         game_items_global=game_state.GAME_ITEMS 
     )
     
-    # 4. Process Monster AI (Movement)
-    monster_ai.process_monster_ai(
-        log_time_prefix=log_prefix,
-        broadcast_callback=broadcast_callback
-    )
+    # 4. [REMOVED] Monster AI is now independent
+    # monster_ai.process_monster_ai(...)
 
     # 5. Process Corpse Decay
     decay_messages_by_room = loot_system.process_corpse_decay(
@@ -98,4 +97,7 @@ def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callbac
         for msg in messages:
             broadcast_callback(room_id, msg, "ambient_decay")
     
-    print(f"{log_prefix}: Global tick complete.")
+    if config.DEBUG_MODE:
+        print(f"{log_prefix}: Global tick complete.")
+        
+    return True
