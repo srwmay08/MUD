@@ -5,11 +5,11 @@ import datetime
 import pytz     
 import copy 
 
-# --- THIS IS THE FIX ---
-# 'config' is in 'mud_backend', not 'mud_backend.core'
+# --- THIS IS THE FIX 1 ---
 from mud_backend import config
-# --- END FIX ---
 from mud_backend.core import game_state 
+from mud_backend.core import combat_system # <-- NEW IMPORT
+# --- END FIX ---
 
 
 def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_equipment_tables, game_items):
@@ -23,6 +23,7 @@ def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_eq
 
 def process_respawns(log_time_prefix, 
                      broadcast_callback,
+                     send_to_player_callback, # <-- THIS IS THE FIX 2
                      # --- Pass in the data it needs ---
                      game_npcs_dict, 
                      game_equipment_tables_global, 
@@ -38,7 +39,6 @@ def process_respawns(log_time_prefix,
     # --- Get state from the global game_state module ---
     tracked_defeated_entities_dict = game_state.DEFEATED_MONSTERS
     game_rooms_dict = game_state.GAME_ROOMS
-    # --- UPDATED: Get monster templates ---
     game_monster_templates_dict = game_state.GAME_MONSTER_TEMPLATES
     # ---
     
@@ -46,39 +46,30 @@ def process_respawns(log_time_prefix,
 
     # --- ADD LOCK ---
     # We lock the entire respawn process to prevent race conditions
-    # with the main thread trying to read/write combat state.
     with game_state.COMBAT_LOCK:
         if config.DEBUG_MODE and getattr(config, 'DEBUG_GAME_TICK_RESPAWN_PHASE', True) and tracked_defeated_entities_dict: 
             print(f"{log_time_prefix} - RESPAWN_SYSTEM: Checking {len(tracked_defeated_entities_dict)} defeated entities.")
         
-        # Use .items() for Python 3
-        # Use list() to create a snapshot in case the dict is modified
         for runtime_id, respawn_info in list(tracked_defeated_entities_dict.items()):
             entity_template_key = respawn_info.get("template_key", runtime_id) 
             
-            # --- FIX: Ensure respawn_info is a dict ---
             if not isinstance(respawn_info, dict):
                 if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_WARN: Skipping invalid respawn entry for {runtime_id}")
                 continue
-            # ---
             
             eligible_at = respawn_info.get("eligible_at", current_time_float)
             is_eligible = current_time_float >= eligible_at
 
-            # --- NEW DEBUG FEATURE ---
             if config.DEBUG_MODE and getattr(config, 'DEBUG_GAME_TICK_RESPAWN_PHASE', True):
                 print(f"{log_time_prefix} - RESPAWN_DEBUG: Entity {runtime_id} (Template: {entity_template_key}). Eligible: {is_eligible} (at {eligible_at:.0f}s).")
-            # --- END NEW DEBUG FEATURE ---
 
             if is_eligible:
                 respawn_chance = respawn_info.get("chance", getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2))
                 roll_for_respawn = random.random()
                 should_respawn_by_chance = roll_for_respawn < respawn_chance
 
-                # --- NEW DEBUG FEATURE ---
                 if config.DEBUG_MODE and getattr(config, 'DEBUG_GAME_TICK_RESPAWN_PHASE', True):
                      print(f"{log_time_prefix} - RESPAWN_DEBUG: Chance Check: Roll={roll_for_respawn:.2f} vs Chance={respawn_chance:.2f}. Respawn: {should_respawn_by_chance}")
-                # --- END NEW DEBUG FEATURE ---
 
 
                 if should_respawn_by_chance:
@@ -96,7 +87,6 @@ def process_respawns(log_time_prefix,
                     if entity_type == "npc":
                         base_template_data = game_npcs_dict.get(entity_template_key)
                     elif entity_type == "monster":
-                        # --- UPDATED: Get from global templates ---
                         base_template_data = game_monster_templates_dict.get(entity_template_key)
 
                     if not base_template_data:
@@ -115,7 +105,6 @@ def process_respawns(log_time_prefix,
                         if "objects" not in room_data: room_data["objects"] = []
                         
                         if entity_type == "monster":
-                            # Add a deep copy of the monster template back to the room's objects
                             room_data["objects"].append(copy.deepcopy(base_template_data))
                             if config.DEBUG_MODE: print(f"{log_time_prefix} - RESPAWN_ACTION: Monster '{entity_template_key}' added back to room {room_id_to_respawn_in}'s object list.")
                         
@@ -127,10 +116,52 @@ def process_respawns(log_time_prefix,
                             game_state.RUNTIME_MONSTER_HP.pop(runtime_id, None)
                         # ---
                         
-                        # --- THIS IS THE FIX: Re-enabled the broadcast ---
+                        # --- THIS IS THE FIX 3: AGGRO CHECK ON RESPAWN ---
+                        monster_obj = base_template_data
+                        
+                        if monster_obj.get("is_aggressive") and monster_obj.get("is_monster"):
+                            monster_id_to_check = runtime_id # This is the ID we are respawning
+                            
+                            # Find all players in this room
+                            players_in_room = []
+                            with game_state.PLAYER_LOCK:
+                                for p_name, p_data in game_state.ACTIVE_PLAYERS.items():
+                                    if p_data.get("current_room_id") == room_id_to_respawn_in:
+                                        players_in_room.append(p_data.get("player_obj"))
+                            
+                            for player_obj in players_in_room:
+                                if not player_obj:
+                                    continue
+                                
+                                player_id = player_obj.name.lower()
+                                
+                                # Check if player is *already* in combat
+                                player_state = game_state.COMBAT_STATE.get(player_id)
+                                player_in_combat = player_state and player_state.get("state_type") == "combat"
+
+                                if not player_in_combat:
+                                    # Player is not in combat. Monster attacks!
+                                    send_to_player_callback(player_obj.name, f"The **{monster_obj['name']}** notices you and attacks!", "combat_other")
+                                    
+                                    monster_rt = combat_system.calculate_roundtime(monster_obj.get("stats", {}).get("AGI", 50))
+                                    
+                                    game_state.COMBAT_STATE[monster_id_to_check] = {
+                                        "state_type": "combat",
+                                        "target_id": player_id,
+                                        "next_action_time": current_time_float, # Attacks immediately
+                                        "current_room_id": room_id_to_respawn_in
+                                    }
+                                    
+                                    if monster_id_to_check not in game_state.RUNTIME_MONSTER_HP:
+                                        game_state.RUNTIME_MONSTER_HP[monster_id_to_check] = monster_obj.get("max_hp", 1)
+                                    
+                                    # Aggro one player and stop
+                                    break 
+                        # --- END FIX 3 ---
+
                         broadcast_callback(room_id_to_respawn_in, f"The {entity_display_name} appears.", "ambient_spawn")
-                        # --- END FIX ---
                         respawned_entity_runtime_ids_to_remove.append(runtime_id)
+                        
                     elif config.DEBUG_MODE:
                          print(f"{log_time_prefix} - RESPAWN_ACTION: Skipping unique monster {entity_template_key} as one already exists in the room.")
         

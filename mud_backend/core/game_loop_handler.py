@@ -13,7 +13,7 @@ from mud_backend.core import loot_system
 # --- END NEW IMPORT ---
 
 # ---
-# This function is moved from command_executor.py
+# (function _prune_active_players is unchanged)
 # ---
 def _prune_active_players(log_prefix: str, broadcast_callback: Callable):
     """Prunes players who have timed out from the active list."""
@@ -49,7 +49,7 @@ def _prune_active_players(log_prefix: str, broadcast_callback: Callable):
 # ---
 # This function is moved from command_executor.py
 # ---
-def check_and_run_game_tick(broadcast_callback: Callable):
+def check_and_run_game_tick(broadcast_callback: Callable, send_to_player_callback: Callable): # <-- THIS IS THE FIX 1
     """
     Checks if enough time has passed and runs the global game tick.
     This is the main entry point for the game loop thread.
@@ -81,11 +81,7 @@ def check_and_run_game_tick(broadcast_callback: Callable):
     
     log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     
-    # --- THIS IS THE FIX ---
-    # The error was: log_prefix = f"{log_prefix} - GAME_TICK..."
-    # You must use log_time, which was just defined.
     log_prefix = f"{log_time} - GAME_TICK ({game_state.GAME_TICK_COUNTER})" 
-    # --- END FIX ---
     
     print(f"{log_prefix}: Running global tick...")
 
@@ -101,10 +97,11 @@ def check_and_run_game_tick(broadcast_callback: Callable):
     )
 
     # --- 3. Process monster/NPC respawns ---
-    # --- THIS IS THE FIX: Removed 'current_time_utc' ---
+    # --- THIS IS THE FIX 2: Pass the new callback ---
     monster_respawn.process_respawns(
         log_time_prefix=log_prefix,
         broadcast_callback=broadcast_callback,
+        send_to_player_callback=send_to_player_callback, # <-- PASS IT HERE
         game_npcs_dict={}, # TODO: Pass real data
         game_equipment_tables_global={}, # TODO: Pass real data
         game_items_global=game_state.GAME_ITEMS # Pass the real items

@@ -20,7 +20,7 @@ from mud_backend.core import db
 from mud_backend.core import combat_system 
 from mud_backend import config # <-- NEW IMPORT
 
-# --- NEW HELPER: Determine Absorption Room Type ---
+# --- (Helper _get_absorption_room_type is unchanged) ---
 def _get_absorption_room_type(room_id: str) -> str:
     """Determines the room type for experience absorption."""
     # Check for "on node" (highest priority)
@@ -56,13 +56,11 @@ def game_tick_thread():
     with app.app_context():
         while True:
             # --- Broadcast to a room (for weather, etc.) ---
-            # --- THIS IS THE FIX 1 ---
             def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
                 if skip_sid:
                     socketio.emit("message", message, to=room_id, skip_sid=skip_sid)
                 else:
                     socketio.emit("message", message, to=room_id)
-            # --- END FIX 1 ---
                 
             # --- NEW: Send a message to a specific player ---
             def send_to_player(player_name, message, msg_type):
@@ -78,8 +76,12 @@ def game_tick_thread():
                         socketio.emit("message", message, to=sid)
             # ---
 
-            # --- Call the function we actually imported: 'check_and_run_game_tick'
-            check_and_run_game_tick(broadcast_to_room)
+            # --- THIS IS THE FIX ---
+            # Call the function with *both* callbacks
+            check_and_run_game_tick(
+                broadcast_callback=broadcast_to_room,
+                send_to_player_callback=send_to_player 
+            )
             # --- END FIX ---
             
             # --- Run the combat tick with *both* callbacks ---
@@ -108,25 +110,20 @@ def game_tick_thread():
 
                 # 1. Absorb XP (which also handles CON recovery)
                 if player_obj.unabsorbed_exp > 0:
-                    # --- MODIFIED: Pass the calculated room type to enable rate logic ---
                     room_id = player_obj.current_room_id
                     room_type = _get_absorption_room_type(room_id)
                     player_obj.absorb_exp_pulse(room_type=room_type)
-                    # --- END MODIFIED ---
                     
                 # 2. Regenerate HP
                 if player_obj.hp < player_obj.max_hp:
                     hp_to_regen = player_obj.hp_regeneration
                     if hp_to_regen > 0:
                         player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_to_regen)
-                        # We don't message the player on every tick,
-                        # it would be too spammy.
                         
             # --- END REVISED LOGIC ---
             
             socketio.emit('tick')
             
-            # Reads interval from game_state (which gets it from config)
             time.sleep(game_state.TICK_INTERVAL_SECONDS)
 
 # ---
@@ -201,11 +198,8 @@ def handle_command_event(data):
         arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
         emit("message", arrives_message, to=new_room_id, skip_sid=sid)
         
-    # ---
-    # --- THIS IS THE FIX 2: Send command response *before* checking aggro
-    # ---
+    # --- (Send command response) ---
     emit("command_response", result_data, to=sid)
-    # --- END FIX 2 ---
 
 
     # ---
@@ -214,15 +208,11 @@ def handle_command_event(data):
     
     player_id = player_name.lower()
     
-    # --- THIS IS THE FIX ---
-    # We must check if the player's state is specifically "combat",
-    # not just if they have an entry.
     player_in_combat = False
     with game_state.COMBAT_LOCK:
         player_state = game_state.COMBAT_STATE.get(player_id)
         if player_state and player_state.get("state_type") == "combat":
             player_in_combat = True
-    # --- END FIX ---
     
     if new_room_id and new_player_info and not player_in_combat:
         
@@ -245,11 +235,8 @@ def handle_command_event(data):
                     with game_state.COMBAT_LOCK:
                         is_defeated = monster_id in game_state.DEFEATED_MONSTERS
                         
-                        # --- THIS IS THE FIX ---
-                        # Check if monster is also in *combat*
                         monster_state = game_state.COMBAT_STATE.get(monster_id)
                         monster_in_combat = monster_state and monster_state.get("state_type") == "combat"
-                        # --- END FIX ---
                         
                         # Check if monster is alive and not already fighting
                         if monster_id and not is_defeated and not monster_in_combat:
@@ -260,15 +247,12 @@ def handle_command_event(data):
                             
                             monster_rt = combat_system.calculate_roundtime(obj.get("stats", {}).get("AGI", 50))
                             
-                            # --- THIS IS THE FIX ---
-                            # Set the state_type to "combat"
                             game_state.COMBAT_STATE[monster_id] = {
-                                "state_type": "combat", # <-- SETTING THE TYPE
+                                "state_type": "combat", 
                                 "target_id": player_id,
                                 "next_action_time": current_time, # Monster attacks immediately
                                 "current_room_id": new_room_id
                             }
-                            # --- END FIX ---
                             
                             if monster_id not in game_state.RUNTIME_MONSTER_HP:
                                 game_state.RUNTIME_MONSTER_HP[monster_id] = obj.get("max_hp", 1)

@@ -76,19 +76,22 @@ class Player:
             "bank_silvers": 0 
         })
 
-        # --- UPDATED: POSTURE vs STANCE ---
         self.stance: str = self.db_data.get("stance", "neutral") # For combat
         self.posture: str = self.db_data.get("posture", "standing") # For physical position
         
-        # --- NEW: Status Effects List ---
         self.status_effects: List[str] = self.db_data.get("status_effects", [])
-        # --- END NEW ---
+
+        # --- THIS IS THE FIX ---
+        # Player's personal action roundtime
+        self.next_action_time: float = self.db_data.get("next_action_time", 0.0)
+        # --- END FIX ---
 
         self.deaths_recent: int = self.db_data.get("deaths_recent", 0)
         self.death_sting_points: int = self.db_data.get("death_sting_points", 0)
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
 
+    # --- (All @property methods are unchanged) ---
     @property
     def con_bonus(self) -> int:
         return (self.stats.get("CON", 50) - 50)
@@ -124,9 +127,6 @@ class Player:
             regen = math.trunc(regen * 0.5)
         return max(0, regen)
         
-    # ---
-    # --- MODIFIED PROPERTY: armor_rt_penalty ---
-    # ---
     @property
     def armor_rt_penalty(self) -> float:
         """
@@ -168,9 +168,6 @@ class Player:
         
         final_penalty = max(0.0, base_rt - penalty_removed)
         return final_penalty
-    # ---
-    # --- END MODIFIED PROPERTY ---
-    # ---
 
     @property
     def field_exp_capacity(self) -> int:
@@ -192,6 +189,7 @@ class Player:
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
+    # --- (add_field_exp, absorb_exp_pulse, _get_xp_target_for_level, _calculate_tps_per_level, _check_for_level_up, send_message, get_equipped_item_data, get_armor_type are unchanged) ---
     def add_field_exp(self, nominal_amount: int):
         if self.death_sting_points > 0:
             original_nominal = nominal_amount
@@ -354,10 +352,11 @@ class Player:
             "ranks_trained_this_level": self.ranks_trained_this_level,
             "stance": self.stance,
             "posture": self.posture,
-            
-            # --- NEW PROPERTY ---
             "status_effects": self.status_effects,
-            # --- END NEW ---
+
+            # --- THIS IS THE FIX ---
+            "next_action_time": self.next_action_time,
+            # --- END FIX ---
 
             "deaths_recent": self.deaths_recent,
             "death_sting_points": self.death_sting_points,
@@ -374,7 +373,7 @@ class Player:
         return f"<Player: {self.name}>"
 
 
-# --- MODIFIED: Room class ---
+# --- (Room class is unchanged) ---
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id
@@ -397,11 +396,8 @@ class Room:
             "exits": self.exits,
         }
         
-        # --- THIS IS THE FIX ---
-        # Corrected the typo from `self.self._id` to `self._id`
         if self._id:
             data["_id"] = self._id
-        # --- END FIX ---
 
         return data
 

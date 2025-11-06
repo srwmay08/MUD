@@ -16,8 +16,10 @@ from mud_backend.core import db
 class Attack(BaseVerb):
     """
     Handles the 'attack' command.
-    - If not in combat, this *initiates* combat AND performs the first attack.
-    - If in combat, this *performs* an attack, subject to roundtime.
+    - Checks for player round-time (RT).
+    - If RT is clear, performs one attack.
+    - Sets the player's RT (as 'action' state).
+    - Activates the monster's AI ('combat' state) to make it fight back.
     """
     
     def execute(self):
@@ -34,11 +36,9 @@ class Attack(BaseVerb):
         for obj in self.room.objects:
             monster_id_check = obj.get("monster_id")
             if monster_id_check:
-                # --- ADD LOCK ---
                 is_defeated = False
                 with COMBAT_LOCK:
                     is_defeated = monster_id_check in DEFEATED_MONSTERS
-                # --- END LOCK ---
                 
                 if not is_defeated:
                     if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
@@ -54,17 +54,26 @@ class Attack(BaseVerb):
             self.player.send_message("That creature cannot be attacked.")
             return
             
-        # --- ADD LOCK ---
         with COMBAT_LOCK:
             if monster_id in DEFEATED_MONSTERS:
                 self.player.send_message(f"The {target_monster_data['name']} is already dead.")
                 return
-        # --- END LOCK ---
         
         current_time = time.time()
+
+        # --- THIS IS THE FIX 1: Check for *any* round-time first ---
+        combat_info = None
+        with COMBAT_LOCK:
+            combat_info = COMBAT_STATE.get(player_id)
+            
+        if combat_info and current_time < combat_info.get("next_action_time", 0):
+            wait_time = combat_info['next_action_time'] - current_time
+            self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
+            return
+        # --- END FIX 1 ---
         
+        # --- Helper function to perform the attack and handle results ---
         def _resolve_and_handle_attack():
-            # --- (resolve_attack call is unchanged) ---
             attack_results = combat_system.resolve_attack(
                 self.player, target_monster_data, GAME_ITEMS
             )
@@ -83,14 +92,12 @@ class Attack(BaseVerb):
                 damage = attack_results['damage']
                 new_hp = 0
                 
-                # --- ADD LOCK ---
                 with COMBAT_LOCK:
                     if monster_id not in RUNTIME_MONSTER_HP:
                         RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
                     
                     RUNTIME_MONSTER_HP[monster_id] -= damage
                     new_hp = RUNTIME_MONSTER_HP[monster_id]
-                # --- END LOCK ---
 
                 if new_hp <= 0:
                     self.player.send_message(f"**The {target_monster_data['name']} has been DEFEATED!**")
@@ -118,7 +125,6 @@ class Attack(BaseVerb):
                         getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2)
                     )
 
-                    # --- ADD LOCK ---
                     with COMBAT_LOCK:
                         DEFEATED_MONSTERS[monster_id] = {
                             "room_id": self.room.room_id,
@@ -127,93 +133,69 @@ class Attack(BaseVerb):
                             "eligible_at": time.time() + respawn_time,
                             "chance": respawn_chance
                         }
-                        # --- FIX: Stop combat *inside* the lock ---
                         combat_system.stop_combat(player_id, monster_id)
-                    # --- END LOCK ---
                     
-                    return False 
+                    return False # Combat has ended
                 else:
                     self.player.send_message(f"(The {target_monster_data['name']} has {new_hp} HP remaining)")
             
-            return True 
+            return True # Combat continues
         # --- (End of helper function) ---
 
 
-        combat_info = None
-        # --- ADD LOCK ---
-        with COMBAT_LOCK:
-            combat_info = COMBAT_STATE.get(player_id)
-        # --- END LOCK ---
+        # --- THIS IS THE FIX 2: Simplified combat logic ---
         
-        # --- MODIFIED: Check for state_type as well ---
-        is_in_active_combat = combat_info and combat_info.get("state_type") == "combat"
+        # Check if the monster is already fighting the player
+        monster_state = None
+        with COMBAT_LOCK:
+            monster_state = COMBAT_STATE.get(monster_id)
+        monster_is_fighting_player = (monster_state and 
+                                      monster_state.get("state_type") == "combat" and 
+                                      monster_state.get("target_id") == player_id)
 
-        if is_in_active_combat:
-            # --- PLAYER IS ALREADY IN COMBAT ---
-            
-            if combat_info["target_id"] != monster_id:
-                # ... (target switching message is unchanged) ...
-                target_id = "something"
-                with COMBAT_LOCK:
-                    if player_id in COMBAT_STATE:
-                         target_id = COMBAT_STATE[player_id].get("target_id", "something")
-                self.player.send_message(f"You are already fighting the {target_id}!")
-                return
-                
-            if current_time < combat_info["next_action_time"]:
-                wait_time = combat_info['next_action_time'] - current_time
-                self.player.send_message(f"You are not ready to attack yet. (Wait {wait_time:.1f}s)")
-                return
-                
-            combat_continues = _resolve_and_handle_attack()
-            
-            if combat_continues:
-                base_rt = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
-                armor_penalty = self.player.armor_rt_penalty
-                rt_seconds = base_rt + armor_penalty
-                # --- ADD LOCK ---
-                with COMBAT_LOCK:
-                    if player_id in COMBAT_STATE: # Check it still exists
-                        # We are simply updating the time on an existing combat state
-                        COMBAT_STATE[player_id]["next_action_time"] = current_time + rt_seconds
-                # --- END LOCK ---
-            
-        else:
-            # --- PLAYER IS INITIATING COMBAT ---
-            # This logic runs if player is not in combat, OR if state_type was "action"
-            
-            self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
-            
+        # Check if player is switching targets
+        if combat_info and combat_info.get("target_id") and combat_info.get("target_id") != monster_id:
+            # Player's last action was against a different target
+            self.player.send_message(f"You are already fighting the {combat_info.get('target_id')}!")
+            return
+
+        # If this is the first attack, show the "You attack" message
+        if not monster_is_fighting_player:
+             self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
+        
+        # --- Resolve the attack ---
+        combat_continues = _resolve_and_handle_attack()
+        
+        # --- Set RT and Monster AI (if combat didn't end) ---
+        if combat_continues:
             room_id = self.room.room_id
             
+            # Calculate player's RT
             base_rt = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
             armor_penalty = self.player.armor_rt_penalty
             rt_seconds = base_rt + armor_penalty
             
-            # --- THIS IS THE FIX ---
-            # Calculate monster_rt *before* the lock
+            # Calculate monster's RT
             monster_rt = combat_system.calculate_roundtime(target_monster_data.get("stats", {}).get("AGI", 50))
-            # --- END FIX ---
-
-            # --- ADD LOCK ---
+            
             with COMBAT_LOCK:
-                # Overwrite any existing "action" state with a "combat" state
+                # Set Player's RT. We use "action" state, not "combat"
                 COMBAT_STATE[player_id] = {
-                    "state_type": "combat", # <-- SETTING THE TYPE
-                    "target_id": monster_id,
+                    "state_type": "action", # <-- Player is just in RT
+                    "target_id": monster_id, # Still need this to know who monster should stop fighting if player flees
                     "next_action_time": current_time + rt_seconds, 
                     "current_room_id": room_id
                 }
                 
-                COMBAT_STATE[monster_id] = {
-                    "state_type": "combat", # <-- SETTING THE TYPE
-                    "target_id": player_id,
-                    "next_action_time": current_time + (monster_rt / 2), # <-- Use the variable
-                    "current_room_id": room_id
-                }
-                
-                if monster_id not in RUNTIME_MONSTER_HP:
-                    RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
-            # --- END LOCK ---
-            
-            _resolve_and_handle_attack()
+                # Set/Update Monster AI
+                if not monster_is_fighting_player:
+                    # Monster wasn't fighting back. Set its AI.
+                    COMBAT_STATE[monster_id] = {
+                        "state_type": "combat", # <-- Monster IS in combat
+                        "target_id": player_id,
+                        "next_action_time": current_time + (monster_rt / 2), # Attacks quickly
+                        "current_room_id": room_id
+                    }
+                    if monster_id not in RUNTIME_MONSTER_HP:
+                         RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
+        # --- END FIX 2 ---
