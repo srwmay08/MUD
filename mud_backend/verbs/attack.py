@@ -64,13 +64,10 @@ class Attack(BaseVerb):
         current_time = time.time()
         
         def _resolve_and_handle_attack():
-            # --- THIS IS THE FIX ---
-            # resolve_attack() takes 3 arguments, not 4.
-            # (attacker, defender, game_items_global)
+            # --- (resolve_attack call is unchanged) ---
             attack_results = combat_system.resolve_attack(
                 self.player, target_monster_data, GAME_ITEMS
             )
-            # --- END FIX ---
             
             # 1. Flavor Text
             self.player.send_message(attack_results['attacker_msg'])
@@ -130,9 +127,10 @@ class Attack(BaseVerb):
                             "eligible_at": time.time() + respawn_time,
                             "chance": respawn_chance
                         }
+                        # --- FIX: Stop combat *inside* the lock ---
+                        combat_system.stop_combat(player_id, monster_id)
                     # --- END LOCK ---
                     
-                    combat_system.stop_combat(player_id, monster_id)
                     return False 
                 else:
                     self.player.send_message(f"(The {target_monster_data['name']} has {new_hp} HP remaining)")
@@ -147,18 +145,18 @@ class Attack(BaseVerb):
             combat_info = COMBAT_STATE.get(player_id)
         # --- END LOCK ---
         
-        is_in_active_combat = combat_info and combat_info.get("target_id")
+        # --- MODIFIED: Check for state_type as well ---
+        is_in_active_combat = combat_info and combat_info.get("state_type") == "combat"
 
         if is_in_active_combat:
             # --- PLAYER IS ALREADY IN COMBAT ---
             
             if combat_info["target_id"] != monster_id:
-                # --- ADD LOCK ---
+                # ... (target switching message is unchanged) ...
                 target_id = "something"
                 with COMBAT_LOCK:
                     if player_id in COMBAT_STATE:
                          target_id = COMBAT_STATE[player_id].get("target_id", "something")
-                # --- END LOCK ---
                 self.player.send_message(f"You are already fighting the {target_id}!")
                 return
                 
@@ -176,11 +174,13 @@ class Attack(BaseVerb):
                 # --- ADD LOCK ---
                 with COMBAT_LOCK:
                     if player_id in COMBAT_STATE: # Check it still exists
+                        # We are simply updating the time on an existing combat state
                         COMBAT_STATE[player_id]["next_action_time"] = current_time + rt_seconds
                 # --- END LOCK ---
             
         else:
             # --- PLAYER IS INITIATING COMBAT ---
+            # This logic runs if player is not in combat, OR if state_type was "action"
             
             self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
             
@@ -190,18 +190,25 @@ class Attack(BaseVerb):
             armor_penalty = self.player.armor_rt_penalty
             rt_seconds = base_rt + armor_penalty
             
+            # --- THIS IS THE FIX ---
+            # Calculate monster_rt *before* the lock
+            monster_rt = combat_system.calculate_roundtime(target_monster_data.get("stats", {}).get("AGI", 50))
+            # --- END FIX ---
+
             # --- ADD LOCK ---
             with COMBAT_LOCK:
+                # Overwrite any existing "action" state with a "combat" state
                 COMBAT_STATE[player_id] = {
+                    "state_type": "combat", # <-- SETTING THE TYPE
                     "target_id": monster_id,
                     "next_action_time": current_time + rt_seconds, 
                     "current_room_id": room_id
                 }
                 
-                monster_rt = combat_system.calculate_roundtime(target_monster_data.get("stats", {}).get("AGI", 50))
                 COMBAT_STATE[monster_id] = {
+                    "state_type": "combat", # <-- SETTING THE TYPE
                     "target_id": player_id,
-                    "next_action_time": current_time + (monster_rt / 2), 
+                    "next_action_time": current_time + (monster_rt / 2), # <-- Use the variable
                     "current_room_id": room_id
                 }
                 

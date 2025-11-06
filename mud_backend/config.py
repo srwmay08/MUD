@@ -39,7 +39,9 @@ SHIELD_SKILL_DS_BONUS_DIVISOR = 10 # SKILL / 10
 
 # Combat Rolls
 COMBAT_ADVANTAGE_FACTOR = 40      # Base "hit chance" added to roll
-COMBAT_HIT_THRESHOLD = 0          # (AS - DS) + ADVANTAGE + d100 must be > this to hit
+# --- THIS IS THE FIX ---
+COMBAT_HIT_THRESHOLD = 100        # (AS - DS) + ADVANTAGE + d100 must be > this to hit
+# --- END FIX ---
 COMBAT_DAMAGE_MODIFIER_DIVISOR = 10 # (ROLL_RESULT - THRESHOLD) / 10 = Bonus Damage
 
 # Roundtime

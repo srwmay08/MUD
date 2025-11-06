@@ -557,6 +557,13 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
 
     for combatant_id, state in combatant_list:
         
+        # --- THIS IS THE ROBUST FIX ---
+        # This entry is for a non-combat roundtime (e.g., foraging)
+        # and should be skipped by the combat processor.
+        if state.get("state_type") != "combat":
+            continue
+        # --- END FIX ---
+
         with game_state.COMBAT_LOCK:
             if combatant_id not in game_state.COMBAT_STATE:
                 continue
@@ -578,6 +585,7 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
         is_attacker_player = isinstance(attacker, Player)
         
         if is_attacker_player:
+            # Player attacks are handled by the 'attack' verb, not the tick
             continue
             
         is_defender_player = isinstance(defender, Player)

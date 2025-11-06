@@ -209,19 +209,20 @@ def handle_command_event(data):
 
 
     # ---
-    # --- AGGRO CHECK (MOVED) ---
-    # This logic is now OUTSIDE the movement block.
-    # It will run on *every command* (look, inv, get, etc.)
+    # --- MODIFIED AGGRO CHECK ---
     # ---
     
-    # Only check for aggro if the player is in a room and *not* already in combat
     player_id = player_name.lower()
     
+    # --- THIS IS THE FIX ---
+    # We must check if the player's state is specifically "combat",
+    # not just if they have an entry.
     player_in_combat = False
-    # --- ADD LOCK ---
     with game_state.COMBAT_LOCK:
-        player_in_combat = player_id in game_state.COMBAT_STATE
-    # --- END LOCK ---
+        player_state = game_state.COMBAT_STATE.get(player_id)
+        if player_state and player_state.get("state_type") == "combat":
+            player_in_combat = True
+    # --- END FIX ---
     
     if new_room_id and new_player_info and not player_in_combat:
         
@@ -229,14 +230,10 @@ def handle_command_event(data):
         if room_data:
             player_obj = new_player_info.get("player_obj")
             
-            # --- FIX: We must get the "live" room objects from the player object ---
-            # (Because execute_command() puts the filtered list in player.room.objects)
             if player_obj and hasattr(player_obj, 'room'):
                 live_room_objects = player_obj.room.objects
             else:
-                # Fallback, though less ideal
                 live_room_objects = room_data.get("objects", [])
-            # --- END FIX ---
 
             for obj in live_room_objects:
                 if obj.get("is_aggressive") and obj.get("is_monster"):
@@ -245,44 +242,40 @@ def handle_command_event(data):
                         continue
 
                     # --- ADD LOCK ---
-                    # We must check and update combat state atomically
                     with game_state.COMBAT_LOCK:
                         is_defeated = monster_id in game_state.DEFEATED_MONSTERS
-                        monster_in_combat = monster_id in game_state.COMBAT_STATE
+                        
+                        # --- THIS IS THE FIX ---
+                        # Check if monster is also in *combat*
+                        monster_state = game_state.COMBAT_STATE.get(monster_id)
+                        monster_in_combat = monster_state and monster_state.get("state_type") == "combat"
+                        # --- END FIX ---
                         
                         # Check if monster is alive and not already fighting
                         if monster_id and not is_defeated and not monster_in_combat:
                             
-                            # ---
-                            # --- START COMBAT (MODIFIED) ---
-                            # ---
-                            
-                            # --- THIS IS THE FIX: Notify player of aggro ---
                             emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
-                            # --- END FIX ---
                             
                             current_time = time.time()
                             
-                            # --- THIS IS THE FIX: ONLY add the monster to combat. ---
-                            # --- The player will not auto-attack. ---
                             monster_rt = combat_system.calculate_roundtime(obj.get("stats", {}).get("AGI", 50))
+                            
+                            # --- THIS IS THE FIX ---
+                            # Set the state_type to "combat"
                             game_state.COMBAT_STATE[monster_id] = {
+                                "state_type": "combat", # <-- SETTING THE TYPE
                                 "target_id": player_id,
                                 "next_action_time": current_time, # Monster attacks immediately
                                 "current_room_id": new_room_id
                             }
+                            # --- END FIX ---
+                            
                             if monster_id not in game_state.RUNTIME_MONSTER_HP:
                                 game_state.RUNTIME_MONSTER_HP[monster_id] = obj.get("max_hp", 1)
                             
-                            # --- END FIX ---
-                            
-                            # Only aggro one monster at a time
                             break 
                     # --- END LOCK ---
     # --- END AGGRO CHECK ---
-
-    # --- MOVED: This is now sent *before* the aggro check ---
-    # emit("command_response", result_data, to=sid)
 
 
 if __name__ == "__main__":

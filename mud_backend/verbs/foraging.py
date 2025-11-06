@@ -5,7 +5,7 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import game_state
 from typing import Tuple, Optional # <-- NEW
 
-# --- NEW HELPER ---
+# --- (Helper _find_item_in_hands is unchanged) ---
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Finds the first item_id in a player's hands that matches.
@@ -21,17 +21,26 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
                     return item_id, slot
     return None, None
 
-# --- NEW HELPER ---
+# --- MODIFIED: _set_action_roundtime ---
 def _set_action_roundtime(player, duration_seconds: float):
     """Sets a non-combat action roundtime for the player."""
     player_id = player.name.lower()
     
     # --- ADD LOCK ---
     with game_state.COMBAT_LOCK:
-        # Get existing state (could be combat RT) or a new dict
+        # Get existing state or a new dict
         rt_data = game_state.COMBAT_STATE.get(player_id, {})
-        # Set the next action time
+        
+        # --- THIS IS THE FIX ---
+        # Set the action time and explicitly mark the state type
         rt_data["next_action_time"] = time.time() + duration_seconds
+        rt_data["state_type"] = "action" # <-- NEW
+        
+        # Explicitly remove combat keys in case they were stuck
+        rt_data.pop("target_id", None)
+        rt_data.pop("current_room_id", None)
+        # --- END FIX ---
+        
         # Put it back in the global state
         game_state.COMBAT_STATE[player_id] = rt_data
     # --- END LOCK ---
@@ -44,12 +53,13 @@ class Forage(BaseVerb):
     """
     
     def execute(self):
-        # --- NEW: Roundtime Check ---
+        # --- Roundtime Check ---
         player_id = self.player.name.lower()
         current_time = time.time()
         
         # --- ADD LOCK ---
         with game_state.COMBAT_LOCK:
+            # This check is now safe, as it only looks for next_action_time
             if player_id in game_state.COMBAT_STATE:
                 rt_data = game_state.COMBAT_STATE[player_id]
                 if current_time < rt_data.get("next_action_time", 0):
@@ -59,6 +69,7 @@ class Forage(BaseVerb):
         # --- END LOCK ---
         # --- END RT Check ---
 
+        # ... (rest of Forage class is unchanged) ...
         if not self.args:
             self.player.send_message("What are you trying to forage for? (e.g., FORAGE VIRIDIAN LEAF or FORAGE SENSE)")
             _set_action_roundtime(self.player, 1.0) # 1s RT for syntax error
@@ -143,6 +154,7 @@ class Forage(BaseVerb):
             self.player.send_message(f"You forage for {item_name} but fail to find any. (Roundtime: {rt_seconds:.1f}s)")
             _set_action_roundtime(self.player, rt_seconds)
 
+# --- (Eat and Drink classes are unchanged) ---
 class Eat(BaseVerb):
     """
     Handles the 'eat' command for herbs and food.
