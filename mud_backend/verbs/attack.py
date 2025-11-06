@@ -6,7 +6,7 @@ from mud_backend.core.game_state import (
     COMBAT_STATE, RUNTIME_MONSTER_HP, 
     DEFEATED_MONSTERS, GAME_MONSTER_TEMPLATES,
     GAME_ITEMS, GAME_LOOT_TABLES,
-    COMBAT_LOCK # <-- NEW IMPORT
+    COMBAT_LOCK
 )
 from mud_backend import config 
 from mud_backend.core import combat_system
@@ -16,10 +16,6 @@ from mud_backend.core import db
 class Attack(BaseVerb):
     """
     Handles the 'attack' command.
-    - Checks for player round-time (RT).
-    - If RT is clear, performs one attack.
-    - Sets the player's RT (as 'action' state).
-    - Activates the monster's AI ('combat' state) to make it fight back.
     """
     
     def execute(self):
@@ -61,7 +57,7 @@ class Attack(BaseVerb):
         
         current_time = time.time()
 
-        # --- THIS IS THE FIX 1: Check for *any* round-time first ---
+        # Check for *any* round-time first
         combat_info = None
         with COMBAT_LOCK:
             combat_info = COMBAT_STATE.get(player_id)
@@ -70,7 +66,6 @@ class Attack(BaseVerb):
             wait_time = combat_info['next_action_time'] - current_time
             self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
             return
-        # --- END FIX 1 ---
         
         # --- Helper function to perform the attack and handle results ---
         def _resolve_and_handle_attack():
@@ -136,14 +131,13 @@ class Attack(BaseVerb):
                         combat_system.stop_combat(player_id, monster_id)
                     
                     return False # Combat has ended
-                else:
-                    self.player.send_message(f"(The {target_monster_data['name']} has {new_hp} HP remaining)")
+                # --- FIX: Removed the 'else' block that showed remaining HP ---
             
             return True # Combat continues
         # --- (End of helper function) ---
 
 
-        # --- THIS IS THE FIX 2: Simplified combat logic ---
+        # --- Simplified combat logic ---
         
         # Check if the monster is already fighting the player
         monster_state = None
@@ -181,8 +175,8 @@ class Attack(BaseVerb):
             with COMBAT_LOCK:
                 # Set Player's RT. We use "action" state, not "combat"
                 COMBAT_STATE[player_id] = {
-                    "state_type": "action", # <-- Player is just in RT
-                    "target_id": monster_id, # Still need this to know who monster should stop fighting if player flees
+                    "state_type": "action", # Player is just in RT
+                    "target_id": monster_id, 
                     "next_action_time": current_time + rt_seconds, 
                     "current_room_id": room_id
                 }
@@ -191,11 +185,10 @@ class Attack(BaseVerb):
                 if not monster_is_fighting_player:
                     # Monster wasn't fighting back. Set its AI.
                     COMBAT_STATE[monster_id] = {
-                        "state_type": "combat", # <-- Monster IS in combat
+                        "state_type": "combat", # Monster IS in combat
                         "target_id": player_id,
                         "next_action_time": current_time + (monster_rt / 2), # Attacks quickly
                         "current_room_id": room_id
                     }
                     if monster_id not in RUNTIME_MONSTER_HP:
                          RUNTIME_MONSTER_HP[monster_id] = target_monster_data.get("max_hp", 1)
-        # --- END FIX 2 ---
