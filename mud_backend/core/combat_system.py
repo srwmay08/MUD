@@ -324,9 +324,9 @@ def calculate_defense_strength(defender: Any,
         # --- END FIX ---
         defender_level = defender.level
         
-        # --- THIS IS THE FIX: The line that caused the crash is REMOVED ---
+        # --- THIS IS THE FIX 1: The line that caused the crash is REMOVED ---
         # defender_status = defender.status_effects # <-- REMOVED
-        # --- END FIX ---
+        # --- END FIX 1 ---
         
     elif isinstance(defender, dict):
         defender_name = defender.get("name", "Creature")
@@ -586,11 +586,11 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             
         is_attacker_player = isinstance(attacker, Player)
         
-        # --- THIS IS THE FIX: Allow players to attack in combat tick ---
+        # --- THIS IS THE FIX 2: Allow players to attack in combat tick ---
         # (This was preventing monsters from *starting* combat)
         # if is_attacker_player:
         #     continue
-        # --- END FIX ---
+        # --- END FIX 2 ---
             
         is_defender_player = isinstance(defender, Player)
         
@@ -607,9 +607,9 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                 continue
         # --- END NEW CHECK ---
 
-        # --- THIS IS THE FIX: Removed the extra 'room_data' argument ---
+        # --- THIS IS THE FIX 3: Removed the extra 'room_data' argument ---
         attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS) 
-        # --- END FIX ---
+        # --- END FIX 3 ---
         
         sid_to_skip = None
         
@@ -652,9 +652,7 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             if is_defender_player:
                 defender.hp -= damage
                 if defender.hp <= 0:
-                    # --- THIS IS THE FIX: Set HP to 0, not 1 ---
                     defender.hp = 0 
-                    # --- END FIX ---
                     broadcast_callback(room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     defender.current_room_id = config.PLAYER_DEATH_ROOM_ID
                     defender.deaths_recent = min(5, defender.deaths_recent + 1)
@@ -709,7 +707,7 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                         "room_id": room_id,
                         "template_key": monster_id,
                         "type": "monster",
-                        "eligible_at": time.time() + 300
+                        "eligible_at": time.time() + 300 # 5 min respawn
                     }
                     stop_combat(combatant_id, state["target_id"])
                     continue
@@ -721,10 +719,14 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
         # --- Calculate and set next action time ---
         rt_seconds = 0.0
         if is_attacker_player:
-            base_rt = combat_system.calculate_roundtime(self.player.stats.get("AGI", 50))
-            armor_penalty = self.player.armor_rt_penalty
+            # --- THIS IS THE FIX: 'self' is not defined here ---
+            # Use the 'attacker' (Player) object instead
+            base_rt = calculate_roundtime(attacker.stats.get("AGI", 50))
+            armor_penalty = attacker.armor_rt_penalty
             rt_seconds = base_rt + armor_penalty
+            # --- END FIX ---
         else:
-             rt_seconds = combat_system.calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
+             # Monster's roundtime
+             rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
              
         state["next_action_time"] = current_time + rt_seconds
