@@ -15,7 +15,11 @@ from mud_backend.core.skill_handler import calculate_skill_bonus
 # --- (Config, Stances, Shield, Race data, and helper functions up to resolve_attack are unchanged) ---
 class MockConfigCombat:
     DEBUG_MODE = True; STAT_BONUS_BASELINE = 50; MELEE_AS_STAT_BONUS_DIVISOR = 20
-    WEAPON_SKILL_AS_BONUS_DIVISOR = 50; BAREHANDED_BASE_AS = 0; DEFAULT_UNARMORED_TYPE = "unarmored"
+    WEAPON_SKILL_AS_BONUS_DIVISOR = 50
+    # --- THIS IS THE FIX: Give monsters a base AS ---
+    BAREHANDED_BASE_AS = 25 # <-- WAS 0
+    # --- END FIX ---
+    DEFAULT_UNARMORED_TYPE = "unarmored"
     MELEE_DS_STAT_BONUS_DIVISOR = 10; UNARMORED_BASE_DS = 0; SHIELD_SKILL_DS_BONUS_DIVISOR = 10
     COMBAT_ADVANTAGE_FACTOR = 40; COMBAT_HIT_THRESHOLD = 0 
     COMBAT_DAMAGE_MODIFIER_DIVISOR = 10
@@ -26,9 +30,7 @@ class MockConfigCombat:
     DEBUG_COMBAT_ROLLS = True
 config = MockConfigCombat()
 
-# --- THIS IS THE FIX: Using posture, not stance, for combat bonuses ---
-# We will map postures to the old stance modifiers for now.
-# Standing is neutral, kneeling/sitting are defensive, prone is very defensive.
+# --- (Posture, Shield, Race data, and helper functions are unchanged) ---
 POSTURE_MODIFIERS = {
     "standing":  {"as_mod": 0.75, "ds_mod": 0.75}, # Neutral
     "sitting":   {"as_mod": 0.5,  "ds_mod": 1.0},  # Defensive
@@ -41,8 +43,6 @@ POSTURE_PERCENTAGE = {
     "kneeling":  0.80, # Guarded
     "prone":     1.20  # (Custom value for prone, very defensive)
 }
-# --- END FIX ---
-
 SHIELD_DATA = {
     "starter_small_shield": {
         "size": "small",
@@ -102,7 +102,7 @@ def get_entity_armor_type(entity, game_items_global: dict) -> str:
         return entity.get("innate_armor_type", config.DEFAULT_UNARMORED_TYPE)
     return config.DEFAULT_UNARMORED_TYPE
 
-# --- UPDATED: calculate_attack_strength ---
+# --- (calculate_attack_strength and DS functions are unchanged) ---
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict, 
                               weapon_item_data: dict | None, target_armor_type: str,
                               attacker_posture: str, attacker_race: str) -> int: # <-- CHANGED: stance to posture
@@ -138,12 +138,10 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     as_val += cman_bonus
     if cman_bonus != 0: as_components_log.append(f"CMan({cman_bonus})")
     
-    # --- THIS IS THE FIX: Use POSTURE_MODIFIERS ---
     posture_mod = POSTURE_MODIFIERS.get(attacker_posture, POSTURE_MODIFIERS["standing"])["as_mod"]
     final_as = int(as_val * posture_mod)
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
         print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Posture: {attacker_posture}, Race: {attacker_race}): Factors = {' + '.join(as_components_log)} => Raw AS = {as_val} * {posture_mod} = {final_as}")
-    # --- END FIX ---
     return final_as
 
 def _get_armor_hindrance(armor_item_data: dict | None, defender_skills: dict) -> float:
@@ -177,7 +175,6 @@ def _get_weapon_type(weapon_item_data: dict | None) -> str:
         return "brawling"
     return "1H" 
 
-# --- UPDATED: calculate_evade_defense ---
 def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defender_race: str, 
                             armor_data: dict | None, shield_data: dict | None, 
                             posture_percent: float, is_ranged_attack: bool) -> int: # <-- CHANGED: stance to posture
@@ -194,15 +191,12 @@ def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defende
         shield_factor = shield_props["factor"]
         if not is_ranged_attack:
             shield_size_penalty = shield_props["size_penalty_melee"]
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
     posture_modifier = 0.75 + (posture_percent / 4)
     ds = (base_value * armor_hindrance * shield_factor - shield_size_penalty) * posture_modifier
-    # --- END FIX ---
     if is_ranged_attack:
         ds *= 1.5
     return math.floor(ds)
 
-# --- UPDATED: calculate_block_defense ---
 def calculate_block_defense(defender_stats: dict, defender_skills: dict, defender_race: str, 
                             shield_data: dict | None, 
                             posture_percent: float, is_ranged_attack: bool) -> int: # <-- CHANGED: stance to posture
@@ -212,9 +206,7 @@ def calculate_block_defense(defender_stats: dict, defender_skills: dict, defende
     str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
     base_value = shield_ranks + math.floor(str_bonus / 4) + math.floor(dex_bonus / 4)
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
     posture_modifier = 0.50 + (posture_percent / 2)
-    # --- END FIX ---
     enchant_bonus = 0 
     ds = 0
     shield_id = "starter_small_shield"
@@ -228,15 +220,12 @@ def calculate_block_defense(defender_stats: dict, defender_skills: dict, defende
         ds = (base_value * size_mod) * posture_modifier * (2/3) + 20 + enchant_bonus
     return math.floor(ds)
 
-# --- UPDATED: calculate_parry_defense ---
 def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defender_race: str, 
                             weapon_data: dict | None, offhand_data: dict | None, defender_level: int,
                             posture_percent: float, is_ranged_attack: bool) -> int: # <-- CHANGED: stance to posture
     if not weapon_data:
         return 0 
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
     posture_bonus = posture_percent * 50
-    # --- END FIX ---
     enchant_bonus = 0
     str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
@@ -256,37 +245,27 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
         return math.floor(ds)
     if weapon_type == "1H":
         base_value = weapon_ranks + stat_bonus + (enchant_bonus / 2)
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
         posture_mod = 0.20 + (posture_percent / 2)
         ds = base_value * posture_mod + posture_bonus
-        # --- END FIX ---
         if offhand_data and _get_weapon_type(offhand_data) != "shield":
             twc_ranks = defender_skills.get("two_weapon_combat", 0)
             twc_base = twc_ranks + stat_bonus
-            # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
             twc_posture_mod = 0.10 + (posture_percent / 4)
             twc_bonus = 5 
             ds += (twc_base * twc_posture_mod) + twc_bonus
-            # --- END FIX ---
     elif weapon_type == "2H":
         base_value = weapon_ranks + stat_bonus + enchant_bonus
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
         posture_mod = 0.30 + (posture_percent * 0.75)
         ds = base_value * posture_mod + posture_bonus
-        # --- END FIX ---
     elif weapon_type == "polearm":
         base_value = weapon_ranks + stat_bonus + enchant_bonus
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
         posture_mod = 0.27 + (posture_percent * 0.67)
         polearm_bonus = 15 + (posture_percent * 65)
         ds = (base_value * posture_mod) + posture_bonus + polearm_bonus
-        # --- END FIX ---
     elif weapon_type == "bow":
         base_value = weapon_ranks + 0 + 0
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
         posture_mod = 0.15 + (posture_percent * 0.30)
         ds = (base_value * posture_mod) + posture_bonus + enchant_bonus
-        # --- END FIX ---
     elif weapon_type == "runestaff":
         magic_ranks = 0
         magic_skills = ["arcane_symbols", "harness_power", "magic_item_use", 
@@ -303,13 +282,10 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
         else: 
             parry_ranks = 10 + (1.3 + 0.05 * (magic_ranks_per_level - 11)) * (defender_level if defender_level > 0 else 1)
         base_value = parry_ranks + stat_bonus
-        # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
         posture_mod = 0.20 + (posture_percent / 2)
         ds = (base_value * posture_mod * 1.5) + posture_bonus + enchant_bonus
-        # --- END FIX ---
     return math.floor(ds)
 
-# --- UPDATED: calculate_defense_strength ---
 def calculate_defense_strength(defender: Any, 
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                weapon_item_data: dict | None, offhand_item_data: dict | None,
@@ -319,30 +295,20 @@ def calculate_defense_strength(defender: Any,
         defender_stats = defender.stats
         defender_skills = defender.skills
         defender_race = defender.race
-        # --- THIS IS THE FIX: Use posture, not stance ---
         defender_posture = defender.posture
-        # --- END FIX ---
         defender_level = defender.level
-        
-        # --- THIS IS THE FIX 1: The line that caused the crash is REMOVED ---
-        # defender_status = defender.status_effects # <-- REMOVED
-        # --- END FIX 1 ---
         
     elif isinstance(defender, dict):
         defender_name = defender.get("name", "Creature")
         defender_stats = defender.get("stats", {})
         defender_skills = defender.get("skills", {})
         defender_race = defender.get("race", "Human")
-        # --- THIS IS THE FIX: Use posture, not stance ---
         defender_posture = defender.get("posture", "standing")
-        # --- END FIX ---
         defender_level = defender.get("level", 1) 
     else:
         return 0 
     
-    # --- THIS IS THE FIX: Use POSTURE_PERCENTAGE ---
     posture_percent = POSTURE_PERCENTAGE.get(defender_posture, 0.70) 
-    # --- END FIX ---
     ds_components_log = []
     generic_ds = 0 
     ds_components_log.append(f"Generic({generic_ds})")
@@ -364,14 +330,10 @@ def calculate_defense_strength(defender: Any,
     ds_components_log.append(f"Parry({parry_ds})")
     final_ds = generic_ds + evade_ds + block_ds + parry_ds
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        # --- THIS IS THE FIX: Use posture, not stance ---
         print(f"DEBUG DS CALC for {defender_name} (Posture: {defender_posture} ({posture_percent*100}%)): Factors = {' + '.join(ds_components_log)} => Final DS = {final_ds}")
-        # --- END FIX ---
     return final_ds
-# --- END UPDATED FUNCTION ---
-
 # ---
-# --- Re-adding the missing helper functions ---
+# --- (HIT_MESSAGES and helper functions are unchanged) ---
 # ---
 HIT_MESSAGES = {
     "player_hit": ["You swing {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
@@ -400,9 +362,6 @@ def get_roll_descriptor(roll_result):
     elif roll_result > 0: return "a minor hit"
     elif roll_result > -25: return "a near miss"
     else: return "a total miss"
-# ---
-# --- END ---
-# ---
 
 # ---
 # --- MODIFIED: resolve_attack
@@ -413,9 +372,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
     attacker_skills = attacker.skills if is_attacker_player else attacker.get("skills", {})
     
-    # --- THIS IS THE FIX: Use posture, not stance ---
     attacker_posture = attacker.posture if is_attacker_player else attacker.get("posture", "standing")
-    # --- END FIX ---
     attacker_race = get_entity_race(attacker)
     
     if is_attacker_player:
@@ -456,7 +413,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     attacker_as = calculate_attack_strength(
         attacker_name, attacker_stats, attacker_skills, 
         attacker_weapon_data, defender_armor_type_str,
-        attacker_posture, attacker_race # <-- CHANGED: stance to posture
+        attacker_posture, attacker_race
     )
     
     defender_ds = calculate_defense_strength(
@@ -471,10 +428,16 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     d100_roll = random.randint(1, 100)
     combat_roll_result = (attacker_as - defender_ds) + config.COMBAT_ADVANTAGE_FACTOR + d100_roll
     
+    # ---
+    # --- THIS IS THE FIX: Clearer roll string ---
+    # ---
+    as_str = f"+{attacker_as}" if attacker_as >= 0 else str(attacker_as)
+    ds_str = f"+{defender_ds}" if defender_ds >= 0 else str(defender_ds)
     roll_string = (
-        f"  AS: +{attacker_as} vs DS: +{defender_ds} "
-        f"+ d100: +{d100_roll} = +{combat_roll_result}"
+        f"  AS: {as_str} vs DS: {ds_str} "
+        f"+ ADV: +{config.COMBAT_ADVANTAGE_FACTOR} + d100: +{d100_roll} = +{combat_roll_result}"
     )
+    # --- END FIX ---
     
     if is_attacker_player:
         weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
@@ -491,14 +454,12 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         "weapon_display": weapon_display
     }
 
-    # --- (Initialize new message keys) ---
     results = {
         'hit': False, 'damage': 0, 
         'roll_string': roll_string, 
         'attacker_msg': "", 'defender_msg': "", 'broadcast_msg': "",
         'damage_msg': "", 'defender_damage_msg': "", 'broadcast_damage_msg': ""
     }
-    # --- END ---
 
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
@@ -521,7 +482,6 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
 
         flavor_msg = get_flavor_message(msg_key_hit, d100_roll, combat_roll_result)
         
-        # --- (Separate flavor and damage messages) ---
         results['attacker_msg'] = flavor_msg.format(**msg_vars)
         results['defender_msg'] = flavor_msg.format(**msg_vars)
         results['damage_msg'] = f"You hit for **{total_damage}** damage!"
@@ -530,7 +490,6 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         broadcast_flavor_msg = get_flavor_message(msg_key_hit.replace("player", "monster"), d100_roll, combat_roll_result)
         results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
         results['broadcast_damage_msg'] = f"{attacker_name} hits for **{total_damage}** damage!"
-        # --- END ---
 
     else:
         results['hit'] = False
@@ -550,18 +509,39 @@ def calculate_roundtime(agility: int) -> float:
     agi_bonus_seconds = (agility - 50.0) / 20.0
     return max(2.0, 6.0 - agi_bonus_seconds)
 def _find_combatant(entity_id: str) -> Optional[Any]:
-    player_data = game_state.ACTIVE_PLAYERS.get(entity_id.lower())
-    if player_data:
-        return player_data.get("player_obj") 
-    combat_data = game_state.COMBAT_STATE.get(entity_id)
+    # --- THIS IS THE FIX: Prioritize ACTIVE_PLAYERS ---
+    player_info = None
+    with game_state.PLAYER_LOCK:
+        player_info = game_state.ACTIVE_PLAYERS.get(entity_id.lower())
+    # --- END LOCK ---
+
+    if player_info:
+        return player_info.get("player_obj") 
+        
+    # If not a player, check for monster
+    combat_data = None
+    with game_state.COMBAT_LOCK:
+        combat_data = game_state.COMBAT_STATE.get(entity_id)
+    # --- END LOCK ---
+    
     if not combat_data: return None 
+    
     room_id = combat_data.get("current_room_id")
     if not room_id: return None 
-    room_data = game_state.GAME_ROOMS.get(room_id)
+    
+    # --- THIS IS THE FIX: Lock room reading ---
+    room_data = None
+    with game_state.ROOM_LOCK:
+        room_data = game_state.GAME_ROOMS.get(room_id)
+    # --- END LOCK ---
+    
     if not room_data: return None 
+    
     monster_data = next((obj for obj in room_data.get("objects", []) if obj.get("monster_id") == entity_id), None)
     return monster_data 
+
 def stop_combat(combatant_id: str, target_id: str):
+    # This function is already wrapped in a lock by its callers
     game_state.COMBAT_STATE.pop(combatant_id, None)
     game_state.COMBAT_STATE.pop(target_id, None)
 
@@ -571,72 +551,78 @@ def stop_combat(combatant_id: str, target_id: str):
 def process_combat_tick(broadcast_callback, send_to_player_callback):
     current_time = time.time()
     
-    # --- THIS IS THE FIX: Lock the iteration ---
     combatant_list = []
     with game_state.COMBAT_LOCK:
         combatant_list = list(game_state.COMBAT_STATE.items())
-    # --- END FIX ---
 
     for combatant_id, state in combatant_list:
         
-        # --- THIS IS THE FIX: Check if state still exists, as it might
-        # have been removed by a previous attacker in this same loop
         with game_state.COMBAT_LOCK:
             if combatant_id not in game_state.COMBAT_STATE:
                 continue
-        # --- END FIX ---
         
         if current_time < state["next_action_time"]:
             continue 
             
         attacker = _find_combatant(combatant_id)
         defender = _find_combatant(state["target_id"])
-        room_id = state.get("current_room_id")
+        
+        # --- (Modified: room_id is now retrieved from state) ---
+        attacker_room_id = state.get("current_room_id")
 
-        if not attacker or not defender or not room_id:
-            # --- ADD LOCK ---
+        if not attacker or not defender or not attacker_room_id:
             with game_state.COMBAT_LOCK:
                 stop_combat(combatant_id, state["target_id"])
-            # --- END LOCK ---
             continue
             
         is_attacker_player = isinstance(attacker, Player)
         
-        # ---
-        # --- THIS IS THE FIX: Players only attack via 'attack' verb. ---
-        # --- The combat tick only processes MONSTER actions. ---
         if is_attacker_player:
             continue
-        # --- END FIX ---
             
         is_defender_player = isinstance(defender, Player)
         
-        # --- NEW: Check if attacker is in a valid posture ---
+        # ---
+        # --- THIS IS THE FIX: Check if attacker and defender are in the same room ---
+        # ---
+        defender_room_id = None
+        if is_defender_player:
+            defender_room_id = defender.current_room_id
+        else:
+            # Get the defender's (monster's) combat state
+            defender_state = None
+            with game_state.COMBAT_LOCK:
+                defender_state = game_state.COMBAT_STATE.get(state["target_id"])
+            if defender_state:
+                defender_room_id = defender_state.get("current_room_id")
+
+        if attacker_room_id != defender_room_id:
+            # One of them has fled (or is in a different room).
+            # Stop the attacker's combat.
+            with game_state.COMBAT_LOCK:
+                game_state.COMBAT_STATE.pop(combatant_id, None)
+            continue # Skip this attack
+        # ---
+        # --- END FIX ---
+        # ---
+
+        # --- (Rest of the function is unchanged) ---
+        
         attacker_posture = "standing" # Default for monsters
         if is_attacker_player:
             attacker_posture = attacker.posture
             if attacker_posture != "standing":
-                # Can't attack unless standing
                 if attacker_posture in ["sitting", "prone", "kneeling"]:
                     send_to_player_callback(attacker.name, f"You must be standing to attack! (You are {attacker_posture})", "system_error")
-                # Give a small RT for the failed attempt
-                # --- ADD LOCK ---
                 with game_state.COMBAT_LOCK:
                     if combatant_id in game_state.COMBAT_STATE:
                         state["next_action_time"] = current_time + 1.0
-                # --- END LOCK ---
                 continue
-        # --- END NEW CHECK ---
 
-        # --- THIS IS THE FIX 3: Removed the extra 'room_data' argument ---
         attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS) 
-        # --- END FIX 3 ---
         
         sid_to_skip = None
         
-        # --- (Re-order message sending) ---
-        
-        # --- Message 1: Flavor Text ---
         if is_attacker_player:
             send_to_player_callback(attacker.name, attack_results['attacker_msg'], "combat_self")
             attacker_info = game_state.ACTIVE_PLAYERS.get(attacker.name.lower())
@@ -646,19 +632,17 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
         if is_defender_player:
             send_to_player_callback(defender.name, attack_results['defender_msg'], "combat_other")
             defender_info = game_state.ACTIVE_PLAYERS.get(defender.name.lower())
-            if defender_info and not sid_to_skip: # Don't overwrite attacker's SID
+            if defender_info and not sid_to_skip:
                 sid_to_skip = defender_info.get("sid")
         
-        broadcast_callback(room_id, attack_results['broadcast_msg'], "combat_broadcast", skip_sid=sid_to_skip)
+        # --- (Use attacker_room_id which we know is correct) ---
+        broadcast_callback(attacker_room_id, attack_results['broadcast_msg'], "combat_broadcast", skip_sid=sid_to_skip)
         
-        # --- Message 2: Roll String ---
-        # Only show roll string to players involved
         if is_attacker_player:
             send_to_player_callback(attacker.name, attack_results['roll_string'], "combat_roll")
         if is_defender_player:
             send_to_player_callback(defender.name, attack_results['roll_string'], "combat_roll")
         
-        # --- Message 3: Damage (if hit) ---
         if attack_results['hit']:
             damage = attack_results['damage']
             
@@ -667,14 +651,13 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
             if is_defender_player:
                 send_to_player_callback(defender.name, attack_results['defender_damage_msg'], "combat_other")
             
-            broadcast_callback(room_id, attack_results['broadcast_damage_msg'], "combat_broadcast", skip_sid=sid_to_skip)
+            broadcast_callback(attacker_room_id, attack_results['broadcast_damage_msg'], "combat_broadcast", skip_sid=sid_to_skip)
 
-            # --- Message 4: Consequences (HP, Death) ---
             if is_defender_player:
                 defender.hp -= damage
                 if defender.hp <= 0:
                     defender.hp = 0 
-                    broadcast_callback(room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
+                    broadcast_callback(attacker_room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     defender.current_room_id = config.PLAYER_DEATH_ROOM_ID
                     defender.deaths_recent = min(5, defender.deaths_recent + 1)
                     con_loss = 3 + defender.deaths_recent
@@ -686,37 +669,44 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                     defender.death_sting_points += 2000
                     send_to_player_callback(defender.name, "You feel the sting of death... (XP gain is reduced)", "system_error")
                     
-                    # --- NEW: Force player to stand on death ---
                     defender.posture = "standing"
-                    # --- END NEW ---
                     
                     save_game_state(defender)
-                    # --- ADD LOCK ---
                     with game_state.COMBAT_LOCK:
                         stop_combat(combatant_id, state["target_id"])
-                    # --- END LOCK ---
                     continue
                 else:
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
                     save_game_state(defender)
             else:
                 monster_id = defender.get("monster_id")
-                # --- ADD LOCK ---
                 new_hp = 0
                 with game_state.COMBAT_LOCK:
                     if monster_id not in game_state.RUNTIME_MONSTER_HP:
                         game_state.RUNTIME_MONSTER_HP[monster_id] = defender.get("max_hp", 1)
                     game_state.RUNTIME_MONSTER_HP[monster_id] -= damage
                     new_hp = game_state.RUNTIME_MONSTER_HP[monster_id]
-                # --- END LOCK ---
                 
                 if new_hp <= 0:
-                    broadcast_callback(room_id, f"**The {defender.get('name')} has been DEFEATED!**", "combat_death")
+                    broadcast_callback(attacker_room_id, f"**The {defender.get('name')} has been DEFEATED!**", "combat_death")
+                    
+                    # --- (Find the player who killed it) ---
+                    attacker_player_obj = None
                     if is_attacker_player:
+                        attacker_player_obj = attacker
+                    else:
+                        # Find the player the monster was *targeting*
+                        player_id_targeted = state.get("target_id")
+                        if player_id_targeted:
+                             attacker_player_obj = _find_combatant(player_id_targeted)
+                             if not isinstance(attacker_player_obj, Player):
+                                 attacker_player_obj = None
+
+                    if attacker_player_obj:
                         nominal_xp = 1000 
                         if nominal_xp > 0:
-                            attacker.add_field_exp(nominal_xp)
-                            send_to_player_callback(attacker.name, "You gain field experience.", "system_info")
+                            attacker_player_obj.add_field_exp(nominal_xp)
+                            send_to_player_callback(attacker_player_obj.name, "You gain field experience.", "system_info")
                     
                     corpse_data = loot_system.create_corpse_object_data(
                         defeated_entity_template=defender, 
@@ -725,46 +715,40 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                         game_loot_tables=game_state.GAME_LOOT_TABLES,
                         game_equipment_tables_data={} 
                     )
-                    # --- THIS IS THE FIX: Need to lock room access ---
                     with game_state.ROOM_LOCK:
-                        room_data = game_state.GAME_ROOMS.get(room_id)
+                        room_data = game_state.GAME_ROOMS.get(attacker_room_id)
                         if room_data:
                             room_data["objects"].append(corpse_data)
                             room_data["objects"] = [obj for obj in room_data["objects"] if obj.get("monster_id") != monster_id]
-                            broadcast_callback(room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
-                    # --- END FIX ---
+                            broadcast_callback(attacker_room_id, f"The {corpse_data['name']} falls to the ground.", "combat")
                     
-                    # --- ADD LOCK ---
                     with game_state.COMBAT_LOCK:
                         game_state.DEFEATED_MONSTERS[monster_id] = {
-                            "room_id": room_id,
+                            "room_id": attacker_room_id,
                             "template_key": monster_id,
                             "type": "monster",
-                            "eligible_at": time.time() + 300 # 5 min respawn
+                            "eligible_at": time.time() + 300
                         }
                         stop_combat(combatant_id, state["target_id"])
-                    # --- END LOCK ---
                     continue
                 else:
+                    # --- (Only show HP to the player) ---
                     if is_attacker_player:
                          send_to_player_callback(attacker.name, f"(The {defender.get('name')} has {new_hp} HP remaining)", "system_info")
-        # --- END ---
+                    else:
+                        # Find the player the monster was *targeting*
+                        player_id_targeted = state.get("target_id")
+                        if player_id_targeted and is_defender_player:
+                            send_to_player_callback(player_id_targeted, f"(The {attacker.get('name')} has {new_hp} HP remaining)", "system_info")
         
-        # --- Calculate and set next action time ---
         rt_seconds = 0.0
         if is_attacker_player:
-            # --- THIS IS THE FIX: 'self' is not defined here ---
-            # Use the 'attacker' (Player) object instead
             base_rt = calculate_roundtime(attacker.stats.get("AGI", 50))
             armor_penalty = attacker.armor_rt_penalty
             rt_seconds = base_rt + armor_penalty
-            # --- END FIX ---
         else:
-             # Monster's roundtime
              rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
         
-        # --- ADD LOCK ---
         with game_state.COMBAT_LOCK:
             if combatant_id in game_state.COMBAT_STATE:
                 state["next_action_time"] = current_time + rt_seconds
-        # --- END LOCK ---
