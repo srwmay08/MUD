@@ -5,26 +5,37 @@ import datetime
 import pytz     
 import copy 
 
-# --- THIS IS THE FIX 1 ---
 from mud_backend import config
 from mud_backend.core import game_state 
-from mud_backend.core import combat_system # <-- NEW IMPORT
-# --- END FIX ---
+from mud_backend.core import combat_system
 
 
 def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_equipment_tables, game_items):
-    # ... (function unchanged) ...
+    """
+    Helper to re-populate a monster's equipment from its template.
+    """
     if not entity_runtime_data or not entity_template:
         return
+
+    # 1. Reset equipment slots
     entity_runtime_data["equipped"] = {slot_key_cfg: None for slot_key_cfg in config.EQUIPMENT_SLOTS.keys()}
-    # ... (rest of logic) ...
-    entity_runtime_data["hp"] = entity_template.get("max_hp", entity_template.get("hp", 1))
+    
+    # 2. Re-equip items defined in the template
+    template_equipped = entity_template.get("equipped", {})
+    for slot, item_id in template_equipped.items():
+        if slot in entity_runtime_data["equipped"]:
+             entity_runtime_data["equipped"][slot] = item_id
+
+    # 3. Reset HP to max
+    if "hp" not in entity_template and "max_hp" in entity_template:
+         entity_runtime_data["hp"] = entity_template["max_hp"]
+    elif "hp" in entity_template:
+         entity_runtime_data["hp"] = entity_template["hp"]
 
 
 def process_respawns(log_time_prefix, 
                      broadcast_callback,
-                     send_to_player_callback, # <-- THIS IS THE FIX 2
-                     # --- Pass in the data it needs ---
+                     send_to_player_callback,
                      game_npcs_dict, 
                      game_equipment_tables_global, 
                      game_items_global             
@@ -71,7 +82,6 @@ def process_respawns(log_time_prefix,
                 if config.DEBUG_MODE and getattr(config, 'DEBUG_GAME_TICK_RESPAWN_PHASE', True):
                      print(f"{log_time_prefix} - RESPAWN_DEBUG: Chance Check: Roll={roll_for_respawn:.2f} vs Chance={respawn_chance:.2f}. Respawn: {should_respawn_by_chance}")
 
-
                 if should_respawn_by_chance:
                     room_id_to_respawn_in = respawn_info["room_id"]
                     entity_type = respawn_info["type"]
@@ -111,12 +121,15 @@ def process_respawns(log_time_prefix,
                         elif entity_type == "npc":
                             pass # (NPC logic)
 
+                        # --- Broadcast Appearance FIRST ---
+                        broadcast_callback(room_id_to_respawn_in, f"The {entity_display_name} appears.", "ambient_spawn")
+                        # ----------------------------------
+
                         # --- Clear runtime combat states from game_state ---
                         if runtime_id in game_state.RUNTIME_MONSTER_HP:
                             game_state.RUNTIME_MONSTER_HP.pop(runtime_id, None)
-                        # ---
                         
-                        # --- THIS IS THE FIX 3: AGGRO CHECK ON RESPAWN ---
+                        # --- AGGRO CHECK ON RESPAWN ---
                         monster_obj = base_template_data
                         
                         if monster_obj.get("is_aggressive") and monster_obj.get("is_monster"):
@@ -157,9 +170,8 @@ def process_respawns(log_time_prefix,
                                     
                                     # Aggro one player and stop
                                     break 
-                        # --- END FIX 3 ---
+                        # --- END AGGRO CHECK ---
 
-                        broadcast_callback(room_id_to_respawn_in, f"The {entity_display_name} appears.", "ambient_spawn")
                         respawned_entity_runtime_ids_to_remove.append(runtime_id)
                         
                     elif config.DEBUG_MODE:
