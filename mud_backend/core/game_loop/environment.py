@@ -2,6 +2,12 @@
 import random
 import datetime
 import pytz 
+from typing import TYPE_CHECKING # <-- NEW
+
+# --- REFACTORED: Import World for type hinting ---
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+# --- END REFACTORED ---
 
 # (MockConfig and imports... no changes needed here)
 class MockConfig:
@@ -18,13 +24,7 @@ class MockConfig:
     WEATHER_STAY_SAME_BAD_CHANCE = 0.40
 config = MockConfig()
 
-try:
-    from mud_backend.core import game_state
-except ImportError:
-    print("ERROR (environment.py): Failed to import 'game_state'. Using mock.")
-    class MockGameState:
-        GAME_ROOMS = {}
-    game_state = MockGameState()
+# --- REMOVED: game_state import ---
 
 # (Module-level state... no changes)
 current_time_of_day = "mid morning" # Start at a reasonable time
@@ -85,12 +85,15 @@ def _get_time_grouping(time_of_day_str: str) -> str:
         return "night"
     return "night" # Default case
 
-def update_environment_state(game_tick_counter, 
+# --- REFACTORED: Accept world object ---
+def update_environment_state(world: 'World',
+                             game_tick_counter, 
                              active_players_dict, 
                              log_time_prefix, 
                              broadcast_callback):
     
-    game_rooms_dict = game_state.GAME_ROOMS
+    # --- FIX: Get game_rooms from world ---
+    game_rooms_dict = world.game_rooms
     
     global current_time_of_day, current_weather, consecutive_clear_checks
 

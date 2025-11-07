@@ -1,11 +1,17 @@
 # mud_backend/core/game_loop/monster_ai.py
 import random
 import copy
-from typing import Callable, Tuple, List, Dict
-from mud_backend.core import game_state
+from typing import Callable, Tuple, List, Dict, TYPE_CHECKING
+# --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend import config
 
-def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
+# --- REFACTORED: Import World for type hinting ---
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+# --- END REFACTORED ---
+
+# --- REFACTORED: Accept world object ---
+def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
     """
     Processes AI for all active monsters.
     Currently handles:
@@ -15,8 +21,9 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
     potential_movers: List[Tuple[Dict, str]] = []
 
     # Lock rooms while we scan to prevent concurrent modification issues
-    with game_state.ROOM_LOCK:
-        for room_id, room_data in game_state.GAME_ROOMS.items():
+    # --- FIX: Use world.room_lock ---
+    with world.room_lock:
+        for room_id, room_data in world.game_rooms.items():
             if not room_data or "objects" not in room_data:
                 continue
                 
@@ -26,7 +33,8 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                     
                     # --- HYDRATION CHECK ---
                     if monster_id and "movement_rules" not in obj:
-                         template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
+                         # --- FIX: Use world.game_monster_templates ---
+                         template = world.game_monster_templates.get(monster_id)
                          if template:
                              obj.update(copy.deepcopy(template))
                     # -----------------------
@@ -37,8 +45,9 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                         # --- NEW: Use UID for combat check ---
                         monster_uid = obj.get("uid")
                         if monster_uid:
-                            with game_state.COMBAT_LOCK:
-                                 if game_state.COMBAT_STATE.get(monster_uid, {}).get("state_type") == "combat":
+                            # --- FIX: Use world.combat_lock and world.combat_state ---
+                             with world.combat_lock:
+                                 if world.combat_state.get(monster_uid, {}).get("state_type") == "combat":
                                      in_combat = True
                         
                         if not in_combat:
@@ -64,7 +73,8 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
              # print(f"{log_time_prefix} - MONSTER_AI: {monster_name} in {current_room_id} decided to move (Roll {roll:.2f} < {wander_chance:.2f})")
 
         if should_move:
-            current_room = game_state.GAME_ROOMS.get(current_room_id)
+            # --- FIX: Use world.game_rooms ---
+            current_room = world.game_rooms.get(current_room_id)
             if not current_room or not current_room.get("exits"):
                 continue
                 
@@ -82,12 +92,15 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                     break
             
             if chosen_exit and destination_room_id:
-                with game_state.ROOM_LOCK:
-                    source_room = game_state.GAME_ROOMS.get(current_room_id)
-                    dest_room = game_state.GAME_ROOMS.get(destination_room_id)
+                # --- FIX: Use world.room_lock and world.game_rooms ---
+                with world.room_lock:
+                    source_room = world.game_rooms.get(current_room_id)
+                    dest_room = world.game_rooms.get(destination_room_id)
                     
-                    if source_room and dest_room and monster in source_room["objects"]:
+                    if source_room and dest_room and "objects" in source_room and monster in source_room["objects"]:
                         source_room["objects"].remove(monster)
+                        if "objects" not in dest_room: # Ensure dest has object list
+                            dest_room["objects"] = []
                         dest_room["objects"].append(monster)
                         if monster_uid:
                             moved_monster_uids.add(monster_uid)
@@ -99,3 +112,5 @@ def process_monster_ai(log_time_prefix: str, broadcast_callback: Callable):
                         
                         if config.DEBUG_MODE:
                             print(f"{log_time_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
+                    elif config.DEBUG_MODE:
+                        print(f"{log_time_prefix} - MONSTER_AI: {monster.get('name')} move failed (room state changed).")

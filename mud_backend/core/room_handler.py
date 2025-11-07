@@ -1,7 +1,6 @@
 # mud_backend/core/room_handler.py
 from mud_backend.core.game_objects import Player, Room
-# --- NEW IMPORT ---
-from mud_backend.core import game_state
+# --- REMOVED: from mud_backend.core import game_state ---
 
 def show_room_to_player(player: Player, room: Room):
     """
@@ -31,8 +30,10 @@ def show_room_to_player(player: Player, room: Room):
     
     # --- UPDATED: Show Other Players ---
     other_players_in_room = []
-    # The key is now the 'sid', the value is 'data'
-    for sid, data in game_state.ACTIVE_PLAYERS.items():
+    
+    # --- FIX: Get player list from the injected player.world object ---
+    # The key is 'sid', the value is 'data'
+    for sid, data in player.world.get_all_players_info():
         
         # --- FIX: Get the name from the data value ---
         player_name_in_room = data["player_name"] 

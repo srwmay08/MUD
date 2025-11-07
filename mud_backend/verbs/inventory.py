@@ -1,6 +1,6 @@
 # mud_backend/verbs/inventory.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
+# --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend import config
 
 class Inventory(BaseVerb):
@@ -25,12 +25,14 @@ class Inventory(BaseVerb):
         
         held_items_msg = []
         if right_hand_id:
-            item_data = game_state.GAME_ITEMS.get(right_hand_id)
+            # --- FIX: Use self.world.game_items ---
+            item_data = self.world.game_items.get(right_hand_id)
             if item_data:
                 held_items_msg.append(f"holding {item_data['name']} in your right hand")
         
         if left_hand_id:
-            item_data = game_state.GAME_ITEMS.get(left_hand_id)
+            # --- FIX: Use self.world.game_items ---
+            item_data = self.world.game_items.get(left_hand_id)
             if item_data:
                 held_items_msg.append(f"holding {item_data['name']} in your left hand")
 
@@ -49,7 +51,8 @@ class Inventory(BaseVerb):
                 
             item_id = self.player.worn_items.get(slot_id)
             if item_id:
-                item_data = game_state.GAME_ITEMS.get(item_id)
+                # --- FIX: Use self.world.game_items ---
+                item_data = self.world.game_items.get(item_id)
                 if item_data:
                     worn_items_msg.append(f"{item_data['name']} (worn on {slot_name})")
                     total_items += 1
@@ -61,7 +64,8 @@ class Inventory(BaseVerb):
         # This is our version of "INVENTORY FULL" for now
         pack_items_msg = []
         for item_id in self.player.inventory:
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use self.world.game_items ---
+            item_data = self.world.game_items.get(item_id)
             if item_data:
                 pack_items_msg.append(item_data['name'])
                 total_items += 1

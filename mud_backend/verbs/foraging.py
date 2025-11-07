@@ -2,7 +2,7 @@
 import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
+# --- REMOVED: from mud_backend.core import game_state ---
 from typing import Tuple, Optional # <-- NEW
 
 # --- (Helper _find_item_in_hands is unchanged) ---
@@ -14,7 +14,8 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
     for slot in ["mainhand", "offhand"]:
         item_id = player.worn_items.get(slot)
         if item_id:
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use player.world.game_items ---
+            item_data = player.world.game_items.get(item_id)
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
                     target_name in item_data.get("keywords", [])):
@@ -26,10 +27,12 @@ def _set_action_roundtime(player, duration_seconds: float):
     """Sets a non-combat action roundtime for the player."""
     player_id = player.name.lower()
     
-    # --- ADD LOCK ---
-    with game_state.COMBAT_LOCK:
+    # --- ADD LOCK: Use player.world ---
+    with player.world.combat_lock:
         # Get existing state or a new dict
-        rt_data = game_state.COMBAT_STATE.get(player_id, {})
+        rt_data = player.world.get_combat_state(player_id)
+        if rt_data is None:
+            rt_data = {}
         
         # --- THIS IS THE FIX ---
         # Set the action time and explicitly mark the state type
@@ -42,7 +45,7 @@ def _set_action_roundtime(player, duration_seconds: float):
         # --- END FIX ---
         
         # Put it back in the global state
-        game_state.COMBAT_STATE[player_id] = rt_data
+        player.world.set_combat_state(player_id, rt_data)
     # --- END LOCK ---
 
 class Forage(BaseVerb):
@@ -57,15 +60,12 @@ class Forage(BaseVerb):
         player_id = self.player.name.lower()
         current_time = time.time()
         
-        # --- ADD LOCK ---
-        with game_state.COMBAT_LOCK:
-            # This check is now safe, as it only looks for next_action_time
-            if player_id in game_state.COMBAT_STATE:
-                rt_data = game_state.COMBAT_STATE[player_id]
-                if current_time < rt_data.get("next_action_time", 0):
-                    wait_time = rt_data["next_action_time"] - current_time
-                    self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
-                    return
+        # --- ADD LOCK: Use self.world ---
+        rt_data = self.world.get_combat_state(player_id)
+        if rt_data and current_time < rt_data.get("next_action_time", 0):
+            wait_time = rt_data["next_action_time"] - current_time
+            self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
+            return
         # --- END LOCK ---
         # --- END RT Check ---
 
@@ -128,7 +128,8 @@ class Forage(BaseVerb):
         # We found a matching plant, now roll against the DC
         item_id = found_plant.get("item_id")
         item_dc = found_plant.get("dc", 100)
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use self.world.game_items ---
+        item_data = self.world.game_items.get(item_id)
         
         if not item_data:
             self.player.send_message("You forage... but find nothing. (Error: Item data missing)")
@@ -173,7 +174,8 @@ class Eat(BaseVerb):
             return
         # --- END FIX ---
 
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use self.world.game_items ---
+        item_data = self.world.game_items.get(item_id)
         if not item_data:
             self.player.send_message("That item seems to have vanished.")
             return
@@ -221,7 +223,8 @@ class Drink(BaseVerb):
             return
         # --- END FIX ---
 
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use self.world.game_items ---
+        item_data = self.world.game_items.get(item_id)
         if not item_data:
             self.player.send_message("That item seems to have vanished.")
             return

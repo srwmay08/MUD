@@ -2,12 +2,7 @@
 import time
 import copy 
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core.game_state import (
-    COMBAT_STATE, RUNTIME_MONSTER_HP, 
-    DEFEATED_MONSTERS, GAME_MONSTER_TEMPLATES,
-    GAME_ITEMS, GAME_LOOT_TABLES,
-    COMBAT_LOCK
-)
+# --- REFACTORED: Removed all game_state imports ---
 from mud_backend import config 
 from mud_backend.core import combat_system
 from mud_backend.core import loot_system
@@ -36,8 +31,9 @@ class Attack(BaseVerb):
                 uid = obj.get("uid")
                 is_defeated = False
                 if uid:
-                    with COMBAT_LOCK:
-                        is_defeated = uid in DEFEATED_MONSTERS
+                    # --- FIX: Use self.world ---
+                    with self.world.defeated_lock:
+                        is_defeated = uid in self.world.defeated_monsters
                 
                 if not is_defeated:
                     if target_name in obj.get("keywords", [obj.get("name", "").lower()]):
@@ -56,17 +52,17 @@ class Attack(BaseVerb):
             self.player.send_message("That creature cannot be attacked right now.")
             return
             
-        with COMBAT_LOCK:
-            if monster_uid in DEFEATED_MONSTERS:
+        # --- FIX: Use self.world ---
+        with self.world.defeated_lock:
+            if monster_uid in self.world.defeated_monsters:
                 self.player.send_message(f"The {target_monster_data['name']} is already dead.")
                 return
         
         current_time = time.time()
 
         # Check for *any* round-time first
-        combat_info = None
-        with COMBAT_LOCK:
-            combat_info = COMBAT_STATE.get(player_id)
+        # --- FIX: Use self.world ---
+        combat_info = self.world.get_combat_state(player_id)
             
         if combat_info and current_time < combat_info.get("next_action_time", 0):
             wait_time = combat_info['next_action_time'] - current_time
@@ -75,8 +71,9 @@ class Attack(BaseVerb):
         
         # --- Helper function to perform the attack and handle results ---
         def _resolve_and_handle_attack():
+            # --- FIX: Pass self.world.game_items ---
             attack_results = combat_system.resolve_attack(
-                self.player, target_monster_data, GAME_ITEMS
+                self.player, target_monster_data, self.world.game_items
             )
             
             # 1. Flavor Text
@@ -93,26 +90,25 @@ class Attack(BaseVerb):
                 damage = attack_results['damage']
                 new_hp = 0
                 
-                with COMBAT_LOCK:
-                    # Use UID for runtime HP tracking
-                    if monster_uid not in RUNTIME_MONSTER_HP:
-                        RUNTIME_MONSTER_HP[monster_uid] = target_monster_data.get("max_hp", 1)
-                    
-                    RUNTIME_MONSTER_HP[monster_uid] -= damage
-                    new_hp = RUNTIME_MONSTER_HP[monster_uid]
+                # --- FIX: Use self.world.modify_monster_hp ---
+                new_hp = self.world.modify_monster_hp(
+                    monster_uid,
+                    target_monster_data.get("max_hp", 1),
+                    damage
+                )
 
                 if new_hp <= 0:
                     self.player.send_message(f"**The {target_monster_data['name']} has been DEFEATED!**")
                     
-                    nominal_xp = 1000 
+                    nominal_xp = 1000 # TODO: Get from template
                     self.player.add_field_exp(nominal_xp)
                     
-                    # Pass the UID to corpse creation so it can be unique too if needed
+                    # --- FIX: Pass self.world data stores ---
                     corpse_data = loot_system.create_corpse_object_data(
                         defeated_entity_template=target_monster_data, 
                         defeated_entity_runtime_id=monster_uid, 
-                        game_items_data=GAME_ITEMS,
-                        game_loot_tables=GAME_LOOT_TABLES,
+                        game_items_data=self.world.game_items,
+                        game_loot_tables=self.world.game_loot_tables,
                         game_equipment_tables_data={} 
                     )
                     self.room.objects.append(corpse_data)
@@ -121,7 +117,9 @@ class Attack(BaseVerb):
                     if target_monster_data in self.room.objects:
                         self.room.objects.remove(target_monster_data)
                     
-                    db.save_room_state(self.room) 
+                    # --- FIX: Pass self.world to save_room_state ---
+                    # db.save_room_state(self.room) # This is handled by self.world.save_room
+                    self.world.save_room(self.room)
                     
                     self.player.send_message(f"The {corpse_data['name']} falls to the ground.")
                     
@@ -131,16 +129,16 @@ class Attack(BaseVerb):
                         getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2)
                     )
 
-                    with COMBAT_LOCK:
-                        # Register defeat using UID, but remember template ID for respawn
-                        DEFEATED_MONSTERS[monster_uid] = {
-                            "room_id": self.room.room_id,
-                            "template_key": monster_id,
-                            "type": "monster",
-                            "eligible_at": time.time() + respawn_time,
-                            "chance": respawn_chance
-                        }
-                        combat_system.stop_combat(player_id, monster_uid)
+                    # --- FIX: Use self.world.set_defeated_monster ---
+                    self.world.set_defeated_monster(monster_uid, {
+                        "room_id": self.room.room_id,
+                        "template_key": monster_id,
+                        "type": "monster",
+                        "eligible_at": time.time() + respawn_time,
+                        "chance": respawn_chance
+                    })
+                    # --- FIX: Use self.world.stop_combat_for_all ---
+                    self.world.stop_combat_for_all(player_id, monster_uid)
                     
                     return False # Combat has ended
             
@@ -150,20 +148,14 @@ class Attack(BaseVerb):
 
         # --- Simplified combat logic ---
         
-        # Check if the monster is already fighting the player (using UID)
-        monster_state = None
-        with COMBAT_LOCK:
-            monster_state = COMBAT_STATE.get(monster_uid)
+        # --- FIX: Use self.world.get_combat_state ---
+        monster_state = self.world.get_combat_state(monster_uid)
         monster_is_fighting_player = (monster_state and 
                                       monster_state.get("state_type") == "combat" and 
                                       monster_state.get("target_id") == player_id)
 
         # Check if player is switching targets (using UID)
         if combat_info and combat_info.get("target_id") and combat_info.get("target_id") != monster_uid:
-            # Player's last action was against a different target
-            # (We might want to allow switching, but GSIV usually locks you or warns you)
-            # For now, let's allow it but warn them implicitly by just attacking the new one.
-            # actually, standard GSIV lets you 'attack other' and it just switches target.
             pass 
 
         if not monster_is_fighting_player:
@@ -180,22 +172,22 @@ class Attack(BaseVerb):
             rt_seconds = base_rt + armor_penalty
             monster_rt = combat_system.calculate_roundtime(target_monster_data.get("stats", {}).get("AGI", 50))
             
-            with COMBAT_LOCK:
-                # Set Player's RT using UID as target
-                COMBAT_STATE[player_id] = {
-                    "state_type": "action",
-                    "target_id": monster_uid, 
-                    "next_action_time": current_time + rt_seconds, 
+            # --- FIX: Use self.world.set_combat_state/set_monster_hp ---
+            # Set Player's RT using UID as target
+            self.world.set_combat_state(player_id, {
+                "state_type": "action",
+                "target_id": monster_uid, 
+                "next_action_time": current_time + rt_seconds, 
+                "current_room_id": room_id
+            })
+            
+            # Set Monster AI using UID as combatant key
+            if not monster_is_fighting_player:
+                self.world.set_combat_state(monster_uid, {
+                    "state_type": "combat",
+                    "target_id": player_id,
+                    "next_action_time": current_time + (monster_rt / 2),
                     "current_room_id": room_id
-                }
-                
-                # Set Monster AI using UID as combatant key
-                if not monster_is_fighting_player:
-                    COMBAT_STATE[monster_uid] = {
-                        "state_type": "combat",
-                        "target_id": player_id,
-                        "next_action_time": current_time + (monster_rt / 2),
-                        "current_room_id": room_id
-                    }
-                    if monster_uid not in RUNTIME_MONSTER_HP:
-                         RUNTIME_MONSTER_HP[monster_uid] = target_monster_data.get("max_hp", 1)
+                })
+                if self.world.get_monster_hp(monster_uid) is None:
+                     self.world.set_monster_hp(monster_uid, target_monster_data.get("max_hp", 1))

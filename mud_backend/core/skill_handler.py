@@ -1,8 +1,12 @@
 # mud_backend/core/skill_handler.py
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from mud_backend.core.game_objects import Player
-from mud_backend.core import game_state
+# --- REMOVED: from mud_backend.core import game_state ---
+
+# --- NEW: Type hint for World ---
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
 
 # ---
 # --- NEW FUNCTION (MOVED FROM combat_system.py) ---
@@ -116,10 +120,12 @@ def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
     
     return {"ptp": final_ptp, "mtp": final_mtp, "stp": final_stp}
 
-def _find_skill_by_name(skill_name: str) -> Optional[Dict]:
+# --- REFACTORED: Accept world object ---
+def _find_skill_by_name(world: 'World', skill_name: str) -> Optional[Dict]:
 # ... (function contents unchanged) ...
     skill_name_lower = skill_name.lower()
-    for skill_id, skill_data in game_state.GAME_SKILLS.items():
+    # --- FIX: Use world.game_skills ---
+    for skill_id, skill_data in world.game_skills.items():
         if skill_name_lower == skill_data.get("name", "").lower():
             return skill_data
         if skill_name_lower in skill_data.get("keywords", []):
@@ -158,6 +164,7 @@ def _format_skill_line(player: Player, skill_data: Dict) -> str:
         # Use white-space:nowrap to ensure the name doesn't break
         return f"<tr><td style='white-space:nowrap;'>- {clickable_name}</td><td style='text-align:center; white-space:nowrap;'>{cost_str}</td><td style='text-align:right;'>{rank_str}</td></tr>"
 
+# --- REFACTORED: Use player.world ---
 def _show_all_skills_by_category(player: Player):
 # ... (function contents unchanged) ...
     # Your custom category order
@@ -181,7 +188,8 @@ def _show_all_skills_by_category(player: Player):
     }
     
     # --- NEW: Get all skills as a dictionary for easy lookup ---
-    all_skills_dict = game_state.GAME_SKILLS
+    # --- FIX: Use player.world ---
+    all_skills_dict = player.world.game_skills
     
     # --- UPDATED: TIGHTER HEADER ROW ---
     HEADER_ROW = "<tr><td></td><td style='text-decoration: underline; text-align:center;'>PTP/MTP/STP</td><td>Rank</td></tr>"
@@ -295,11 +303,13 @@ def _show_simple_training_menu(player: Player):
     player.send_message("- Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")
     player.send_message("- Type '<span class='keyword' data-command='done'>DONE</span>' to finish training.")
 
+# --- REFACTORED: Use player.world ---
 def show_skill_list(player: Player, category: str):
 # ... (function contents unchanged) ...
     category_lower = category.lower()
     
-    all_categories = sorted(list(set(s.get("category", "Uncategorized") for s in game_state.GAME_SKILLS.values())))
+    # --- FIX: Use player.world ---
+    all_categories = sorted(list(set(s.get("category", "Uncategorized") for s in player.world.game_skills.values())))
     
     if category_lower == "all":
         _show_all_skills_by_category(player)
@@ -325,7 +335,8 @@ def show_skill_list(player: Player, category: str):
     
     # --- UPDATED: Sort alphabetically here for the single-category view ---
     sorted_skills = []
-    for skill_data in game_state.GAME_SKILLS.values():
+    # --- FIX: Use player.world ---
+    for skill_data in player.world.game_skills.values():
         if skill_data.get("category", "Uncategorized").lower() == category_lower:
             sorted_skills.append(skill_data)
     sorted_skills.sort(key=lambda s: s.get("name", "zzz"))
@@ -501,13 +512,15 @@ def _perform_conversion_and_train(player: Player, pending_data: Dict):
     # --- FIX: Removed call to show_training_menu ---
     # (It's now part of the function above)
 
+# --- REFACTORED: Use player.world ---
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):
 # ... (function contents unchanged) ...
     if ranks_to_train <= 0:
         player.send_message("You must train at least 1 rank.")
         return
         
-    skill_data = _find_skill_by_name(skill_name)
+    # --- FIX: Pass player.world to helper ---
+    skill_data = _find_skill_by_name(player.world, skill_name)
     if not skill_data:
         player.send_message(f"Unknown skill: '{skill_name}'.")
         return

@@ -4,9 +4,14 @@ import re
 import math
 import time
 import copy
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 
-from mud_backend.core import game_state
+# --- REFACTORED: Import World for type hinting ---
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+# --- END REFACTORED ---
+
+# --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import save_game_state
 from mud_backend.core import loot_system
@@ -14,7 +19,7 @@ from mud_backend.core.skill_handler import calculate_skill_bonus
 from mud_backend import config
 
 # --- STANCE MODIFIERS ---
-# Multipliers applied to final AS and DS based on stance.
+# (This section is unchanged)
 STANCE_MODIFIERS = {
     "offensive": {"as_mod": 1.15, "ds_mod": 0.70},
     "advance":   {"as_mod": 1.10, "ds_mod": 0.80},
@@ -25,22 +30,19 @@ STANCE_MODIFIERS = {
     # Fallback for creatures without stances
     "creature":  {"as_mod": 1.00, "ds_mod": 1.00}
 }
-
+# ... (POSTURE_MODIFIERS, SHIELD_DATA, RACE_MODIFIERS are all unchanged) ...
 POSTURE_MODIFIERS = {
     "standing":  {"as_mod": 1.0, "ds_mod": 1.0},
     "sitting":   {"as_mod": 0.5, "ds_mod": 0.5},
     "kneeling":  {"as_mod": 0.75, "ds_mod": 0.75},
     "prone":     {"as_mod": 0.3, "ds_mod": 0.9}
 }
-
-# Percentages of full DS applied in different postures
 POSTURE_PERCENTAGE = {
     "standing":  1.00,
     "sitting":   0.50,
     "kneeling":  0.75,
     "prone":     0.90
 }
-
 SHIELD_DATA = {
     "starter_small_shield": {
         "size": "small",
@@ -52,7 +54,6 @@ SHIELD_DATA = {
     }
 }
 DEFAULT_SHIELD_DATA = SHIELD_DATA["starter_small_shield"]
-
 RACE_MODIFIERS = {
     "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
     "Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -10, "AUR": 5},
@@ -60,6 +61,13 @@ RACE_MODIFIERS = {
     "Dark Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 5, "LOG": 0, "INT": 5, "WIS": 5, "INF": -5, "ZEA": -5, "ESS": 0, "DIS": -10, "AUR": 10},
 }
 DEFAULT_RACE_MODS = {"STR": 0, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 0, "INT": 0, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 0, "AUR": 0}
+
+
+# --- (All calculation functions are unchanged as they don't use game_state) ---
+# ... (get_stat_bonus, get_entity_race, get_entity_armor_type, _get_weapon_type, ...)
+# ... (_get_armor_hindrance, calculate_attack_strength, calculate_evade_defense, ...)
+# ... (calculate_block_defense, calculate_parry_defense, calculate_defense_strength, ...)
+# ... (HIT_MESSAGES, get_flavor_message, resolve_attack, calculate_roundtime) ...
 
 def get_stat_bonus(stat_value: int, stat_name: str, race: str) -> int:
     base_bonus = math.floor((stat_value - 50) / 2)
@@ -76,7 +84,7 @@ def get_entity_race(entity: Any) -> str:
 
 def get_entity_armor_type(entity, game_items_global: dict) -> str:
     if hasattr(entity, 'get_armor_type'):
-        return entity.get_armor_type(game_items_global)
+        return entity.get_armor_type() # Player object gets items from its own world
     elif isinstance(entity, dict):
         equipped_items_dict = entity.get("equipped", {})
         torso_id = equipped_items_dict.get("torso")
@@ -119,7 +127,7 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     as_val += str_bonus
     as_components_log.append(f"Str({str_bonus})")
 
-    if not weapon_item_data or weapon_item_data.get("type") != "weapon":
+    if not weapon_item_data or weapon_item_data.get("item_type") != "weapon": # FIX: check item_type
         brawling_skill_rank = attacker_skills.get("brawling", 0)
         brawling_bonus = calculate_skill_bonus(brawling_skill_rank)
         as_val += brawling_bonus
@@ -275,7 +283,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     attacker_stance = attacker.stance if is_attacker_player else attacker.get("stance", "creature")
 
     if is_attacker_player:
-        attacker_weapon_data = attacker.get_equipped_item_data("mainhand", game_items_global)
+        attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
         attacker.add_field_exp(1)
     else:
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
@@ -290,11 +298,11 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     defender_stance = defender.stance if is_defender_player else defender.get("stance", "creature")
 
     if is_defender_player:
-        defender_armor_data = defender.get_equipped_item_data("torso", game_items_global)
-        defender_shield_data = defender.get_equipped_item_data("offhand", game_items_global)
-        defender_weapon_data = defender.get_equipped_item_data("mainhand", game_items_global)
-        defender_offhand_data = defender.get_equipped_item_data("offhand", game_items_global)
-        defender_armor_type_str = defender.get_armor_type(game_items_global)
+        defender_armor_data = defender.get_equipped_item_data("torso")
+        defender_shield_data = defender.get_equipped_item_data("offhand")
+        defender_weapon_data = defender.get_equipped_item_data("mainhand")
+        defender_offhand_data = defender.get_equipped_item_data("offhand")
+        defender_armor_type_str = defender.get_armor_type()
     else:
         torso_id = defender.get("equipped", {}).get("torso")
         offhand_id = defender.get("equipped", {}).get("offhand")
@@ -305,9 +313,9 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         defender_offhand_data = game_items_global.get(offhand_id) if offhand_id else None
         defender_armor_type_str = get_entity_armor_type(defender, game_items_global)
 
-    if defender_shield_data and defender_shield_data.get("type") != "shield":
+    if defender_shield_data and defender_shield_data.get("item_type") != "shield": # FIX: check item_type
         defender_shield_data = None
-    if defender_offhand_data and defender_offhand_data.get("type") == "shield":
+    if defender_offhand_data and defender_offhand_data.get("item_type") == "shield": # FIX: check item_type
         defender_offhand_data = None
 
     attacker_as = calculate_attack_strength(
@@ -353,7 +361,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
         flat_base_damage_component = getattr(config, 'BAREHANDED_FLAT_DAMAGE', 1)
-        if not is_attacker_player and (not attacker_weapon_data or attacker_weapon_data.get("type") != "weapon"):
+        if not is_attacker_player and (not attacker_weapon_data or attacker_weapon_data.get("item_type") != "weapon"): # FIX: check item_type
              flat_base_damage_component += attacker.get("natural_attack_bonus_damage", 0)
 
         damage_divisor = getattr(config, 'COMBAT_DAMAGE_MODIFIER_DIVISOR', 10)
@@ -384,67 +392,72 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
 def calculate_roundtime(agility: int) -> float:
     return max(3.0, 5.0 - ((agility - 50) / 25))
 
-def _find_combatant(entity_id: str) -> Optional[Any]:
-    player_info = None
-    with game_state.PLAYER_LOCK:
-        player_info = game_state.ACTIVE_PLAYERS.get(entity_id.lower())
+# --- REFACTORED: Accept world object ---
+def _find_combatant(world: 'World', entity_id: str) -> Optional[Any]:
+    player_info = world.get_player_info(entity_id.lower())
     if player_info: return player_info.get("player_obj")
 
-    combat_data = None
-    with game_state.COMBAT_LOCK:
-        combat_data = game_state.COMBAT_STATE.get(entity_id)
+    combat_data = world.get_combat_state(entity_id)
     if not combat_data: return None
 
     room_id = combat_data.get("current_room_id")
     if not room_id: return None
 
-    room_data = None
-    with game_state.ROOM_LOCK:
-        room_data = game_state.GAME_ROOMS.get(room_id)
+    room_data = world.get_room(room_id)
     if not room_data: return None
 
     # --- NEW: Look for UID instead of monster_id ---
     return next((obj for obj in room_data.get("objects", []) if obj.get("uid") == entity_id), None)
 
-def stop_combat(combatant_id: str, target_id: str):
-    game_state.COMBAT_STATE.pop(combatant_id, None)
-    game_state.COMBAT_STATE.pop(target_id, None)
+# --- REFACTORED: Accept world object and use its methods ---
+def stop_combat(world: 'World', combatant_id: str, target_id: str):
+    world.stop_combat_for_all(combatant_id, target_id)
 
-def process_combat_tick(broadcast_callback, send_to_player_callback):
+# --- REFACTORED: Accept world object and use its methods ---
+def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callback):
     current_time = time.time()
-    combatant_list = []
-    with game_state.COMBAT_LOCK:
-        combatant_list = list(game_state.COMBAT_STATE.items())
+    combatant_list = world.get_all_combat_states()
 
     for combatant_id, state in combatant_list:
         if state.get("state_type") != "combat": continue
-        with game_state.COMBAT_LOCK:
-             if combatant_id not in game_state.COMBAT_STATE: continue
+        
+        # Check if combat was stopped by a different process this tick
+        with world.combat_lock:
+             if combatant_id not in world.combat_state: continue
+        
         if current_time < state["next_action_time"]: continue
 
-        attacker = _find_combatant(combatant_id)
-        defender = _find_combatant(state["target_id"])
+        attacker = _find_combatant(world, combatant_id)
+        defender = _find_combatant(world, state["target_id"])
         attacker_room_id = state.get("current_room_id")
 
         if not attacker or not defender or not attacker_room_id:
-            with game_state.COMBAT_LOCK: stop_combat(combatant_id, state["target_id"])
+            world.stop_combat_for_all(combatant_id, state["target_id"])
             continue
 
         if isinstance(attacker, Player): continue # Players attack via command
 
         is_defender_player = isinstance(defender, Player)
-        defender_room_id = defender.current_room_id if is_defender_player else game_state.COMBAT_STATE.get(state["target_id"], {}).get("current_room_id")
+        
+        defender_room_id = None
+        if is_defender_player:
+            defender_room_id = defender.current_room_id
+        else:
+            defender_state = world.get_combat_state(state["target_id"])
+            if defender_state:
+                defender_room_id = defender_state.get("current_room_id")
+
 
         if attacker_room_id != defender_room_id:
-            with game_state.COMBAT_LOCK: game_state.COMBAT_STATE.pop(combatant_id, None)
+            world.remove_combat_state(combatant_id) # Stop this monster
             continue
 
-        attack_results = resolve_attack(attacker, defender, game_items_global=game_state.GAME_ITEMS)
+        attack_results = resolve_attack(attacker, defender, game_items_global=world.game_items)
 
         sid_to_skip = None
         if is_defender_player:
             send_to_player_callback(defender.name, attack_results['defender_msg'], "combat_other")
-            defender_info = game_state.ACTIVE_PLAYERS.get(defender.name.lower())
+            defender_info = world.get_player_info(defender.name.lower())
             if defender_info: sid_to_skip = defender_info.get("sid")
 
         broadcast_callback(attacker_room_id, attack_results['broadcast_msg'], "combat_broadcast", skip_sid=sid_to_skip)
@@ -460,7 +473,12 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                 if defender.hp <= 0:
                     defender.hp = 0
                     broadcast_callback(attacker_room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
-                    defender.current_room_id = config.PLAYER_DEATH_ROOM_ID
+                    
+                    # --- REFACTORED: Use Player.move_to_room to handle death movement ---
+                    # This also handles stopping combat
+                    defender.move_to_room(config.PLAYER_DEATH_ROOM_ID, "You have been slain...")
+                    # --- END REFACTOR ---
+                    
                     defender.deaths_recent = min(5, defender.deaths_recent + 1)
                     con_loss = min(3 + defender.deaths_recent, 25 - defender.con_lost)
                     if con_loss > 0:
@@ -471,14 +489,14 @@ def process_combat_tick(broadcast_callback, send_to_player_callback):
                     send_to_player_callback(defender.name, "You feel the sting of death... (XP gain is reduced)", "system_error")
                     defender.posture = "standing"
                     save_game_state(defender)
-                    with game_state.COMBAT_LOCK: stop_combat(combatant_id, state["target_id"])
+                    # world.stop_combat_for_all(combatant_id, state["target_id"]) # This is now done by move_to_room
                     continue
                 else:
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
                     save_game_state(defender)
 
         rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
-        with game_state.COMBAT_LOCK:
+        with world.combat_lock:
             # Use direct access to ensure we update the live state, not a stale copy
-            if combatant_id in game_state.COMBAT_STATE:
-                 game_state.COMBAT_STATE[combatant_id]["next_action_time"] = current_time + rt_seconds
+            if combatant_id in world.combat_state:
+                 world.combat_state[combatant_id]["next_action_time"] = current_time + rt_seconds

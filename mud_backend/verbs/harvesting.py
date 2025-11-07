@@ -1,6 +1,6 @@
 # mud_backend/verbs/harvesting.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
+# --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend.core import loot_system
 from typing import Dict, Any
 from mud_backend.core import db 
@@ -37,12 +37,14 @@ def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] 
 
     return None # No matches at all
 
-def _spill_item_into_room(room_objects: list, item_id: str) -> str | None:
+# --- REFACTORED: Accept world object ---
+def _spill_item_into_room(world: 'World', room_objects: list, item_id: str) -> str | None:
     """
     Creates an item object and adds it to the room's object list.
     Returns the item's name if successful.
     """
-    item_data = game_state.GAME_ITEMS.get(item_id)
+    # --- FIX: Use world.game_items ---
+    item_data = world.game_items.get(item_id)
     if not item_data:
         print(f"[LOOT_SYSTEM] WARNING: Could not find item_id '{item_id}' in GAME_ITEMS.")
         return None
@@ -84,7 +86,8 @@ class Absorb(BaseVerb):
         
         # Clear the experience from the room
         self.room.unabsorbed_social_exp = 0
-        db.save_room_state(self.room) 
+        # --- FIX: Use self.world.save_room ---
+        self.world.save_room(self.room)
 
 
 class Search(BaseVerb):
@@ -120,7 +123,8 @@ class Search(BaseVerb):
             # --- THIS IS THE FIX ---
             # Remove the empty corpse from the room
             self.room.objects.remove(corpse_obj)
-            db.save_room_state(self.room) # Save the room state
+            # --- FIX: Use self.world.save_room ---
+            self.world.save_room(self.room) # Save the room state
             # --- END FIX ---
             return
 
@@ -128,7 +132,8 @@ class Search(BaseVerb):
         
         found_items_names = []
         for item_id in item_ids_to_drop:
-            item_name = _spill_item_into_room(self.room.objects, item_id)
+            # --- FIX: Pass self.world ---
+            item_name = _spill_item_into_room(self.world, self.room.objects, item_id)
             if item_name:
                 found_items_names.append(item_name)
         
@@ -143,7 +148,8 @@ class Search(BaseVerb):
         self.room.objects.remove(corpse_obj)
         
         # Save the room state *after* spilling items and removing corpse
-        db.save_room_state(self.room)
+        # --- FIX: Use self.world.save_room ---
+        self.world.save_room(self.room)
         # --- END FIX ---
 
 
@@ -180,32 +186,38 @@ class Skin(BaseVerb):
         template_key = corpse_obj.get("original_template_key")
         if not template_key:
             self.player.send_message("You try to skin it, but the corpse is unidentifiable.")
-            db.save_room_state(self.room) # Save the 'skinned' flag
+            # --- FIX: Use self.world.save_room ---
+            self.world.save_room(self.room) # Save the 'skinned' flag
             return
             
-        monster_template = game_state.GAME_MONSTER_TEMPLATES.get(template_key)
+        # --- FIX: Use self.world.game_monster_templates ---
+        monster_template = self.world.game_monster_templates.get(template_key)
         if not monster_template:
             self.player.send_message("You can't seem to find a way to skin this creature.")
-            db.save_room_state(self.room) # Save the 'skinned' flag
+            # --- FIX: Use self.world.save_room ---
+            self.world.save_room(self.room) # Save the 'skinned' flag
             return
 
         # Get player's skinning skill
         player_skill = self.player.skills.get("skinning", 0)
         
         # Call the loot_system function
+        # --- FIX: Pass self.world.game_items ---
         item_ids_to_drop = loot_system.generate_skinning_loot(
             monster_template=monster_template,
             player_skill_value=player_skill,
-            game_items_data=game_state.GAME_ITEMS
+            game_items_data=self.world.game_items
         )
         
         if not item_ids_to_drop:
             self.player.send_message("You try to skin the creature, but fail to produce anything of use.")
-            db.save_room_state(self.room) # Save the 'skinned' flag
+            # --- FIX: Use self.world.save_room ---
+            self.world.save_room(self.room) # Save the 'skinned' flag
             return
             
         for item_id in item_ids_to_drop:
-            item_name = _spill_item_into_room(self.room.objects, item_id)
+            # --- FIX: Pass self.world ---
+            item_name = _spill_item_into_room(self.world, self.room.objects, item_id)
             if item_name:
                 # Check if it was a failure item
                 skinning_info = monster_template.get("skinning", {})
@@ -215,4 +227,5 @@ class Skin(BaseVerb):
                     self.player.send_message(f"You skillfully skin the {corpse_obj['original_name']}, producing {item_name}.")
         
         # Save the room state after spilling items
-        db.save_room_state(self.room)
+        # --- FIX: Use self.world.save_room ---
+        self.world.save_room(self.room)

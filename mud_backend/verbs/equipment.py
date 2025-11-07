@@ -1,12 +1,13 @@
 # mud_backend/verbs/equipment.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
+# --- REMOVED: from mud_backend.core import game_state ---
 from typing import Dict, Any, Tuple, Optional
 
 def _find_item_in_inventory(player, target_name: str) -> str | None:
     """Finds the first item_id in a player's inventory that matches."""
     for item_id in player.inventory:
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use player.world.game_items ---
+        item_data = player.world.game_items.get(item_id)
         if item_data:
             if (target_name == item_data.get("name", "").lower() or 
                 target_name in item_data.get("keywords", [])):
@@ -17,7 +18,8 @@ def _find_item_worn(player, target_name: str) -> tuple[str, str] | tuple[None, N
     """Finds the first item_id and slot on a player that matches."""
     for slot, item_id in player.worn_items.items():
         if item_id:
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use player.world.game_items ---
+            item_data = player.world.game_items.get(item_id)
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
                     target_name in item_data.get("keywords", [])):
@@ -32,7 +34,8 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
     for slot in ["mainhand", "offhand"]:
         item_id = player.worn_items.get(slot)
         if item_id:
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use player.world.game_items ---
+            item_data = player.world.game_items.get(item_id)
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
                     target_name in item_data.get("keywords", [])):
@@ -74,7 +77,8 @@ class Wear(BaseVerb):
             self.player.send_message(f"You don't have a '{target_name}'.")
             return
 
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use self.world.game_items ---
+        item_data = self.world.game_items.get(item_id)
         if not item_data:
             self.player.send_message("An error occurred with that item.")
             return
@@ -88,7 +92,8 @@ class Wear(BaseVerb):
         # 3. Check if the target slot is free
         if self.player.worn_items.get(target_slot) is not None:
             occupied_id = self.player.worn_items.get(target_slot)
-            occupied_item = game_state.GAME_ITEMS.get(occupied_id, {})
+            # --- FIX: Use self.world.game_items ---
+            occupied_item = self.world.game_items.get(occupied_id, {})
             self.player.send_message(f"You are already wearing {occupied_item.get('name')} on your {target_slot}.")
             return
             
@@ -124,7 +129,8 @@ class Remove(BaseVerb):
             self.player.send_message(f"You are not wearing a {target_name}.")
             return
             
-        item_data = game_state.GAME_ITEMS.get(item_id, {})
+        # --- FIX: Use self.world.game_items ---
+        item_data = self.world.game_items.get(item_id, {})
         
         # 2. Find an empty hand
         right_hand_slot = "mainhand"
