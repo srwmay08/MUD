@@ -319,6 +319,53 @@ class Player:
             return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
         return DEFAULT_UNARMORED_TYPE
     
+    # ---
+    # --- NEW METHODS FOR REFACTOR 2A ---
+    # ---
+    def _stop_combat(self):
+        """Stops any combat the player is involved in."""
+        player_id = self.name.lower()
+        
+        with game_state.COMBAT_LOCK:
+            if player_id in game_state.COMBAT_STATE:
+                combat_data = game_state.COMBAT_STATE.pop(player_id, None)
+                if combat_data and combat_data.get("target_id"):
+                    target_id = combat_data["target_id"]
+                    # Stop the monster from fighting too
+                    game_state.COMBAT_STATE.pop(target_id, None)
+                    self.send_message(f"You flee from the {target_id}!")
+    
+    def move_to_room(self, target_room_id: str, move_message: str):
+        """
+        Handles all logic for moving a player to a new room.
+        Stops combat, updates state, and sends messages.
+        """
+        # --- Local imports to prevent circular dependency ---
+        from mud_backend.core.room_handler import show_room_to_player
+        # Note: 'Room' class is defined below in this same file.
+        # ---
+
+        new_room_data = game_state.GAME_ROOMS.get(target_room_id)
+
+        if not new_room_data or new_room_data.get("room_id") == "void":
+            self.send_message("You try to move, but find only an endless void. You quickly scramble back.")
+            return
+
+        new_room = Room(
+            room_id=new_room_data["room_id"],
+            name=new_room_data["name"],
+            description=new_room_data["description"],
+            db_data=new_room_data
+        )
+
+        self._stop_combat() # Stop combat
+        self.current_room_id = target_room_id
+        self.send_message(move_message)
+        show_room_to_player(self, new_room)
+    # ---
+    # --- END NEW METHODS ---
+    # ---
+
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
         
