@@ -1,6 +1,7 @@
 # mud_backend/core/game_state.py
 import time
 import threading
+import copy  # <-- THIS IS THE FIX
 from mud_backend import config
 from typing import Dict, Any, Optional, List, Tuple
 from mud_backend.core import db
