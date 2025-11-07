@@ -1,6 +1,6 @@
 # mud_backend/verbs/skills.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
+# --- REFACTORED: Removed game_state import ---
 from typing import List, Tuple, Dict, Any
 
 class Skills(BaseVerb):
@@ -17,8 +17,8 @@ class Skills(BaseVerb):
 
         skill_lines = []
         
-        # We need the full skill list from game_state to get the names/categories
-        all_skills = game_state.GAME_SKILLS
+        # --- FIX: Get skill data from self.world ---
+        all_skills = self.world.game_skills
         
         # Filter for skills with rank > 0 and prepare for sorting
         active_skills: List[Tuple[str, int]] = [

@@ -2,8 +2,8 @@
 from mud_backend.verbs.base_verb import BaseVerb
 # --- REMOVED: fetch_room_data, Room, show_room_to_player ---
 from mud_backend.core.command_executor import DIRECTION_MAP
-# --- NEW IMPORTS ---
-from mud_backend.core import game_state
+# --- REFACTORED: Removed unused game_state import ---
+
 
 # --- REMOVED: _stop_player_combat helper function ---
 

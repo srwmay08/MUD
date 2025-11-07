@@ -1,7 +1,7 @@
 # mud_backend/verbs/item_actions.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import db
-from mud_backend.core import game_state
+# --- REFACTORED: Removed game_state import ---
 from typing import Dict, Any
 
 def _find_item_in_room(room_objects: list, target_name: str) -> Dict[str, Any] | None:
@@ -20,22 +20,26 @@ def _find_item_in_room(room_objects: list, target_name: str) -> Dict[str, Any] |
         
     return None
 
-def _find_item_in_inventory(player, target_name: str) -> str | None:
+# --- REFACTORED: Pass game_items_data ---
+def _find_item_in_inventory(player, game_items_data: Dict[str, Any], target_name: str) -> str | None:
     """Finds the first item_id in a player's inventory that matches."""
     for item_id in player.inventory:
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use passed game_items_data ---
+        item_data = game_items_data.get(item_id)
         if item_data:
             if (target_name == item_data.get("name", "").lower() or 
                 target_name in item_data.get("keywords", [])):
                 return item_id
     return None
 
-def _find_container_on_player(player, target_name: str) -> Dict[str, Any] | None:
+# --- REFACTORED: Pass game_items_data ---
+def _find_container_on_player(player, game_items_data: Dict[str, Any], target_name: str) -> Dict[str, Any] | None:
     """Finds a container item on the player (worn or in inventory)."""
     # Check worn containers (like a backpack)
     for slot, item_id in player.worn_items.items():
         if item_id:
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use passed game_items_data ---
+            item_data = game_items_data.get(item_id)
             if item_data and item_data.get("is_container"):
                 # --- FIX: Add 'item_id' to search keywords for exact matching ---
                 search_keywords = item_data.get("keywords", []) + [item_id]
@@ -48,7 +52,8 @@ def _find_container_on_player(player, target_name: str) -> Dict[str, Any] | None
 
     # Check inventory containers (like a small pouch)
     for item_id in player.inventory:
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use passed game_items_data ---
+        item_data = game_items_data.get(item_id)
         if item_data and item_data.get("is_container"):
              search_keywords = item_data.get("keywords", []) + [item_id]
              if (target_name == item_data.get("name", "").lower() or
@@ -91,11 +96,15 @@ class Get(BaseVerb):
         elif self.player.worn_items.get(left_hand_slot) is None:
             target_hand_slot = left_hand_slot
 
+        # --- FIX: Get game_items from self.world ---
+        game_items = self.world.game_items
+
         # ---
         # BRANCH 1: GET <item> FROM <container>
         # ---
         if target_container_name:
-            container = _find_container_on_player(self.player, target_container_name)
+            # --- FIX: Pass game_items to helper ---
+            container = _find_container_on_player(self.player, game_items, target_container_name)
             
             # For now, we only support getting from the 'backpack' (main inventory)
             if not container or container.get("wearable_slot") != "back":
@@ -103,13 +112,15 @@ class Get(BaseVerb):
                 return
 
             # Find the item in the player's inventory
-            item_id = _find_item_in_inventory(self.player, target_item_name)
+            # --- FIX: Pass game_items to helper ---
+            item_id = _find_item_in_inventory(self.player, game_items, target_item_name)
             
             if not item_id:
                 self.player.send_message(f"You don't have a {target_item_name} in your {container.get('name')}.")
                 return
             
-            item_data = game_state.GAME_ITEMS.get(item_id, {})
+            # --- FIX: Use local game_items ---
+            item_data = game_items.get(item_id, {})
             item_name = item_data.get("name", "an item")
 
             # Check for free hands
@@ -138,10 +149,6 @@ class Get(BaseVerb):
                     return
 
                 if not target_hand_slot:
-                     # Auto-stow if hands full? For now, just fail if standard GET.
-                     # Or we can implement the "put in pack" logic if hands full.
-                     # Let's do standard MUD: must have hand free to GET, unless we add GET X AND STOW.
-                     # Re-reading your prompt: you liked "Both hands are full. You get... and put it in your pack."
                      self.player.inventory.append(item_id)
                      self.player.send_message(f"Both hands are full. You get {item_name} and put it in your pack.")
                 else:
@@ -149,11 +156,13 @@ class Get(BaseVerb):
                      self.player.send_message(f"You get {item_name} and hold it.")
                 
                 self.room.objects.remove(item_obj)
-                db.save_room_state(self.room)
+                # --- FIX: Use self.world.save_room ---
+                self.world.save_room(self.room)
                 return
 
             # If not on ground, try to find item in inventory (to hold it)
-            item_id_from_pack = _find_item_in_inventory(self.player, target_item_name)
+            # --- FIX: Pass game_items to helper ---
+            item_id_from_pack = _find_item_in_inventory(self.player, game_items, target_item_name)
             if not item_id_from_pack:
                 self.player.send_message(f"You don't see a **{target_item_name}** here or in your pack.")
                 return
@@ -165,7 +174,8 @@ class Get(BaseVerb):
             # Move from inventory to hand
             self.player.inventory.remove(item_id_from_pack)
             self.player.worn_items[target_hand_slot] = item_id_from_pack
-            item_name = game_state.GAME_ITEMS.get(item_id_from_pack, {}).get("name", "an item")
+            # --- FIX: Use local game_items ---
+            item_name = game_items.get(item_id_from_pack, {}).get("name", "an item")
             self.player.send_message(f"You get {item_name} from your pack and hold it.")
 
 
@@ -191,27 +201,25 @@ class Drop(BaseVerb):
             target_item_name = parts[0].strip()
             target_container_name = parts[1].strip()
         elif " on " in args_str:
-             # Handle "put backpack on back" as a WEAR alias if it matches a slot
              parts = args_str.split(" on ", 1)
              possible_item = parts[0].strip()
              possible_slot = parts[1].strip()
              
-             # Very basic check if the second part is a slot name
-             # This is a hacky way to support "put X on Y" as wear without a full parser.
-             # If they try "put backpack on back", we tell them to use WEAR for now to avoid complexity.
              if possible_slot in ["back", "head", "torso", "legs", "feet", "hands", "waist"]:
                   self.player.send_message(f"To wear items, please use 'WEAR {possible_item}'.")
                   return
              
-             # Otherwise treat "on" as "in" for things like tables
              target_item_name = possible_item
              target_container_name = possible_slot
 
-        elif self.command == "stow":
+        # --- FIX: Get game_items from self.world ---
+        game_items = self.world.game_items
+
+        if self.command == "stow":
             target_item_name = args_str
-            backpack = _find_container_on_player(self.player, "backpack")
+            # --- FIX: Pass game_items to helper ---
+            backpack = _find_container_on_player(self.player, game_items, "backpack")
             if backpack:
-                 # We use the main keyword to ensure we find it again easily
                  target_container_name = backpack.get("keywords", ["backpack"])[0]
             else:
                  self.player.send_message("You don't seem to have a backpack to stow things in.")
@@ -227,7 +235,8 @@ class Drop(BaseVerb):
         for slot in ["mainhand", "offhand"]:
             item_id = self.player.worn_items.get(slot)
             if item_id:
-                item_data = game_state.GAME_ITEMS.get(item_id, {})
+                # --- FIX: Use local game_items ---
+                item_data = game_items.get(item_id, {})
                 if (target_item_name == item_data.get("name", "").lower() or 
                     target_item_name in item_data.get("keywords", [])):
                     item_id_to_drop = item_id
@@ -235,7 +244,8 @@ class Drop(BaseVerb):
                     break
         
         if not item_id_to_drop:
-            item_id_to_drop = _find_item_in_inventory(self.player, target_item_name)
+            # --- FIX: Pass game_items to helper ---
+            item_id_to_drop = _find_item_in_inventory(self.player, game_items, target_item_name)
             if item_id_to_drop:
                 item_location = "inventory"
 
@@ -243,27 +253,24 @@ class Drop(BaseVerb):
             self.player.send_message(f"You don't seem to have a {target_item_name}.")
             return
             
-        item_data = game_state.GAME_ITEMS.get(item_id_to_drop)
+        # --- FIX: Use local game_items ---
+        item_data = game_items.get(item_id_to_drop)
         item_name = item_data.get("name", "an item")
 
         # 2. Handle destination
         if target_container_name:
             # --- PUT IN CONTAINER ---
-            container = _find_container_on_player(self.player, target_container_name)
+            # --- FIX: Pass game_items to helper ---
+            container = _find_container_on_player(self.player, game_items, target_container_name)
             
             if not container:
                  self.player.send_message(f"You don't have a container called '{target_container_name}'.")
                  return
 
-            # --- RECURSION CHECK ---
-            # Check if the container we found is the SAME item we are trying to drop.
-            # We attached _runtime_item_id in _find_container_on_player for this exact check.
             if container.get("_runtime_item_id") == item_id_to_drop:
                  self.player.send_message("You can't put something inside itself!")
                  return
-            # -----------------------
 
-            # For now, we only support putting things in the 'backpack' (main inventory)
             if container.get("wearable_slot") == "back":
                 if item_location == "inventory":
                     self.player.send_message(f"The {item_name} is already in your pack.")
@@ -273,7 +280,6 @@ class Drop(BaseVerb):
                 self.player.inventory.append(item_id_to_drop)
                 self.player.send_message(f"You put {item_name} in your {container.get('name')}.")
             else:
-                # Future: support putting items into other containers (pouches, etc.)
                 self.player.send_message(f"You can't put things in {container.get('name')} yet.")
                 return
         else:
@@ -294,7 +300,8 @@ class Drop(BaseVerb):
                 "perception_dc": 0
             }
             self.room.objects.append(new_item_obj)
-            db.save_room_state(self.room)
+            # --- FIX: Use self.world.save_room ---
+            self.world.save_room(self.room)
             self.player.send_message(f"You drop {item_name}.")
 
 class Take(Get):
@@ -318,14 +325,18 @@ class Pour(BaseVerb):
         target_item_name = parts[0].strip()
         target_container_name = parts[1].strip()
         
-        # For now, just find item and fail gracefully since we don't have potion logic here yet
-        item_id = _find_item_in_inventory(self.player, target_item_name)
+        # --- FIX: Get game_items from self.world ---
+        game_items = self.world.game_items
+        
+        # --- FIX: Pass game_items to helper ---
+        item_id = _find_item_in_inventory(self.player, game_items, target_item_name)
         if not item_id:
              # Check hands too
              for slot in ["mainhand", "offhand"]:
                   hid = self.player.worn_items.get(slot)
                   if hid:
-                       hdata = game_state.GAME_ITEMS.get(hid, {})
+                       # --- FIX: Use local game_items ---
+                       hdata = game_items.get(hid, {})
                        if target_item_name in hdata.get("keywords", []):
                             item_id = hid
                             break

@@ -1,13 +1,13 @@
 # mud_backend/verbs/shop.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
+# --- REFACTORED: Removed game_state import ---
 from mud_backend.core import db
 import math
 import random 
-from typing import Tuple, Optional # <-- NEW
+from typing import Tuple, Optional, Dict, Any
 
-# --- NEW HELPER ---
-def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
+# --- REFACTORED: Pass game_items_data ---
+def _find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Finds the first item_id in a player's hands that matches.
     Returns (item_id, slot_name) or (None, None)
@@ -15,18 +15,20 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
     for slot in ["mainhand", "offhand"]:
         item_id = player.worn_items.get(slot)
         if item_id:
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use passed game_items_data ---
+            item_data = game_items_data.get(item_id)
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
                     target_name in item_data.get("keywords", [])):
                     return item_id, slot
     return None, None
 
-# --- Helper from item_actions.py (for SELL BACKPACK) ---
-def _find_item_in_inventory(player, target_name: str) -> str | None:
+# --- REFACTORED: Pass game_items_data ---
+def _find_item_in_inventory(player, game_items_data: Dict[str, Any], target_name: str) -> str | None:
     """Finds the first item_id in a player's inventory that matches."""
     for item_id in player.inventory:
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use passed game_items_data ---
+        item_data = game_items_data.get(item_id)
         if item_data:
             if (target_name == item_data.get("name", "").lower() or 
                 target_name in item_data.get("keywords", [])):
@@ -40,20 +42,24 @@ def _get_shop_data(room) -> dict | None:
             return obj.get("shop_data")
     return None
 
-def _get_item_buy_price(item_id: str) -> int:
+# --- REFACTORED: Pass game_items_data ---
+def _get_item_buy_price(item_id: str, game_items_data: Dict[str, Any]) -> int:
     """Gets the price a shop SELLS an item for (fixed price)."""
-    item_data = game_state.GAME_ITEMS.get(item_id)
+    # --- FIX: Use passed game_items_data ---
+    item_data = game_items_data.get(item_id)
     if not item_data:
         return 0
     # Shops sell for 2x base value
     return item_data.get("base_value", 0) * 2
 
-def _get_item_sell_price(item_id: str) -> int:
+# --- REFACTORED: Pass game_items_data ---
+def _get_item_sell_price(item_id: str, game_items_data: Dict[str, Any]) -> int:
     """
     Gets the price a shop BUYS an item for.
     Uses value_range if it exists.
     """
-    item_data = game_state.GAME_ITEMS.get(item_id)
+    # --- FIX: Use passed game_items_data ---
+    item_data = game_items_data.get(item_id)
     if not item_data:
         return 0
         
@@ -80,11 +86,9 @@ class List(BaseVerb):
     def execute(self):
         shop_data = _get_shop_data(self.room)
         if not shop_data:
-            # --- FIX: Check if this is the training room ---
             if self.player.game_state == "training":
                 self.player.send_message("You must 'check in' at the inn to train.")
                 return
-            # --- END FIX ---
             self.player.send_message("You can't seem to shop here.")
             return
             
@@ -97,9 +101,13 @@ class List(BaseVerb):
         self.player.send_message("Item Name (type 'buy <name>')      Price")
         self.player.send_message("-----------------------------------------")
         
+        # --- FIX: Get game_items from self.world ---
+        game_items = self.world.game_items
+        
         for item_id in inventory:
-            price = _get_item_buy_price(item_id)
-            item_name = game_state.GAME_ITEMS.get(item_id, {}).get("name", "An item")
+            # --- FIX: Pass game_items to helper ---
+            price = _get_item_buy_price(item_id, game_items)
+            item_name = game_items.get(item_id, {}).get("name", "An item")
             self.player.send_message(f"- {item_name:<30} {price} silver")
             
 class Buy(BaseVerb):
@@ -119,10 +127,14 @@ class Buy(BaseVerb):
             
         target_name = " ".join(self.args).lower()
         
+        # --- FIX: Get game_items from self.world ---
+        game_items = self.world.game_items
+        
         # Find the item in the shop's inventory
         item_id_to_buy = None
         for item_id in shop_data.get("inventory", []):
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use local game_items ---
+            item_data = game_items.get(item_id)
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
                     target_name in item_data.get("keywords", [])):
@@ -134,7 +146,8 @@ class Buy(BaseVerb):
             return
             
         # Check price and player silver
-        price = _get_item_buy_price(item_id_to_buy)
+        # --- FIX: Pass game_items to helper ---
+        price = _get_item_buy_price(item_id_to_buy, game_items)
         player_silver = self.player.wealth.get("silvers", 0)
         
         if player_silver < price:
@@ -145,7 +158,8 @@ class Buy(BaseVerb):
         self.player.wealth["silvers"] = player_silver - price
         self.player.inventory.append(item_id_to_buy) # Add to pack
         
-        item_name = game_state.GAME_ITEMS.get(item_id_to_buy, {}).get("name", "the item")
+        # --- FIX: Use local game_items ---
+        item_name = game_items.get(item_id_to_buy, {}).get("name", "the item")
         self.player.send_message(f"You buy {item_name} for {price} silver.")
 
 class Appraise(BaseVerb):
@@ -164,12 +178,16 @@ class Appraise(BaseVerb):
             return
 
         target_name = " ".join(self.args).lower()
-        # --- THIS IS THE FIX ---
+        
+        # --- FIX: Get game_items from self.world ---
+        game_items = self.world.game_items
+        
         # Appraise should work on items in hands OR inventory
-        item_id, location = _find_item_in_hands(self.player, target_name)
+        # --- FIX: Pass game_items to helper ---
+        item_id, location = _find_item_in_hands(self.player, game_items, target_name)
         if not item_id:
-            item_id = _find_item_in_inventory(self.player, target_name)
-        # --- END FIX ---
+            # --- FIX: Pass game_items to helper ---
+            item_id = _find_item_in_inventory(self.player, game_items, target_name)
             
         if not item_id:
             self.player.send_message(f"You don't have a '{target_name}'.")
@@ -180,7 +198,8 @@ class Appraise(BaseVerb):
             self.player.send_message("The shopkeep looks at your item and shakes their head, 'I'm not interested in that.'")
             return
             
-        price = _get_item_sell_price(item_id)
+        # --- FIX: Pass game_items to helper ---
+        price = _get_item_sell_price(item_id, game_items)
         
         if price == 0:
             self.player.send_message("The shopkeep tells you, 'That item is worthless.'")
@@ -205,6 +224,9 @@ class Sell(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         
+        # --- FIX: Get game_items from self.world ---
+        game_items = self.world.game_items
+        
         # --- NEW: SELL BACKPACK LOGIC ---
         backpack_keywords = ["backpack", "pack", "back"]
         if target_name in backpack_keywords:
@@ -212,8 +234,6 @@ class Sell(BaseVerb):
             items_to_sell = []
             shop_will_buy_list = shop_data.get("will_buy", [])
             
-            # Find all items in inventory that the shop will buy
-            # Iterate over a copy so we can modify the original
             for item_id in self.player.inventory[:]:
                 if item_id in shop_will_buy_list:
                     items_to_sell.append(item_id)
@@ -224,11 +244,13 @@ class Sell(BaseVerb):
                 
             total_silver = 0
             for item_id in items_to_sell:
-                price = _get_item_sell_price(item_id)
+                # --- FIX: Pass game_items to helper ---
+                price = _get_item_sell_price(item_id, game_items)
                 if price > 0:
                     self.player.inventory.remove(item_id)
                     total_silver += price
-                    item_name = game_state.GAME_ITEMS.get(item_id, {}).get("name", "an item")
+                    # --- FIX: Use local game_items ---
+                    item_name = game_items.get(item_id, {}).get("name", "an item")
                     self.player.send_message(f"You sell {item_name} for {price} silver.")
             
             if total_silver > 0:
@@ -240,7 +262,8 @@ class Sell(BaseVerb):
         # --- END: SELL BACKPACK LOGIC ---
 
         # --- DEFAULT: SELL <item> (must be in hands) ---
-        item_id, item_location = _find_item_in_hands(self.player, target_name)
+        # --- FIX: Pass game_items to helper ---
+        item_id, item_location = _find_item_in_hands(self.player, game_items, target_name)
 
         if not item_id:
             self.player.send_message(f"You are not holding a '{target_name}' to sell.")
@@ -251,7 +274,8 @@ class Sell(BaseVerb):
             self.player.send_message("The shopkeep isn't interested in that item.")
             return
             
-        price = _get_item_sell_price(item_id)
+        # --- FIX: Pass game_items to helper ---
+        price = _get_item_sell_price(item_id, game_items)
         
         if price == 0:
             self.player.send_message("That item is worthless.")
@@ -260,5 +284,6 @@ class Sell(BaseVerb):
         # Perform Transaction
         self.player.worn_items[item_location] = None # Remove from hand
         self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + price
-        item_name = game_state.GAME_ITEMS.get(item_id, {}).get("name", "the item")
+        # --- FIX: Use local game_items ---
+        item_name = game_items.get(item_id, {}).get("name", "the item")
         self.player.send_message(f"You sell {item_name} for {price} silver.")

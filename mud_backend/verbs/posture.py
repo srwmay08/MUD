@@ -3,7 +3,7 @@ import random
 import math
 import time
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
+# --- REFACTORED: Removed game_state import ---
 
 # We import these helpers from other files
 # This helper applies roundtime
@@ -33,12 +33,15 @@ class Posture(BaseVerb):
         # Check for existing roundtime
         player_id = self.player.name.lower()
         current_time = time.time()
-        if player_id in game_state.COMBAT_STATE:
-            rt_data = game_state.COMBAT_STATE[player_id]
+        
+        # --- FIX: Use self.world ---
+        rt_data = self.world.get_combat_state(player_id)
+        if rt_data:
             if current_time < rt_data.get("next_action_time", 0):
                 wait_time = rt_data["next_action_time"] - current_time
                 self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
                 return
+        # --- END FIX ---
 
         # Roll to see if RT is applied
         if random.random() < chance:
@@ -90,12 +93,14 @@ class Posture(BaseVerb):
         player_id = self.player.name.lower()
         current_time = time.time()
         
-        if player_id in game_state.COMBAT_STATE:
-            rt_data = game_state.COMBAT_STATE[player_id]
+        # --- FIX: Use self.world ---
+        rt_data = self.world.get_combat_state(player_id)
+        if rt_data:
             if current_time < rt_data.get("next_action_time", 0):
                 wait_time = rt_data["next_action_time"] - current_time
                 self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
                 return
+        # --- END FIX ---
 
         if target_posture == "standing":
             # Handle standing logic (which includes RT rolls)

@@ -6,9 +6,7 @@ from mud_backend.core.game_objects import Room
 from mud_backend.core.db import fetch_room_data
 from mud_backend.core.room_handler import show_room_to_player
 from mud_backend import config
-# --- THIS IS THE FIX ---
-from mud_backend.core import game_state 
-# --- END FIX ---
+# --- REFACTORED: Removed game_state import ---
 from mud_backend.core.skill_handler import (
     show_skill_list, 
     train_skill,
@@ -164,7 +162,8 @@ class Done(BaseVerb):
                 if item_id:
                     # Put it in their main hand
                     self.player.worn_items["mainhand"] = item_id
-                    item_data = game_state.GAME_ITEMS.get(item_id, {})
+                    # --- FIX: Use self.world.game_items ---
+                    item_data = self.world.game_items.get(item_id, {})
                     given_items_msg.append(item_data.get("name", "a weapon"))
 
             # 4. Give backpack

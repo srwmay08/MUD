@@ -1,8 +1,7 @@
 # mud_backend/verbs/trading.py
 import time
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core import game_state
-from mud_backend.core.command_executor import get_player_object
+# --- REFACTORED: Removed game_state and get_player_object imports ---
 
 class Give(BaseVerb):
     """
@@ -18,9 +17,10 @@ class Give(BaseVerb):
         target_item_name = " ".join(self.args[1:]).lower()
         
         # 1. Check if target player is real and in the same room
-        target_player = get_player_object(target_player_name)
+        # --- FIX: Use self.world to get player object ---
+        target_player = self.world.get_player_obj(target_player_name)
         if not target_player or target_player.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_player_name}' here.")
+            self.player.send_message(f"You don't see anyone named '{self.args[0]}' here.")
             return
             
         if target_player.name.lower() == self.player.name.lower():
@@ -30,8 +30,9 @@ class Give(BaseVerb):
         # 2. Find the item in the giver's inventory
         item_id_to_give = None
         for item_id in self.player.inventory:
-            item_data = game_state.GAME_ITEMS.get(item_id)
-            if item_data and target_item_name in item_data['name'].lower():
+            # --- FIX: Use self.world.game_items ---
+            item_data = self.world.game_items.get(item_id)
+            if item_data and (target_item_name == item_data['name'].lower() or target_item_name in item_data.get("keywords", [])):
                 item_id_to_give = item_id
                 break
         
@@ -39,7 +40,8 @@ class Give(BaseVerb):
             self.player.send_message(f"You don't have a '{target_item_name}' in your pack.")
             return
             
-        item_data = game_state.GAME_ITEMS.get(item_id_to_give)
+        # --- FIX: Use self.world.game_items ---
+        item_data = self.world.game_items.get(item_id_to_give)
 
         # 3. Create a pending trade offer
         trade_offer = {
@@ -49,7 +51,8 @@ class Give(BaseVerb):
             "offer_time": time.time()
         }
         
-        game_state.PENDING_TRADES[target_player.name.lower()] = trade_offer
+        # --- FIX: Use self.world to set trade ---
+        self.world.set_pending_trade(target_player.name.lower(), trade_offer)
         
         self.player.send_message(f"You offer {item_data['name']} to {target_player.name}.")
         
@@ -66,7 +69,8 @@ class Accept(BaseVerb):
         player_key = self.player.name.lower()
         
         # 1. Check for a pending trade
-        trade_offer = game_state.PENDING_TRADES.get(player_key)
+        # --- FIX: Use self.world ---
+        trade_offer = self.world.get_pending_trade(player_key)
         
         if not trade_offer:
             self.player.send_message("You have not been offered anything.")
@@ -75,21 +79,25 @@ class Accept(BaseVerb):
         # 2. Check if the offer is still valid (e.g., 30 seconds)
         if time.time() - trade_offer['offer_time'] > 30:
             self.player.send_message("The offer has expired.")
-            game_state.PENDING_TRADES.pop(player_key, None)
+            # --- FIX: Use self.world ---
+            self.world.remove_pending_trade(player_key)
             return
             
         # 3. Check if the giver is still here
-        giver_player = get_player_object(trade_offer['from_player_name'])
+        # --- FIX: Use self.world ---
+        giver_player = self.world.get_player_obj(trade_offer['from_player_name'].lower())
         if not giver_player or giver_player.current_room_id != self.player.current_room_id:
             self.player.send_message(f"{trade_offer['from_player_name']} is no longer here.")
-            game_state.PENDING_TRADES.pop(player_key, None)
+            # --- FIX: Use self.world ---
+            self.world.remove_pending_trade(player_key)
             return
             
         # 4. Check if the giver still has the item
         item_id = trade_offer['item_id']
         if item_id not in giver_player.inventory:
             self.player.send_message(f"{giver_player.name} no longer has {trade_offer['item_name']}.")
-            game_state.PENDING_TRADES.pop(player_key, None)
+            # --- FIX: Use self.world ---
+            self.world.remove_pending_trade(player_key)
             return
             
         # 5. Success! Transfer the item.
@@ -100,7 +108,8 @@ class Accept(BaseVerb):
         giver_player.send_message(f"{self.player.name} accepts your offer.")
         
         # 6. Clear the trade
-        game_state.PENDING_TRADES.pop(player_key, None)
+        # --- FIX: Use self.world ---
+        self.world.remove_pending_trade(player_key)
 
 class Decline(BaseVerb):
     """
@@ -110,7 +119,8 @@ class Decline(BaseVerb):
         player_key = self.player.name.lower()
         
         # 1. Check for a pending trade
-        trade_offer = game_state.PENDING_TRADES.pop(player_key, None)
+        # --- FIX: Use self.world ---
+        trade_offer = self.world.remove_pending_trade(player_key)
         
         if not trade_offer:
             self.player.send_message("You have no offers to decline.")
@@ -119,7 +129,8 @@ class Decline(BaseVerb):
         # 2. Notify players
         self.player.send_message(f"You decline the offer from {trade_offer['from_player_name']}.")
         
-        giver_player = get_player_object(trade_offer['from_player_name'])
+        # --- FIX: Use self.world ---
+        giver_player = self.world.get_player_obj(trade_offer['from_player_name'].lower())
         if giver_player:
             giver_player.send_message(f"{self.player.name} declines your offer.")
 
