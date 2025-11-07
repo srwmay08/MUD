@@ -1,12 +1,11 @@
-# verbs/base_verb.py
-# FIX: Change to absolute import using the top package name
+# mud_backend/verbs/base_verb.py
 from mud_backend.core.game_objects import Player, Room 
 from typing import List, TYPE_CHECKING
-# TYPE_CHECKING is used for type hints to avoid circular imports, 
-# though not strictly necessary for this simple example.
 
-# if TYPE_CHECKING:
-#     from core.command_executor import CommandExecutor # example
+# --- REFACTORED: Add TYPE_CHECKING for World ---
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+# --- END REFACTOR ---
 
 class BaseVerb:
     """
@@ -14,13 +13,14 @@ class BaseVerb:
     All verbs must override the execute method.
     """
     
-    # --- THIS IS THE FIX ---
-    def __init__(self, player: Player, room: Room, args: List[str], command: str = ""):
+    # --- REFACTORED: Add 'world' to __init__ ---
+    def __init__(self, world: 'World', player: Player, room: Room, args: List[str], command: str = ""):
+        self.world = world
         self.player = player
         self.room = room
         self.args = args
-        self.command = command # <-- Store the original command
-    # --- END FIX ---
+        self.command = command
+    # --- END REFACTOR ---
  
     def execute(self):
         """

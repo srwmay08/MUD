@@ -1,14 +1,17 @@
-# core/game_objects.py
-from typing import Optional, List, Dict, Any, Tuple
+# mud_backend/core/game_objects.py
+from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 import math
-from mud_backend.core import game_state
-# --- NEW IMPORT ---
+# --- REFACTORED: Removed game_state import ---
+# from mud_backend.core import game_state
+# --- END REFACTOR ---
 from mud_backend import config
-# --- REMOVED IMPORT: This was causing the circular dependency ---
-# from mud_backend.core.skill_handler import calculate_skill_bonus 
-# ---
 
-# --- (RACE_DATA dictionary is unchanged) ---
+# --- REFACTORED: Add TYPE_CHECKING for World ---
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+# --- END REFACTOR ---
+
+
 RACE_DATA = {
     "Human": {
         "base_hp_max": 150,
@@ -33,10 +36,12 @@ RACE_DATA = {
 }
 
 
-# --- (Player class __init__ is unchanged) ---
 class Player:
-    def __init__(self, name: str, current_room_id: str, db_data: Optional[dict] = None):
-        # ... (init unchanged) ...
+    # --- REFACTORED: Add 'world' to __init__ ---
+    def __init__(self, world: 'World', name: str, current_room_id: str, db_data: Optional[dict] = None):
+        self.world = world # Store the world reference
+        # --- END REFACTOR ---
+        
         self.name = name
         self.current_room_id = current_room_id
         self.db_data = db_data if db_data is not None else {}
@@ -76,22 +81,17 @@ class Player:
             "bank_silvers": 0 
         })
 
-        self.stance: str = self.db_data.get("stance", "neutral") # For combat
-        self.posture: str = self.db_data.get("posture", "standing") # For physical position
+        self.stance: str = self.db_data.get("stance", "neutral")
+        self.posture: str = self.db_data.get("posture", "standing")
         
         self.status_effects: List[str] = self.db_data.get("status_effects", [])
-
-        # --- THIS IS THE FIX ---
-        # Player's personal action roundtime
         self.next_action_time: float = self.db_data.get("next_action_time", 0.0)
-        # --- END FIX ---
 
         self.deaths_recent: int = self.db_data.get("deaths_recent", 0)
         self.death_sting_points: int = self.db_data.get("death_sting_points", 0)
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
 
-    # --- (All @property methods are unchanged) ---
     @property
     def con_bonus(self) -> int:
         return (self.stats.get("CON", 50) - 50)
@@ -116,7 +116,8 @@ class Player:
         hp_gain_rate = self.race_data.get("hp_gain_per_pf_rank", 6)
         pf_bonus_per_rank = hp_gain_rate + math.trunc(con_bonus / 10)
         hp_from_pf = pf_ranks * pf_bonus_per_rank
-        return self.base_hp + con_bonus + hp_from_pf
+        # --- REFACTORED: max_hp should use racial_base_max, not self.base_hp ---
+        return racial_base_max + con_bonus + hp_from_pf # FIX from original logic
 
     @property
     def hp_regeneration(self) -> int:
@@ -133,16 +134,15 @@ class Player:
         Calculates the final armor roundtime penalty after
         applying reduction from Armor Use skill bonus.
         """
-        # --- THIS IS THE FIX ---
-        # Import here to avoid circular dependency
-        from mud_backend.core.skill_handler import calculate_skill_bonus
-        # --- END FIX ---
+        from mud_backend.core.skill_handler import calculate_skill_bonus 
 
         armor_id = self.worn_items.get("torso")
         if not armor_id:
             return 0.0
             
-        armor_data = game_state.GAME_ITEMS.get(armor_id)
+        # --- REFACTORED: Get item data from self.world ---
+        armor_data = self.world.game_items.get(armor_id)
+        # --- END REFACTOR ---
         if not armor_data:
             return 0.0
             
@@ -150,21 +150,13 @@ class Player:
         if base_rt == 0:
             return 0.0
             
-        # Get Armor Use skill bonus
         armor_use_ranks = self.skills.get("armor_use", 0)
         skill_bonus = calculate_skill_bonus(armor_use_ranks)
         
-        # Each 20 bonus points removes 1s, but the first is removed at 10.
         if skill_bonus < 10:
             return base_rt
             
-        # At 10 bonus, 1s is removed.
-        # At 30 bonus, 2s are removed.
-        # At 50 bonus, 3s are removed.
-        # Formula: 1 + floor((bonus - 10) / 20)
         penalty_removed = 1 + math.floor(max(0, skill_bonus - 10) / 20)
-        
-        # TODO: Add Dex/Agi offsets
         
         final_penalty = max(0.0, base_rt - penalty_removed)
         return final_penalty
@@ -189,7 +181,6 @@ class Player:
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
-    # --- (add_field_exp, absorb_exp_pulse, _get_xp_target_for_level, _calculate_tps_per_level, _check_for_level_up, send_message, get_equipped_item_data, get_armor_type are unchanged) ---
     def add_field_exp(self, nominal_amount: int):
         if self.death_sting_points > 0:
             original_nominal = nominal_amount
@@ -259,7 +250,9 @@ class Player:
         return True
 
     def _get_xp_target_for_level(self, level: int) -> int:
-        table = game_state.GAME_LEVEL_TABLE
+        # --- REFACTORED: Get level table from self.world ---
+        table = self.world.game_level_table
+        # --- END REFACTOR ---
         if not table:
             return (level + 1) * 1000
         if level < 0: return 0
@@ -305,47 +298,44 @@ class Player:
     def send_message(self, message: str):
         self.messages.append(message)
 
-    def get_equipped_item_data(self, slot: str, game_items_global: dict) -> Optional[dict]:
+    def get_equipped_item_data(self, slot: str) -> Optional[dict]:
         """Gets the item data for an equipped item."""
         item_id = self.worn_items.get(slot) 
         if item_id:
-            return game_items_global.get(item_id)
+            # --- REFACTORED: Get item data from self.world ---
+            return self.world.game_items.get(item_id)
+            # --- END REFACTOR ---
         return None
 
-    def get_armor_type(self, game_items_global: dict) -> str:
-        DEFAULT_UNARMORED_TYPE = "unarmored" 
-        armor_data = self.get_equipped_item_data("torso", game_items_global)
+    def get_armor_type(self) -> str:
+        DEFAULT_UNARMORED_TYPE = "unarmed" # Corrected from "unarmored"
+        armor_data = self.get_equipped_item_data("torso")
         if armor_data and armor_data.get("type") == "armor":
             return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
         return DEFAULT_UNARMORED_TYPE
     
-    # ---
-    # --- NEW METHODS FOR REFACTOR 2A ---
-    # ---
     def _stop_combat(self):
         """Stops any combat the player is involved in."""
         player_id = self.name.lower()
         
-        with game_state.COMBAT_LOCK:
-            if player_id in game_state.COMBAT_STATE:
-                combat_data = game_state.COMBAT_STATE.pop(player_id, None)
-                if combat_data and combat_data.get("target_id"):
-                    target_id = combat_data["target_id"]
-                    # Stop the monster from fighting too
-                    game_state.COMBAT_STATE.pop(target_id, None)
-                    self.send_message(f"You flee from the {target_id}!")
+        # --- REFACTORED: Use world methods ---
+        combat_data = self.world.get_combat_state(player_id)
+        if combat_data:
+            target_id = combat_data.get("target_id")
+            self.world.stop_combat_for_all(player_id, target_id)
+            self.send_message(f"You flee from the {target_id}!")
+        # --- END REFACTOR ---
     
     def move_to_room(self, target_room_id: str, move_message: str):
         """
         Handles all logic for moving a player to a new room.
         Stops combat, updates state, and sends messages.
         """
-        # --- Local imports to prevent circular dependency ---
         from mud_backend.core.room_handler import show_room_to_player
-        # Note: 'Room' class is defined below in this same file.
-        # ---
 
-        new_room_data = game_state.GAME_ROOMS.get(target_room_id)
+        # --- REFACTORED: Use world methods ---
+        new_room_data = self.world.get_room(target_room_id)
+        # --- END REFACTOR ---
 
         if not new_room_data or new_room_data.get("room_id") == "void":
             self.send_message("You try to move, but find only an endless void. You quickly scramble back.")
@@ -358,13 +348,10 @@ class Player:
             db_data=new_room_data
         )
 
-        self._stop_combat() # Stop combat
+        self._stop_combat()
         self.current_room_id = target_room_id
         self.send_message(move_message)
-        show_room_to_player(self, new_room)
-    # ---
-    # --- END NEW METHODS ---
-    # ---
+        show_room_to_player(self, new_room) # show_room_to_player also needs refactoring
 
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
@@ -400,11 +387,7 @@ class Player:
             "stance": self.stance,
             "posture": self.posture,
             "status_effects": self.status_effects,
-
-            # --- THIS IS THE FIX ---
             "next_action_time": self.next_action_time,
-            # --- END FIX ---
-
             "deaths_recent": self.deaths_recent,
             "death_sting_points": self.death_sting_points,
             "con_lost": self.con_lost,
@@ -420,7 +403,6 @@ class Player:
         return f"<Player: {self.name}>"
 
 
-# --- (Room class is unchanged) ---
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
         self.room_id = room_id

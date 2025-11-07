@@ -1,11 +1,17 @@
-# core/command_executor.py
+# mud_backend/core/command_executor.py
 import importlib.util
 import os
 import time 
 import datetime 
 import copy 
-import uuid # <-- NEW IMPORT
+import uuid
 from typing import List, Tuple, Dict, Any, Optional 
+
+# --- REFACTORED: World is now a type hint, not an import ---
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+# --- END REFACTOR ---
 
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.db import fetch_player_data, fetch_room_data, save_game_state
@@ -16,12 +22,16 @@ from mud_backend.core.chargen_handler import (
 )
 from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core.skill_handler import show_skill_list 
-from mud_backend.core import game_state
+
+# --- REFACTORED: Removed game_state import ---
+# from mud_backend.core import game_state 
+# --- END REFACTOR ---
+
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
-# --- VERB ALIASES ---
+# --- VERB ALIASES (Unchanged) ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
     "move": ("movement", "Move"), "go": ("movement", "Move"),
@@ -82,11 +92,13 @@ DIRECTION_MAP = {
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
 
-def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
+# --- REFACTORED: 'world' is the first argument ---
+def execute_command(world: 'World', player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
     """The main function to parse and execute a game command."""
-    player_info = None
-    with game_state.PLAYER_LOCK:
-        player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+    
+    # --- REFACTORED: Get player from world ---
+    player_info = world.get_player_info(player_name.lower())
+    # --- END REFACTOR ---
     
     if player_info and player_info.get("player_obj"):
         player = player_info["player_obj"]
@@ -95,22 +107,19 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         player_db_data = fetch_player_data(player_name)
         if not player_db_data:
             start_room_id = config.CHARGEN_START_ROOM
-            player = Player(player_name, start_room_id, {})
+            # --- REFACTORED: Inject world into new Player ---
+            player = Player(world, player_name, start_room_id, {})
+            # --- END REFACTOR ---
             player.game_state = "chargen"; player.chargen_step = 0; player.hp = player.max_hp 
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
-            player = Player(player_db_data["name"], player_db_data["current_room_id"], player_db_data)
+            # --- REFACTORED: Inject world into existing Player ---
+            player = Player(world, player_db_data["name"], player_db_data["current_room_id"], player_db_data)
+            # --- END REFACTOR ---
             
-    room_db_data = None
-    with game_state.ROOM_LOCK:
-        room_db_data = copy.deepcopy(game_state.GAME_ROOMS.get(player.current_room_id))
-
-    if not room_db_data:
-        # print(f"[WARN] Room {player.current_room_id} not in cache! Fetching from DB.")
-        room_db_data = fetch_room_data(player.current_room_id)
-        if room_db_data and room_db_data.get("room_id") != "void":
-            with game_state.ROOM_LOCK: game_state.GAME_ROOMS[player.current_room_id] = room_db_data
-            room_db_data = copy.deepcopy(room_db_data)
+    # --- REFACTORED: Get room from world ---
+    room_db_data = world.get_room(player.current_room_id)
+    # --- END REFACTOR ---
             
     room = Room(room_db_data.get("room_id", "void"), room_db_data.get("name", "The Void"), room_db_data.get("description", "..."), db_data=room_db_data)
 
@@ -120,27 +129,27 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         for obj in all_objects:
             monster_id = obj.get("monster_id")
             if monster_id:
-                # --- NEW: Ensure UID and use it for defeated check ---
                 if "uid" not in obj:
                      obj["uid"] = uuid.uuid4().hex
                 uid = obj["uid"]
 
-                is_defeated = False
-                with game_state.COMBAT_LOCK: is_defeated = uid in game_state.DEFEATED_MONSTERS
+                # --- REFACTORED: Check world for defeated state ---
+                is_defeated = world.get_defeated_monster(uid) is not None
+                # --- END REFACTOR ---
                 
                 if not is_defeated:
                     if "stats" not in obj:
-                        template = game_state.GAME_MONSTER_TEMPLATES.get(monster_id)
+                        # --- REFACTORED: Get template from world ---
+                        template = world.game_monster_templates.get(monster_id)
+                        # --- END REFACTOR ---
                         if template:
-                            # Update with template but KEEP the UID we just verified
                             current_uid = obj["uid"]
                             obj.update(copy.deepcopy(template))
                             obj["uid"] = current_uid 
                             live_room_objects.append(obj)
                         else: 
-                             pass # print(f"[ERROR] Monster {monster_id} in room {room.room_id} has no template!")
+                             pass
                     else: live_room_objects.append(obj)
-                # -----------------------------------------------------
             else: live_room_objects.append(obj)
     room.objects = live_room_objects
     
@@ -160,7 +169,10 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
         elif command == "look":
              verb_info = ("observation", "Look")
              if args: player.send_message("You must 'done' training to interact with objects."); verb_info = None
-        if verb_info: _run_verb(player, room, command, args, verb_info)
+        if verb_info:
+            # --- REFACTORED: Pass world to _run_verb ---
+            _run_verb(world, player, room, command, args, verb_info)
+            # --- END REFACTOR ---
         else:
             if not parts: player.send_message("Invalid command. Type 'list', 'train', or 'done'.")
             else: player.send_message(f"You cannot '{command}' while training. Type 'done' to finish.")
@@ -174,17 +186,23 @@ def execute_command(player_name: str, command_line: str, sid: str) -> Dict[str, 
                 verb_module, verb_class = verb_info
                 if verb_module == "training" and command not in ["check", "checkin"]:
                     player.send_message("You must 'check in' at the inn to train.")
-                else: _run_verb(player, room, command, args, verb_info)
+                else: 
+                    # --- REFACTORED: Pass world to _run_verb ---
+                    _run_verb(world, player, room, command, args, verb_info)
+                    # --- END REFACTOR ---
     
-    with game_state.PLAYER_LOCK:
-        game_state.ACTIVE_PLAYERS[player.name.lower()] = {
-            "sid": sid, "player_name": player.name, "current_room_id": player.current_room_id,
-            "last_seen": time.time(), "player_obj": player 
-        }
+    # --- REFACTORED: Set player in world ---
+    world.set_player_info(player.name.lower(), {
+        "sid": sid, "player_name": player.name, "current_room_id": player.current_room_id,
+        "last_seen": time.time(), "player_obj": player 
+    })
+    # --- END REFACTOR ---
+    
     save_game_state(player)
     return {"messages": player.messages, "game_state": player.game_state}
 
-def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):
+# --- REFACTORED: 'world' is the first argument ---
+def _run_verb(world: 'World', player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):
     try:
         verb_name, verb_class_name = verb_info
         verb_file_path = os.path.join(os.path.dirname(__file__), '..', 'verbs', f'{verb_name}.py')
@@ -194,7 +212,11 @@ def _run_verb(player: Player, room: Room, command: str, args: List[str], verb_in
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         VerbClass = getattr(module, verb_class_name)
-        verb_instance = VerbClass(player=player, room=room, args=args, command=command)
+        
+        # --- REFACTORED: Pass world to verb constructor ---
+        verb_instance = VerbClass(world=world, player=player, room=room, args=args, command=command)
+        # --- END REFACTOR ---
+        
         if verb_class_name == "Move" and command in DIRECTION_MAP: verb_instance.args = [DIRECTION_MAP[command]]
         elif verb_class_name == "Exit" and command == "out": verb_instance.args = []
         verb_instance.execute()

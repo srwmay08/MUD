@@ -12,10 +12,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from mud_backend.core.command_executor import execute_command
 from mud_backend.core.game_loop_handler import check_and_run_game_tick
-from mud_backend.core import game_state
+
+# --- REFACTORED: Import World class, not global state ---
+from mud_backend.core.game_state import World
 from mud_backend.core import db
+# --- END REFACTOR ---
+
 from mud_backend.core import combat_system 
-from mud_backend.core.game_loop import monster_ai # <-- NEW IMPORT for independent AI
+from mud_backend.core.game_loop import monster_ai
 from mud_backend import config
 
 def _get_absorption_room_type(room_id: str) -> str:
@@ -32,11 +36,24 @@ app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.config['SECRET_KEY'] = 'your-very-secret-key!'
 socketio = SocketIO(app)
 
+# --- REFACTORED: Create the World instance ---
+print("[SERVER START] Initializing database...")
+database = db.get_db()
+print("[SERVER START] Creating World instance...")
+world = World()
+if database is not None:
+    world.load_all_data(database)
+else:
+     print("[SERVER START] ERROR: Could not connect to database. World is empty.")
+# --- END REFACTOR ---
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
-def game_tick_thread():
+# --- REFACTORED: Pass 'world' object to the thread ---
+def game_tick_thread(world_instance: World):
     """
     A background thread that runs various game loops at different intervals.
     """
@@ -52,9 +69,9 @@ def game_tick_thread():
                     socketio.emit("message", message, to=room_id)
                 
             def send_to_player(player_name, message, msg_type):
-                player_info = None
-                with game_state.PLAYER_LOCK:
-                    player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
+                # --- REFACTORED: Use world object ---
+                player_info = world_instance.get_player_info(player_name.lower())
+                # --- END REFACTOR ---
                 
                 if player_info:
                     sid = player_info.get("sid")
@@ -62,34 +79,39 @@ def game_tick_thread():
                         socketio.emit("message", message, to=sid)
 
             # --- 1. FAST TICK: Combat (approx every 1s via sleep at end) ---
+            # --- REFACTORED: Pass world object ---
             combat_system.process_combat_tick(
+                world=world_instance,
                 broadcast_callback=broadcast_to_room,
                 send_to_player_callback=send_to_player
             )
             
             # --- 2. INDEPENDENT TICK: Monster AI Movement ---
-            # Runs on its own interval, unrelated to the global 30s tick.
-            if current_time - game_state.LAST_MONSTER_TICK_TIME >= config.MONSTER_TICK_INTERVAL_SECONDS:
-                game_state.LAST_MONSTER_TICK_TIME = current_time
-                # We can use a generic log prefix here as it's independent
+            # --- REFACTORED: Use world attributes for timers ---
+            if current_time - world_instance.last_monster_tick_time >= config.MONSTER_TICK_INTERVAL_SECONDS:
+                world_instance.last_monster_tick_time = current_time
+                # --- END REFACTOR ---
                 log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+                # --- REFACTORED: Pass world object ---
                 monster_ai.process_monster_ai(
+                    world=world_instance,
                     log_time_prefix=f"{log_time} - MONSTER_TICK",
                     broadcast_callback=broadcast_to_room
                 )
 
             # --- 3. SLOW TICK: Global Game Tick (30s) ---
-            # Handles Environment, Respawns, Decay, and Player Regens
+            # --- REFACTORED: Pass world object ---
             did_global_tick = check_and_run_game_tick(
+                world=world_instance,
                 broadcast_callback=broadcast_to_room,
                 send_to_player_callback=send_to_player 
             )
 
             if did_global_tick:
                 # --- XP ABSORPTION & HP REGEN (Now tied strictly to the 30s tick) ---
-                active_players_list = []
-                with game_state.PLAYER_LOCK:
-                    active_players_list = list(game_state.ACTIVE_PLAYERS.items())
+                # --- REFACTORED: Use world object ---
+                active_players_list = world_instance.get_all_players_info()
+                # --- END REFACTOR ---
                 
                 for player_name_lower, player_data in active_players_list:
                     player_obj = player_data.get("player_obj")
@@ -106,7 +128,6 @@ def game_tick_thread():
                         if hp_to_regen > 0:
                             player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_to_regen)
                 
-                # --- Emit the visual tick '>' to clients only when this 30s tick happens ---
                 socketio.emit('tick')
 
             time.sleep(1.0) # Main loop heartbeat
@@ -121,14 +142,14 @@ def handle_disconnect():
     player_name_to_remove = None
     player_info = None
 
-    with game_state.PLAYER_LOCK:
-        for name, data in game_state.ACTIVE_PLAYERS.items():
-            if data["sid"] == sid:
+    # --- REFACTORED: Use world object ---
+    for name, data in world.get_all_players_info():
+        if data["sid"] == sid:
+            player_info = world.remove_player(name)
+            if player_info:
                 player_name_to_remove = name
-                player_info = data
                 break
-        if player_name_to_remove and player_info:
-            game_state.ACTIVE_PLAYERS.pop(player_name_to_remove, None)
+    # --- END REFACTOR ---
             
     if player_name_to_remove and player_info:
         room_id = player_info["current_room_id"]
@@ -147,19 +168,15 @@ def handle_command_event(data):
         emit("message", "Error: No player name received.", to=sid)
         return
 
-    old_player_info = None
-    old_room_id = None
-    with game_state.PLAYER_LOCK:
-        old_player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
-        old_room_id = old_player_info.get("current_room_id") if old_player_info else None
+    # --- REFACTORED: Use world object ---
+    old_player_info = world.get_player_info(player_name.lower())
+    old_room_id = old_player_info.get("current_room_id") if old_player_info else None
     
-    result_data = execute_command(player_name, command_line, sid)
+    result_data = execute_command(world, player_name, command_line, sid)
 
-    new_player_info = None
-    new_room_id = None
-    with game_state.PLAYER_LOCK:
-        new_player_info = game_state.ACTIVE_PLAYERS.get(player_name.lower())
-        new_room_id = new_player_info.get("current_room_id") if new_player_info else None
+    new_player_info = world.get_player_info(player_name.lower())
+    # --- END REFACTOR ---
+    new_room_id = new_player_info.get("current_room_id") if new_player_info else None
     
     if new_room_id and old_room_id != new_room_id:
         if old_room_id:
@@ -176,62 +193,49 @@ def handle_command_event(data):
     # --- AGGRO CHECK ---
     player_id = player_name.lower()
     player_in_combat = False
-    with game_state.COMBAT_LOCK:
-        player_state = game_state.COMBAT_STATE.get(player_id)
-        if player_state and player_state.get("state_type") == "combat":
-            player_in_combat = True
+    # --- REFACTORED: Use world object ---
+    player_state = world.get_combat_state(player_id)
+    if player_state and player_state.get("state_type") == "combat":
+        player_in_combat = True
     
     if new_room_id and new_player_info and not player_in_combat:
-        room_data = game_state.GAME_ROOMS.get(new_room_id)
+        room_data = world.get_room(new_room_id)
+        # --- END REFACTOR ---
         if room_data:
             player_obj = new_player_info.get("player_obj")
             live_room_objects = player_obj.room.objects if player_obj and hasattr(player_obj, 'room') else room_data.get("objects", [])
 
             for obj in live_room_objects:
                 if obj.get("is_aggressive") and obj.get("is_monster"):
-                    # --- NEW: Use UID for aggro combat state ---
                     monster_uid = obj.get("uid")
                     if not monster_uid: continue
 
-                    with game_state.COMBAT_LOCK:
-                        is_defeated = monster_uid in game_state.DEFEATED_MONSTERS
-                        monster_state = game_state.COMBAT_STATE.get(monster_uid)
-                        monster_in_combat = monster_state and monster_state.get("state_type") == "combat"
+                    # --- REFACTORED: Use world object ---
+                    is_defeated = world.get_defeated_monster(monster_uid) is not None
+                    monster_state = world.get_combat_state(monster_uid)
+                    monster_in_combat = monster_state and monster_state.get("state_type") == "combat"
                         
-                        if monster_uid and not is_defeated and not monster_in_combat:
-                            emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
-                            current_time = time.time()
-                            game_state.COMBAT_STATE[monster_uid] = {
-                                "state_type": "combat", 
-                                "target_id": player_id,
-                                "next_action_time": current_time,
-                                "current_room_id": new_room_id
-                            }
-                            if monster_uid not in game_state.RUNTIME_MONSTER_HP:
-                                game_state.RUNTIME_MONSTER_HP[monster_uid] = obj.get("max_hp", 1)
-                            break 
+                    if monster_uid and not is_defeated and not monster_in_combat:
+                        emit("message", f"The **{obj['name']}** notices you and attacks!", to=sid)
+                        current_time = time.time()
+                        world.set_combat_state(monster_uid, {
+                            "state_type": "combat", 
+                            "target_id": player_id,
+                            "next_action_time": current_time,
+                            "current_room_id": new_room_id
+                        })
+                        if world.get_monster_hp(monster_uid) is None:
+                            world.set_monster_hp(monster_uid, obj.get("max_hp", 1))
+                        # --- END REFACTOR ---
+                        break 
 
 if __name__ == "__main__":
-    print("[SERVER START] Initializing database...")
-    database = db.get_db()
-    if database is not None:
-        print("[SERVER START] Loading all rooms into game state cache...")
-        game_state.GAME_ROOMS = db.fetch_all_rooms()
-        print("[SERVER START] Loading all monster templates...")
-        game_state.GAME_MONSTER_TEMPLATES = db.fetch_all_monsters()
-        print("[SERVER START] Loading all loot tables...")
-        game_state.GAME_LOOT_TABLES = db.fetch_all_loot_tables()
-        print("[SERVER START] Loading all items...")
-        game_state.GAME_ITEMS = db.fetch_all_items()
-        print("[SERVER START] Loading level table...")
-        game_state.GAME_LEVEL_TABLE = db.fetch_all_levels()
-        print("[SERVER START] Loading all skills...")
-        game_state.GAME_SKILLS = db.fetch_all_skills()
-        print("[SERVER START] Data loaded.")
-    else:
-        print("[SERVER START] ERROR: Could not connect to database.")
+    # --- REFACTORED: Data loading is now done by the World instance ---
+    # (The world instance was already created above)
     
-    threading.Thread(target=game_tick_thread, daemon=True).start()
+    # --- REFACTORED: Pass 'world' to the thread ---
+    threading.Thread(target=game_tick_thread, args=(world,), daemon=True).start()
+    # --- END REFACTOR ---
     
     print("[SERVER START] Running SocketIO server on http://127.0.0.1:8000")
     socketio.run(app, port=8000, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)

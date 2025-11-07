@@ -1,17 +1,22 @@
-# core/db.py
+# mud_backend/core/db.py
 import socket 
 import json
 import os
-import uuid # <-- NEW IMPORT
+import uuid
 from typing import TYPE_CHECKING, Optional, Any
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config
 
-from mud_backend.core import game_state
+# --- REFACTORED: Removed game_state import ---
+# from mud_backend.core import game_state
+# --- END REFACTOR ---
 
 if TYPE_CHECKING:
     from .game_objects import Player, Room
+    # --- REFACTORED: Add World type hint ---
+    from .game_state import World
+    # --- END REFACTOR ---
 
 MONGO_URI = config.MONGO_URI
 DATABASE_NAME = config.DATABASE_NAME
@@ -58,10 +63,8 @@ def ensure_initial_data():
                 upsert=True
             )
             if result.upserted_id:
-                # print(f"[DB DEBUG] Inserted new room: {room_id}")
                 upsert_count += 1
             elif result.modified_count > 0:
-                # print(f"[DB DEBUG] Updated existing room: {room_id}")
                 update_count += 1
         
         if upsert_count > 0 or update_count > 0:
@@ -132,7 +135,6 @@ def save_game_state(player: 'Player'):
         player._id = result.upserted_id
         print(f"\n[DB SAVE] Player {player.name} created with ID: {player._id}")
     else:
-        # print(f"\n[DB SAVE] Player {player.name} state updated.")
         pass
 
 def save_room_state(room: 'Room'):
@@ -142,8 +144,9 @@ def save_room_state(room: 'Room'):
     
     if database is None:
         print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
-        with game_state.ROOM_LOCK:
-            game_state.GAME_ROOMS[room.room_id] = room_data_dict
+        # --- REFACTORED: Removed write to global game_state ---
+        # (The world object is now responsible for this)
+        # --- END REFACTOR ---
         return
         
     query = {"room_id": room.room_id}
@@ -155,10 +158,9 @@ def save_room_state(room: 'Room'):
         upsert=True
     )
     
-    with game_state.ROOM_LOCK:
-        game_state.GAME_ROOMS[room.room_id] = room.to_dict()
-    
-    # print(f"\n[DB SAVE] Room {room.name} state updated.")
+    # --- REFACTORED: Removed write to global game_state ---
+    # (The world object is now responsible for this)
+    # --- END REFACTOR ---
 
 def fetch_all_rooms() -> dict:
     """
@@ -175,12 +177,10 @@ def fetch_all_rooms() -> dict:
         for room_data in database.rooms.find():
             room_id = room_data.get("room_id")
             if room_id:
-                # --- NEW: Ensure all monsters have a unique runtime ID (uid) ---
                 if "objects" in room_data:
                     for obj in room_data["objects"]:
                         if obj.get("is_monster") and "uid" not in obj:
                             obj["uid"] = uuid.uuid4().hex
-                # ------------------------------------------------------------
                 rooms_dict[room_id] = room_data
         print(f"[DB INIT] ...Cached {len(rooms_dict)} rooms.")
         return rooms_dict
