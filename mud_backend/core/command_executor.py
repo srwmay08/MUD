@@ -64,7 +64,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "forage": ("foraging", "Forage"), "eat": ("foraging", "Eat"), "drink": ("foraging", "Drink"),
     
     # Systems
-    "say": ("say", "Say"), "ping": ("tick", "Tick"),
+    "say": ("say", "Say"),
     "give": ("trading", "Give"), "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"),
     "list": ("shop", "List"), "buy": ("shop", "Buy"),
