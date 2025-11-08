@@ -165,35 +165,26 @@ class Player:
 
     @property
     def max_hp(self) -> int:
-        # Per user spec: Max HP = Race Base HP + Constitution bonus + (PF Ranks * HP per PF rank)
-        # Per user spec: HP per PF rank = Race HP gain rate + trunc(Constitution bonus / 10)
+        # --- THIS IS THE NEW FORMULA ---
+        # Maximum Health = ((STR stat + CON stat) / 10) + (Physical Fitness ranks * Health Point gain rate based on Race)
         
+        # self.base_hp is already ((STR + CON) / 10)
+        base_hp_val = self.base_hp
         pf_ranks = self.skills.get("physical_fitness", 0)
-        racial_base_max = self.race_data.get("base_hp_max", 150)
-        con_bonus = self.con_bonus # This is the stat bonus (e.g., 10)
         hp_gain_rate = self.race_data.get("hp_gain_per_pf_rank", 6)
         
-        hp_per_pf_rank = hp_gain_rate + math.trunc(con_bonus / 10)
-        hp_from_pf = pf_ranks * hp_per_pf_rank
-        
-        # --- THIS IS THE FIX: Use user's new Formula B (sort of) ---
-        # Formula: Base HP + (PF ranks * HP gain rate)
-        # This seems to be what the user is asking for now.
-        # base_hp_val = self.base_hp
-        # pf_ranks_val = self.skills.get("physical_fitness", 0)
-        # hp_gain_rate_val = self.race_data.get("hp_gain_per_pf_rank", 6)
-        # return base_hp_val + (pf_ranks_val * hp_gain_rate_val)
-        
-        # --- REVERT: Sticking to the *previous* complex formula, as the new one is contradictory ---
-        # --- and would result in tiny HP pools. The 196/176 issue is a data clamp issue. ---
-        return racial_base_max + con_bonus + hp_from_pf
+        return base_hp_val + (pf_ranks * hp_gain_rate)
+        # --- END NEW FORMULA ---
 
     @property
     def hp_regeneration(self) -> int:
         # User formula: 2 + (Physical Fitness ranks / 20)
-        # This ignores racial base regen. We will use the racial base instead of 2.
         pf_ranks = self.skills.get("physical_fitness", 0)
-        base_regen = self.race_data.get("base_hp_regen", 2)
+        
+        # --- THIS IS THE FIX ---
+        # Use a static '2' as the base, per user's new formula
+        base_regen = 2
+        # --- END FIX ---
         
         regen = base_regen + math.trunc(pf_ranks / 20)
         if self.death_sting_points > 0:
