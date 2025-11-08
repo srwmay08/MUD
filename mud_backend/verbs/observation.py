@@ -4,7 +4,7 @@ from mud_backend.core.db import fetch_player_data
 from mud_backend.core.chargen_handler import format_player_description
 from mud_backend.core.room_handler import show_room_to_player
 import math
-from mud_backend.core import game_state
+# --- REMOVED: from mud_backend.core import game_state ---
 
 # --- Class from examine.py ---
 class Examine(BaseVerb):
@@ -68,7 +68,8 @@ def _find_item_on_player(player, target_name):
     # Check worn items
     for slot, item_id in player.worn_items.items():
         if item_id:
-            item_data = game_state.GAME_ITEMS.get(item_id)
+            # --- FIX: Use player.world ---
+            item_data = player.world.game_items.get(item_id)
             if item_data:
                 # Check keywords first, then the item's name
                 if target_name in item_data.get("keywords", []) or target_name == item_data['name'].lower():
@@ -76,7 +77,8 @@ def _find_item_on_player(player, target_name):
                     
     # Check inventory (pack)
     for item_id in player.inventory:
-        item_data = game_state.GAME_ITEMS.get(item_id)
+        # --- FIX: Use player.world ---
+        item_data = player.world.game_items.get(item_id)
         if item_data:
             if target_name in item_data.get("keywords", []) or target_name == item_data['name'].lower():
                 return item_data, "inventory"
@@ -120,7 +122,8 @@ class Look(BaseVerb):
                 
                 self.player.send_message(f"You look in your {container_data['name']}:")
                 for item_id in self.player.inventory:
-                    item_data = game_state.GAME_ITEMS.get(item_id)
+                    # --- FIX: Use self.world ---
+                    item_data = self.world.game_items.get(item_id)
                     self.player.send_message(f"- {item_data.get('name', 'an item')}")
                 return
             else:
@@ -163,15 +166,17 @@ class Look(BaseVerb):
             return
                 
         # D. Check if target is another player
-        target_player_state = game_state.ACTIVE_PLAYERS.get(target_name)
-        if target_player_state and target_player_state["current_room_id"] == self.room.room_id:
-            target_case_correct_name = target_player_state["player_name"]
-            target_player_data = fetch_player_data(target_case_correct_name)
-            if target_player_data:
-                self.player.send_message(f"You see **{target_player_data['name']}**.")
-                description = format_player_description(target_player_data)
-                self.player.send_message(description)
-                return
+        # --- REFACTORED: Use self.world to get player object ---
+        target_player_obj = self.world.get_player_obj(target_name)
+        
+        if target_player_obj and target_player_obj.current_room_id == self.room.room_id:
+            # We can use the object directly
+            target_player_data = target_player_obj.to_dict() 
+            self.player.send_message(f"You see **{target_player_data['name']}**.")
+            description = format_player_description(target_player_data)
+            self.player.send_message(description)
+            return
+        # --- END REFACTORED ---
             
         # --- E. Not found ---
         self.player.send_message(f"You do not see a **{target_name}** here.")

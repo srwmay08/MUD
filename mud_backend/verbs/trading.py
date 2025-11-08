@@ -4,6 +4,8 @@ import re
 from mud_backend.verbs.base_verb import BaseVerb
 # --- REFACTORED: Removed game_state and get_player_object imports ---
 from typing import Dict, Any, Tuple, Optional
+# --- NEW: Import config for DEBUG_MODE ---
+from mud_backend import config
 
 # --- NEW: Helper functions copied from equipment.py ---
 def _find_item_in_inventory(player, target_name: str) -> str | None:
@@ -38,8 +40,8 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
 class Give(BaseVerb):
     """
     Handles the 'give' command.
-    GIVE <player> <item>
-    GIVE <player> <amount> (for silver)
+    GIVE <player> <item> (Prompts for ACCEPT)
+    GIVE <player> <amount> (Transfers silver immediately)
     """
     def execute(self):
         if len(self.args) < 2:
@@ -56,11 +58,6 @@ class Give(BaseVerb):
             
         if target_player.name.lower() == self.player.name.lower():
             self.player.send_message("You can't give things to yourself.")
-            return
-
-        # --- Check for pending trade ---
-        if self.world.get_pending_trade(target_player.name.lower()):
-            self.player.send_message(f"{target_player.name} already has a pending offer. Please wait.")
             return
 
         trade_offer = {
@@ -81,21 +78,35 @@ class Give(BaseVerb):
                 silver_amount = 0 # It's not silver, so treat as an item name
         
         if silver_amount > 0:
+            # --- MODIFIED: Silver transfers are IMMEDIATE ---
             player_silver = self.player.wealth.get("silvers", 0)
             if player_silver < silver_amount:
                 self.player.send_message(f"You don't have {silver_amount} silver to give.")
                 return
             
-            trade_offer.update({
-                "trade_type": "silver",
-                "amount": silver_amount,
-                "item_name": f"{silver_amount} silver" # for display
-            })
+            # Perform immediate transfer
+            self.player.wealth["silvers"] = player_silver - silver_amount
+            target_player.wealth["silvers"] = target_player.wealth.get("silvers", 0) + silver_amount
             
-            self.player.send_message(f"You offer {silver_amount} silver to {target_player.name}.")
+            # Send messages to both parties
+            self.player.send_message(f"You give {silver_amount} silver to {target_player.name}.")
+            target_player.send_message(f"{self.player.name} gives you {silver_amount} silver.")
+            
+            # --- NEW: Add DEBUG log ---
+            if config.DEBUG_MODE:
+                print(f"[TRADE DEBUG] {self.player.name} gave {silver_amount} silver to {target_player.name} (Immediate).")
+            
+            return # We are done.
+            # --- END MODIFICATION ---
 
         # --- BRANCH 2: Giving an Item ---
         else:
+            # --- Check for pending trade (MOVED HERE) ---
+            if self.world.get_pending_trade(target_player.name.lower()):
+                self.player.send_message(f"{target_player.name} already has a pending offer. Please wait.")
+                return
+            # --- END MOVE ---
+
             item_id_to_give = None
             item_source_location = None # e.g., "inventory", "mainhand"
             
@@ -126,9 +137,13 @@ class Give(BaseVerb):
             
             self.player.send_message(f"You offer {item_data['name']} to {target_player.name}.")
 
-        # 4. Create the pending trade and notify the target player
+        # 4. Create the pending trade and notify the target player (ITEM ONLY)
         self.world.set_pending_trade(target_player.name.lower(), trade_offer)
         
+        # --- NEW: Add DEBUG log ---
+        if config.DEBUG_MODE:
+            print(f"[TRADE DEBUG] {self.player.name} offered {trade_offer['item_name']} to {target_player.name}. Waiting for ACCEPT.")
+
         target_player.send_message(
             f"{self.player.name} offers you {trade_offer['item_name']}. "
             f"Type '<span class='keyword' data-command='accept'>ACCEPT</span>' or "
@@ -161,48 +176,58 @@ class Accept(BaseVerb):
         trade_type = trade_offer.get("trade_type", "item")
         item_name = trade_offer.get("item_name", "the item")
 
-        # --- BRANCH 1: Accepting a simple 'GIVE' (item or silver) ---
-        if trade_type == "item" or trade_type == "silver":
+        # --- BRANCH 1: Accepting a simple 'GIVE' (item) ---
+        if trade_type == "item": # <-- MODIFIED (removed "or trade_type == 'silver'")
             
-            # 4. Check if the giver still has the item/silver
-            if trade_type == "item":
-                item_id = trade_offer['item_id']
-                item_source = trade_offer['item_source_location']
-                item_is_present = False
-                if item_source == "inventory":
-                    if item_id in giver_player.inventory:
-                        item_is_present = True
-                elif item_source in ["mainhand", "offhand"]:
-                    if giver_player.worn_items.get(item_source) == item_id:
-                        item_is_present = True
+            # 4. Check if the giver still has the item
+            item_id = trade_offer['item_id']
+            item_source = trade_offer['item_source_location']
+            item_is_present = False
+            if item_source == "inventory":
+                if item_id in giver_player.inventory:
+                    item_is_present = True
+            elif item_source in ["mainhand", "offhand"]:
+                if giver_player.worn_items.get(item_source) == item_id:
+                    item_is_present = True
+            
+            if not item_is_present:
+                self.player.send_message(f"{giver_player.name} no longer has {item_name}.")
+                self.world.remove_pending_trade(player_key)
+                return
                 
-                if not item_is_present:
-                    self.player.send_message(f"{giver_player.name} no longer has {item_name}.")
-                    self.world.remove_pending_trade(player_key)
-                    return
-                    
-                # 5. Success! Transfer the item.
-                if item_source == "inventory":
-                    giver_player.inventory.remove(item_id)
-                else: # Was in a hand
-                    giver_player.worn_items[item_source] = None
+            # 5. Success! Transfer the item.
+            if item_source == "inventory":
+                giver_player.inventory.remove(item_id)
+            else: # Was in a hand
+                giver_player.worn_items[item_source] = None
+            
+            # --- NEW LOGIC: Place in hands, then pack ---
+            right_hand_slot = "mainhand"
+            left_hand_slot = "offhand"
+            
+            if self.player.worn_items.get(right_hand_slot) is None:
+                self.player.worn_items[right_hand_slot] = item_id
+                self.player.send_message(f"You accept {item_name} from {giver_player.name} and hold it in your right hand.")
+                giver_player.send_message(f"{self.player.name} accepts your offer for {item_name}.")
+            elif self.player.worn_items.get(left_hand_slot) is None:
+                self.player.worn_items[left_hand_slot] = item_id
+                self.player.send_message(f"You accept {item_name} from {giver_player.name} and hold it in your left hand.")
+                giver_player.send_message(f"{self.player.name} accepts your offer for {item_name}.")
+            else:
+                # Both hands are full, goes to pack
                 self.player.inventory.append(item_id)
-                
-            elif trade_type == "silver":
-                amount = trade_offer['amount']
-                if giver_player.wealth.get("silvers", 0) < amount:
-                    self.player.send_message(f"{giver_player.name} no longer has {amount} silver.")
-                    self.world.remove_pending_trade(player_key)
-                    return
-                
-                # 5. Success! Transfer silver.
-                giver_player.wealth["silvers"] = giver_player.wealth.get("silvers", 0) - amount
-                self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + amount
+                self.player.send_message(f"You accept {item_name} from {giver_player.name}. Your hands are full, so you place it in your pack.")
+                giver_player.send_message(f"{self.player.name} accepts your offer for {item_name}.")
+            # --- END NEW LOGIC ---
+
+            # --- NEW: Add DEBUG log ---
+            if config.DEBUG_MODE:
+                print(f"[TRADE DEBUG] {self.player.name} ACCEPTED item {item_name} from {giver_player.name}.")
 
             # 6. Send confirmations and clear trade
-            self.player.send_message(f"You accept {item_name} from {giver_player.name}.")
-            giver_player.send_message(f"{self.player.name} accepts your offer for {item_name}.")
             self.world.remove_pending_trade(player_key)
+
+        # --- DELETED: Silver-only branch ---
 
         # --- BRANCH 2: Accepting an 'EXCHANGE' ---
         elif trade_type == "exchange":
@@ -235,18 +260,38 @@ class Accept(BaseVerb):
             self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) - silver_amount
             giver_player.wealth["silvers"] = giver_player.wealth.get("silvers", 0) + silver_amount
             
-            # B. Item transfer
+            # B. Item transfer (from giver)
             if item_source == "inventory":
                 giver_player.inventory.remove(item_id)
             else: # Was in a hand
                 giver_player.worn_items[item_source] = None
-            self.player.inventory.append(item_id)
+            
+            # C. Item placement (to buyer)
+            # --- NEW LOGIC: Place in hands, then pack ---
+            right_hand_slot = "mainhand"
+            left_hand_slot = "offhand"
+            
+            item_received_msg = ""
+            if self.player.worn_items.get(right_hand_slot) is None:
+                self.player.worn_items[right_hand_slot] = item_id
+                item_received_msg = f"You accept {giver_player.name}'s offer and hold {item_name} in your right hand."
+            elif self.player.worn_items.get(left_hand_slot) is None:
+                self.player.worn_items[left_hand_slot] = item_id
+                item_received_msg = f"You accept {giver_player.name}'s offer and hold {item_name} in your left hand."
+            else:
+                self.player.inventory.append(item_id)
+                item_received_msg = f"You accept {giver_player.name}'s offer for {item_name}. Your hands are full, so you place it in your pack."
+            # --- END NEW LOGIC ---
             
             # 7. Send confirmations and clear trade
             self.player.send_message(f"You hand {giver_player.name} {silver_amount} silver.\n"
-                                     f"You accept {giver_player.name}'s offer and are now holding {item_name}.")
+                                     f"{item_received_msg}")
             giver_player.send_message(f"{self.player.name} hands you {silver_amount} silver.\n"
-                                      f"{self.player.name} has accepted your offer and is now holding {item_name}.")
+                                      f"{self.player.name} has accepted your offer.")
+            
+            # --- NEW: Add DEBUG log ---
+            if config.DEBUG_MODE:
+                print(f"[TRADE DEBUG] {self.player.name} ACCEPTED exchange with {giver_player.name} (Item: {item_name}, Silver: {silver_amount}).")
             
             self.world.remove_pending_trade(player_key)
 
@@ -280,11 +325,22 @@ class Decline(BaseVerb):
                 receiver_obj = self.world.get_player_obj(receiver_name)
                 if receiver_obj:
                     receiver_obj.send_message(f"{self.player.name} cancels their offer.")
+                
+                # --- NEW: Add DEBUG log ---
+                if config.DEBUG_MODE:
+                    item_name = offer_to_cancel.get("item_name", "offer")
+                    print(f"[TRADE DEBUG] {self.player.name} CANCELLED offer of {item_name} to {receiver_name}.")
                 return
             
             self.player.send_message("You have no offers to decline or cancel.")
             return
             
+        # --- NEW: Add DEBUG log ---
+        if config.DEBUG_MODE:
+            item_name = trade_offer.get("item_name", "offer")
+            from_name = trade_offer.get("from_player_name", "Unknown")
+            print(f"[TRADE DEBUG] {self.player.name} DECLINED offer of {item_name} from {from_name}.")
+
         # 2. Notify players (standard decline)
         self.player.send_message(f"You decline the offer from {trade_offer['from_player_name']}.")
         
@@ -384,6 +440,10 @@ class Exchange(BaseVerb):
         }
         
         self.world.set_pending_trade(target_player.name.lower(), trade_offer)
+
+        # --- NEW: Add DEBUG log ---
+        if config.DEBUG_MODE:
+            print(f"[TRADE DEBUG] {self.player.name} offered {item_name} to {target_player.name} for {silver_amount} silver. Waiting for ACCEPT.")
 
         # 6. Send notifications
         # To Seller (self)
