@@ -77,6 +77,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "say": ("say", "Say"),
     "give": ("trading", "Give"), "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"),
+    "exchange": ("trading", "Exchange"), # <-- NEW
     "list": ("shop", "List"), "buy": ("shop", "Buy"),
     "sell": ("shop", "Sell"), "appraise": ("shop", "Appraise"),
 

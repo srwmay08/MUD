@@ -86,6 +86,39 @@ def game_tick_thread(world_instance: World):
                 send_to_player_callback=send_to_player
             )
             
+            # --- NEW: 1.b. FAST TICK: Pending Trade Timeouts (approx every 1s) ---
+            if world_instance.pending_trades:
+                expired_trades = []
+                # Use list() to avoid mutation during iteration
+                with world_instance.trade_lock:
+                    trade_items = list(world_instance.pending_trades.items())
+                
+                for receiver_name, offer_data in trade_items:
+                    if current_time - offer_data.get("offer_time", 0) > 30:
+                        expired_trades.append((receiver_name, offer_data))
+                
+                for receiver_name, offer_data in expired_trades:
+                    # Remove the trade first
+                    world_instance.remove_pending_trade(receiver_name)
+                    
+                    giver_name = offer_data.get("from_player_name")
+                    item_name = offer_data.get("item_name", "their offer")
+                    trade_type = offer_data.get("trade_type", "give")
+
+                    # Notify receiver
+                    receiver_obj = world_instance.get_player_obj(receiver_name)
+                    if receiver_obj:
+                        receiver_obj.send_message(f"The offer from {giver_name} for {item_name} has expired.")
+                        
+                    # Notify giver
+                    giver_obj = world_instance.get_player_obj(giver_name.lower())
+                    if giver_obj:
+                        if trade_type == "exchange":
+                            giver_obj.send_message(f"Your exchange with {receiver_name} for {item_name} has expired.")
+                        else:
+                            giver_obj.send_message(f"Your offer to {receiver_name} for {item_name} has expired.")
+            # --- END NEW: Trade Timeout ---
+            
             # --- 2. INDEPENDENT TICK: Monster AI Movement ---
             # --- REFACTORED: Use world attributes for timers ---
             if current_time - world_instance.last_monster_tick_time >= config.MONSTER_TICK_INTERVAL_SECONDS:
