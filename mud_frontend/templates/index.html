@@ -9,9 +9,41 @@
 <body>
     <div id="output">Please enter your character name to create or load a character.</div>
     
+    <div id="vitals-container">
+        <div id="rt-container">
+            <div class="rt-box"></div>
+            <div class="rt-box"></div>
+            <div class="rt-box"></div>
+            <div class="rt-box"></div>
+            <div class="rt-box"></div>
+        </div>
+        <div id="posture-container">
+            Standing
+        </div>
+    </div>
+    
     <div id="input-line">
         <span>&gt;</span>
         <input type="text" id="command-input" autofocus>
+    </div>
+
+    <div id="gauges-container">
+        <div id="health-bar" class="gauge-bar">
+            <div id="health-fill" class="gauge-fill health"></div>
+            <span id="health-text" class="gauge-text">Health: 0/0</span>
+        </div>
+        <div id="mana-bar" class="gauge-bar">
+            <div id="mana-fill" class="gauge-fill mana"></div>
+            <span id="mana-text" class="gauge-text">Mana: 0/0</span>
+        </div>
+        <div id="stamina-bar" class="gauge-bar">
+            <div id="stamina-fill" class="gauge-fill stamina"></div>
+            <span id="stamina-text" class="gauge-text">Stamina: 0/0</span>
+        </div>
+        <div id="spirit-bar" class="gauge-bar">
+            <div id="spirit-fill" class="gauge-fill spirit"></div>
+            <span id="spirit-text" class="gauge-text">Spirit: 0/0</span>
+        </div>
     </div>
 
     <div id="context-menu"></div>

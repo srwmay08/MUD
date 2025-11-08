@@ -3,6 +3,23 @@ const output = document.getElementById('output');
 const input = document.getElementById('command-input');
 const contextMenu = document.getElementById('context-menu');
 
+// --- NEW: Get GUI elements ---
+const rtBoxes = document.querySelectorAll('#rt-container .rt-box');
+const postureStatusEl = document.getElementById('posture-container');
+const gaugeFills = {
+    health: document.getElementById('health-fill'),
+    mana: document.getElementById('mana-fill'),
+    stamina: document.getElementById('stamina-fill'),
+    spirit: document.getElementById('spirit-fill')
+};
+const gaugeTexts = {
+    health: document.getElementById('health-text'),
+    mana: document.getElementById('mana-text'),
+    stamina: document.getElementById('stamina-text'),
+    spirit: document.getElementById('spirit-text')
+};
+// --- END NEW ---
+
 // --- NEW: Initialize Socket.IO connection ---
 const socket = io();
 
@@ -16,6 +33,13 @@ let currentClientState = "login_user"; // Tracks the *client's* state (login_use
 // ---
 let commandHistory = [];
 let historyIndex = -1;
+
+// --- NEW: Roundtime Timer State ---
+let rtEndTime = 0;
+let rtTotalDuration = 0;
+let rtTimer = null;
+// --- END NEW ---
+
 
 // --- Helper: Send Command to Backend (NOW USES WEBSOCKETS) ---
 function sendCommand(command) {
@@ -44,7 +68,97 @@ function addMessage(message, messageClass = null) {
 }
 
 // ---
-// NEW: WEBSOCKET EVENT LISTENERS
+// --- NEW: GUI Update Functions
+// ---
+
+function updateRtDisplay() {
+    const now = Date.now();
+    const timeLeft = rtEndTime - now;
+
+    if (timeLeft <= 0) {
+        // --- Roundtime is over ---
+        if (rtTimer) {
+            clearInterval(rtTimer);
+            rtTimer = null;
+        }
+        rtEndTime = 0;
+        rtBoxes.forEach(box => box.classList.remove('active'));
+        input.disabled = false;
+        
+        // Add prompt only if we are in the game
+        if (currentClientState === "in_game" && currentGameState === "playing") {
+            addMessage(">", "command-echo");
+            input.focus(); // Focus input when RT clears
+        }
+    } else {
+        // --- Roundtime is active ---
+        input.disabled = true;
+        let boxesToShow = 0;
+        if (rtTotalDuration > 0) {
+            const percent = timeLeft / rtTotalDuration;
+            boxesToShow = Math.ceil(percent * 5); // 5 boxes
+        }
+        
+        rtBoxes.forEach((box, index) => {
+            if (index < boxesToShow) {
+                box.classList.add('active');
+            } else {
+                box.classList.remove('active');
+            }
+        });
+    }
+}
+
+function startRtTimer(duration_ms, end_time_ms) {
+    rtEndTime = end_time_ms;
+    rtTotalDuration = duration_ms;
+
+    // Clear any existing timer just in case
+    if (rtTimer) {
+        clearInterval(rtTimer);
+    }
+    
+    // Start a new timer
+    rtTimer = setInterval(updateRtDisplay, 100); // Check 10x per second
+    updateRtDisplay(); // Run once immediately
+}
+
+function updateVitals(vitals) {
+    if (!vitals) return;
+
+    // 1. Update Gauges
+    const gauges = ['health', 'mana', 'stamina', 'spirit'];
+    gauges.forEach(type => {
+        const current = vitals[type] || 0;
+        const max = vitals[`max_${type}`] || 100;
+        let percent = 0;
+        if (max > 0) {
+            percent = (current / max) * 100;
+        }
+        
+        if (gaugeFills[type]) {
+            gaugeFills[type].style.width = `${percent}%`;
+        }
+        if (gaugeTexts[type]) {
+            gaugeTexts[type].innerText = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${current}/${max}`;
+        }
+    });
+
+    // 2. Update Posture & Status
+    let statusText = vitals.posture || "Unknown";
+    if (vitals.status_effects && vitals.status_effects.length > 0) {
+        statusText += ` (${vitals.status_effects.join(', ')})`;
+    }
+    postureStatusEl.innerText = statusText;
+
+    // 3. Update Roundtime
+    if (vitals.rt_end_time_ms > Date.now()) {
+        startRtTimer(vitals.rt_duration_ms, vitals.rt_end_time_ms);
+    }
+}
+
+// ---
+// --- WEBSOCKET EVENT LISTENERS
 // ---
 
 // 1. This handles the direct response to *your* command
@@ -59,6 +173,12 @@ socket.on('command_response', (data) => {
     if (data.messages) {
         data.messages.forEach(msg => addMessage(msg));
     }
+    
+    // --- NEW: Update GUI ---
+    if (data.vitals) {
+        updateVitals(data.vitals);
+    }
+    // --- END NEW ---
 });
 
 // 2. This handles *broadcasts* from the server (e.g., "Sean arrives.")
@@ -68,8 +188,8 @@ socket.on('message', (message) => {
 
 // 3. This handles the global tick event
 socket.on('tick', () => {
-    // --- MODIFIED: Use client state to check ---
-    if (currentClientState === "in_game" && currentGameState === "playing") {
+    // --- MODIFIED: Only add a prompt if RT is not active ---
+    if (currentClientState === "in_game" && currentGameState === "playing" && !rtTimer) {
         addMessage(">", "command-echo");
     }
 });
@@ -85,6 +205,7 @@ socket.on('disconnect', () => {
     addMessage("...Connection lost. Please refresh the page.", "command-echo");
     currentClientState = "login_user";
     input.type = 'text';
+    input.disabled = true; // Disable input on disconnect
 });
 
 // ---
@@ -95,6 +216,7 @@ socket.on('prompt_username', () => {
     output.innerHTML = "Welcome. Please enter your Username.\n(This will create a new account if one does not exist)";
     currentClientState = "login_user";
     input.type = 'text';
+    input.disabled = false;
     input.focus();
 });
 
@@ -102,6 +224,7 @@ socket.on('prompt_password', () => {
     addMessage("Password:");
     currentClientState = "login_pass";
     input.type = 'password';
+    input.disabled = false;
     input.focus();
 });
 
@@ -119,6 +242,7 @@ socket.on('show_char_list', (data) => {
     addMessage("\nType a character name to login, or type '<span class='keyword' data-command='create'>create</span>' to make a new one.");
     currentClientState = "char_select";
     input.type = 'text';
+    input.disabled = false;
 });
 
 socket.on('prompt_create_character', () => {
@@ -126,6 +250,7 @@ socket.on('prompt_create_character', () => {
     addMessage("Please enter a name for your new character:");
     currentClientState = "char_create_name";
     input.type = 'text';
+    input.disabled = false;
 });
 
 socket.on('name_taken', () => {
@@ -149,13 +274,22 @@ socket.on('char_invalid', (message) => {
 // UPDATED: Input: Listen for "Enter" key
 // ---
 input.addEventListener('keydown', async function(event) {
+    // --- NEW: Block input if RT is active ---
+    if (event.key === 'Enter' && input.disabled) {
+        return; // Do nothing if input is disabled (RT active)
+    }
+    // --- END NEW ---
+
     if (event.key === 'Enter') {
         const commandText = input.value;
         if (!commandText && currentClientState !== 'login_pass') return; // Allow empty password
 
         // Add to history *only if* in game
-        if (currentClientState === "in_game" && commandText !== commandHistory[0]) {
+        if (currentClientState === "in_game" && commandText && commandText !== commandHistory[0]) {
             commandHistory.unshift(commandText);
+            if (commandHistory.length > 50) { // Limit history
+                commandHistory.pop();
+            }
         }
         historyIndex = -1;
         input.value = '';
@@ -197,6 +331,10 @@ input.addEventListener('keydown', async function(event) {
 
 // --- UPDATED: Left-Click Menu Logic ---
 output.addEventListener('click', function(event) {
+    // --- NEW: Block clicks if input is disabled (RT) ---
+    if (input.disabled) return;
+    // --- END NEW ---
+
     const target = event.target;
     
     // Check if the clicked element is a 'keyword'
@@ -221,6 +359,7 @@ output.addEventListener('click', function(event) {
         if (currentGameState === "chargen") {
             // This handles clicking chargen options
             input.value = '';
+            addMessage(`> ${target.innerText}`, 'command-echo'); // Echo the click
             sendCommand(target.innerText); 
             
         } else if (currentClientState === "in_game") { // Check client state
@@ -251,6 +390,10 @@ document.addEventListener('click', function(event) {
 });
 
 contextMenu.addEventListener('click', function(event) {
+    // --- NEW: Block clicks if input is disabled (RT) ---
+    if (input.disabled) return;
+    // --- END NEW ---
+
     const command = event.target.dataset.command;
     if (command && currentClientState === "in_game") { // Check client state
         input.value = ''; 
@@ -258,3 +401,16 @@ contextMenu.addEventListener('click', function(event) {
         sendCommand(command); 
     }
 });
+
+// --- NEW: Initialize GUI on load ---
+// Set default values so it doesn't look broken before login
+updateVitals({
+    hp: 0, max_hp: 0,
+    mana: 0, max_mana: 0,
+    stamina: 0, max_stamina: 0,
+    spirit: 0, max_spirit: 0,
+    posture: "...",
+    status_effects: [],
+    rt_end_time_ms: 0
+});
+// --- END NEW ---

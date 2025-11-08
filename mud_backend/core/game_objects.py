@@ -1,12 +1,14 @@
 # mud_backend/core/game_objects.py
 from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 import math
+import time # <-- NEW IMPORT
 # --- REFACTORED: Removed game_state import ---
 # from mud_backend.core import game_state
 # --- END REFACTOR ---
 from mud_backend import config
 # --- NEW IMPORT: Import from the neutral utils file ---
-from mud_backend.core.utils import calculate_skill_bonus
+from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
+# --- END NEW ---
 
 # --- REFACTORED: Add TYPE_CHECKING for World ---
 if TYPE_CHECKING:
@@ -18,23 +20,46 @@ RACE_DATA = {
     "Human": {
         "base_hp_max": 150,
         "hp_gain_per_pf_rank": 6,
-        "base_hp_regen": 2
+        "base_hp_regen": 2,
+        "spirit_regen_tier": "Moderate" # NEW
     },
     "Elf": {
         "base_hp_max": 130,
         "hp_gain_per_pf_rank": 5,
-        "base_hp_regen": 1
+        "base_hp_regen": 1,
+        "spirit_regen_tier": "Very Low" # NEW
     },
     "Dwarf": {
         "base_hp_max": 140,
         "hp_gain_per_pf_rank": 6,
-        "base_hp_regen": 3
+        "base_hp_regen": 3,
+        "spirit_regen_tier": "High" # NEW
     },
     "Dark Elf": {
         "base_hp_max": 120,
         "hp_gain_per_pf_rank": 5,
-        "base_hp_regen": 1
-    }
+        "base_hp_regen": 1,
+        "spirit_regen_tier": "Very Low" # NEW
+    },
+    # --- NEW: Added other races for spirit regen ---
+    "Sylvan": {"spirit_regen_tier": "Low"},
+    "Half-Elf": {"spirit_regen_tier": "Low"},
+    "Aelotoi": {"spirit_regen_tier": "Low"},
+    "Burghal Gnome": {"spirit_regen_tier": "Moderate"},
+    "Halfling": {"spirit_regen_tier": "High"},
+    "Erithian": {"spirit_regen_tier": "Low"},
+    "Forest Gnome": {"spirit_regen_tier": "High"},
+    "Giantman": {"spirit_regen_tier": "Moderate"},
+    "Half-Krolvin": {"spirit_regen_tier": "Low"},
+}
+
+# --- NEW: Spirit Regen Tiers (in seconds) ---
+SPIRIT_REGEN_RATES = {
+    # Tier: (Off-Node Interval, On-Node Interval)
+    "Very Low": (300, 150), # 1 per 5 min, 2 per 5 min
+    "Low": (240, 120),      # 1 per 4 min, 2 per 4 min
+    "Moderate": (180, 90), # 1 per 3 min, 2 per 3 min
+    "High": (150, 75)       # 2 per 5 min, 4 per 5 min
 }
 
 
@@ -72,7 +97,21 @@ class Player:
         self.game_state: str = self.db_data.get("game_state", "playing")
         self.chargen_step: int = self.db_data.get("chargen_step", 0)
         self.appearance: Dict[str, str] = self.db_data.get("appearance", {})
+        
+        # --- HEALTH, MANA, STAMINA, SPIRIT ---
         self.hp: int = self.db_data.get("hp", 100)
+        # --- MODIFIED: Add Mana, Stamina, Spirit ---
+        # (These will eventually be calculated, but we set defaults for now)
+        self.max_mana = self.db_data.get("max_mana", 100) # Placeholder
+        self.mana: int = self.db_data.get("mana", self.max_mana)
+        
+        # Stamina is calculated, so no "max_stamina" in db
+        self.stamina: int = self.db_data.get("stamina", 100)
+        
+        # Spirit is calculated, so no "max_spirit" in db
+        self.spirit: int = self.db_data.get("spirit", 10)
+        # --- END MODIFIED ---
+
         self.skills: Dict[str, int] = self.db_data.get("skills", {})
 
         self.inventory: List[str] = self.db_data.get("inventory", [])
@@ -98,6 +137,17 @@ class Player:
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
 
+        # --- NEW: Vitals Ability Tracking ---
+        self.next_mana_pulse_time: float = self.db_data.get("next_mana_pulse_time", 0.0)
+        self.mana_pulse_used: bool = self.db_data.get("mana_pulse_used", False)
+        self.last_spellup_use_time: float = self.db_data.get("last_spellup_use_time", 0.0)
+        self.spellup_uses_today: int = self.db_data.get("spellup_uses_today", 0)
+        self.last_second_wind_time: float = self.db_data.get("last_second_wind_time", 0.0)
+        self.stamina_burst_pulses: int = self.db_data.get("stamina_burst_pulses", 0) # > 0 is buff, < 0 is debuff
+        self.next_spirit_regen_time: float = self.db_data.get("next_spirit_regen_time", 0.0)
+        # --- END NEW ---
+
+
     @property
     def con_bonus(self) -> int:
         return (self.stats.get("CON", 50) - 50)
@@ -108,7 +158,9 @@ class Player:
         
     @property
     def race_data(self) -> dict:
+        # --- MODIFIED: Handle incomplete RACE_DATA ---
         return RACE_DATA.get(self.race, RACE_DATA["Human"])
+        # --- END MODIFIED ---
 
     @property
     def base_hp(self) -> int:
@@ -117,9 +169,11 @@ class Player:
     @property
     def max_hp(self) -> int:
         pf_ranks = self.skills.get("physical_fitness", 0)
+        # --- MODIFIED: Handle incomplete RACE_DATA ---
         racial_base_max = self.race_data.get("base_hp_max", 150)
         con_bonus = self.con_bonus
         hp_gain_rate = self.race_data.get("hp_gain_per_pf_rank", 6)
+        # --- END MODIFIED ---
         pf_bonus_per_rank = hp_gain_rate + math.trunc(con_bonus / 10)
         hp_from_pf = pf_ranks * pf_bonus_per_rank
         # --- REFACTORED: max_hp should use racial_base_max, not self.base_hp ---
@@ -128,12 +182,98 @@ class Player:
     @property
     def hp_regeneration(self) -> int:
         pf_ranks = self.skills.get("physical_fitness", 0)
+        # --- MODIFIED: Handle incomplete RACE_DATA ---
         base_regen = self.race_data.get("base_hp_regen", 2)
+        # --- END MODIFIED ---
         regen = base_regen + math.trunc(pf_ranks / 20)
         if self.death_sting_points > 0:
             regen = math.trunc(regen * 0.5)
         return max(0, regen)
         
+    # ---
+    # --- NEW VITALS PROPERTIES ---
+    # ---
+    
+    @property
+    def max_stamina(self) -> int:
+        # Max Stamina = CON bonus + ((STR bonus + AGI bonus + DIS bonus)/3) + (Physical Fitness skill bonus / 3)
+        con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
+        str_b = get_stat_bonus(self.stats.get("STR", 50), "STR", self.race)
+        agi_b = get_stat_bonus(self.stats.get("AGI", 50), "AGI", self.race)
+        dis_b = get_stat_bonus(self.stats.get("DIS", 50), "DIS", self.race)
+        
+        pf_ranks = self.skills.get("physical_fitness", 0)
+        pf_bonus = calculate_skill_bonus(pf_ranks)
+        
+        stat_avg = math.trunc((str_b + agi_b + dis_b) / 3)
+        pf_avg = math.trunc(pf_bonus / 3)
+        
+        return con_b + stat_avg + pf_avg
+
+    @property
+    def stamina_regen_per_pulse(self) -> int:
+        # STEP 1: Find SR %
+        con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
+        bonus = 0
+        if self.posture in ["sitting", "kneeling", "prone"]:
+            if self.worn_items.get("mainhand") is None:
+                bonus = 5
+        
+        sr_percent = 20 + math.trunc(con_b / 4.5) + bonus
+        
+        # STEP 2: Calculate gain
+        # Stamina gained per pulse = round(Maximum Stamina * (SR / 100)) + Enhancive Bonus
+        enhancive_bonus = 0
+        if self.stamina_burst_pulses > 0:
+            enhancive_bonus = 15
+        elif self.stamina_burst_pulses < 0:
+            enhancive_bonus = -15
+            
+        gain = round(self.max_stamina * (sr_percent / 100.0)) + enhancive_bonus
+        return int(gain)
+
+    @property
+    def max_spirit(self) -> int:
+        # Base is 10. TODO: Add enhancives
+        return 10
+
+    @property
+    def spirit_regen_tier(self) -> str:
+        # TODO: Add enhancive logic
+        return self.race_data.get("spirit_regen_tier", "Moderate")
+
+    @property
+    def mana_regen_off_node(self) -> int:
+        # Placeholder based on user text. TODO: Calculate from skills
+        return 82
+
+    @property
+    def mana_regen_on_node(self) -> int:
+        # Placeholder based on user text. TODO: Calculate from skills
+        return 118
+
+    @property
+    def effective_mana_control_ranks(self) -> int:
+        # Placeholder: Assumes a single-sphere caster
+        # TODO: Check profession and hybrid status
+        mc_ranks = self.skills.get("elemental_lore", 0) # Just guessing one
+        return mc_ranks
+
+    def get_spirit_regen_interval(self) -> int:
+        """Returns spirit regen interval in seconds."""
+        tier = self.spirit_regen_tier
+        rates = SPIRIT_REGEN_RATES.get(tier, SPIRIT_REGEN_RATES["Moderate"])
+        
+        # Check if on a node
+        room_id = self.current_room_id
+        is_on_node = room_id in getattr(config, 'NODE_ROOM_IDS', [])
+        
+        return rates[1] if is_on_node else rates[0]
+        
+    # ---
+    # --- END NEW VITALS PROPERTIES ---
+    # ---
+
     @property
     def armor_rt_penalty(self) -> float:
         """
@@ -386,6 +526,14 @@ class Player:
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
             "hp": self.hp,
+            # --- MODIFIED: Save Mana, Stamina, Spirit ---
+            "max_mana": self.max_mana,
+            "mana": self.mana,
+            # Max stamina is calculated, not stored
+            "stamina": self.stamina,
+            # Max spirit is calculated, not stored
+            "spirit": self.spirit,
+            # --- END MODIFIED ---
             "skills": self.skills,
             "inventory": self.inventory,
             "worn_items": self.worn_items,
@@ -402,6 +550,15 @@ class Player:
             "death_sting_points": self.death_sting_points,
             "con_lost": self.con_lost,
             "con_recovery_pool": self.con_recovery_pool,
+            # --- NEW: Save Vitals Ability Tracking ---
+            "next_mana_pulse_time": self.next_mana_pulse_time,
+            "mana_pulse_used": self.mana_pulse_used,
+            "last_spellup_use_time": self.last_spellup_use_time,
+            "spellup_uses_today": self.spellup_uses_today,
+            "last_second_wind_time": self.last_second_wind_time,
+            "stamina_burst_pulses": self.stamina_burst_pulses,
+            "next_spirit_regen_time": self.next_spirit_regen_time,
+            # --- END NEW ---
         }
         
         if self._id:

@@ -93,6 +93,51 @@ DIRECTION_MAP = {
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
 
+# ---
+# --- NEW HELPER FUNCTION ---
+# ---
+def _get_player_vitals(world: 'World', player: Player) -> Dict[str, Any]:
+    """
+    Gathers all vital player stats for the GUI and returns them in a dict.
+    Includes HP, Mana, Stamina, Spirit, Posture, Status, and Roundtime.
+    """
+    
+    # 1. Get HP, Mana, Stamina, Spirit
+    vitals = {
+        "hp": player.hp,
+        "max_hp": player.max_hp,
+        "mana": player.mana,
+        "max_mana": player.max_mana,
+        "stamina": player.stamina,
+        "max_stamina": player.max_stamina,
+        "spirit": player.spirit,
+        "max_spirit": player.max_spirit,
+    }
+
+    # 2. Get Posture and Status Effects
+    vitals["posture"] = player.posture.capitalize()
+    vitals["status_effects"] = player.status_effects # This is a list
+
+    # 3. Get Roundtime
+    rt_data = world.get_combat_state(player.name.lower())
+    rt_end_time_ms = 0
+    rt_duration_ms = 0
+    
+    if rt_data:
+        rt_end_time_sec = rt_data.get("next_action_time", 0)
+        if rt_end_time_sec > time.time():
+            rt_end_time_ms = int(rt_end_time_sec * 1000)
+            rt_duration_ms = int((rt_end_time_sec - time.time()) * 1000)
+
+    vitals["rt_end_time_ms"] = rt_end_time_ms
+    vitals["rt_duration_ms"] = rt_duration_ms
+
+    return vitals
+# ---
+# --- END NEW HELPER FUNCTION ---
+# ---
+
+
 # --- REFACTORED: 'world' is the first argument + add account_username ---
 def execute_command(world: 'World', player_name: str, command_line: str, sid: str, account_username: Optional[str] = None) -> Dict[str, Any]:
     """The main function to parse and execute a game command."""
@@ -119,7 +164,15 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             # --- NEW: Assign account username ---
             player.account_username = account_username
             # --- END REFACTOR ---
-            player.game_state = "chargen"; player.chargen_step = 0; player.hp = player.max_hp 
+            player.game_state = "chargen"; player.chargen_step = 0
+            
+            # --- NEW: Set default HP/Mana/etc on creation ---
+            player.hp = player.max_hp
+            player.mana = player.max_mana
+            player.stamina = player.max_stamina
+            player.spirit = player.max_spirit
+            # --- END NEW ---
+            
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
             # --- THIS IS A LOADING CHARACTER ---
@@ -209,7 +262,16 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     # --- END REFACTOR ---
     
     save_game_state(player)
-    return {"messages": player.messages, "game_state": player.game_state}
+    
+    # ---
+    # --- NEW: Bundle vitals with every response ---
+    # ---
+    vitals_data = _get_player_vitals(world, player)
+    return {
+        "messages": player.messages, 
+        "game_state": player.game_state,
+        "vitals": vitals_data  # <-- NEW
+    }
 
 # --- REFACTORED: 'world' is the first argument ---
 def _run_verb(world: 'World', player: Player, room: Room, command: str, args: List[str], verb_info: Tuple[str, str]):

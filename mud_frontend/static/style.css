@@ -2,10 +2,11 @@
 
 body {
     /* --- MODIFIED: Prioritize Courier New --- */
-    font-family: 'Inconsolata', 'Courier New', monospace;    background: #000;
+    font-family: 'Inconsolata', 'Courier New', monospace;    
+    background: #000;
     color: #CCC; /* Default text color */
     
-    /* --- Flexbox layout --- */
+    /* --- MODIFIED: Flexbox layout --- */
     display: flex;
     flex-direction: column;
     height: 100vh; /* Fill the entire viewport height */
@@ -53,9 +54,47 @@ body {
     color: #888;
 }
 
+/* --- NEW: Vitals Container (RT + Posture) --- */
+#vitals-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-top: 5px; /* Space between output and this bar */
+    flex-shrink: 0; /* Don't shrink */
+}
+
+#rt-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.rt-box {
+    width: 20px;
+    height: 20px;
+    background-color: #222;
+    border: 1px solid #444;
+    margin-right: 2px;
+    box-sizing: border-box;
+    transition: background-color 0.1s ease;
+}
+
+.rt-box.active {
+    background-color: #800000; /* Dark Red */
+    border-color: #F00;
+}
+
+#posture-container {
+    margin-left: 15px;
+    font-weight: bold;
+    color: #f0c674; /* Yellow/Gold */
+    font-size: 1.1em;
+}
+/* --- END NEW --- */
+
+
 #input-line {
     display: flex;
-    margin-top: 10px;
+    margin-top: 5px; /* MODIFIED: was 10px */
     
     /* --- NEW: Ensure it doesn't grow or shrink --- */
     flex-grow: 0;
@@ -77,6 +116,53 @@ body {
 #command-input:focus {
     outline: none;
 }
+
+/* --- NEW: Gauges Container --- */
+#gauges-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin-top: 10px;
+    flex-shrink: 0; /* Don't shrink */
+    gap: 5px; /* Space between bars */
+}
+
+.gauge-bar {
+    flex: 1; /* Each bar takes equal space */
+    height: 22px;
+    background-color: #111;
+    border: 1px solid #555;
+    position: relative; /* For centering text */
+    box-sizing: border-box;
+}
+
+.gauge-fill {
+    height: 100%;
+    width: 0%; /* Default width */
+    transition: width 0.2s ease-out; /* Smooth transition */
+}
+
+.gauge-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    text-align: center;
+    color: #FFF;
+    font-weight: bold;
+    font-size: 0.9em;
+    text-shadow: 1px 1px 2px #000;
+    white-space: nowrap;
+}
+
+/* Bar Colors */
+.gauge-fill.health { background-color: #a00000; } /* Red */
+.gauge-fill.mana { background-color: #0000a0; } /* Blue */
+.gauge-fill.stamina { background-color: #00a000; } /* Green */
+.gauge-fill.spirit { background-color: #a0a000; } /* Yellow */
+/* --- END NEW --- */
+
 
 /* --- The new Left-Click Verb Menu --- */
 #context-menu {

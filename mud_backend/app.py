@@ -122,6 +122,28 @@ def game_tick_thread(world_instance: World):
                     if giver_obj:
                         giver_obj.send_message(f"Your offer to {receiver_name} for {item_name} has expired.")
             # --- END NEW: Trade Timeout ---
+
+            # --- NEW: 1.c. FAST TICK: Spirit Regen & Ability Cooldowns ---
+            active_players_list = world_instance.get_all_players_info()
+            for player_name_lower, player_data in active_players_list:
+                player_obj = player_data.get("player_obj")
+                if not player_obj:
+                    continue
+
+                # --- Spirit Regen Check ---
+                if player_obj.spirit < player_obj.max_spirit:
+                    if current_time >= player_obj.next_spirit_regen_time:
+                        player_obj.spirit += 1
+                        # Get new interval and set next time
+                        interval = player_obj.get_spirit_regen_interval()
+                        player_obj.next_spirit_regen_time = current_time + interval
+                
+                # --- Ability Cooldown Checks (e.g., Spellup) ---
+                # Check if 24 hours (86400s) has passed since last spellup
+                if player_obj.spellup_uses_today > 0:
+                    if current_time - player_obj.last_spellup_use_time > 86400:
+                         player_obj.spellup_uses_today = 0
+            # --- END NEW: Spirit Regen ---
             
             # --- 2. INDEPENDENT TICK: Monster AI Movement ---
             # --- REFACTORED: Use world attributes for timers ---
@@ -144,28 +166,10 @@ def game_tick_thread(world_instance: World):
                 send_to_player_callback=send_to_player 
             )
 
-            if did_global_tick:
-                # --- XP ABSORPTION & HP REGEN (Now tied strictly to the 30s tick) ---
-                # --- REFACTORED: Use world object ---
-                active_players_list = world_instance.get_all_players_info()
-                # --- END REFACTOR ---
-                
-                for player_name_lower, player_data in active_players_list:
-                    player_obj = player_data.get("player_obj")
-                    if not player_obj:
-                        continue
-
-                    if player_obj.unabsorbed_exp > 0:
-                        room_id = player_obj.current_room_id
-                        room_type = _get_absorption_room_type(room_id)
-                        player_obj.absorb_exp_pulse(room_type=room_type)
-                        
-                    if player_obj.hp < player_obj.max_hp:
-                        hp_to_regen = player_obj.hp_regeneration
-                        if hp_to_regen > 0:
-                            player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_to_regen)
-                
-                socketio.emit('tick')
+            # --- MODIFIED: This logic is now inside check_and_run_game_tick ---
+            # if did_global_tick:
+            #    socketio.emit('tick')
+            # --- END MODIFIED ---
 
             time.sleep(1.0) # Main loop heartbeat
 

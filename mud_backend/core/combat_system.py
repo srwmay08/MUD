@@ -19,6 +19,10 @@ from mud_backend.core import loot_system
 from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend import config
 
+# --- NEW: Import stat logic from utils ---
+from mud_backend.core.utils import get_stat_bonus, RACE_MODIFIERS, DEFAULT_RACE_MODS
+# --- END NEW ---
+
 # --- STANCE MODIFIERS ---
 # (This section is unchanged)
 STANCE_MODIFIERS = {
@@ -31,7 +35,7 @@ STANCE_MODIFIERS = {
     # Fallback for creatures without stances
     "creature":  {"as_mod": 1.00, "ds_mod": 1.00}
 }
-# ... (POSTURE_MODIFIERS, SHIELD_DATA, RACE_MODIFIERS are all unchanged) ...
+# ... (POSTURE_MODIFIERS, SHIELD_DATA are all unchanged) ...
 POSTURE_MODIFIERS = {
     "standing":  {"as_mod": 1.0, "ds_mod": 1.0},
     "sitting":   {"as_mod": 0.5, "ds_mod": 0.5},
@@ -55,26 +59,16 @@ SHIELD_DATA = {
     }
 }
 DEFAULT_SHIELD_DATA = SHIELD_DATA["starter_small_shield"]
-RACE_MODIFIERS = {
-    "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
-    "Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -10, "AUR": 5},
-    "Dwarf": {"STR": 10, "CON": 15, "DEX": 0, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 5, "ESS": 0, "DIS": 15, "AUR": 0},
-    "Dark Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 5, "LOG": 0, "INT": 5, "WIS": 5, "INF": -5, "ZEA": -5, "ESS": 0, "DIS": -10, "AUR": 10},
-}
-DEFAULT_RACE_MODS = {"STR": 0, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 0, "INT": 0, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 0, "AUR": 0}
+
+# --- REMOVED: get_stat_bonus, RACE_MODIFIERS, DEFAULT_RACE_MODS ---
+# --- (These are now imported from utils.py) ---
 
 
-# --- (All calculation functions are unchanged as they don't use game_state) ---
-# ... (get_stat_bonus, get_entity_race, get_entity_armor_type, _get_weapon_type, ...)
+# --- (All other calculation functions are unchanged as they don't use game_state) ---
+# ... (get_entity_race, get_entity_armor_type, _get_weapon_type, ...)
 # ... (_get_armor_hindrance, calculate_attack_strength, calculate_evade_defense, ...)
 # ... (calculate_block_defense, calculate_parry_defense, calculate_defense_strength, ...)
 # ... (HIT_MESSAGES, get_flavor_message, resolve_attack, calculate_roundtime) ...
-
-def get_stat_bonus(stat_value: int, stat_name: str, race: str) -> int:
-    base_bonus = math.floor((stat_value - 50) / 2)
-    race_mods = RACE_MODIFIERS.get(race, DEFAULT_RACE_MODS)
-    race_bonus = race_mods.get(stat_name, 0)
-    return base_bonus + race_bonus
 
 def get_entity_race(entity: Any) -> str:
     if isinstance(entity, Player):
