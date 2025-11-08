@@ -11,11 +11,24 @@ from mud_backend.verbs.foraging import _set_action_roundtime
 # This helper calculates stat bonuses
 from mud_backend.core.combat_system import get_stat_bonus
 
-VALID_POSTURES = ["standing", "sitting", "kneeling", "prone"]
+# --- THIS IS THE FIX ---
+# Map all valid COMMANDS (keys) to their resulting STATE (values)
+POSTURE_MAP = {
+    "stand": "standing",
+    "sit": "sitting",
+    "kneel": "kneeling",
+    "prone": "prone",
+    "crouch": "kneeling", # <-- NEW ALIAS
+    "meditate": "sitting",  # <-- NEW ALIAS
+    "lay": "prone"        # <-- NEW ALIAS (for "lay down")
+}
+# --- END FIX ---
+
 
 class Posture(BaseVerb):
     """
-    Handles the 'sit', 'stand', 'kneel', and 'prone' commands.
+    Handles the 'sit', 'stand', 'kneel', 'prone', 'crouch', 
+    'meditate', and 'lay' commands.
     Allows the player to change their physical posture.
     
     The command itself (e.g., 'sit') is passed in self.command.
@@ -74,20 +87,25 @@ class Posture(BaseVerb):
         self.player.posture = "standing"
 
     def execute(self):
-        # The command is 'sit', 'stand', 'kneel', or 'prone'
-        # We get it from self.command (passed by command_executor)
-        target_posture = self.command.lower()
+        # --- THIS IS THE FIX ---
         
-        if target_posture not in VALID_POSTURES:
+        # The command is 'sit', 'stand', 'crouch', etc.
+        # We get it from self.command (passed by command_executor)
+        target_command = self.command.lower()
+        
+        if target_command not in POSTURE_MAP:
             # This should not happen if aliased correctly
             self.player.send_message("That is not a valid posture.")
             return
 
+        # Get the target *state* (e.g., "sitting") from the *command* (e.g., "sit")
+        target_state = POSTURE_MAP[target_command]
         current_posture = self.player.posture
         
-        if target_posture == current_posture:
+        if target_state == current_posture:
             self.player.send_message(f"You are already {current_posture}.")
             return
+        # --- END FIX ---
 
         # Check for existing roundtime
         player_id = self.player.name.lower()
@@ -102,12 +120,16 @@ class Posture(BaseVerb):
                 return
         # --- END FIX ---
 
-        if target_posture == "standing":
+        if target_state == "standing":
             # Handle standing logic (which includes RT rolls)
             self._handle_stand(current_posture)
         else:
             # Moving between sit/kneel/prone (or from stand to one)
             # This is always allowed and has a minimal RT
-            self.player.posture = target_posture
-            self.player.send_message(f"You move into a **{target_posture}** position.")
+            
+            # --- THIS IS THE FIX ---
+            self.player.posture = target_state # Set the correct state (e.g., "sitting")
+            self.player.send_message(f"You move into a **{target_state}** position.")
+            # --- END FIX ---
+            
             _set_action_roundtime(self.player, 0.5) # 0.5s RT for changing posture

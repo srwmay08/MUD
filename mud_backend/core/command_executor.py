@@ -62,8 +62,15 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Combat & Status
     "attack": ("attack", "Attack"),
     "stance": ("stance", "Stance"), 
-    "sit": ("posture", "Posture"), "stand": ("posture", "Posture"),
-    "kneel": ("posture", "Posture"), "prone": ("posture", "Posture"),
+    # --- THIS IS THE FIX ---
+    "sit": ("posture", "Posture"), 
+    "stand": ("posture", "Posture"),
+    "kneel": ("posture", "Posture"), 
+    "prone": ("posture", "Posture"),
+    "crouch": ("posture", "Posture"),    # <-- NEW ALIAS
+    "meditate": ("posture", "Posture"), # <-- NEW ALIAS
+    "lay": ("posture", "Posture"),        # <-- NEW ALIAS (for "lay down")
+    # --- END FIX ---
     "health": ("health", "Health"), "hp": ("health", "Health"),
     "stat": ("stats", "Stats"), "stats": ("stats", "Stats"),
     "skill": ("skills", "Skills"), "skills": ("skills", "Skills"),
