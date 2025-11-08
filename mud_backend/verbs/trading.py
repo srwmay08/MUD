@@ -90,7 +90,7 @@ class Give(BaseVerb):
             
             # Send messages to both parties
             self.player.send_message(f"You give {silver_amount} silver to {target_player.name}.")
-            target_player.send_message(f"{self.player.name} gives you {silver_amount} silver.")
+            target_player.send_message(f"{self.player.name} gives you {silver_amount} silver.") # <-- THIS IS THE FIX
             
             # --- NEW: Add DEBUG log ---
             if config.DEBUG_MODE:
@@ -297,42 +297,16 @@ class Accept(BaseVerb):
 
 class Decline(BaseVerb):
     """
-    Handles the 'decline' or 'cancel' command for trades.
+    Handles the 'decline' command for trades.
     """
     def execute(self):
         player_key = self.player.name.lower()
         
-        # 1. Check for a pending trade
+        # 1. Check for a pending trade TO this player
         trade_offer = self.world.remove_pending_trade(player_key)
         
         if not trade_offer:
-            # Check if *we* are the ones with an outstanding offer
-            giver_key = self.player.name.lower()
-            offer_to_cancel = None
-            receiver_name = None
-            
-            # This is less efficient, but necessary for CANCEL
-            with self.world.trade_lock:
-                for r_name, offer in self.world.pending_trades.items():
-                    if offer.get("from_player_name", "").lower() == giver_key:
-                        offer_to_cancel = offer
-                        receiver_name = r_name
-                        break
-            
-            if offer_to_cancel and receiver_name:
-                self.world.remove_pending_trade(receiver_name)
-                self.player.send_message(f"You cancel your offer to {receiver_name}.")
-                receiver_obj = self.world.get_player_obj(receiver_name)
-                if receiver_obj:
-                    receiver_obj.send_message(f"{self.player.name} cancels their offer.")
-                
-                # --- NEW: Add DEBUG log ---
-                if config.DEBUG_MODE:
-                    item_name = offer_to_cancel.get("item_name", "offer")
-                    print(f"[TRADE DEBUG] {self.player.name} CANCELLED offer of {item_name} to {receiver_name}.")
-                return
-            
-            self.player.send_message("You have no offers to decline or cancel.")
+            self.player.send_message("You have no offers to decline.")
             return
             
         # --- NEW: Add DEBUG log ---
@@ -348,9 +322,40 @@ class Decline(BaseVerb):
         if giver_player:
             giver_player.send_message(f"{self.player.name} declines your offer.")
 
-# Alias 'Cancel' to 'Decline'
-class Cancel(Decline):
-    pass
+# --- NEW: Cancel verb ---
+class Cancel(BaseVerb):
+    """
+    Handles the 'cancel' command to retract an offer.
+    """
+    def execute(self):
+        giver_key = self.player.name.lower()
+        offer_to_cancel = None
+        receiver_name = None
+        
+        # Find an offer WHERE from_player_name is me
+        with self.world.trade_lock:
+            for r_name, offer in self.world.pending_trades.items():
+                if offer.get("from_player_name", "").lower() == giver_key:
+                    offer_to_cancel = offer
+                    receiver_name = r_name
+                    break
+        
+        if offer_to_cancel and receiver_name:
+            # Found our outgoing offer, remove it
+            self.world.remove_pending_trade(receiver_name)
+            self.player.send_message(f"You cancel your offer to {receiver_name}.")
+            
+            # Notify the person who *would* have received it
+            receiver_obj = self.world.get_player_obj(receiver_name)
+            if receiver_obj:
+                receiver_obj.send_message(f"{self.player.name} cancels their offer.")
+            
+            if config.DEBUG_MODE:
+                item_name = offer_to_cancel.get("item_name", "offer")
+                print(f"[TRADE DEBUG] {self.player.name} CANCELLED offer of {item_name} to {receiver_name}.")
+        else:
+            self.player.send_message("You have no active offers to cancel.")
+
 
 # --- NEW VERB: EXCHANGE ---
 class Exchange(BaseVerb):
