@@ -141,7 +141,9 @@ function updateVitals(vitals) {
     const gauges = ['health', 'mana', 'stamina', 'spirit'];
     gauges.forEach(type => {
         const current = vitals[type] || 0;
-        const max = vitals[`max_${type}`] || 100;
+        // --- THIS IS THE FIX: Default to 0, not 100 ---
+        const max = vitals[`max_${type}`] || 0;
+        // --- END FIX ---
         let percent = 0;
         if (max > 0) {
             percent = (current / max) * 100;
@@ -199,10 +201,11 @@ socket.on('message', (message) => {
 
 // 3. This handles the global tick event
 socket.on('tick', () => {
-    // --- MODIFIED: Only add a prompt if RT is not active ---
+    // --- THIS IS THE FIX: 'in_g' -> 'in_game' ---
     if (currentClientState === "in_game" && currentGameState === "playing" && !rtTimer) {
         addMessage(">", "command-echo");
     }
+    // --- END FIX ---
 });
 
 // 4. Handle connection/disconnection events

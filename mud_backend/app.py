@@ -166,10 +166,10 @@ def game_tick_thread(world_instance: World):
                 send_to_player_callback=send_to_player 
             )
 
-            # --- MODIFIED: This logic is now inside check_and_run_game_tick ---
-            # if did_global_tick:
-            #    socketio.emit('tick')
-            # --- END MODIFIED ---
+            # --- THIS IS THE FIX: Uncommented this block ---
+            if did_global_tick:
+               socketio.emit('tick')
+            # --- END FIX ---
 
             time.sleep(1.0) # Main loop heartbeat
 

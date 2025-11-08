@@ -19,27 +19,27 @@ if TYPE_CHECKING:
 RACE_DATA = {
     "Human": {
         "base_hp_max": 150,
-        "hp_gain_per_pf_rank": 6,
+        "hp_gain_per_pf_rank": 6, # <-- Per user spec
         "base_hp_regen": 2,
-        "spirit_regen_tier": "Moderate" # NEW
+        "spirit_regen_tier": "Moderate"
     },
     "Elf": {
         "base_hp_max": 130,
-        "hp_gain_per_pf_rank": 5,
+        "hp_gain_per_pf_rank": 5, # <-- Per user spec
         "base_hp_regen": 1,
-        "spirit_regen_tier": "Very Low" # NEW
+        "spirit_regen_tier": "Very Low"
     },
     "Dwarf": {
         "base_hp_max": 140,
-        "hp_gain_per_pf_rank": 6,
+        "hp_gain_per_pf_rank": 5, # <-- THIS IS THE FIX (was 6)
         "base_hp_regen": 3,
-        "spirit_regen_tier": "High" # NEW
+        "spirit_regen_tier": "High"
     },
     "Dark Elf": {
         "base_hp_max": 120,
-        "hp_gain_per_pf_rank": 5,
+        "hp_gain_per_pf_rank": 6, # <-- THIS IS THE FIX (was 5)
         "base_hp_regen": 1,
-        "spirit_regen_tier": "Very Low" # NEW
+        "spirit_regen_tier": "Very Low"
     },
     # --- NEW: Added other races for spirit regen ---
     "Sylvan": {"spirit_regen_tier": "Low"},
@@ -100,17 +100,12 @@ class Player:
         
         # --- HEALTH, MANA, STAMINA, SPIRIT ---
         self.hp: int = self.db_data.get("hp", 100)
-        # --- MODIFIED: Add Mana, Stamina, Spirit ---
-        # (These will eventually be calculated, but we set defaults for now)
-        self.max_mana = self.db_data.get("max_mana", 100) # Placeholder
+        
+        # --- THIS IS THE FIX: Initialize using the @property as the default ---
         self.mana: int = self.db_data.get("mana", self.max_mana)
-        
-        # Stamina is calculated, so no "max_stamina" in db
-        self.stamina: int = self.db_data.get("stamina", 100)
-        
-        # Spirit is calculated, so no "max_spirit" in db
-        self.spirit: int = self.db_data.get("spirit", 10)
-        # --- END MODIFIED ---
+        self.stamina: int = self.db_data.get("stamina", self.max_stamina)
+        self.spirit: int = self.db_data.get("spirit", self.max_spirit)
+        # --- END FIX ---
 
         self.skills: Dict[str, int] = self.db_data.get("skills", {})
 
@@ -150,7 +145,8 @@ class Player:
 
     @property
     def con_bonus(self) -> int:
-        return (self.stats.get("CON", 50) - 50)
+        # This is the stat *bonus* (e.g., 70 CON -> 10 bonus)
+        return get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
         
     @property
     def race(self) -> str:
@@ -164,20 +160,26 @@ class Player:
 
     @property
     def base_hp(self) -> int:
+        # Per user spec: Base HP = trunc((Strength statistic + Constitution statistic) / 10)
+        # Note: User mentioned this is set at level 0. For now, we'll keep it dynamic
+        # as implementing a stored value requires more chargen/db changes.
+        # The formula itself is correct.
         return math.trunc((self.stats.get("STR", 0) + self.stats.get("CON", 0)) / 10)
 
     @property
     def max_hp(self) -> int:
+        # Per user spec: Max HP = Race Base HP + Constitution bonus + (PF Ranks * HP per PF rank)
+        # Per user spec: HP per PF rank = Race HP gain rate + trunc(Constitution bonus / 10)
+        
         pf_ranks = self.skills.get("physical_fitness", 0)
-        # --- MODIFIED: Handle incomplete RACE_DATA ---
         racial_base_max = self.race_data.get("base_hp_max", 150)
-        con_bonus = self.con_bonus
+        con_bonus = self.con_bonus # This is the stat bonus (e.g., 10)
         hp_gain_rate = self.race_data.get("hp_gain_per_pf_rank", 6)
-        # --- END MODIFIED ---
-        pf_bonus_per_rank = hp_gain_rate + math.trunc(con_bonus / 10)
-        hp_from_pf = pf_ranks * pf_bonus_per_rank
-        # --- REFACTORED: max_hp should use racial_base_max, not self.base_hp ---
-        return racial_base_max + con_bonus + hp_from_pf # FIX from original logic
+        
+        hp_per_pf_rank = hp_gain_rate + math.trunc(con_bonus / 10)
+        hp_from_pf = pf_ranks * hp_per_pf_rank
+        
+        return racial_base_max + con_bonus + hp_from_pf
 
     @property
     def hp_regeneration(self) -> int:
@@ -194,9 +196,32 @@ class Player:
     # --- NEW VITALS PROPERTIES ---
     # ---
     
+    # --- THIS IS THE FIX: Converted max_mana to a property ---
+    @property
+    def max_mana(self) -> int:
+        # Max Mana = INT Bonus + ((LOG Bonus + WIS bonus + INF bonus)/3) + (Harness Power skill bonus / 4) + (Mana Control skill bonus / 3)
+        int_b = get_stat_bonus(self.stats.get("INT", 50), "INT", self.race)
+        log_b = get_stat_bonus(self.stats.get("LOG", 50), "LOG", self.race)
+        wis_b = get_stat_bonus(self.stats.get("WIS", 50), "WIS", self.race)
+        inf_b = get_stat_bonus(self.stats.get("INF", 50), "INF", self.race)
+        
+        hp_ranks = self.skills.get("harness_power", 0)
+        mc_ranks = self.skills.get("mana_control", 0)
+        
+        hp_bonus = calculate_skill_bonus(hp_ranks)
+        mc_bonus = calculate_skill_bonus(mc_ranks)
+        
+        stat_avg = math.trunc((log_b + wis_b + inf_b) / 3)
+        hp_avg = math.trunc(hp_bonus / 4)
+        mc_avg = math.trunc(mc_bonus / 3)
+        
+        # Assuming 0 base mana, this is the formula
+        return int_b + stat_avg + hp_avg + mc_avg
+    # --- END FIX ---
+    
     @property
     def max_stamina(self) -> int:
-        # Max Stamina = CON bonus + ((STR bonus + AGI bonus + DIS bonus)/3) + (Physical Fitness skill bonus / 3)
+        # Per user spec: Max Stamina = CON bonus + ((STR bonus + AGI bonus + DIS bonus)/3) + (Physical Fitness skill bonus / 3)
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
         str_b = get_stat_bonus(self.stats.get("STR", 50), "STR", self.race)
         agi_b = get_stat_bonus(self.stats.get("AGI", 50), "AGI", self.race)
@@ -232,10 +257,30 @@ class Player:
         gain = round(self.max_stamina * (sr_percent / 100.0)) + enhancive_bonus
         return int(gain)
 
+    # --- THIS IS THE FIX: Updated max_spirit property ---
     @property
     def max_spirit(self) -> int:
-        # Base is 10. TODO: Add enhancives
-        return 10
+        # Per user spec: Max Spirit = ESS Bonus + ((ZEA Bonus + WIS Bonus + LOG Bonus)/3) + (Harness Power skill bonus / 4) + (Spirit Control skill bonus / 3)
+        # NOTE: "Spirit Control" skill not found, using "spiritual_lore" as the logical equivalent.
+        
+        ess_b = get_stat_bonus(self.stats.get("ESS", 50), "ESS", self.race)
+        zea_b = get_stat_bonus(self.stats.get("ZEA", 50), "ZEA", self.race)
+        wis_b = get_stat_bonus(self.stats.get("WIS", 50), "WIS", self.race)
+        log_b = get_stat_bonus(self.stats.get("LOG", 50), "LOG", self.race)
+        
+        hp_ranks = self.skills.get("harness_power", 0)
+        sc_ranks = self.skills.get("spiritual_lore", 0) # Using spiritual_lore
+        
+        hp_bonus = calculate_skill_bonus(hp_ranks)
+        sc_bonus = calculate_skill_bonus(sc_ranks)
+        
+        stat_avg = math.trunc((zea_b + wis_b + log_b) / 3)
+        hp_avg = math.trunc(hp_bonus / 4)
+        sc_avg = math.trunc(sc_bonus / 3)
+        
+        # Adding 10 base spirit, as per the original implementation's default
+        return 10 + ess_b + stat_avg + hp_avg + sc_avg
+    # --- END FIX ---
 
     @property
     def spirit_regen_tier(self) -> str:
@@ -526,14 +571,14 @@ class Player:
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
             "hp": self.hp,
-            # --- MODIFIED: Save Mana, Stamina, Spirit ---
-            "max_mana": self.max_mana,
+            # --- THIS IS THE FIX: Remove max_mana, as it's calculated ---
+            # "max_mana": self.max_mana,
             "mana": self.mana,
             # Max stamina is calculated, not stored
             "stamina": self.stamina,
             # Max spirit is calculated, not stored
             "spirit": self.spirit,
-            # --- END MODIFIED ---
+            # --- END FIX ---
             "skills": self.skills,
             "inventory": self.inventory,
             "worn_items": self.worn_items,
