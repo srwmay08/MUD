@@ -50,6 +50,10 @@ class Player:
         self.messages = [] 
         
         self._id = self.db_data.get("_id") 
+        
+        # --- NEW: Store the account username ---
+        self.account_username: str = self.db_data.get("account_username", "")
+        # --- END NEW ---
 
         self.experience: int = self.db_data.get("experience", 0)
         self.unabsorbed_exp: int = self.db_data.get("unabsorbed_exp", 0)
@@ -365,6 +369,9 @@ class Player:
         data = {
             **self.db_data,
             "name": self.name,
+            # --- NEW: Save account_username ---
+            "account_username": self.account_username,
+            # --- END NEW ---
             "current_room_id": self.current_room_id,
             "experience": self.experience, 
             "unabsorbed_exp": self.unabsorbed_exp,

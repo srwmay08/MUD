@@ -488,4 +488,3 @@ class Exchange(BaseVerb):
             f"The offer will expire in 30 seconds."
         )
         # --- END FIX ---
-}

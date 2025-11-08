@@ -262,4 +262,3 @@ class World:
         elif config.DEBUG_MODE:
                 print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} not active. Cannot send: {message}")
     # --- END NEW METHOD ---
-}

@@ -93,8 +93,8 @@ DIRECTION_MAP = {
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
 
-# --- REFACTORED: 'world' is the first argument ---
-def execute_command(world: 'World', player_name: str, command_line: str, sid: str) -> Dict[str, Any]:
+# --- REFACTORED: 'world' is the first argument + add account_username ---
+def execute_command(world: 'World', player_name: str, command_line: str, sid: str, account_username: Optional[str] = None) -> Dict[str, Any]:
     """The main function to parse and execute a game command."""
     
     # --- REFACTORED: Get player from world ---
@@ -107,13 +107,22 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     else:
         player_db_data = fetch_player_data(player_name)
         if not player_db_data:
+            # --- THIS IS A NEW CHARACTER ---
+            if not account_username:
+                # This should not happen if app.py is correct, but it's a safety check
+                print(f"[EXEC-ERROR] New player {player_name} has no account_username!")
+                return {"messages": ["Critical error: Account not found."], "game_state": "error"}
+
             start_room_id = config.CHARGEN_START_ROOM
             # --- REFACTORED: Inject world into new Player ---
             player = Player(world, player_name, start_room_id, {})
+            # --- NEW: Assign account username ---
+            player.account_username = account_username
             # --- END REFACTOR ---
             player.game_state = "chargen"; player.chargen_step = 0; player.hp = player.max_hp 
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
+            # --- THIS IS A LOADING CHARACTER ---
             # --- REFACTORED: Inject world into existing Player ---
             player = Player(world, player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             # --- END REFACTOR ---

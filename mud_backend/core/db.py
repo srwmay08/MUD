@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Optional, Any
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config
+# --- NEW: Import password hashing utilities ---
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- REFACTORED: Removed game_state import ---
 # from mud_backend.core import game_state
@@ -80,10 +82,12 @@ def ensure_initial_data():
         print(f"[DB ERROR] An error occurred loading rooms: {e}")
 
     # 2. Test Player 'Alice'
+    # --- MODIFIED: Add account_username to Alice ---
     if database.players.count_documents({"name": "Alice"}) == 0:
         database.players.insert_one(
             {
                 "name": "Alice", 
+                "account_username": "dev", # <-- NEW: Link to an account
                 "current_room_id": "town_square",
                 "level": 0, "experience": 0, "game_state": "playing", "chargen_step": 99,
                 "stats": {
@@ -100,11 +104,64 @@ def ensure_initial_data():
             }
         )
         print("[DB INIT] Inserted test player 'Alice'.")
+    
+    # 3. Test Account 'dev'
+    if database.accounts.count_documents({"username": "dev"}) == 0:
+        database.accounts.insert_one({
+            "username": "dev",
+            "password_hash": generate_password_hash("dev")
+        })
+        print("[DB INIT] Inserted test account 'dev' (password: dev).")
 
+# --- NEW: Account Functions ---
+
+def fetch_account(username: str) -> Optional[dict]:
+    """Fetches an account by username (case-insensitive)."""
+    database = get_db()
+    if database is None: return None
+    return database.accounts.find_one({"username": {"$regex": f"^{username}$", "$options": "i"}})
+
+def create_account(username: str, password: str) -> bool:
+    """Creates a new account with a hashed password."""
+    database = get_db()
+    if database is None: return False
+    
+    try:
+        database.accounts.insert_one({
+            "username": username,
+            "password_hash": generate_password_hash(password)
+        })
+        return True
+    except Exception as e:
+        print(f"[DB ERROR] Could not create account: {e}")
+        return False
+
+def check_account_password(account_data: dict, password: str) -> bool:
+    """Checks a given password against the stored hash."""
+    return check_password_hash(account_data.get("password_hash", ""), password)
+
+# --- NEW: Character (Player) Functions ---
+
+def fetch_characters_for_account(account_username: str) -> List[dict]:
+    """Fetches all player characters associated with an account."""
+    database = get_db()
+    if database is None: return []
+    
+    characters = []
+    # Find all players where 'account_username' matches (case-insensitive)
+    cursor = database.players.find({
+        "account_username": {"$regex": f"^{account_username}$", "$options": "i"}
+    })
+    for char in cursor:
+        characters.append(char)
+    return characters
+
+# --- MODIFIED: Player & Room Functions ---
 
 def fetch_player_data(player_name: str) -> dict:
     database = get_db()
     if database is None: return {} 
+    # Check for player name (case-insensitive)
     player_data = database.players.find_one({"name": {"$regex": f"^{player_name}$", "$options": "i"}})
     return player_data if player_data else {}
 
@@ -125,7 +182,11 @@ def save_game_state(player: 'Player'):
     if database is None:
         print(f"\n[DB SAVE MOCK] Player {player.name} state saved (Mock).")
         return
+        
     player_data = player.to_dict()
+    # Ensure account_username is saved
+    player_data["account_username"] = player.account_username 
+    
     result = database.players.update_one(
         {"name": player.name}, 
         {"$set": player_data}, 
@@ -133,9 +194,9 @@ def save_game_state(player: 'Player'):
     )
     if result.upserted_id:
         player._id = result.upserted_id
-        print(f"\n[DB SAVE] Player {player.name} created with ID: {player._id}")
+        print(f"\n[DB SAVE] Player {player.name} created with ID: {player._id} for account {player.account_username}")
     else:
-        pass
+        pass # Standard save
 
 def save_room_state(room: 'Room'):
     """Saves the current state of a room object to the database."""
@@ -144,9 +205,6 @@ def save_room_state(room: 'Room'):
     
     if database is None:
         print(f"\n[DB SAVE MOCK] Room {room.name} state saved (Mock).")
-        # --- REFACTORED: Removed write to global game_state ---
-        # (The world object is now responsible for this)
-        # --- END REFACTOR ---
         return
         
     query = {"room_id": room.room_id}
@@ -158,10 +216,6 @@ def save_room_state(room: 'Room'):
         upsert=True
     )
     
-    # --- REFACTORED: Removed write to global game_state ---
-    # (The world object is now responsible for this)
-    # --- END REFACTOR ---
-
 def fetch_all_rooms() -> dict:
     """
     Fetches all rooms and ensures every monster has a unique runtime ID (uid).
@@ -188,7 +242,7 @@ def fetch_all_rooms() -> dict:
         print(f"[DB ERROR] Failed to fetch all rooms: {e}")
         return {}
 
-def _load_json_data(filename: str) -> dict:
+def _load_json_data(filename: str) -> Any: # Changed to Any
     """Helper to load a JSON file from the 'data' directory."""
     try:
         json_path = os.path.join(os.path.dirname(__file__), '..', 'data', filename)
@@ -200,12 +254,12 @@ def _load_json_data(filename: str) -> dict:
         print(f"[DB ERROR] '{filename}' contains invalid JSON.")
     except Exception as e:
         print(f"[DB ERROR] An error occurred loading '{filename}': {e}")
-    return {}
+    return {} if ".json" in filename else [] # Return list for e.g. leveling.json
 
 def fetch_all_monsters() -> dict:
     print("[DB INIT] Caching all monsters from monsters.json...")
     monster_list = _load_json_data("monsters.json")
-    monster_templates = {m["monster_id"]: m for m in monster_list if m.get("monster_id")}
+    monster_templates = {m["monster_id"]: m for m in monster_list if isinstance(m, dict) and m.get("monster_id")}
     print(f"[DB INIT] ...Cached {len(monster_templates)} monsters.")
     return monster_templates
 
@@ -236,6 +290,6 @@ def fetch_all_skills() -> dict:
     if not isinstance(skill_list, list):
         print("[DB ERROR] 'skills.json' is not a valid list.")
         return {}
-    skill_templates = {s["skill_id"]: s for s in skill_list if s.get("skill_id")}
+    skill_templates = {s["skill_id"]: s for s in skill_list if isinstance(s, dict) and s.get("skill_id")}
     print(f"[DB INIT] ...Cached {len(skill_templates)} skills.")
     return skill_templates
