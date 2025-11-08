@@ -54,23 +54,40 @@ body {
     color: #888;
 }
 
-/* --- NEW: Vitals Container (RT + Posture) --- */
-#vitals-container {
+/* --- DELETED: #vitals-container styles removed --- */
+
+
+#input-line {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    margin-top: 5px; /* Space between output and this bar */
-    flex-shrink: 0; /* Don't shrink */
+    margin-top: 5px; /* MODIFIED: was 10px */
+    
+    /* --- NEW: Ensure it doesn't grow or shrink --- */
+    flex-grow: 0;
+    flex-shrink: 0;
+    
+    /* --- NEW: Relative positioning for RT bar --- */
+    position: relative;
+    border: 1px solid #333; /* Add a border to frame the input/rt */
+    background: #000; /* Background for the whole line */
 }
 
+/* --- NEW: RT Container (behind input) --- */
 #rt-container {
+    position: absolute;
+    top: 0;
+    left: 20px; /* Offset for the ">" span */
+    height: 100%;
+    z-index: 1; /* Behind the input */
+    
     display: flex;
     flex-direction: row;
+    align-items: center; /* Vertically center boxes */
+    padding-left: 5px; /* Small padding from the ">" */
 }
 
 .rt-box {
-    width: 20px;
-    height: 20px;
+    width: 10px; /* Smaller boxes */
+    height: 16px; /* Taller boxes */
     background-color: #222;
     border: 1px solid #444;
     margin-right: 2px;
@@ -82,36 +99,30 @@ body {
     background-color: #800000; /* Dark Red */
     border-color: #F00;
 }
+/* --- END NEW RT STYLES --- */
 
-#posture-container {
-    margin-left: 15px;
-    font-weight: bold;
-    color: #f0c674; /* Yellow/Gold */
-    font-size: 1.1em;
-}
-/* --- END NEW --- */
-
-
-#input-line {
-    display: flex;
-    margin-top: 5px; /* MODIFIED: was 10px */
-    
-    /* --- NEW: Ensure it doesn't grow or shrink --- */
-    flex-grow: 0;
-    flex-shrink: 0;
-}
 
 #input-line > span {
-    padding-right: 10px;
+    padding-right: 5px; /* Reduced padding */
+    padding-left: 5px;
     color: #CCC;
+    
+    /* --- NEW: Sit on top of RT bar --- */
+    position: relative;
+    z-index: 2;
 }
 
 #command-input {
     flex-grow: 1;
-    background: #000;
+    /* --- MODIFIED: Transparent background --- */
+    background: transparent;
     color: #0F0;
     border: none;
     font-family: 'Courier New', 'Lucida Console', monospace;
+    
+    /* --- NEW: Sit on top of RT bar --- */
+    position: relative;
+    z-index: 2;
 }
 #command-input:focus {
     outline: none;
@@ -161,6 +172,25 @@ body {
 .gauge-fill.mana { background-color: #0000a0; } /* Blue */
 .gauge-fill.stamina { background-color: #00a000; } /* Green */
 .gauge-fill.spirit { background-color: #a0a000; } /* Yellow */
+
+/* --- NEW: Posture Container (inside gauges) --- */
+#posture-container {
+    flex: 0 0 auto; /* Don't grow or shrink, size to content */
+    height: 22px;
+    background-color: #111;
+    border: 1px solid #555;
+    box-sizing: border-box;
+    padding: 0 15px;
+    
+    /* Flex to center text */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    color: #f0c674; /* Yellow/Gold */
+    font-weight: bold;
+    white-space: nowrap;
+}
 /* --- END NEW --- */
 
 

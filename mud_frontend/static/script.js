@@ -4,7 +4,7 @@ const input = document.getElementById('command-input');
 const contextMenu = document.getElementById('context-menu');
 
 // --- NEW: Get GUI elements ---
-const rtBoxes = document.querySelectorAll('#rt-container .rt-box');
+const rtContainer = document.getElementById('rt-container'); // Get the container
 const postureStatusEl = document.getElementById('posture-container');
 const gaugeFills = {
     health: document.getElementById('health-fill'),
@@ -36,7 +36,6 @@ let historyIndex = -1;
 
 // --- NEW: Roundtime Timer State ---
 let rtEndTime = 0;
-let rtTotalDuration = 0;
 let rtTimer = null;
 // --- END NEW ---
 
@@ -82,8 +81,7 @@ function updateRtDisplay() {
             rtTimer = null;
         }
         rtEndTime = 0;
-        rtBoxes.forEach(box => box.classList.remove('active'));
-        input.disabled = false;
+        rtContainer.innerHTML = ''; // Clear all boxes
         
         // Add prompt only if we are in the game
         if (currentClientState === "in_game" && currentGameState === "playing") {
@@ -92,15 +90,12 @@ function updateRtDisplay() {
         }
     } else {
         // --- Roundtime is active ---
-        input.disabled = true;
-        let boxesToShow = 0;
-        if (rtTotalDuration > 0) {
-            const percent = timeLeft / rtTotalDuration;
-            boxesToShow = Math.ceil(percent * 5); // 5 boxes
-        }
+        const secondsLeft = Math.ceil(timeLeft / 1000); // How many seconds are left
+        const currentBoxes = rtContainer.querySelectorAll('.rt-box');
         
-        rtBoxes.forEach((box, index) => {
-            if (index < boxesToShow) {
+        // Count down by removing 'active' class
+        currentBoxes.forEach((box, index) => {
+            if (index < secondsLeft) {
                 box.classList.add('active');
             } else {
                 box.classList.remove('active');
@@ -111,12 +106,28 @@ function updateRtDisplay() {
 
 function startRtTimer(duration_ms, end_time_ms) {
     rtEndTime = end_time_ms;
-    rtTotalDuration = duration_ms;
 
     // Clear any existing timer just in case
     if (rtTimer) {
         clearInterval(rtTimer);
     }
+    
+    // --- NEW: Dynamically create boxes ---
+    rtContainer.innerHTML = ''; // Clear old boxes
+    const totalSeconds = Math.ceil(duration_ms / 1000);
+    
+    // Don't create boxes for tiny RTs
+    if (totalSeconds < 1) {
+        updateRtDisplay();
+        return;
+    }
+
+    let boxesHtml = '';
+    for (let i = 0; i < totalSeconds; i++) {
+        boxesHtml += '<div class="rt-box active"></div>'; // Start all as active
+    }
+    rtContainer.innerHTML = boxesHtml;
+    // --- END NEW ---
     
     // Start a new timer
     rtTimer = setInterval(updateRtDisplay, 100); // Check 10x per second
@@ -274,9 +285,10 @@ socket.on('char_invalid', (message) => {
 // UPDATED: Input: Listen for "Enter" key
 // ---
 input.addEventListener('keydown', async function(event) {
-    // --- NEW: Block input if RT is active ---
-    if (event.key === 'Enter' && input.disabled) {
-        return; // Do nothing if input is disabled (RT active)
+    // --- NEW: Block "Enter" if RT is active ---
+    if (event.key === 'Enter' && rtTimer) {
+        event.preventDefault(); // Stop the 'Enter' key
+        return; // Do nothing
     }
     // --- END NEW ---
 
@@ -309,7 +321,7 @@ input.addEventListener('keydown', async function(event) {
             input.type = 'text';
         }
     }
-    // ... (ArrowUp/ArrowDown history logic is unchanged) ...
+    // --- MODIFIED: Arrow keys work even if "rtTimer" is active ---
     else if (event.key === 'ArrowUp') {
         event.preventDefault();
         if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
@@ -331,8 +343,8 @@ input.addEventListener('keydown', async function(event) {
 
 // --- UPDATED: Left-Click Menu Logic ---
 output.addEventListener('click', function(event) {
-    // --- NEW: Block clicks if input is disabled (RT) ---
-    if (input.disabled) return;
+    // --- NEW: Block clicks if RT is active ---
+    if (rtTimer) return;
     // --- END NEW ---
 
     const target = event.target;
@@ -390,8 +402,8 @@ document.addEventListener('click', function(event) {
 });
 
 contextMenu.addEventListener('click', function(event) {
-    // --- NEW: Block clicks if input is disabled (RT) ---
-    if (input.disabled) return;
+    // --- NEW: Block clicks if RT is active ---
+    if (rtTimer) return;
     // --- END NEW ---
 
     const command = event.target.dataset.command;
