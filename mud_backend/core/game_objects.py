@@ -98,16 +98,17 @@ class Player:
         self.chargen_step: int = self.db_data.get("chargen_step", 0)
         self.appearance: Dict[str, str] = self.db_data.get("appearance", {})
         
+        # --- THIS IS THE FIX: Define skills *before* vitals that depend on it ---
+        self.skills: Dict[str, int] = self.db_data.get("skills", {})
+        # --- END FIX ---
+        
         # --- HEALTH, MANA, STAMINA, SPIRIT ---
         self.hp: int = self.db_data.get("hp", 100)
         
-        # --- THIS IS THE FIX: Initialize using the @property as the default ---
+        # Initialize using the @property as the default
         self.mana: int = self.db_data.get("mana", self.max_mana)
         self.stamina: int = self.db_data.get("stamina", self.max_stamina)
         self.spirit: int = self.db_data.get("spirit", self.max_spirit)
-        # --- END FIX ---
-
-        self.skills: Dict[str, int] = self.db_data.get("skills", {})
 
         self.inventory: List[str] = self.db_data.get("inventory", [])
         self.worn_items: Dict[str, Optional[str]] = self.db_data.get("worn_items", {})
