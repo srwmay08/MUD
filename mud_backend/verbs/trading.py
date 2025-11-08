@@ -90,7 +90,9 @@ class Give(BaseVerb):
             
             # Send messages to both parties
             self.player.send_message(f"You give {silver_amount} silver to {target_player.name}.")
-            target_player.send_message(f"{self.player.name} gives you {silver_amount} silver.") # <-- THIS IS THE FIX
+            # --- THIS IS THE FIX ---
+            self.world.send_message_to_player(target_player.name.lower(), f"{self.player.name} gives you {silver_amount} silver.")
+            # --- END FIX ---
             
             # --- NEW: Add DEBUG log ---
             if config.DEBUG_MODE:
@@ -144,12 +146,15 @@ class Give(BaseVerb):
         if config.DEBUG_MODE:
             print(f"[TRADE DEBUG] {self.player.name} offered {trade_offer['item_name']} to {target_player.name}. Waiting for ACCEPT.")
 
-        target_player.send_message(
+        # --- THIS IS THE FIX ---
+        self.world.send_message_to_player(
+            target_player.name.lower(),
             f"{self.player.name} offers you {trade_offer['item_name']}. "
             f"Type '<span class='keyword' data-command='accept'>ACCEPT</span>' or "
             f"'<span class='keyword' data-command='decline'>DECLINE</span>'.\n"
             f"The offer will expire in 30 seconds."
         )
+        # --- END FIX ---
 
 
 class Accept(BaseVerb):
@@ -205,19 +210,26 @@ class Accept(BaseVerb):
             right_hand_slot = "mainhand"
             left_hand_slot = "offhand"
             
+            # --- THIS IS THE FIX ---
+            giver_player_name_lower = giver_player.name.lower()
+            # --- END FIX ---
+
             if self.player.worn_items.get(right_hand_slot) is None:
                 self.player.worn_items[right_hand_slot] = item_id
                 self.player.send_message(f"You accept {item_name} from {giver_player.name} and hold it in your right hand.")
-                giver_player.send_message(f"{self.player.name} accepts your offer for {item_name}.")
+                # --- THIS IS THE FIX ---
+                self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} accepts your offer for {item_name}.")
             elif self.player.worn_items.get(left_hand_slot) is None:
                 self.player.worn_items[left_hand_slot] = item_id
                 self.player.send_message(f"You accept {item_name} from {giver_player.name} and hold it in your left hand.")
-                giver_player.send_message(f"{self.player.name} accepts your offer for {item_name}.")
+                # --- THIS IS THE FIX ---
+                self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} accepts your offer for {item_name}.")
             else:
                 # Both hands are full, goes to pack
                 self.player.inventory.append(item_id)
                 self.player.send_message(f"You accept {item_name} from {giver_player.name}. Your hands are full, so you place it in your pack.")
-                giver_player.send_message(f"{self.player.name} accepts your offer for {item_name}.")
+                # --- THIS IS THE FIX ---
+                self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} accepts your offer for {item_name}.")
             # --- END NEW LOGIC ---
 
             # --- NEW: Add DEBUG log ---
@@ -286,8 +298,14 @@ class Accept(BaseVerb):
             # 7. Send confirmations and clear trade
             self.player.send_message(f"You hand {giver_player.name} {silver_amount} silver.\n"
                                      f"{item_received_msg}")
-            giver_player.send_message(f"{self.player.name} hands you {silver_amount} silver.\n"
-                                      f"{self.player.name} has accepted your offer.")
+            
+            # --- THIS IS THE FIX ---
+            self.world.send_message_to_player(
+                giver_player.name.lower(),
+                f"{self.player.name} hands you {silver_amount} silver.\n"
+                f"{self.player.name} has accepted your offer."
+            )
+            # --- END FIX ---
             
             # --- NEW: Add DEBUG log ---
             if config.DEBUG_MODE:
@@ -318,9 +336,11 @@ class Decline(BaseVerb):
         # 2. Notify players (standard decline)
         self.player.send_message(f"You decline the offer from {trade_offer['from_player_name']}.")
         
-        giver_player = self.world.get_player_obj(trade_offer['from_player_name'].lower())
-        if giver_player:
-            giver_player.send_message(f"{self.player.name} declines your offer.")
+        # --- THIS IS THE FIX ---
+        # Notify the giver, even if they are offline or in another room (so they don't see "offer pending")
+        giver_player_name_lower = trade_offer['from_player_name'].lower()
+        self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} declines your offer.")
+        # --- END FIX ---
 
 # --- NEW: Cancel verb ---
 class Cancel(BaseVerb):
@@ -345,10 +365,10 @@ class Cancel(BaseVerb):
             self.world.remove_pending_trade(receiver_name)
             self.player.send_message(f"You cancel your offer to {receiver_name}.")
             
+            # --- THIS IS THE FIX ---
             # Notify the person who *would* have received it
-            receiver_obj = self.world.get_player_obj(receiver_name)
-            if receiver_obj:
-                receiver_obj.send_message(f"{self.player.name} cancels their offer.")
+            self.world.send_message_to_player(receiver_name, f"{self.player.name} cancels their offer.")
+            # --- END FIX ---
             
             if config.DEBUG_MODE:
                 item_name = offer_to_cancel.get("item_name", "offer")
@@ -458,14 +478,14 @@ class Exchange(BaseVerb):
             f"Type '<span class='keyword' data-command='cancel'>CANCEL</span>' to prematurely cancel the offer."
         )
         
+        # --- THIS IS THE FIX ---
         # To Buyer (target)
-        target_player.send_message(
+        self.world.send_message_to_player(
+            target_player.name.lower(),
             f"{self.player.name} offers you {self.player.name}'s {item_name} for {silver_amount} silvers. "
             f"Type '<span class='keyword' data-command='accept'>ACCEPT</span>' to pay the silvers and accept the offer or "
             f"'<span class='keyword' data-command='decline'>DECLINE</span>' to decline it. "
             f"The offer will expire in 30 seconds."
         )
-        
-        # To Room (Broadcast)
-        # (This requires a broadcast_callback from the executor, which is complex.
-        # For now, we'll just message the two parties.)
+        # --- END FIX ---
+}

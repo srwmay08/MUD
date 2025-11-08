@@ -41,6 +41,7 @@ print("[SERVER START] Initializing database...")
 database = db.get_db()
 print("[SERVER START] Creating World instance...")
 world = World()
+world.socketio = socketio # <-- THIS IS THE FIX
 if database is not None:
     world.load_all_data(database)
 else:

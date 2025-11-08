@@ -19,6 +19,7 @@ class World:
     methods for accessing and modifying it.
     """
     def __init__(self):
+        self.socketio = None # <-- THIS IS THE FIX
         # --- State Dictionaries ---
         self.runtime_monster_hp: Dict[str, int] = {}
         self.defeated_monsters: Dict[str, Dict[str, Any]] = {}
@@ -242,3 +243,23 @@ class World:
     def remove_pending_trade(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         with self.trade_lock:
             return self.pending_trades.pop(player_name_lower, None)
+
+    # --- NEW METHOD ---
+    def send_message_to_player(self, player_name_lower: str, message: str, msg_type: str = "message"):
+        """Emits a message directly to a player's socket."""
+        if not self.socketio:
+            if config.DEBUG_MODE:
+                print(f"[WORLD/SOCKET-WARN] No socketio object. Cannot send message to {player_name_lower}: {message}")
+            return
+
+        player_info = self.get_player_info(player_name_lower)
+        if player_info:
+            sid = player_info.get("sid")
+            if sid:
+                self.socketio.emit(msg_type, message, to=sid)
+            elif config.DEBUG_MODE:
+                    print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} has no SID. Cannot send: {message}")
+        elif config.DEBUG_MODE:
+                print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} not active. Cannot send: {message}")
+    # --- END NEW METHOD ---
+}
