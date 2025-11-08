@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 from mud_backend.core.game_objects import Player
 from mud_backend.core.db import save_game_state
 from mud_backend.core import loot_system
-from mud_backend.core.skill_handler import calculate_skill_bonus
+# --- FIX: Import from utils.py instead of skill_handler.py ---
+from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend import config
 
 # --- STANCE MODIFIERS ---

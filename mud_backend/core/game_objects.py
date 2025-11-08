@@ -5,6 +5,8 @@ import math
 # from mud_backend.core import game_state
 # --- END REFACTOR ---
 from mud_backend import config
+# --- NEW IMPORT: Import from the neutral utils file ---
+from mud_backend.core.utils import calculate_skill_bonus
 
 # --- REFACTORED: Add TYPE_CHECKING for World ---
 if TYPE_CHECKING:
@@ -134,7 +136,8 @@ class Player:
         Calculates the final armor roundtime penalty after
         applying reduction from Armor Use skill bonus.
         """
-        from mud_backend.core.skill_handler import calculate_skill_bonus 
+        # --- FIX: Removed local import ---
+        # from mud_backend.core.skill_handler import calculate_skill_bonus 
 
         armor_id = self.worn_items.get("torso")
         if not armor_id:
