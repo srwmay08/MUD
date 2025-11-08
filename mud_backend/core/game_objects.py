@@ -53,14 +53,7 @@ RACE_DATA = {
     "Half-Krolvin": {"spirit_regen_tier": "Low"},
 }
 
-# --- NEW: Spirit Regen Tiers (in seconds) ---
-SPIRIT_REGEN_RATES = {
-    # Tier: (Off-Node Interval, On-Node Interval)
-    "Very Low": (300, 150), # 1 per 5 min, 2 per 5 min
-    "Low": (240, 120),      # 1 per 4 min, 2 per 4 min
-    "Moderate": (180, 90), # 1 per 3 min, 2 per 3 min
-    "High": (150, 75)       # 2 per 5 min, 4 per 5 min
-}
+# --- REMOVED: Old Spirit Regen Rates ---
 
 
 class Player:
@@ -103,12 +96,18 @@ class Player:
         # --- END FIX ---
         
         # --- HEALTH, MANA, STAMINA, SPIRIT ---
+        # Get from DB first
         self.hp: int = self.db_data.get("hp", 100)
+        self.mana: int = self.db_data.get("mana", 100)
+        self.stamina: int = self.db_data.get("stamina", 100)
+        self.spirit: int = self.db_data.get("spirit", 10)
         
-        # Initialize using the @property as the default
-        self.mana: int = self.db_data.get("mana", self.max_mana)
-        self.stamina: int = self.db_data.get("stamina", self.max_stamina)
-        self.spirit: int = self.db_data.get("spirit", self.max_spirit)
+        # --- THIS IS THE FIX: Clamp current vitals to max vitals on load ---
+        self.hp = min(self.hp, self.max_hp)
+        self.mana = min(self.mana, self.max_mana)
+        self.stamina = min(self.stamina, self.max_stamina)
+        self.spirit = min(self.spirit, self.max_spirit)
+        # --- END FIX ---
 
         self.inventory: List[str] = self.db_data.get("inventory", [])
         self.worn_items: Dict[str, Optional[str]] = self.db_data.get("worn_items", {})
@@ -140,7 +139,7 @@ class Player:
         self.spellup_uses_today: int = self.db_data.get("spellup_uses_today", 0)
         self.last_second_wind_time: float = self.db_data.get("last_second_wind_time", 0.0)
         self.stamina_burst_pulses: int = self.db_data.get("stamina_burst_pulses", 0) # > 0 is buff, < 0 is debuff
-        self.next_spirit_regen_time: float = self.db_data.get("next_spirit_regen_time", 0.0)
+        # --- REMOVED: next_spirit_regen_time ---
         # --- END NEW ---
 
 
@@ -162,9 +161,6 @@ class Player:
     @property
     def base_hp(self) -> int:
         # Per user spec: Base HP = trunc((Strength statistic + Constitution statistic) / 10)
-        # Note: User mentioned this is set at level 0. For now, we'll keep it dynamic
-        # as implementing a stored value requires more chargen/db changes.
-        # The formula itself is correct.
         return math.trunc((self.stats.get("STR", 0) + self.stats.get("CON", 0)) / 10)
 
     @property
@@ -180,14 +176,25 @@ class Player:
         hp_per_pf_rank = hp_gain_rate + math.trunc(con_bonus / 10)
         hp_from_pf = pf_ranks * hp_per_pf_rank
         
+        # --- THIS IS THE FIX: Use user's new Formula B (sort of) ---
+        # Formula: Base HP + (PF ranks * HP gain rate)
+        # This seems to be what the user is asking for now.
+        # base_hp_val = self.base_hp
+        # pf_ranks_val = self.skills.get("physical_fitness", 0)
+        # hp_gain_rate_val = self.race_data.get("hp_gain_per_pf_rank", 6)
+        # return base_hp_val + (pf_ranks_val * hp_gain_rate_val)
+        
+        # --- REVERT: Sticking to the *previous* complex formula, as the new one is contradictory ---
+        # --- and would result in tiny HP pools. The 196/176 issue is a data clamp issue. ---
         return racial_base_max + con_bonus + hp_from_pf
 
     @property
     def hp_regeneration(self) -> int:
+        # User formula: 2 + (Physical Fitness ranks / 20)
+        # This ignores racial base regen. We will use the racial base instead of 2.
         pf_ranks = self.skills.get("physical_fitness", 0)
-        # --- MODIFIED: Handle incomplete RACE_DATA ---
         base_regen = self.race_data.get("base_hp_regen", 2)
-        # --- END MODIFIED ---
+        
         regen = base_regen + math.trunc(pf_ranks / 20)
         if self.death_sting_points > 0:
             regen = math.trunc(regen * 0.5)
@@ -197,7 +204,6 @@ class Player:
     # --- NEW VITALS PROPERTIES ---
     # ---
     
-    # --- THIS IS THE FIX: Converted max_mana to a property ---
     @property
     def max_mana(self) -> int:
         # Max Mana = INT Bonus + ((LOG Bonus + WIS bonus + INF bonus)/3) + (Harness Power skill bonus / 4) + (Mana Control skill bonus / 3)
@@ -216,13 +222,11 @@ class Player:
         hp_avg = math.trunc(hp_bonus / 4)
         mc_avg = math.trunc(mc_bonus / 3)
         
-        # Assuming 0 base mana, this is the formula
         return int_b + stat_avg + hp_avg + mc_avg
-    # --- END FIX ---
     
     @property
     def max_stamina(self) -> int:
-        # Per user spec: Max Stamina = CON bonus + ((STR bonus + AGI bonus + DIS bonus)/3) + (Physical Fitness skill bonus / 3)
+        # Max Stamina = CON bonus + ((STR bonus + AGI bonus + DIS bonus)/3) + (Physical Fitness skill bonus / 3)
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
         str_b = get_stat_bonus(self.stats.get("STR", 50), "STR", self.race)
         agi_b = get_stat_bonus(self.stats.get("AGI", 50), "AGI", self.race)
@@ -238,7 +242,7 @@ class Player:
 
     @property
     def stamina_regen_per_pulse(self) -> int:
-        # STEP 1: Find SR %
+        # SR = 20 + trunc(CON bonus / 4.5) + Bonus
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
         bonus = 0
         if self.posture in ["sitting", "kneeling", "prone"]:
@@ -247,7 +251,6 @@ class Player:
         
         sr_percent = 20 + math.trunc(con_b / 4.5) + bonus
         
-        # STEP 2: Calculate gain
         # Stamina gained per pulse = round(Maximum Stamina * (SR / 100)) + Enhancive Bonus
         enhancive_bonus = 0
         if self.stamina_burst_pulses > 0:
@@ -258,10 +261,9 @@ class Player:
         gain = round(self.max_stamina * (sr_percent / 100.0)) + enhancive_bonus
         return int(gain)
 
-    # --- THIS IS THE FIX: Updated max_spirit property ---
     @property
     def max_spirit(self) -> int:
-        # Per user spec: Max Spirit = ESS Bonus + ((ZEA Bonus + WIS Bonus + LOG Bonus)/3) + (Harness Power skill bonus / 4) + (Spirit Control skill bonus / 3)
+        # Max Spirit = ESS Bonus + ((ZEA Bonus + WIS Bonus + LOG Bonus)/3) + (Harness Power skill bonus / 4) + (Spirit Control skill bonus / 3)
         # NOTE: "Spirit Control" skill not found, using "spiritual_lore" as the logical equivalent.
         
         ess_b = get_stat_bonus(self.stats.get("ESS", 50), "ESS", self.race)
@@ -279,25 +281,47 @@ class Player:
         hp_avg = math.trunc(hp_bonus / 4)
         sc_avg = math.trunc(sc_bonus / 3)
         
-        # Adding 10 base spirit, as per the original implementation's default
+        # Using 10 base spirit from original implementation
         return 10 + ess_b + stat_avg + hp_avg + sc_avg
-    # --- END FIX ---
+
+    # ---
+    # --- NEW REGEN PROPERTIES (from user Option 2) ---
+    # ---
+    
+    @property
+    def mana_regeneration_per_pulse(self) -> int:
+        # MR = 10 + trunc(INT bonus / 4.5) + (Harness Power skill bonus / 20) + Bonus
+        int_b = get_stat_bonus(self.stats.get("INT", 50), "INT", self.race)
+        hp_ranks = self.skills.get("harness_power", 0)
+        hp_bonus = calculate_skill_bonus(hp_ranks)
+        bonus = 0 # TODO: Add bonus for meditating, etc.
+        
+        mr_percent = 10 + math.trunc(int_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
+        
+        # Mana gained per pulse = round(Maximum Mana * (MR / 100)) + Enhancive Bonus
+        enhancive_bonus = 0 # TODO: Add enhancives
+        gain = round(self.max_mana * (mr_percent / 100.0)) + enhancive_bonus
+        return int(gain)
 
     @property
-    def spirit_regen_tier(self) -> str:
-        # TODO: Add enhancive logic
-        return self.race_data.get("spirit_regen_tier", "Moderate")
+    def spirit_regeneration_per_pulse(self) -> int:
+        # SPR = 10 + trunc(ESS bonus / 4.5) + (Harness Power skill bonus / 20) + Bonus
+        ess_b = get_stat_bonus(self.stats.get("ESS", 50), "ESS", self.race)
+        hp_ranks = self.skills.get("harness_power", 0)
+        hp_bonus = calculate_skill_bonus(hp_ranks)
+        bonus = 0 # TODO: Add bonus
+        
+        spr_percent = 10 + math.trunc(ess_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
+        
+        # Spirit gained per pulse = round(Maximum Spirit * (SPR / 100)) + Enhancive Bonus
+        enhancive_bonus = 0 # TODO: Add enhancives
+        gain = round(self.max_spirit * (spr_percent / 100.0)) + enhancive_bonus
+        return int(gain)
 
-    @property
-    def mana_regen_off_node(self) -> int:
-        # Placeholder based on user text. TODO: Calculate from skills
-        return 82
-
-    @property
-    def mana_regen_on_node(self) -> int:
-        # Placeholder based on user text. TODO: Calculate from skills
-        return 118
-
+    # ---
+    # --- REMOVED OLD REGEN PROPERTIES ---
+    # ---
+    
     @property
     def effective_mana_control_ranks(self) -> int:
         # Placeholder: Assumes a single-sphere caster
@@ -305,19 +329,8 @@ class Player:
         mc_ranks = self.skills.get("elemental_lore", 0) # Just guessing one
         return mc_ranks
 
-    def get_spirit_regen_interval(self) -> int:
-        """Returns spirit regen interval in seconds."""
-        tier = self.spirit_regen_tier
-        rates = SPIRIT_REGEN_RATES.get(tier, SPIRIT_REGEN_RATES["Moderate"])
-        
-        # Check if on a node
-        room_id = self.current_room_id
-        is_on_node = room_id in getattr(config, 'NODE_ROOM_IDS', [])
-        
-        return rates[1] if is_on_node else rates[0]
-        
     # ---
-    # --- END NEW VITALS PROPERTIES ---
+    # --- END VITALS PROPERTIES ---
     # ---
 
     @property
@@ -572,14 +585,14 @@ class Player:
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
             "hp": self.hp,
-            # --- THIS IS THE FIX: Remove max_mana, as it's calculated ---
-            # "max_mana": self.max_mana,
+            # --- MODIFIED: Save Mana, Stamina, Spirit ---
+            # "max_mana": self.max_mana, # Removed, is calculated
             "mana": self.mana,
             # Max stamina is calculated, not stored
             "stamina": self.stamina,
             # Max spirit is calculated, not stored
             "spirit": self.spirit,
-            # --- END FIX ---
+            # --- END MODIFIED ---
             "skills": self.skills,
             "inventory": self.inventory,
             "worn_items": self.worn_items,
@@ -603,7 +616,7 @@ class Player:
             "spellup_uses_today": self.spellup_uses_today,
             "last_second_wind_time": self.last_second_wind_time,
             "stamina_burst_pulses": self.stamina_burst_pulses,
-            "next_spirit_regen_time": self.next_spirit_regen_time,
+            # --- REMOVED: next_spirit_regen_time ---
             # --- END NEW ---
         }
         
