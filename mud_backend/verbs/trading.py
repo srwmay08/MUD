@@ -2,6 +2,37 @@
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 # --- REFACTORED: Removed game_state and get_player_object imports ---
+from typing import Dict, Any, Tuple, Optional
+
+# --- NEW: Helper functions copied from equipment.py ---
+def _find_item_in_inventory(player, target_name: str) -> str | None:
+    """Finds the first item_id in a player's inventory that matches."""
+    for item_id in player.inventory:
+        # --- FIX: Use player.world.game_items ---
+        item_data = player.world.game_items.get(item_id)
+        if item_data:
+            if (target_name == item_data.get("name", "").lower() or 
+                target_name in item_data.get("keywords", [])):
+                return item_id
+    return None
+
+def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Finds the first item_id in a player's hands that matches.
+    Returns (item_id, slot_name) or (None, None)
+    """
+    for slot in ["mainhand", "offhand"]:
+        item_id = player.worn_items.get(slot)
+        if item_id:
+            # --- FIX: Use player.world.game_items ---
+            item_data = player.world.game_items.get(item_id)
+            if item_data:
+                if (target_name == item_data.get("name", "").lower() or 
+                    target_name in item_data.get("keywords", [])):
+                    return item_id, slot
+    return None, None
+# --- END HELPERS ---
+
 
 class Give(BaseVerb):
     """
@@ -27,17 +58,24 @@ class Give(BaseVerb):
             self.player.send_message("You can't give things to yourself.")
             return
 
-        # 2. Find the item in the giver's inventory
+        # 2. Find the item in the giver's hands OR inventory
         item_id_to_give = None
-        for item_id in self.player.inventory:
-            # --- FIX: Use self.world.game_items ---
-            item_data = self.world.game_items.get(item_id)
-            if item_data and (target_item_name == item_data['name'].lower() or target_item_name in item_data.get("keywords", [])):
-                item_id_to_give = item_id
-                break
+        item_source_location = None # e.g., "inventory", "mainhand"
+        
+        # Check hands first
+        item_id_hand, hand_slot = _find_item_in_hands(self.player, target_item_name)
+        if item_id_hand:
+            item_id_to_give = item_id_hand
+            item_source_location = hand_slot
+        else:
+            # Check inventory
+            item_id_inv = _find_item_in_inventory(self.player, target_item_name)
+            if item_id_inv:
+                item_id_to_give = item_id_inv
+                item_source_location = "inventory"
         
         if not item_id_to_give:
-            self.player.send_message(f"You don't have a '{target_item_name}' in your pack.")
+            self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
             return
             
         # --- FIX: Use self.world.game_items ---
@@ -48,6 +86,7 @@ class Give(BaseVerb):
             "from_player_name": self.player.name,
             "item_id": item_id_to_give,
             "item_name": item_data['name'],
+            "item_source_location": item_source_location, # Track where it came from
             "offer_time": time.time()
         }
         
@@ -94,14 +133,30 @@ class Accept(BaseVerb):
             
         # 4. Check if the giver still has the item
         item_id = trade_offer['item_id']
-        if item_id not in giver_player.inventory:
+        item_source = trade_offer['item_source_location']
+        
+        item_is_present = False
+        if item_source == "inventory":
+            if item_id in giver_player.inventory:
+                item_is_present = True
+        elif item_source in ["mainhand", "offhand"]:
+            if giver_player.worn_items.get(item_source) == item_id:
+                item_is_present = True
+        
+        if not item_is_present:
             self.player.send_message(f"{giver_player.name} no longer has {trade_offer['item_name']}.")
             # --- FIX: Use self.world ---
             self.world.remove_pending_trade(player_key)
             return
             
         # 5. Success! Transfer the item.
-        giver_player.inventory.remove(item_id)
+        # Remove from giver
+        if item_source == "inventory":
+            giver_player.inventory.remove(item_id)
+        else: # Was in a hand
+            giver_player.worn_items[item_source] = None
+            
+        # Give to receiver (always goes to inventory)
         self.player.inventory.append(item_id)
         
         self.player.send_message(f"You accept {trade_offer['item_name']} from {giver_player.name}.")

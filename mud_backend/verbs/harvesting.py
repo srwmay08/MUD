@@ -109,7 +109,13 @@ class Search(BaseVerb):
             return
 
         if corpse_obj.get("searched_and_emptied", False):
-            self.player.send_message(f"The {corpse_obj['name']} has already been searched.")
+            self.player.send_message(f"You search the {corpse_obj['name']} but find nothing left.")
+            # --- THIS IS THE FIX ---
+            # Remove the already-searched corpse
+            if corpse_obj in self.room.objects:
+                self.room.objects.remove(corpse_obj)
+            self.world.save_room(self.room)
+            # --- END FIX ---
             return
 
         # Mark as searched immediately (so it can't be searched again)
@@ -122,7 +128,8 @@ class Search(BaseVerb):
             
             # --- THIS IS THE FIX ---
             # Remove the empty corpse from the room
-            self.room.objects.remove(corpse_obj)
+            if corpse_obj in self.room.objects:
+                self.room.objects.remove(corpse_obj)
             # --- FIX: Use self.world.save_room ---
             self.world.save_room(self.room) # Save the room state
             # --- END FIX ---
@@ -145,7 +152,8 @@ class Search(BaseVerb):
         # Clear the corpse's inventory (redundant, but good practice)
         corpse_obj["inventory"] = []
         # Remove the searched corpse from the room
-        self.room.objects.remove(corpse_obj)
+        if corpse_obj in self.room.objects:
+            self.room.objects.remove(corpse_obj)
         
         # Save the room state *after* spilling items and removing corpse
         # --- FIX: Use self.world.save_room ---
@@ -199,7 +207,12 @@ class Skin(BaseVerb):
             return
 
         # Get player's skinning skill
-        player_skill = self.player.skills.get("skinning", 0)
+        # --- FIX: 'skinning' is not a skill, 'survival' might be used?
+        # Let's assume 'survival' is the skill for skinning for now.
+        # If 'skinning' is a real skill, this is correct.
+        # Re-checking skills.json... there is no 'skinning' skill.
+        # I will use 'survival'
+        player_skill = self.player.skills.get("survival", 0)
         
         # Call the loot_system function
         # --- FIX: Pass self.world.game_items ---
