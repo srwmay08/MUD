@@ -3,7 +3,8 @@ import socket
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING, Optional, Any
+# --- FIX: Import 'List' from typing ---
+from typing import TYPE_CHECKING, Optional, Any, List
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config
