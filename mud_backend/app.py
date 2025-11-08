@@ -123,27 +123,20 @@ def game_tick_thread(world_instance: World):
                         giver_obj.send_message(f"Your offer to {receiver_name} for {item_name} has expired.")
             # --- END NEW: Trade Timeout ---
 
-            # --- NEW: 1.c. FAST TICK: Spirit Regen & Ability Cooldowns ---
+            # --- MODIFIED: 1.c. FAST TICK: Ability Cooldowns ONLY ---
+            # --- (Regen is now handled in the 30s 'slow' tick) ---
             active_players_list = world_instance.get_all_players_info()
             for player_name_lower, player_data in active_players_list:
                 player_obj = player_data.get("player_obj")
                 if not player_obj:
                     continue
-
-                # --- Spirit Regen Check ---
-                if player_obj.spirit < player_obj.max_spirit:
-                    if current_time >= player_obj.next_spirit_regen_time:
-                        player_obj.spirit += 1
-                        # Get new interval and set next time
-                        interval = player_obj.get_spirit_regen_interval()
-                        player_obj.next_spirit_regen_time = current_time + interval
                 
                 # --- Ability Cooldown Checks (e.g., Spellup) ---
                 # Check if 24 hours (86400s) has passed since last spellup
                 if player_obj.spellup_uses_today > 0:
                     if current_time - player_obj.last_spellup_use_time > 86400:
                          player_obj.spellup_uses_today = 0
-            # --- END NEW: Spirit Regen ---
+            # --- END MODIFIED: Ability Cooldowns ---
             
             # --- 2. INDEPENDENT TICK: Monster AI Movement ---
             # --- REFACTORED: Use world attributes for timers ---

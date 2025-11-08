@@ -41,6 +41,47 @@ def _prune_active_players(world: 'World', log_prefix: str, broadcast_callback: C
                 broadcast_callback(room_id, disappears_message, "ambient")
                 print(f"{log_prefix}: Pruned stale player {player_name} from room {room_id}.")
 
+# ---
+# --- NEW: Function to handle all player regeneration
+# ---
+def _process_player_vitals(world: 'World', log_prefix: str, send_to_player_callback: Callable):
+    """
+    Handles passive regeneration for HP, Mana, Stamina, and Spirit
+    for all active players.
+    """
+    if config.DEBUG_MODE:
+        print(f"{log_prefix}: Processing player vitals...")
+        
+    active_players_list = world.get_all_players_info()
+    
+    for player_name, data in active_players_list:
+        player_obj = data.get("player_obj")
+        if not player_obj:
+            continue
+            
+        # 1. HP Regeneration
+        hp_regen_amount = player_obj.hp_regeneration
+        if player_obj.hp < player_obj.max_hp and hp_regen_amount > 0:
+            player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_regen_amount)
+            # We don't send a message for HP regen to reduce spam
+
+        # 2. Mana Regeneration
+        mana_regen_amount = player_obj.mana_regeneration_per_pulse
+        if player_obj.mana < player_obj.max_mana and mana_regen_amount > 0:
+            player_obj.mana = min(player_obj.max_mana, player_obj.mana + mana_regen_amount)
+
+        # 3. Stamina Regeneration
+        stamina_regen_amount = player_obj.stamina_regen_per_pulse
+        if player_obj.stamina < player_obj.max_stamina and stamina_regen_amount > 0:
+            player_obj.stamina = min(player_obj.max_stamina, player_obj.stamina + stamina_regen_amount)
+            
+        # 4. Spirit Regeneration
+        spirit_regen_amount = player_obj.spirit_regeneration_per_pulse
+        if player_obj.spirit < player_obj.max_spirit and spirit_regen_amount > 0:
+            player_obj.spirit = min(player_obj.max_spirit, player_obj.spirit + spirit_regen_amount)
+# --- END NEW FUNCTION ---
+
+
 # --- REFACTORED: Accept world object ---
 def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_to_player_callback: Callable) -> bool:
     """
@@ -110,6 +151,16 @@ def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_t
         for msg in messages:
             broadcast_callback(room_id, msg, "ambient_decay")
     
+    # ---
+    # --- NEW: 6. Process Player Vitals (Regen)
+    # ---
+    _process_player_vitals(
+        world=world,
+        log_prefix=log_prefix,
+        send_to_player_callback=send_to_player_callback
+    )
+    # --- END NEW ---
+
     if config.DEBUG_MODE:
         print(f"{log_prefix}: Global tick complete.")
         

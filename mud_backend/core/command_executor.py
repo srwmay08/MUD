@@ -111,8 +111,10 @@ def _get_player_vitals(world: 'World', player: Player) -> Dict[str, Any]:
     
     # 1. Get HP, Mana, Stamina, Spirit
     vitals = {
-        "hp": player.hp,
-        "max_hp": player.max_hp,
+        # --- THIS IS THE FIX ---
+        "health": player.hp,         # CHANGED from "hp"
+        "max_health": player.max_hp,   # CHANGED from "max_hp"
+        # --- END FIX ---
         "mana": player.mana,
         "max_mana": player.max_mana,
         "stamina": player.stamina,
