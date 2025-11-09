@@ -169,7 +169,7 @@ body {
 
 /* Bar Colors */
 .gauge-fill.health { background-color: #a00000; } /* Red */
-.gauge-fill.mana { background-color: #0000a0; } /* Blue */
+.gauge-fill.mana { background-color: #182fa3; } /* Blue */
 .gauge-fill.stamina { background-color: #00a000; } /* Green */
 .gauge-fill.spirit { background-color: #a0a000; } /* Yellow */
 

@@ -178,4 +178,3 @@ def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_t
         print(f"{log_prefix}: Global tick complete.")
         
     return True
-}
