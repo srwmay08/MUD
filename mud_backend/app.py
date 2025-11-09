@@ -169,7 +169,8 @@ def game_tick_thread(world_instance: World):
             did_global_tick = check_and_run_game_tick(
                 world=world_instance,
                 broadcast_callback=broadcast_to_room,
-                send_to_player_callback=send_to_player 
+                send_to_player_callback=send_to_player,
+                send_vitals_callback=send_vitals_to_player # <-- THIS IS THE FIX
             )
 
             # --- THIS IS THE FIX: Uncommented this block ---
