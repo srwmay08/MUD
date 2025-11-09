@@ -8,6 +8,27 @@ from mud_backend.core.skill_handler import (
 from mud_backend import config
 import re
 
+# --- NEW: Map of skill_ids to their corresponding starter item_ids ---
+# (Item IDs are from data/items.json)
+SKILL_TO_WEAPON_MAP = {
+    "brawling": "knuckle_dusters",
+    "small_edged": "starter_dagger",
+    "edged_weapons": "starter_short_sword",
+    "two_handed_edged": "starter_bastard_sword",
+    "small_blunt": "starter_club",
+    "blunt_weapons": "starter_mace",
+    "two_handed_blunt": "starter_greatclub",
+    "polearms": "starter_spear",
+    "staves": "starter_staff",
+    "bows": "starter_bow",
+    "crossbows": "starter_crossbow",
+    "slings": "starter_sling",
+    "small_thrown": "starter_throwing_knife",
+    "large_thrown": "starter_javelin"
+}
+# --- END NEW ---
+
+
 class CheckIn(BaseVerb):
     """
     Handles the 'checkin' command.
@@ -105,6 +126,40 @@ class Done(BaseVerb):
         
         # Set HP to max after chargen
         self.player.hp = self.player.max_hp
+        
+        # --- THIS IS THE UPDATED LOGIC ---
+        
+        # 1. Grant standard gear (backpack, armor, silver)
+        if not self.player.worn_items.get("back"):
+            self.player.worn_items["back"] = "starter_backpack"
+            
+        if not self.player.worn_items.get("torso"):
+            self.player.worn_items["torso"] = "starter_leather_armor"
+
+        if self.player.wealth.get("silvers", 0) == 0:
+            self.player.wealth["silvers"] = 500 # Grant 500 silver
+            
+        # 2. Grant best weapon based on trained skills
+        if not self.player.worn_items.get("mainhand"):
+            best_skill_id = None
+            max_rank = 0
+            
+            # Find the highest-ranked weapon skill the player trained
+            for skill_id, rank in self.player.skills.items():
+                if skill_id in SKILL_TO_WEAPON_MAP and rank > max_rank:
+                    max_rank = rank
+                    best_skill_id = skill_id
+            
+            # Grant the corresponding weapon
+            if best_skill_id:
+                weapon_to_grant = SKILL_TO_WEAPON_MAP[best_skill_id]
+                self.player.worn_items["mainhand"] = weapon_to_grant
+            else:
+                # Default to a dagger if no weapon skills were trained
+                self.player.worn_items["mainhand"] = "starter_dagger"
+        
+        self.player.send_message("You are given some starting gear to help you on your way.")
+        # --- END UPDATED LOGIC ---
         
         # Move player to the town square to start the game
         # (This also handles broadcasting their arrival)
