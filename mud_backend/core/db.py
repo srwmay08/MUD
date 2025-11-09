@@ -294,3 +294,10 @@ def fetch_all_skills() -> dict:
     skill_templates = {s["skill_id"]: s for s in skill_list if isinstance(s, dict) and s.get("skill_id")}
     print(f"[DB INIT] ...Cached {len(skill_templates)} skills.")
     return skill_templates
+
+def fetch_all_criticals() -> dict:
+    """Loads criticals.json into a dictionary."""
+    print("[DB INIT] Caching all criticals from criticals.json...")
+    criticals = _load_json_data("criticals.json")
+    print(f"[DB INIT] ...Cached {len(criticals)} critical tables.")
+    return criticals

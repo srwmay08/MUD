@@ -1,0 +1,47 @@
+{
+  "slash": {
+    "head": {
+      "1": { "message": "A minor cut grazes the {defender}'s head.", "extra_damage": 1, "wound_rank": 1 },
+      "2": { "message": "A slash glances across the {defender}'s scalp.", "extra_damage": 3, "wound_rank": 1 },
+      "3": { "message": "A solid cut opens a gash on the {defender}'s face.", "extra_damage": 5, "wound_rank": 2, "stun": true },
+      "4": { "message": "A deep slash strikes the {defender}'s head, staggering them.", "extra_damage": 8, "wound_rank": 2, "stun": true },
+      "5": { "message": "A savage cut to the {defender}'s head sends them reeling.", "extra_damage": 12, "wound_rank": 3, "stun": true },
+      "6": { "message": "A brutal slash caves in the {defender}'s skull. A fatal blow!", "extra_damage": 20, "wound_rank": 3, "fatal": true }
+    },
+    "right_hand": {
+      "1": { "message": "A minor cut on the {defender}'s right hand.", "extra_damage": 1, "wound_rank": 1 },
+      "2": { "message": "A sharp cut lands on the {defender}'s right knuckles.", "extra_damage": 2, "wound_rank": 1 },
+      "3": { "message": "A deep slash cuts across the {defender}'s right palm.", "extra_damage": 4, "wound_rank": 2 },
+      "4": { "message": "Strong slash to the {defender}'s right hand cuts deep.", "extra_damage": 7, "wound_rank": 2, "stun": true },
+      "5": { "message": "A vicious slash severs tendons in the {defender}'s right hand!", "extra_damage": 10, "wound_rank": 3 },
+      "6": { "message": "The {defender}'s right hand is lopped off at the wrist!", "extra_damage": 15, "wound_rank": 3 }
+    }
+  },
+  "crush": {
+    "head": {
+      "1": { "message": "A glancing blow bruises the {defender}'s head.", "extra_damage": 2, "wound_rank": 1 },
+      "2": { "message": "A solid blow rings the {defender}'s bell.", "extra_damage": 4, "wound_rank": 1, "stun": true },
+      "3": { "message": "A heavy blow to the {defender}'s head sends them seeing stars.", "extra_damage": 7, "wound_rank": 2, "stun": true },
+      "4": { "message": "A crushing blow splits the {defender}'s helm, staggering them.", "extra_damage": 10, "wound_rank": 2, "stun": true },
+      "5": { "message": "A devastating blow caves in the {defender}'s head. A fatal blow!", "extra_damage": 20, "wound_rank": 3, "fatal": true }
+    },
+    "chest": {
+      "1": { "message": "A solid thump to the {defender}'s chest.", "extra_damage": 1, "wound_rank": 1 },
+      "2": { "message": "A heavy blow to the {defender}'s chest knocks the wind out of them.", "extra_damage": 3, "wound_rank": 1, "stun": true },
+      "3": { "message": "A powerful blow cracks the {defender}'s ribs.", "extra_damage": 5, "wound_rank": 2, "stun": true }
+    }
+  },
+  "puncture": {
+    "neck": {
+      "1": { "message": "A small prick on the {defender}'s neck.", "extra_damage": 2, "wound_rank": 1 },
+      "2": { "message": "A sharp jab pierces the {defender}'s neck.", "extra_damage": 5, "wound_rank": 2 },
+      "3": { "message": "The blade sinks deep into the {defender}'s throat.", "extra_damage": 10, "wound_rank": 3, "stun": true },
+      "4": { "message": "A mortal wound to the {defender}'s neck! Blood fountains forth.", "extra_damage": 25, "wound_rank": 3, "fatal": true }
+    }
+  },
+  "wounds": {
+    "head": { "1": "minor bruises about the head", "2": "minor lacerations about the head", "3": "severe head trauma and bleeding" },
+    "neck": { "1": "minor bruises on your neck", "2": "moderate bleeding from your neck", "3": "serious bleeding from the neck" },
+    "right_hand": { "1": "minor cuts on your right hand", "2": "a fractured and bleeding right hand", "3": "a completely severed right hand" }
+  }
+}

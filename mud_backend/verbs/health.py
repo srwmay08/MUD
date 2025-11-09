@@ -46,3 +46,15 @@ class Health(BaseVerb):
         self.player.send_message(f"HP: {current_hp}/{max_hp} ({status})")
         self.player.send_message(f"CON Loss: {con_loss_msg}")
         self.player.send_message(f"Death's Sting: {death_sting_msg}")
+        
+        # --- NEW: Display Wounds ---
+        if self.player.wounds:
+            self.player.send_message("\n--- **Active Wounds** ---")
+            # Load the wound descriptions from the criticals table
+            wound_descs = self.world.game_criticals.get("wounds", {})
+            
+            for location, rank in self.player.wounds.items():
+                # Get the description for this location and rank
+                desc = wound_descs.get(location, {}).get(str(rank), f"a rank {rank} wound to the {location}")
+                self.player.send_message(f"- {location.capitalize()}: {desc}")
+        # --- END NEW ---

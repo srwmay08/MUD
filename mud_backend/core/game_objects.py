@@ -131,6 +131,10 @@ class Player:
         self.death_sting_points: int = self.db_data.get("death_sting_points", 0)
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
+        
+        # --- NEW: Add wound tracking ---
+        self.wounds: Dict[str, int] = self.db_data.get("wounds", {})
+        # --- END NEW ---
 
         # --- NEW: Vitals Ability Tracking ---
         self.next_mana_pulse_time: float = self.db_data.get("next_mana_pulse_time", 0.0)
@@ -600,6 +604,7 @@ class Player:
             "death_sting_points": self.death_sting_points,
             "con_lost": self.con_lost,
             "con_recovery_pool": self.con_recovery_pool,
+            "wounds": self.wounds, # <-- ADD THIS
             # --- NEW: Save Vitals Ability Tracking ---
             "next_mana_pulse_time": self.next_mana_pulse_time,
             "mana_pulse_used": self.mana_pulse_used,

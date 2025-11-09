@@ -267,7 +267,76 @@ def get_flavor_message(key, d100_roll, combat_roll_result):
         if d100_roll <= 5: return random.choice(HIT_MESSAGES[key.replace("miss", "fumble")])
         else: return random.choice(HIT_MESSAGES[key.replace("hit", "miss")])
 
-def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dict:
+# --- NEW HELPER FUNCTIONS ---
+HIT_LOCATIONS = [
+    "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
+    "right_leg", "left_leg", "right_arm", "left_arm", "right_hand", "left_hand"
+]
+
+def _get_random_hit_location() -> str:
+    """Returns a random hit location string."""
+    return random.choice(HIT_LOCATIONS)
+
+def _get_entity_critical_divisor(entity: Any, armor_data: Optional[Dict]) -> int:
+    """Gets the critical divisor. 5 for unarmored, or from armor."""
+    if armor_data:
+        return armor_data.get("critical_divisor", 11) # Default to 11 (plate) if missing
+    
+    # Check for monster innate armor
+    if isinstance(entity, dict):
+        return entity.get("critical_divisor", 5) # Monster default
+        
+    return 5 # Player default
+
+def _get_randomized_crit_rank(base_rank: int) -> int:
+    """Applies the critical randomization table."""
+    if base_rank <= 0: return 0
+    if base_rank == 1: return 1
+    if base_rank == 2: return random.choice([1, 2])
+    if base_rank == 3: return random.choice([2, 3])
+    if base_rank == 4: return random.choice([2, 3, 4])
+    if base_rank == 5: return random.choice([3, 4, 5])
+    if base_rank == 6: return random.choice([3, 4, 5, 6])
+    if base_rank == 7: return random.choice([4, 5, 6, 7])
+    if base_rank == 8: return random.choice([4, 5, 6, 7, 8])
+    return random.choice([5, 6, 7, 8, 9]) # For 9+
+
+def _get_critical_result(
+    world: 'World', 
+    damage_type: str, 
+    location: str, 
+    rank: int
+) -> Dict[str, Any]:
+    """
+    Looks up the critical result from the world's loaded criticals table.
+    """
+    if rank <= 0:
+        return {"message": "", "extra_damage": 0, "wound_rank": 0}
+
+    # Fallback to "slash" if type is missing
+    if damage_type not in world.game_criticals:
+        damage_type = "slash"
+        
+    crit_table = world.game_criticals[damage_type]
+    
+    # Fallback to "chest" if location is missing
+    if location not in crit_table:
+        location = "chest"
+        
+    location_table = crit_table[location]
+    
+    # Get the highest available rank if we exceed the table
+    rank_str = str(min(rank, max(int(k) for k in location_table.keys())))
+    
+    result = location_table.get(rank_str, {"message": "A solid hit!", "extra_damage": 1, "wound_rank": 1})
+    result.setdefault("stun", False)
+    result.setdefault("fatal", False)
+    return result
+# --- END NEW HELPER FUNCTIONS ---
+
+
+def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_global: dict) -> dict:
+    # --- (This part is mostly the same) ---
     is_attacker_player = isinstance(attacker, Player)
     attacker_name = attacker.name if is_attacker_player else attacker.get("name", "Creature")
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
@@ -276,16 +345,6 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
     attacker_race = get_entity_race(attacker)
     # Get attacker stance, default to 'creature' for monsters
     attacker_stance = attacker.stance if is_attacker_player else attacker.get("stance", "creature")
-
-    if is_attacker_player:
-        attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
-        attacker.add_field_exp(1)
-    else:
-        mainhand_id = attacker.get("equipped", {}).get("mainhand")
-        attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
-
-    attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
-    is_ranged_attack = attacker_weapon_type in ["bow"]
 
     is_defender_player = isinstance(defender, Player)
     defender_name = defender.name if is_defender_player else defender.get("name", "Creature")
@@ -312,7 +371,26 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         defender_shield_data = None
     if defender_offhand_data and defender_offhand_data.get("item_type") == "shield": # FIX: check item_type
         defender_offhand_data = None
+        
+    # --- (This is where you get the DF and Damage Type) ---
+    if is_attacker_player:
+        attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
+        attacker.add_field_exp(1)
+    else:
+        mainhand_id = attacker.get("equipped", {}).get("mainhand")
+        attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
 
+    # --- NEW: Get Damage Factor and Type ---
+    weapon_damage_factor = 0.100 # Brawling default
+    weapon_damage_type = "crush"  # Brawling default
+    if attacker_weapon_data:
+        weapon_damage_type = attacker_weapon_data.get("damage_type", "crush")
+        weapon_damage_factor = attacker_weapon_data.get("damage_factors", {}).get(defender_armor_type_str, 0.100)
+    
+    attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
+    is_ranged_attack = attacker_weapon_type in ["bow"]
+
+    # --- (AS and DS calculation is unchanged) ---
     attacker_as = calculate_attack_strength(
         attacker_name, attacker_stats, attacker_skills,
         attacker_weapon_data, defender_armor_type_str,
@@ -327,7 +405,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
 
     d100_roll = random.randint(1, 100)
     combat_advantage = getattr(config, 'COMBAT_ADVANTAGE_FACTOR', 40)
-    combat_roll_result = (attacker_as - defender_ds) + combat_advantage + d100_roll
+    combat_roll_result = (attacker_as - defender_ds) + combat_advantage + d100_roll # This is the "Endroll"
 
     as_str = f"+{attacker_as}" if attacker_as >= 0 else str(attacker_as)
     ds_str = f"+{defender_ds}" if defender_ds >= 0 else str(defender_ds)
@@ -336,6 +414,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         f"+ ADV: +{combat_advantage} + d100: +{d100_roll} = +{combat_roll_result}"
     )
 
+    # --- (Flavor message setup is unchanged) ---
     if is_attacker_player:
         weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
         msg_key_hit = "player_hit"
@@ -344,37 +423,66 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         weapon_display = attacker_weapon_data.get("name", "its natural weapons") if attacker_weapon_data else "its natural weapons"
         msg_key_hit = "monster_hit"
         msg_key_miss = "monster_miss"
-
+        
     msg_vars = {"attacker": attacker_name, "defender": defender_name, "weapon_display": weapon_display}
-
+    
     results = {
         'hit': False, 'damage': 0, 'roll_string': roll_string,
         'attacker_msg': "", 'defender_msg': "", 'broadcast_msg': "",
-        'damage_msg': "", 'defender_damage_msg': "", 'broadcast_damage_msg': ""
+        'damage_msg': "", 'defender_damage_msg': "", 'broadcast_damage_msg': "",
+        'is_fatal': False
     }
 
+    # --- (THIS IS THE REPLACED SECTION) ---
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
-        flat_base_damage_component = getattr(config, 'BAREHANDED_FLAT_DAMAGE', 1)
-        if not is_attacker_player and (not attacker_weapon_data or attacker_weapon_data.get("item_type") != "weapon"): # FIX: check item_type
-             flat_base_damage_component += attacker.get("natural_attack_bonus_damage", 0)
-
-        damage_divisor = getattr(config, 'COMBAT_DAMAGE_MODIFIER_DIVISOR', 10)
-        damage_bonus_from_roll = max(0, (combat_roll_result - config.COMBAT_HIT_THRESHOLD) // damage_divisor)
-        total_damage = max(1, flat_base_damage_component + damage_bonus_from_roll)
-        if d100_roll >= 95: total_damage = int(total_damage * 1.5)
+        
+        # 1. Calculate Raw Damage (per text formula)
+        endroll_success_margin = combat_roll_result - config.COMBAT_HIT_THRESHOLD
+        raw_damage = max(1, endroll_success_margin * weapon_damage_factor) # Ensure at least 1 raw damage
+        
+        # 2. Get Critical Divisor
+        critical_divisor = _get_entity_critical_divisor(defender, defender_armor_data)
+        
+        # 3. Get Base Critical Rank
+        base_crit_rank = math.trunc(raw_damage / critical_divisor)
+        
+        # 4. Get Randomized Rank
+        final_crit_rank = _get_randomized_crit_rank(base_crit_rank)
+        
+        # 5. Get Hit Location
+        hit_location = _get_random_hit_location() # (Add logic for Ambush/Precision here later)
+        
+        # 6. Get Critical Result
+        crit_result = _get_critical_result(world, weapon_damage_type, hit_location, final_crit_rank)
+        
+        # 7. Total Damage (Raw + Crit)
+        extra_damage = crit_result["extra_damage"]
+        total_damage = math.trunc(raw_damage) + extra_damage
         results['damage'] = total_damage
-
+        results['is_fatal'] = crit_result.get("fatal", False)
+        
+        # 8. Apply Wound (if defender is a player)
+        wound_rank = crit_result.get("wound_rank", 0)
+        if is_defender_player and wound_rank > 0:
+            existing_wound = defender.wounds.get(hit_location, 0)
+            if wound_rank > existing_wound:
+                defender.wounds[hit_location] = wound_rank
+        
+        # --- (Message formatting) ---
         flavor_msg = get_flavor_message(msg_key_hit, d100_roll, combat_roll_result)
         results['attacker_msg'] = flavor_msg.format(**msg_vars)
         results['defender_msg'] = flavor_msg.format(**msg_vars)
-        results['damage_msg'] = f"You hit for **{total_damage}** damage!"
-        results['defender_damage_msg'] = f"You are hit for **{total_damage}** damage!"
+        
+        # Format the critical message
+        crit_msg = crit_result.get("message", "A solid hit!").format(defender=defender_name)
+        
+        results['damage_msg'] = f"...and hit for **{total_damage}** points of damage!\n{crit_msg}"
+        results['defender_damage_msg'] = f"...and hit you for **{total_damage}** points of damage!\n{crit_msg}"
+        results['broadcast_damage_msg'] = f"{attacker_name} hits for **{total_damage}** damage!\n{crit_msg}"
 
-        broadcast_flavor_msg = get_flavor_message(msg_key_hit.replace("player", "monster"), d100_roll, combat_roll_result)
-        results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
-        results['broadcast_damage_msg'] = f"{attacker_name} hits for **{total_damage}** damage!"
     else:
+        # --- (This 'miss' block is unchanged) ---
         results['hit'] = False
         flavor_msg = get_flavor_message(msg_key_miss, d100_roll, combat_roll_result)
         results['attacker_msg'] = flavor_msg.format(**msg_vars)
@@ -383,6 +491,7 @@ def resolve_attack(attacker: Any, defender: Any, game_items_global: dict) -> dic
         results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
 
     return results
+
 
 def calculate_roundtime(agility: int) -> float:
     return max(3.0, 5.0 - ((agility - 50) / 25))
@@ -447,7 +556,7 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             world.remove_combat_state(combatant_id) # Stop this monster
             continue
 
-        attack_results = resolve_attack(attacker, defender, game_items_global=world.game_items)
+        attack_results = resolve_attack(world, attacker, defender, game_items_global=world.game_items)
 
         sid_to_skip = None
         if is_defender_player:
@@ -460,12 +569,18 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
 
         if attack_results['hit']:
             damage = attack_results['damage']
+            is_fatal = attack_results['is_fatal'] # <-- GET THE FATAL FLAG
+            
             if is_defender_player: send_to_player_callback(defender.name, attack_results['defender_damage_msg'], "combat_other")
             broadcast_callback(attacker_room_id, attack_results['broadcast_damage_msg'], "combat_broadcast", skip_sid=sid_to_skip)
 
             if is_defender_player:
                 defender.hp -= damage
-                if defender.hp <= 0:
+                
+                # --- NEW FATAL CHECK ---
+                if defender.hp <= 0 or is_fatal:
+                    if is_fatal and defender.hp > 0:
+                         send_to_player_callback(defender.name, "The world goes black as you suffer a fatal wound...", "combat_death")
                     defender.hp = 0
                     broadcast_callback(attacker_room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     

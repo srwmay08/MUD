@@ -71,9 +71,9 @@ class Attack(BaseVerb):
         
         # --- Helper function to perform the attack and handle results ---
         def _resolve_and_handle_attack():
-            # --- FIX: Pass self.world.game_items ---
+            # --- FIX: Pass self.world.game_items AND self.world ---
             attack_results = combat_system.resolve_attack(
-                self.player, target_monster_data, self.world.game_items
+                self.world, self.player, target_monster_data, self.world.game_items
             )
             
             # 1. Flavor Text
@@ -88,6 +88,7 @@ class Attack(BaseVerb):
                 
                 # 4. Consequences (HP, Death)
                 damage = attack_results['damage']
+                is_fatal = attack_results['is_fatal'] # <-- GET FATAL FLAG
                 new_hp = 0
                 
                 # --- FIX: Use self.world.modify_monster_hp ---
@@ -97,7 +98,7 @@ class Attack(BaseVerb):
                     damage
                 )
 
-                if new_hp <= 0:
+                if new_hp <= 0 or is_fatal: # <-- CHECK FATAL FLAG
                     self.player.send_message(f"**The {target_monster_data['name']} has been DEFEATED!**")
                     
                     nominal_xp = 1000 # TODO: Get from template

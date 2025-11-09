@@ -64,7 +64,21 @@
         "keywords": ["armor", "leather armor", "starter armor"],
         "base_value": 120,
         "armor_rt": 1,
-        "armor_ap": -1
+        "armor_ap": -1,
+        "critical_divisor": 6
+    },
+    "full_plate": {
+        "name": "Full Plate",
+        "description": "A complete suit of interlocking steel plates.",
+        "item_type": "armor",
+        "armor_type": "plate",
+        "wearable_slot": "torso",
+        "skill": "armor_use",
+        "keywords": ["plate", "full plate", "full plate armor"],
+        "base_value": 5000,
+        "armor_rt": 12,
+        "armor_ap": -35,
+        "critical_divisor": 11
     },
     "starter_small_shield": {
         "name": "a small wooden shield",
@@ -126,7 +140,22 @@
         "wearable_slot": "mainhand",
         "skill": "edged_weapons",
         "keywords": ["sword", "short sword"],
-        "base_value": 100
+        "base_value": 100,
+        "damage_type": "slash",
+        "damage_factors": {
+            "cloth": 0.350,
+            "leather": 0.240,
+            "scale": 0.200,
+            "chain": 0.150,
+            "plate": 0.125
+        },
+        "avd_modifiers": {
+            "cloth": 40,
+            "leather": 33,
+            "scale": 24,
+            "chain": 13,
+            "plate": 7
+        }
     },
     "starter_bastard_sword": {
         "name": "a bastard sword",
@@ -153,7 +182,22 @@
         "wearable_slot": "mainhand",
         "skill": "blunt_weapons",
         "keywords": ["mace", "simple mace"],
-        "base_value": 90
+        "base_value": 90,
+        "damage_type": "crush",
+        "damage_factors": {
+            "cloth": 0.400,
+            "leather": 0.300,
+            "scale": 0.225,
+            "chain": 0.250,
+            "plate": 0.175
+        },
+        "avd_modifiers": {
+            "cloth": 31,
+            "leather": 29,
+            "scale": 29,
+            "chain": 30,
+            "plate": 18
+        }
     },
     "starter_greatclub": {
         "name": "a greatclub",
