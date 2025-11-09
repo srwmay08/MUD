@@ -518,7 +518,7 @@ def stop_combat(world: 'World', combatant_id: str, target_id: str):
     world.stop_combat_for_all(combatant_id, target_id)
 
 # --- REFACTORED: Accept world object and use its methods ---
-def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callback):
+def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callback, send_vitals_callback):
     current_time = time.time()
     combatant_list = world.get_all_combat_states()
 
@@ -582,6 +582,12 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     if is_fatal and defender.hp > 0:
                          send_to_player_callback(defender.name, "The world goes black as you suffer a fatal wound...", "combat_death")
                     defender.hp = 0
+                    
+                    # --- THIS IS THE FIX: Send vitals update immediately ---
+                    vitals_data = defender.get_vitals()
+                    send_vitals_callback(defender.name, vitals_data)
+                    # --- END FIX ---
+                    
                     broadcast_callback(attacker_room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     
                     # --- REFACTORED: Use Player.move_to_room to handle death movement ---
@@ -602,6 +608,10 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     # world.stop_combat_for_all(combatant_id, state["target_id"]) # This is now done by move_to_room
                     continue
                 else:
+                    # --- THIS IS THE FIX: Send vitals update immediately ---
+                    vitals_data = defender.get_vitals()
+                    send_vitals_callback(defender.name, vitals_data)
+                    # --- END FIX ---
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
                     save_game_state(defender)
 

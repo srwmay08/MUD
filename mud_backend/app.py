@@ -83,12 +83,25 @@ def game_tick_thread(world_instance: World):
                     if sid:
                         socketio.emit("message", message, to=sid)
 
+            # ---
+            # --- THIS IS THE FIX: Add a dedicated vitals callback
+            # ---
+            def send_vitals_to_player(player_name, vitals_data):
+                """Emits a 'update_vitals' event to a specific player."""
+                player_info = world_instance.get_player_info(player_name.lower())
+                if player_info:
+                    sid = player_info.get("sid")
+                    if sid:
+                        socketio.emit("update_vitals", vitals_data, to=sid)
+            # --- END FIX ---
+
             # --- 1. FAST TICK: Combat (approx every 1s via sleep at end) ---
-            # --- REFACTORED: Pass world object ---
+            # --- REFACTORED: Pass world object AND new callback ---
             combat_system.process_combat_tick(
                 world=world_instance,
                 broadcast_callback=broadcast_to_room,
-                send_to_player_callback=send_to_player
+                send_to_player_callback=send_to_player,
+                send_vitals_callback=send_vitals_to_player # <-- NEW
             )
             
             # --- NEW: 1.b. FAST TICK: Pending Trade Timeouts (approx every 1s) ---

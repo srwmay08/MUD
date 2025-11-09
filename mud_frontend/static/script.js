@@ -208,6 +208,16 @@ socket.on('tick', () => {
     // --- END FIX ---
 });
 
+// ---
+// --- THIS IS THE FIX: Listen for the new 'update_vitals' event
+// ---
+socket.on('update_vitals', (data) => {
+    if (data) {
+        updateVitals(data);
+    }
+});
+// --- END FIX ---
+
 // 4. Handle connection/disconnection events
 socket.on('connect', () => {
     console.log("Connected to server with ID:", socket.id);

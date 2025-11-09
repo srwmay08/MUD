@@ -1,7 +1,7 @@
 # mud_backend/core/game_objects.py
 from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 import math
-import time # <-- NEW IMPORT
+import time # <-- IMPORT IS USED NOW
 # --- REFACTORED: Removed game_state import ---
 # from mud_backend.core import game_state
 # --- END REFACTOR ---
@@ -620,6 +620,49 @@ class Player:
             data["_id"] = self._id
             
         return data
+
+    # ---
+    # --- NEW: get_vitals method (moved from command_executor.py)
+    # ---
+    def get_vitals(self) -> Dict[str, Any]:
+        """
+        Gathers all vital player stats for the GUI and returns them in a dict.
+        Includes HP, Mana, Stamina, Spirit, Posture, Status, and Roundtime.
+        """
+        
+        # 1. Get HP, Mana, Stamina, Spirit
+        vitals = {
+            "health": self.hp,
+            "max_health": self.max_hp,
+            "mana": self.mana,
+            "max_mana": self.max_mana,
+            "stamina": self.stamina,
+            "max_stamina": self.max_stamina,
+            "spirit": self.spirit,
+            "max_spirit": self.max_spirit,
+        }
+
+        # 2. Get Posture and Status Effects
+        vitals["posture"] = self.posture.capitalize()
+        vitals["status_effects"] = self.status_effects # This is a list
+
+        # 3. Get Roundtime
+        rt_data = self.world.get_combat_state(self.name.lower()) # Use self.world
+        rt_end_time_ms = 0
+        rt_duration_ms = 0
+        
+        if rt_data:
+            rt_end_time_sec = rt_data.get("next_action_time", 0)
+            current_time = time.time() # Need current time
+            if rt_end_time_sec > current_time:
+                rt_end_time_ms = int(rt_end_time_sec * 1000)
+                rt_duration_ms = int((rt_end_time_sec - current_time) * 1000)
+
+        vitals["rt_end_time_ms"] = rt_end_time_ms
+        vitals["rt_duration_ms"] = rt_duration_ms
+
+        return vitals
+    # --- END NEW METHOD ---
 
     def __repr__(self):
         return f"<Player: {self.name}>"

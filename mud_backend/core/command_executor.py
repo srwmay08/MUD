@@ -101,49 +101,8 @@ DIRECTION_MAP = {
 }
 
 # ---
-# --- NEW HELPER FUNCTION ---
-# ---
-def _get_player_vitals(world: 'World', player: Player) -> Dict[str, Any]:
-    """
-    Gathers all vital player stats for the GUI and returns them in a dict.
-    Includes HP, Mana, Stamina, Spirit, Posture, Status, and Roundtime.
-    """
-    
-    # 1. Get HP, Mana, Stamina, Spirit
-    vitals = {
-        # --- THIS IS THE FIX ---
-        "health": player.hp,         # CHANGED from "hp"
-        "max_health": player.max_hp,   # CHANGED from "max_hp"
-        # --- END FIX ---
-        "mana": player.mana,
-        "max_mana": player.max_mana,
-        "stamina": player.stamina,
-        "max_stamina": player.max_stamina,
-        "spirit": player.spirit,
-        "max_spirit": player.max_spirit,
-    }
-
-    # 2. Get Posture and Status Effects
-    vitals["posture"] = player.posture.capitalize()
-    vitals["status_effects"] = player.status_effects # This is a list
-
-    # 3. Get Roundtime
-    rt_data = world.get_combat_state(player.name.lower())
-    rt_end_time_ms = 0
-    rt_duration_ms = 0
-    
-    if rt_data:
-        rt_end_time_sec = rt_data.get("next_action_time", 0)
-        if rt_end_time_sec > time.time():
-            rt_end_time_ms = int(rt_end_time_sec * 1000)
-            rt_duration_ms = int((rt_end_time_sec - time.time()) * 1000)
-
-    vitals["rt_end_time_ms"] = rt_end_time_ms
-    vitals["rt_duration_ms"] = rt_duration_ms
-
-    return vitals
-# ---
-# --- END NEW HELPER FUNCTION ---
+# --- HELPER FUNCTION REMOVED ---
+# --- (Moved to Player class in game_objects.py)
 # ---
 
 
@@ -273,13 +232,13 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     save_game_state(player)
     
     # ---
-    # --- NEW: Bundle vitals with every response ---
+    # --- MODIFIED: Use new player method ---
     # ---
-    vitals_data = _get_player_vitals(world, player)
+    vitals_data = player.get_vitals()
     return {
         "messages": player.messages, 
         "game_state": player.game_state,
-        "vitals": vitals_data  # <-- NEW
+        "vitals": vitals_data
     }
 
 # --- REFACTORED: 'world' is the first argument ---
