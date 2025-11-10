@@ -17,10 +17,10 @@ class Enter(BaseVerb):
     """Handles the 'enter' command to move through doors, portals, etc."""
     
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- MODIFIED: RT Check ---
+        if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END NEW ---
+        # --- END MODIFIED ---
 
         if not self.args:
             self.player.send_message("Enter what?")
@@ -68,10 +68,10 @@ class Climb(BaseVerb):
     """Handles the 'climb' command to move between connected objects (like wells/ropes)."""
     
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- MODIFIED: RT Check ---
+        if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END NEW ---
+        # --- END MODIFIED ---
 
         if not self.args:
             self.player.send_message("Climb what? (e.g., CLIMB ROPE or CLIMB WELL)")
@@ -119,10 +119,10 @@ class Move(BaseVerb):
     """
     
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- MODIFIED: RT Check ---
+        if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END NEW ---
+        # --- END MODIFIED ---
 
         if not self.args:
             self.player.send_message("Move where? (e.g., NORTH, SOUTH, E, W, etc.)")
@@ -192,10 +192,10 @@ class Exit(BaseVerb):
     """
     
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- MODIFIED: RT Check ---
+        if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END NEW ---
+        # --- END MODIFIED ---
         
         if not self.args:
             # --- CHECK 1: Handle 'exit' or 'out' (no args) ---

@@ -17,7 +17,7 @@ class Attack(BaseVerb):
     """
     
     # ---
-    # --- NEW: Refactored helper function to return structured data
+    # --- MODIFIED: Refactored helper function to return structured data
     # ---
     def _resolve_and_handle_attack(self, target_monster_data: dict) -> dict:
         """
@@ -40,10 +40,13 @@ class Attack(BaseVerb):
         # 1. Flavor Text (e.g., "You swing...")
         resolve_data["messages"].append(attack_results['attacker_msg'])
         
-        # 2. Roll String
-        resolve_data["messages"].append(attack_results['roll_string'])
-        
+        # ---
+        # --- THIS IS THE FIX: Only show roll string on a HIT
+        # ---
         if attack_results['hit']:
+            # 2. Roll String
+            resolve_data["messages"].append(attack_results['roll_string'])
+            
             # 3. Damage Text
             resolve_data["messages"].append(attack_results['damage_msg'])
             
@@ -104,6 +107,8 @@ class Attack(BaseVerb):
                 })
                 # --- FIX: Use self.world.stop_combat_for_all ---
                 self.world.stop_combat_for_all(self.player.name.lower(), monster_uid)
+        
+        # --- END OF HIT BLOCK ---
         
         return resolve_data
     # --- (End of helper function) ---
@@ -180,7 +185,8 @@ class Attack(BaseVerb):
         # ---
         # --- MODIFIED: Resolve attack and print messages in order
         # ---
-        resolve_data = self._resolve_and_handle_attack()
+        # --- FIX: Pass target monster data to helper ---
+        resolve_data = self._resolve_and_handle_attack(target_monster_data)
         
         # Print all messages from the resolve data
         for msg in resolve_data["messages"]:

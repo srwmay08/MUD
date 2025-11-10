@@ -3,7 +3,10 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+# --- MODIFIED: Import get_stat_bonus ---
 from mud_backend.core.combat_system import calculate_attack_strength, calculate_defense_strength
+from mud_backend.core.utils import get_stat_bonus
+# --- END MODIFIED ---
 
 # Skills that can be used for tripping
 TRIP_WEAPON_SKILLS = ["polearms", "staves", "two_handed_blunt"]
@@ -55,7 +58,12 @@ class Trip(BaseVerb):
         # Attacker's "Trip AS"
         cman_ranks = self.player.skills.get("combat_maneuvers", 0)
         weapon_ranks = self.player.skills.get(weapon_skill, 0)
-        str_bonus = self.player.con_bonus # con_bonus is actually get_stat_bonus for STR
+        
+        # ---
+        # --- THIS IS THE FIX ---
+        # Calculate STR bonus correctly
+        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", self.player.race)
+        # --- END FIX ---
         
         attacker_as = (cman_ranks * 2) + weapon_ranks + str_bonus
         

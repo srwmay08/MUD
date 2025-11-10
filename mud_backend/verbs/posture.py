@@ -50,9 +50,10 @@ class Posture(BaseVerb):
         # --- MODIFIED: Use new helper ---
         # Note: We check RT *again* here because execute() might call this
         # without having checked RT itself (if logic changes). It's safer.
-        if _check_action_roundtime(self.player):
+        # --- FIX: Specify action_type ---
+        if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END MODIFIED ---
+        # --- END FIX ---
 
         # Roll to see if RT is applied
         if random.random() < chance:
@@ -109,9 +110,10 @@ class Posture(BaseVerb):
 
         # Check for existing roundtime
         # --- MODIFIED: Use new helper ---
-        if _check_action_roundtime(self.player):
+        # --- FIX: Specify action_type ---
+        if _check_action_roundtime(self.player, action_type="stance"):
             return
-        # --- END MODIFIED ---
+        # --- END FIX ---
 
         if target_state == "standing":
             # Handle standing logic (which includes RT rolls)
