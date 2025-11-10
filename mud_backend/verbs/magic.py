@@ -8,13 +8,13 @@ from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core import combat_system
 
 # --- Spell Definitions ---
-# spell_id: { mana_cost, min_rank, max_rank }
+# --- MODIFIED: Changed "heal" to use spirit_cost ---
 SPELL_BOOK = {
-    "heal": {
+    "heal_1": {
         "name": "Minor Heal",
-        "mana_cost": 10
+        "spirit_cost": 8
     },
-    "shock": {
+    "shock_1": {
         "name": "Minor Shock",
         "mana_cost": 10
     },
@@ -23,6 +23,7 @@ SPELL_BOOK = {
         "mana_cost": 15
     }
 }
+# --- END MODIFIED ---
 
 
 class Prep(BaseVerb):
@@ -48,29 +49,51 @@ class Prep(BaseVerb):
         # Find the spell in our "book"
         spell_id = None
         spell_display_name = ""
-        for key, data in SPELL_BOOK.items():
-            if spell_name in data["name"].lower():
-                spell_id = key
-                spell_display_name = data["name"]
+        
+        # --- MODIFIED: Check player's known_spells list ---
+        for known_spell_id in self.player.known_spells:
+            spell_data = SPELL_BOOK.get(known_spell_id)
+            if spell_data and spell_name in spell_data["name"].lower():
+                spell_id = known_spell_id
+                spell_display_name = spell_data["name"]
                 break
+        # --- END MODIFIED ---
         
         if not spell_id:
             self.player.send_message("You do not know that spell.")
             return
 
         spell_data = SPELL_BOOK[spell_id]
-        mana_cost = spell_data.get("mana_cost", 10)
         
-        if self.player.mana < mana_cost:
-            self.player.send_message("You do not have enough mana to prepare that spell.")
-            return
+        # ---
+        # --- MODIFIED: Check for Mana or Spirit cost
+        # ---
+        mana_cost = spell_data.get("mana_cost", 0)
+        spirit_cost = spell_data.get("spirit_cost", 0)
+        
+        if mana_cost > 0:
+            if self.player.mana < mana_cost:
+                self.player.send_message("You do not have enough mana to prepare that spell.")
+                return
+            # All checks pass. Prepare the spell.
+            self.player.mana -= mana_cost
             
-        # All checks pass. Prepare the spell.
-        self.player.mana -= mana_cost
+        elif spirit_cost > 0:
+            if self.player.spirit < spirit_cost:
+                self.player.send_message("You do not have enough spirit to prepare that spell.")
+                return
+            # All checks pass. Prepare the spell.
+            self.player.spirit -= spirit_cost
+            
+        else:
+            # Fallback for spells with no cost
+            pass
+        # --- END MODIFIED ---
+
         self.player.prepared_spell = {
             "spell": spell_id,
             "rank": rank,
-            "cost": mana_cost,
+            "cost": mana_cost or spirit_cost,
             "display_name": spell_display_name
         }
         
@@ -106,7 +129,7 @@ class Cast(BaseVerb):
         # ---
         # --- Branch 1: Heal (Self-cast)
         # ---
-        if spell_id == "heal":
+        if spell_id == "heal_1":
             heal_amount = 10 # Rank 1
             self.player.hp = min(self.player.max_hp, self.player.hp + heal_amount)
             self.player.send_message("A warm, restorative light washes over you. You feel a bit better.")
@@ -139,7 +162,7 @@ class Cast(BaseVerb):
         # ---
         # --- Branch 3: Shock (Targeted attack spell)
         # ---
-        if spell_id == "shock":
+        if spell_id == "shock_1":
             if not self.args:
                 self.player.send_message("Who do you want to cast that on?")
                 return

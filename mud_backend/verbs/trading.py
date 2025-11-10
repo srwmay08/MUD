@@ -39,12 +39,25 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
     return None, None
 # --- END HELPERS ---
 
+# --- NEW: Helper to find NPCs ---
+def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
+    """Finds an NPC object in the room by name or keyword."""
+    for obj in room.objects:
+        # Check if it's an NPC (has quest_data) and not a monster
+        if obj.get("quest_data") and not obj.get("is_monster"):
+            if (target_name == obj.get("name", "").lower() or 
+                target_name in obj.get("keywords", [])):
+                return obj
+    return None
+# --- END NEW HELPER ---
+
 
 class Give(BaseVerb):
     """
     Handles the 'give' command.
     GIVE <player> <item> (Prompts for ACCEPT)
     GIVE <player> <amount> (Transfers silver immediately)
+    GIVE <npc> <item> (Handles quests)
     """
     def execute(self):
         # --- NEW: RT Check ---
@@ -53,13 +66,83 @@ class Give(BaseVerb):
         # --- END NEW ---
         
         if len(self.args) < 2:
-            self.player.send_message("Usage: GIVE <player> <item> OR GIVE <player> <amount>")
+            self.player.send_message("Usage: GIVE <target> <item> OR GIVE <player> <amount>")
             return
             
-        target_player_name = self.args[0].lower()
+        target_name_input = self.args[0].lower()
         
+        # ---
+        # --- MODIFIED: Split item/silver logic
+        # ---
+        silver_amount = 0
+        target_item_name = ""
+
+        # Check for silver first
+        if len(self.args) == 2:
+            try:
+                silver_amount = int(self.args[1])
+                if silver_amount <= 0:
+                    raise ValueError("Must be positive")
+            except ValueError:
+                silver_amount = 0 # It's not silver
+        
+        if silver_amount == 0:
+            # It's an item
+            target_item_name = " ".join(self.args[1:]).lower()
+        # ---
+        # --- END MODIFIED
+        # ---
+
+        # ---
+        # --- NEW: BRANCH 0: Quest NPC Check (Items Only)
+        # ---
+        if silver_amount == 0 and target_item_name:
+            target_npc = _find_npc_in_room(self.room, target_name_input)
+            if target_npc:
+                quest_data = target_npc.get("quest_data", {})
+                item_needed = quest_data.get("item_needed")
+                reward_spell = quest_data.get("reward_spell")
+
+                # Find the item on the player
+                item_id_to_give, item_source_location = _find_item_in_hands(self.player, target_item_name)
+                if not item_id_to_give:
+                    item_id_to_give = _find_item_in_inventory(self.player, target_item_name)
+                    if item_id_to_give:
+                        item_source_location = "inventory"
+                
+                if not item_id_to_give:
+                    self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
+                    return
+
+                # Check if this is the correct item for the quest
+                if item_id_to_give == item_needed:
+                    # Quest item match!
+                    
+                    # Remove item from player
+                    if item_source_location == "inventory":
+                        self.player.inventory.remove(item_id_to_give)
+                    else:
+                        self.player.worn_items[item_source_location] = None
+                    
+                    # Check if player already knows the spell
+                    if reward_spell in self.player.known_spells:
+                        self.player.send_message(quest_data.get("already_learned_message", "You have already completed this task."))
+                    else:
+                        # Grant reward
+                        self.player.known_spells.append(reward_spell)
+                        self.player.send_message(quest_data.get("reward_message", "You have learned a new spell!"))
+                    
+                    _set_action_roundtime(self.player, 1.0) # 1s RT for giving
+                    return # Quest complete, verb is done.
+                else:
+                    self.player.send_message(f"The {target_npc.get('name')} does not seem interested in that.")
+                    return
+        # ---
+        # --- END NEW BRANCH
+        # ---
+
         # 1. Check if target player is real and in the same room
-        target_player = self.world.get_player_obj(target_player_name)
+        target_player = self.world.get_player_obj(target_name_input)
         if not target_player or target_player.current_room_id != self.player.current_room_id:
             self.player.send_message(f"You don't see anyone named '{self.args[0]}' here.")
             return
@@ -73,18 +156,7 @@ class Give(BaseVerb):
             "offer_time": time.time()
         }
         
-        silver_amount = 0
-        target_item_name = " ".join(self.args[1:]).lower()
-
         # --- BRANCH 1: Giving Silver ---
-        if len(self.args) == 2:
-            try:
-                silver_amount = int(self.args[1])
-                if silver_amount <= 0:
-                    raise ValueError("Must be positive")
-            except ValueError:
-                silver_amount = 0 # It's not silver, so treat as an item name
-        
         if silver_amount > 0:
             # --- MODIFIED: Silver transfers are IMMEDIATE ---
             player_silver = self.player.wealth.get("silvers", 0)

@@ -123,7 +123,24 @@
     },
     
     {"room_id": "ts_north", "name": "North Square", "is_outdoor": true, "description": "You are in the northern part of the town square. The main square is to the south.", "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}},
-    {"room_id": "ts_east", "name": "East Square", "is_outdoor": true, "description": "You are in the eastern part of the town square. The main square is to the west. The old well is here.", "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, "objects": [{"name": "well", "description": "A weathered stone well...", "verbs": ["CLIMB"], "target_room": "well_bottom", "perception_dc": 0, "keywords": ["well"]}]},
+    
+    {
+        "room_id": "ts_east", 
+        "name": "East Square", 
+        "is_outdoor": true, 
+        "description": "You are in the eastern part of the town square. The main square is to the west. A set of tall, oaken doors stand here, open to the public.", 
+        "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, 
+        "objects": [
+            {
+                "name": "oaken doors", 
+                "description": "Tall, oaken doors carved with symbols of light and healing. This is the entrance to the temple.", 
+                "verbs": ["ENTER"], 
+                "target_room": "temple_of_light",
+                "perception_dc": 0,
+                "keywords": ["doors", "oaken doors", "temple"]
+            }
+        ]
+    },
     
     {
         "room_id": "ts_west", "name": "West Square", 
@@ -142,7 +159,23 @@
         ]
     },
     
-    {"room_id": "ts_northeast", "name": "Northeast Square", "is_outdoor": true, "description": "You are in the northeast corner of the town square.", "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"}},
+    {
+        "room_id": "ts_northeast", 
+        "name": "Northeast Square", 
+        "is_outdoor": true, 
+        "description": "You are in the northeast corner of the town square. A small, rune-etched door is set into an alley here.", 
+        "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"},
+        "objects": [
+            {
+                "name": "rune-etched door", 
+                "description": "This door is barred by a faint, shimmering field of energy. A small plaque reads: 'Elementalist's Study. Apprentices only.'", 
+                "verbs": ["ENTER"], 
+                "target_room": "elementalist_study",
+                "perception_dc": 0,
+                "keywords": ["door", "rune-etched door", "study"]
+            }
+        ]
+    },
     
     {
         "room_id": "ts_northwest", "name": "Northwest Square", 
@@ -257,5 +290,57 @@
             }
         ],
         "exits": { "out": "ts_northwest" }
+    },
+    
+    {
+        "room_id": "temple_of_light",
+        "name": "Temple of Light",
+        "description": "A quiet, peaceful temple. Incense burns softly in the air, and sunlight streams through a high, stained-glass window, illuminating a stone altar in the center of the room. A robed priest tends to several hurt patrons on cots.",
+        "objects": [
+            {
+                "name": "stone altar",
+                "description": "A simple, flat altar of white stone. It feels cold to the touch. This is where you awaken if you are slain.",
+                "keywords": ["altar", "stone altar"]
+            },
+            {
+                "name": "priest",
+                "description": "A kindly priest moves between cots, offering water and bandages. He looks tired and his supplies seem low. You could try to 'GIVE' him items.",
+                "keywords": ["priest", "robed priest"],
+                "quest_data": {
+                    "quest_id": "heal_quest_1",
+                    "item_needed": "viridian_leaf",
+                    "reward_spell": "heal_1",
+                    "reward_message": "The priest accepts the viridian leaf gratefully. 'Thank you, traveler. Your spirit is strong. Let me show you how to channel it to restore the body.' You have learned Minor Heal!",
+                    "already_learned_message": "The priest smiles. 'Thank you again for your help, traveler. May your light shine bright.'"
+                }
+            },
+            {
+                "name": "hurt patron",
+                "description": "A citizen lying on a cot, groaning softly.",
+                "keywords": ["patron", "hurt patron", "citizen"]
+            }
+        ],
+        "exits": { "out": "ts_east" }
+    },
+    
+    {
+        "room_id": "elementalist_study",
+        "name": "Elementalist's Study",
+        "description": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter.",
+        "objects": [
+            {
+                "name": "elementalist",
+                "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research. You could try to 'GIVE' them items.",
+                "keywords": ["elementalist", "trainer"],
+                "quest_data": {
+                    "quest_id": "shock_quest_1",
+                    "item_needed": "monster_claw",
+                    "reward_spell": "shock_1",
+                    "reward_message": "The elementalist snatches the claw. 'Good. These have the right energetic signature.' They show you a simple gesture, and you feel a jolt of power. You have learned Minor Shock!",
+                    "already_learned_message": "The elementalist nods. 'More claws? I suppose I can take them. Your knowledge is already secure.'"
+                }
+            }
+        ],
+        "exits": { "out": "ts_northeast" }
     }
 ]
