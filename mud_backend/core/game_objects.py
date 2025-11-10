@@ -152,6 +152,12 @@ class Player:
         self.prepared_spell: Optional[Dict] = self.db_data.get("prepared_spell", None)
         self.buffs: Dict[str, Dict] = self.db_data.get("buffs", {})
         # --- END NEW ---
+        
+        # --- NEW: Learned Abilities ---
+        self.known_spells: List[str] = self.db_data.get("known_spells", [])
+        self.known_maneuvers: List[str] = self.db_data.get("known_maneuvers", [])
+        self.completed_quests: List[str] = self.db_data.get("completed_quests", [])
+        # --- END NEW ---
 
 
     @property
@@ -627,6 +633,12 @@ class Player:
             # ---
             "prepared_spell": self.prepared_spell,
             "buffs": self.buffs,
+            # --- END NEW ---
+            
+            # --- NEW: Save Learned Abilities ---
+            "known_spells": self.known_spells,
+            "known_maneuvers": self.known_maneuvers,
+            "completed_quests": self.completed_quests,
             # --- END NEW ---
         }
         

@@ -32,7 +32,7 @@ from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
 # ---
-# --- MODIFIED: VERB ALIASES (Added trip, prep, cast)
+# --- MODIFIED: VERB ALIASES (Removed trip, prep, cast)
 # ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -75,15 +75,15 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "stat": ("stats", "Stats"), "stats": ("stats", "Stats"),
     "skill": ("skills", "Skills"), "skills": ("skills", "Skills"),
     "experience": ("experience", "Experience"), "exp": ("experience", "Experience"),
-    "trip": ("maneuvers", "Trip"), # <-- NEW
+    # "trip": ("maneuvers", "Trip"), # <-- REMOVED
 
     # Activities
     "search": ("harvesting", "Search"), "skin": ("harvesting", "Skin"),
     "forage": ("foraging", "Forage"), "eat": ("foraging", "Eat"), "drink": ("foraging", "Drink"),
     
     # Magic
-    "prep": ("magic", "Prep"), "prepare": ("magic", "Prep"), # <-- NEW
-    "cast": ("magic", "Cast"), # <-- NEW
+    # "prep": ("magic", "Prep"), "prepare": ("magic", "Prep"), # <-- REMOVED
+    # "cast": ("magic", "Cast"), # <-- REMOVED
     
     # Systems
     "say": ("say", "Say"),
@@ -218,6 +218,20 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             if command_line.lower() != "ping": player.send_message("What?")
         else:
             verb_info = VERB_ALIASES.get(command)
+            
+            # --- NEW: Check for learned spells/maneuvers ---
+            if not verb_info:
+                if command in ["prep", "prepare"]:
+                    if "shock_1" in player.known_spells or "heal_1" in player.known_spells: # Check if they know *any* spell
+                        verb_info = ("magic", "Prep")
+                elif command == "cast":
+                     if "shock_1" in player.known_spells or "heal_1" in player.known_spells:
+                        verb_info = ("magic", "Cast")
+                elif command == "trip":
+                    if "trip" in player.known_maneuvers:
+                        verb_info = ("maneuvers", "Trip")
+            # --- END NEW ---
+
             if not verb_info: player.send_message(f"I don't know the command **'{command}'**.")
             else:
                 verb_module, verb_class = verb_info

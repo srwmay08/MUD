@@ -21,7 +21,9 @@ PLAYER_TIMEOUT_SECONDS = 600 # 10 minutes
 # --- Player & Chargen ---
 CHARGEN_START_ROOM = "inn_room"
 CHARGEN_COMPLETE_ROOM = "town_square"
-PLAYER_DEATH_ROOM_ID = "town_square" # Room player respawns in
+# --- MODIFIED: Player respawns in the new temple room ---
+PLAYER_DEATH_ROOM_ID = "temple_of_light" # Was "town_square"
+# --- END MODIFIED ---
 
 # --- Combat System ---
 STAT_BONUS_BASELINE = 50          # Stats below this give no bonus
@@ -106,9 +108,12 @@ EQUIPMENT_SLOTS = {
 }
 
 # --- NEW: EXP ABSORPTION ROOMS ---
+# --- MODIFIED: Added new temple/study rooms to the town list ---
 TOWN_ROOM_IDS = [
     "town_square", "ts_south", "inn_room", "ts_north", "ts_east", "ts_west", 
-    "ts_northeast", "ts_northwest", "ts_southeast", "ts_southwest"
+    "ts_northeast", "ts_northwest", "ts_southeast", "ts_southwest",
+    "temple_of_light", "elementalist_study" # <-- NEW
 ]
+# --- END MODIFIED ---
 NODE_ROOM_IDS = ["town_square"] 
 # ---

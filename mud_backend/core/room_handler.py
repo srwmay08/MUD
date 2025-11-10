@@ -1,6 +1,9 @@
 # mud_backend/core/room_handler.py
 from mud_backend.core.game_objects import Player, Room
 # --- REMOVED: from mud_backend.core import game_state ---
+# --- NEW: Import environment module ---
+from mud_backend.core.game_loop import environment
+# --- END NEW ---
 
 def show_room_to_player(player: Player, room: Room):
     """
@@ -8,6 +11,12 @@ def show_room_to_player(player: Player, room: Room):
     """
     player.send_message(f"**{room.name}**")
     player.send_message(room.description)
+    
+    # --- NEW: Add ambient time/weather description ---
+    ambient_desc = environment.get_ambient_description(room.db_data)
+    if ambient_desc:
+        player.send_message(ambient_desc)
+    # --- END NEW ---
     
     # --- Skill-Based Object Perception ---
     player_perception = player.stats.get("WIS", 0)

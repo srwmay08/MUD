@@ -608,10 +608,12 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     
                     broadcast_callback(attacker_room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
                     
-                    # --- REFACTORED: Use Player.move_to_room to handle death movement ---
-                    # This also handles stopping combat
-                    defender.move_to_room(config.PLAYER_DEATH_ROOM_ID, "You have been slain...")
-                    # --- END REFACTOR ---
+                    # --- MODIFIED: Update death message and respawn location ---
+                    defender.move_to_room(
+                        config.PLAYER_DEATH_ROOM_ID, 
+                        "You have been slain... You awaken on a cold stone altar, feeling weak."
+                    )
+                    # --- END MODIFIED ---
                     
                     defender.deaths_recent = min(5, defender.deaths_recent + 1)
                     con_loss = min(3 + defender.deaths_recent, 25 - defender.con_lost)
@@ -621,7 +623,11 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                         send_to_player_callback(defender.name, f"You have lost {con_loss} Constitution.", "system_error")
                     defender.death_sting_points += 2000
                     send_to_player_callback(defender.name, "You feel the sting of death... (XP gain is reduced)", "system_error")
-                    defender.posture = "standing"
+                    
+                    # --- MODIFIED: Set posture to prone on death ---
+                    defender.posture = "prone"
+                    # --- END MODIFIED ---
+                    
                     save_game_state(defender)
                     # world.stop_combat_for_all(combatant_id, state["target_id"]) # This is now done by move_to_room
                     continue
