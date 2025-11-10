@@ -39,6 +39,24 @@
       "4": { "message": "A mortal wound to the {defender}'s neck! Blood fountains forth.", "extra_damage": 25, "wound_rank": 3, "fatal": true }
     }
   },
+  "electricity": {
+    "head": {
+      "1": { "message": "A jolt of energy crackles across the {defender}'s scalp.", "extra_damage": 2, "wound_rank": 1 },
+      "2": { "message": "A surge of electricity zaps the {defender}'s head, stunning them.", "extra_damage": 5, "wound_rank": 1, "stun": true },
+      "3": { "message": "A heavy jolt to the {defender}'s head cooks their eyes!", "extra_damage": 9, "wound_rank": 2, "stun": true },
+      "4": { "message": "The {defender}'s head explodes in a shower of sparks. A fatal blow!", "extra_damage": 20, "wound_rank": 3, "fatal": true }
+    },
+    "chest": {
+      "1": { "message": "A minor jolt zaps the {defender}'s chest.", "extra_damage": 2, "wound_rank": 1 },
+      "2": { "message": "A strong shock courses through the {defender}'s torso, making them gasp.", "extra_damage": 4, "wound_rank": 1, "stun": true },
+      "3": { "message": "A powerful surge stops the {defender}'s heart for a moment!", "extra_damage": 8, "wound_rank": 2, "stun": true }
+    },
+    "abdomen": {
+        "1": { "message": "A jolt strikes the {defender}'s abdomen.", "extra_damage": 2, "wound_rank": 1 },
+        "2": { "message": "A heavy jolt to the abdomen causes skin to break open.", "extra_damage": 6, "wound_rank": 2, "stun": true },
+        "3": { "message": "A powerful surge flashes through the {defender}, cooking their insides.", "extra_damage": 10, "wound_rank": 3, "stun": true }
+    }
+  },
   "wounds": {
     "head": { "1": "minor bruises about the head", "2": "minor lacerations about the head", "3": "severe head trauma and bleeding" },
     "neck": { "1": "minor bruises on your neck", "2": "moderate bleeding from your neck", "3": "serious bleeding from the neck" },

@@ -145,6 +145,13 @@ class Player:
         self.stamina_burst_pulses: int = self.db_data.get("stamina_burst_pulses", 0) # > 0 is buff, < 0 is debuff
         # --- REMOVED: next_spirit_regen_time ---
         # --- END NEW ---
+        
+        # ---
+        # --- NEW: Magic Properties
+        # ---
+        self.prepared_spell: Optional[Dict] = self.db_data.get("prepared_spell", None)
+        self.buffs: Dict[str, Dict] = self.db_data.get("buffs", {})
+        # --- END NEW ---
 
 
     @property
@@ -614,6 +621,13 @@ class Player:
             "stamina_burst_pulses": self.stamina_burst_pulses,
             # --- REMOVED: next_spirit_regen_time ---
             # --- END NEW ---
+            
+            # ---
+            # --- NEW: Save Magic Properties
+            # ---
+            "prepared_spell": self.prepared_spell,
+            "buffs": self.buffs,
+            # --- END NEW ---
         }
         
         if self._id:
@@ -650,9 +664,11 @@ class Player:
         rt_data = self.world.get_combat_state(self.name.lower()) # Use self.world
         rt_end_time_ms = 0
         rt_duration_ms = 0
+        rt_type = "hard" # Default to hard
         
         if rt_data:
             rt_end_time_sec = rt_data.get("next_action_time", 0)
+            rt_type = rt_data.get("rt_type", "hard") # <-- NEW
             current_time = time.time() # Need current time
             if rt_end_time_sec > current_time:
                 rt_end_time_ms = int(rt_end_time_sec * 1000)
@@ -660,6 +676,7 @@ class Player:
 
         vitals["rt_end_time_ms"] = rt_end_time_ms
         vitals["rt_duration_ms"] = rt_duration_ms
+        vitals["rt_type"] = rt_type # <-- NEW
 
         return vitals
     # --- END NEW METHOD ---

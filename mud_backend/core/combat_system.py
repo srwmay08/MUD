@@ -216,7 +216,9 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
     ds = base_value * handedness_mod * posture_percent * 0.5
     return math.floor(ds)
 
-# --- UPDATED DS CALCULATION ---
+# ---
+# --- UPDATED DS CALCULATION (Added Buff Check)
+# ---
 def calculate_defense_strength(defender: Any,
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                weapon_item_data: dict | None, offhand_item_data: dict | None,
@@ -235,8 +237,23 @@ def calculate_defense_strength(defender: Any,
     evade_ds = calculate_evade_defense(stats, skills, race, armor_item_data, shield_item_data, posture_percent, is_ranged_attack)
     block_ds = calculate_block_defense(stats, skills, race, shield_item_data, posture_percent, is_ranged_attack)
     parry_ds = calculate_parry_defense(stats, skills, race, weapon_item_data, offhand_item_data, level, posture_percent, is_ranged_attack)
+    
+    # ---
+    # --- NEW: Check for DS Buffs ---
+    # ---
+    buff_bonus = 0
+    if isinstance(defender, Player):
+        # Check for Spirit Shield
+        if "spirit_shield" in defender.buffs:
+            buff_data = defender.buffs["spirit_shield"]
+            # Check if expired (This is also checked in app.py, but good to double-check)
+            if time.time() < buff_data.get("expires_at", 0):
+                buff_bonus = buff_data.get("ds_bonus", 0)
+            else:
+                defender.buffs.pop("spirit_shield", None) # Remove expired buff
+    # --- END NEW ---
 
-    base_ds = evade_ds + block_ds + parry_ds
+    base_ds = evade_ds + block_ds + parry_ds + buff_bonus
 
     # Apply Stance Modifier
     stance_data = STANCE_MODIFIERS.get(defender_stance, STANCE_MODIFIERS["creature"])
@@ -244,9 +261,10 @@ def calculate_defense_strength(defender: Any,
     final_ds = int(base_ds * stance_mod)
 
     if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG DS CALC for {name} (Pos: {posture}({posture_percent}), Stance: {defender_stance}({stance_mod})): Base={base_ds} (E:{evade_ds}+B:{block_ds}+P:{parry_ds}) -> Final={final_ds}")
+        print(f"DEBUG DS CALC for {name} (Pos: {posture}({posture_percent}), Stance: {defender_stance}({stance_mod})): Base={base_ds} (E:{evade_ds}+B:{block_ds}+P:{parry_ds}+Buff:{buff_bonus}) -> Final={final_ds}")
 
     return final_ds
+# --- END UPDATED DS ---
 
 HIT_MESSAGES = {
     "player_hit": ["You swing {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
@@ -477,7 +495,7 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         # Format the critical message
         crit_msg = crit_result.get("message", "A solid hit!").format(defender=defender_name)
         
-        results['damage_msg'] = f"...and hit for **{total_damage}** points of damage!\n{crit_msg}"
+        results['damage_msg'] = f"  ... and hit for {total_damage} points of damage!\n  {crit_msg}"
         results['defender_damage_msg'] = f"...and hit you for **{total_damage}** points of damage!\n{crit_msg}"
         results['broadcast_damage_msg'] = f"{attacker_name} hits for **{total_damage}** damage!\n{crit_msg}"
 

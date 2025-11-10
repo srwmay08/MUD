@@ -136,8 +136,7 @@ def game_tick_thread(world_instance: World):
                         giver_obj.send_message(f"Your offer to {receiver_name} for {item_name} has expired.")
             # --- END NEW: Trade Timeout ---
 
-            # --- MODIFIED: 1.c. FAST TICK: Ability Cooldowns ONLY ---
-            # --- (Regen is now handled in the 30s 'slow' tick) ---
+            # --- MODIFIED: 1.c. FAST TICK: Ability Cooldowns & Buffs ONLY ---
             active_players_list = world_instance.get_all_players_info()
             for player_name_lower, player_data in active_players_list:
                 player_obj = player_data.get("player_obj")
@@ -145,11 +144,22 @@ def game_tick_thread(world_instance: World):
                     continue
                 
                 # --- Ability Cooldown Checks (e.g., Spellup) ---
-                # Check if 24 hours (86400s) has passed since last spellup
                 if player_obj.spellup_uses_today > 0:
                     if current_time - player_obj.last_spellup_use_time > 86400:
                          player_obj.spellup_uses_today = 0
-            # --- END MODIFIED: Ability Cooldowns ---
+                
+                # ---
+                # --- NEW: Buff Expiration Check
+                # ---
+                if player_obj.buffs:
+                    expired_buffs = [key for key, data in player_obj.buffs.items() if current_time >= data.get("expires_at", 0)]
+                    for key in expired_buffs:
+                        player_obj.buffs.pop(key, None)
+                        if key == "spirit_shield":
+                            # Use send_to_player to send the message immediately
+                            send_to_player(player_obj.name, "The dim aura fades from around you.", "message")
+                # --- END NEW ---
+            # --- END MODIFIED ---
             
             # --- 2. INDEPENDENT TICK: Monster AI Movement ---
             # --- REFACTORED: Use world attributes for timers ---

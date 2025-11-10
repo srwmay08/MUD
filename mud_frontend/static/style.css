@@ -95,11 +95,19 @@ body {
     transition: background-color 0.1s ease;
 }
 
-.rt-box.active {
+/* ---
+--- THIS IS THE FIX: Split .active into .hard and .soft
+--- */
+.rt-box.active.hard {
     background-color: #800000; /* Dark Red */
     border-color: #F00;
 }
-/* --- END NEW RT STYLES --- */
+
+.rt-box.active.soft {
+    background-color: #000080; /* Dark Blue */
+    border-color: #00F;
+}
+/* --- END FIX --- */
 
 
 #input-line > span {

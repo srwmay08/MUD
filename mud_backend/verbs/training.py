@@ -124,8 +124,14 @@ class Done(BaseVerb):
         self.player.send_message("You finish your training and head out into the world.")
         self.player.game_state = "playing"
         
-        # Set HP to max after chargen
+        # ---
+        # --- THIS IS THE FIX: Set all vitals to max
+        # ---
         self.player.hp = self.player.max_hp
+        self.player.mana = self.player.max_mana
+        self.player.stamina = self.player.max_stamina
+        self.player.spirit = self.player.max_spirit
+        # --- END FIX ---
         
         # --- THIS IS THE UPDATED LOGIC ---
         

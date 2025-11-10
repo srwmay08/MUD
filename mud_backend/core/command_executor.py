@@ -31,7 +31,9 @@ from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
-# --- VERB ALIASES (Unchanged) ---
+# ---
+# --- MODIFIED: VERB ALIASES (Added trip, prep, cast)
+# ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
     "move": ("movement", "Move"), "go": ("movement", "Move"),
@@ -62,29 +64,32 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Combat & Status
     "attack": ("attack", "Attack"),
     "stance": ("stance", "Stance"), 
-    # --- THIS IS THE FIX ---
     "sit": ("posture", "Posture"), 
     "stand": ("posture", "Posture"),
     "kneel": ("posture", "Posture"), 
     "prone": ("posture", "Posture"),
-    "crouch": ("posture", "Posture"),    # <-- NEW ALIAS
-    "meditate": ("posture", "Posture"), # <-- NEW ALIAS
-    "lay": ("posture", "Posture"),        # <-- NEW ALIAS (for "lay down")
-    # --- END FIX ---
+    "crouch": ("posture", "Posture"),
+    "meditate": ("posture", "Posture"),
+    "lay": ("posture", "Posture"),
     "health": ("health", "Health"), "hp": ("health", "Health"),
     "stat": ("stats", "Stats"), "stats": ("stats", "Stats"),
     "skill": ("skills", "Skills"), "skills": ("skills", "Skills"),
     "experience": ("experience", "Experience"), "exp": ("experience", "Experience"),
+    "trip": ("maneuvers", "Trip"), # <-- NEW
 
     # Activities
     "search": ("harvesting", "Search"), "skin": ("harvesting", "Skin"),
     "forage": ("foraging", "Forage"), "eat": ("foraging", "Eat"), "drink": ("foraging", "Drink"),
     
+    # Magic
+    "prep": ("magic", "Prep"), "prepare": ("magic", "Prep"), # <-- NEW
+    "cast": ("magic", "Cast"), # <-- NEW
+    
     # Systems
     "say": ("say", "Say"),
     "give": ("trading", "Give"), "accept": ("trading", "Accept"),
-    "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"), # <-- THIS IS THE FIX
-    "exchange": ("trading", "Exchange"), # <-- NEW
+    "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"),
+    "exchange": ("trading", "Exchange"),
     "list": ("shop", "List"), "buy": ("shop", "Buy"),
     "sell": ("shop", "Sell"), "appraise": ("shop", "Appraise"),
 
@@ -92,6 +97,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "check": ("training", "CheckIn"), "checkin": ("training", "CheckIn"),
     "train": ("training", "Train"), "done": ("training", "Done"),
 }
+# --- END MODIFIED ---
 
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",

@@ -104,7 +104,10 @@ function updateRtDisplay() {
     }
 }
 
-function startRtTimer(duration_ms, end_time_ms) {
+// ---
+// --- MODIFIED: Add rt_type parameter
+// ---
+function startRtTimer(duration_ms, end_time_ms, rt_type = "hard") {
     rtEndTime = end_time_ms;
 
     // Clear any existing timer just in case
@@ -124,7 +127,8 @@ function startRtTimer(duration_ms, end_time_ms) {
 
     let boxesHtml = '';
     for (let i = 0; i < totalSeconds; i++) {
-        boxesHtml += '<div class="rt-box active"></div>'; // Start all as active
+        // --- THIS IS THE FIX: Add rt_type (e.g., "hard" or "soft") as a class
+        boxesHtml += `<div class="rt-box active ${rt_type}"></div>`;
     }
     rtContainer.innerHTML = boxesHtml;
     // --- END NEW ---
@@ -133,6 +137,7 @@ function startRtTimer(duration_ms, end_time_ms) {
     rtTimer = setInterval(updateRtDisplay, 100); // Check 10x per second
     updateRtDisplay(); // Run once immediately
 }
+// --- END MODIFIED ---
 
 function updateVitals(vitals) {
     if (!vitals) return;
@@ -165,9 +170,13 @@ function updateVitals(vitals) {
     postureStatusEl.innerText = statusText;
 
     // 3. Update Roundtime
+    // ---
+    // --- MODIFIED: Pass rt_type to startRtTimer
+    // ---
     if (vitals.rt_end_time_ms > Date.now()) {
-        startRtTimer(vitals.rt_duration_ms, vitals.rt_end_time_ms);
+        startRtTimer(vitals.rt_duration_ms, vitals.rt_end_time_ms, vitals.rt_type || 'hard');
     }
+    // --- END MODIFIED ---
 }
 
 // ---
@@ -434,6 +443,7 @@ updateVitals({
     spirit: 0, max_spirit: 0,
     posture: "...",
     status_effects: [],
-    rt_end_time_ms: 0
+    rt_end_time_ms: 0,
+    rt_type: "hard" // <-- NEW
 });
 // --- END NEW ---
