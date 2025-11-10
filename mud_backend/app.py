@@ -421,4 +421,6 @@ if __name__ == "__main__":
     # --- END REFACTOR ---
     
     print("[SERVER START] Running SocketIO server on http://127.0.0.1:8024")
-    socketio.run(app, host='0.0.0.0', port=8000, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+    # --- THIS IS THE FIX ---
+    socketio.run(app, host='0.0.0.0', port=8024, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+    # --- END FIX ---
