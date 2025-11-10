@@ -2,6 +2,10 @@
 from mud_backend.verbs.base_verb import BaseVerb
 # --- REMOVED: from mud_backend.core import game_state ---
 from typing import Dict, Any, Tuple, Optional
+# --- NEW: Import RT helpers ---
+from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+import time
+# --- END NEW ---
 
 def _find_item_in_inventory(player, target_name: str) -> str | None:
     """Finds the first item_id in a player's inventory that matches."""
@@ -49,6 +53,11 @@ class Wear(BaseVerb):
     """
     
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+        
         if not self.args:
             self.player.send_message("Wear what?")
             return
@@ -108,6 +117,10 @@ class Wear(BaseVerb):
         # Use "wield" for weapons, "wear" for everything else
         verb = "wield" if item_data.get("item_type") in ["weapon", "shield"] else "wear"
         self.player.send_message(f"You {verb} {item_data.get('name')}.")
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 1.0) # 1s RT for equipping
+        # --- END NEW ---
 
 class Remove(BaseVerb):
     """
@@ -116,6 +129,11 @@ class Remove(BaseVerb):
     """
     
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         if not self.args:
             self.player.send_message("Remove what?")
             return
@@ -166,3 +184,7 @@ class Remove(BaseVerb):
                 if slot == "mainhand": verb = "lower"
                 if slot == "offhand": verb = "unstrap"
             self.player.send_message(f"You {verb} {item_data.get('name')} and put it in your pack.")
+
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 1.0) # 1s RT for removing
+        # --- END NEW ---

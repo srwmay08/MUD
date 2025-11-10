@@ -7,9 +7,12 @@ from mud_backend.verbs.base_verb import BaseVerb
 
 # We import these helpers from other files
 # This helper applies roundtime
-from mud_backend.verbs.foraging import _set_action_roundtime
+# --- MODIFIED: Import both helpers ---
+from mud_backend.verbs.foraging import _set_action_roundtime, _check_action_roundtime
+# --- END MODIFIED ---
 # This helper calculates stat bonuses
-from mud_backend.core.combat_system import get_stat_bonus
+from mud_backend.core.combat_system import get_stat_bonus #<-- This should be from utils, but keeping as-is from your file
+from mud_backend.core.utils import get_stat_bonus #<-- Correcting import, using utils
 
 # --- THIS IS THE FIX ---
 # Map all valid COMMANDS (keys) to their resulting STATE (values)
@@ -44,17 +47,12 @@ class Posture(BaseVerb):
             chance = 0.40
         
         # Check for existing roundtime
-        player_id = self.player.name.lower()
-        current_time = time.time()
-        
-        # --- FIX: Use self.world ---
-        rt_data = self.world.get_combat_state(player_id)
-        if rt_data:
-            if current_time < rt_data.get("next_action_time", 0):
-                wait_time = rt_data["next_action_time"] - current_time
-                self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
-                return
-        # --- END FIX ---
+        # --- MODIFIED: Use new helper ---
+        # Note: We check RT *again* here because execute() might call this
+        # without having checked RT itself (if logic changes). It's safer.
+        if _check_action_roundtime(self.player):
+            return
+        # --- END MODIFIED ---
 
         # Roll to see if RT is applied
         if random.random() < chance:
@@ -78,11 +76,13 @@ class Posture(BaseVerb):
             # Final RT is 0.5s minimum
             final_rt = max(0.5, base_rt - stat_reduction) 
             
-            self.player.send_message(f"You stumble slightly while trying to stand. (Roundtime: {final_rt:.1f}s)")
-            _set_action_roundtime(self.player, final_rt)
+            # --- MODIFIED: Use helper, provide custom message ---
+            _set_action_roundtime(self.player, final_rt, f"You stumble slightly while trying to stand.")
         else:
             # Success! No roundtime.
             self.player.send_message("You move to a standing position.")
+            # --- NEW: Set minimal RT for successful stand ---
+            _set_action_roundtime(self.player, 0.5)
         
         self.player.posture = "standing"
 
@@ -108,17 +108,10 @@ class Posture(BaseVerb):
         # --- END FIX ---
 
         # Check for existing roundtime
-        player_id = self.player.name.lower()
-        current_time = time.time()
-        
-        # --- FIX: Use self.world ---
-        rt_data = self.world.get_combat_state(player_id)
-        if rt_data:
-            if current_time < rt_data.get("next_action_time", 0):
-                wait_time = rt_data["next_action_time"] - current_time
-                self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
-                return
-        # --- END FIX ---
+        # --- MODIFIED: Use new helper ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END MODIFIED ---
 
         if target_state == "standing":
             # Handle standing logic (which includes RT rolls)

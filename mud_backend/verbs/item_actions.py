@@ -3,6 +3,10 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import db
 # --- REFACTORED: Removed game_state import ---
 from typing import Dict, Any
+# --- NEW: Import RT helpers ---
+from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+import time
+# --- END NEW ---
 
 def _find_item_in_room(room_objects: list, target_name: str) -> Dict[str, Any] | None:
     """Helper function to find a gettable item object by name or keywords."""
@@ -72,6 +76,11 @@ class Get(BaseVerb):
     """
     
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         if not self.args:
             self.player.send_message("Get what?")
             return
@@ -132,6 +141,7 @@ class Get(BaseVerb):
             self.player.inventory.remove(item_id)
             self.player.worn_items[target_hand_slot] = item_id
             self.player.send_message(f"You get {item_name} from your {container.get('name')} and hold it.")
+            _set_action_roundtime(self.player, 1.0) # 1s RT
             
         # ---
         # BRANCH 2: GET <item> (from GROUND first, then inventory)
@@ -158,6 +168,7 @@ class Get(BaseVerb):
                 self.room.objects.remove(item_obj)
                 # --- FIX: Use self.world.save_room ---
                 self.world.save_room(self.room)
+                _set_action_roundtime(self.player, 1.0) # 1s RT
                 return
 
             # If not on ground, try to find item in inventory (to hold it)
@@ -177,6 +188,7 @@ class Get(BaseVerb):
             # --- FIX: Use local game_items ---
             item_name = game_items.get(item_id_from_pack, {}).get("name", "an item")
             self.player.send_message(f"You get {item_name} from your pack and hold it.")
+            _set_action_roundtime(self.player, 1.0) # 1s RT
 
 
 class Drop(BaseVerb):
@@ -188,6 +200,11 @@ class Drop(BaseVerb):
     """
     
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         if not self.args:
             self.player.send_message("Drop what?")
             return
@@ -237,8 +254,8 @@ class Drop(BaseVerb):
             if item_id:
                 # --- FIX: Use local game_items ---
                 item_data = game_items.get(item_id, {})
-                if (target_item_name == item_data.get("name", "").lower() or 
-                    target_item_name in item_data.get("keywords", [])):
+                if (target_name == item_data.get("name", "").lower() or 
+                    target_name in item_data.get("keywords", [])):
                     item_id_to_drop = item_id
                     item_location = slot
                     break
@@ -303,6 +320,11 @@ class Drop(BaseVerb):
             # --- FIX: Use self.world.save_room ---
             self.world.save_room(self.room)
             self.player.send_message(f"You drop {item_name}.")
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 1.0) # 1s RT for dropping/putting
+        # --- END NEW ---
+
 
 class Take(Get):
     pass
@@ -316,6 +338,11 @@ class Pour(BaseVerb):
     POUR <item> IN <target>
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+        
         args_str = " ".join(self.args).lower()
         if " in " not in args_str:
             self.player.send_message("Usage: POUR <item> IN <target>")
@@ -346,3 +373,7 @@ class Pour(BaseVerb):
             return
 
         self.player.send_message(f"You can't seem to find '{target_container_name}' to pour into.")
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 2.0)
+        # --- END NEW ---

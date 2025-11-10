@@ -182,6 +182,10 @@ class Attack(BaseVerb):
                 "current_room_id": room_id
             })
             
+            # --- THIS IS THE FIX ---
+            self.player.send_message(f"Roundtime: {rt_seconds:.1f}s")
+            # --- END FIX ---
+            
             # Set Monster AI using UID as combatant key
             if not monster_is_fighting_player:
                 self.world.set_combat_state(monster_uid, {

@@ -4,6 +4,10 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import loot_system
 from typing import Dict, Any
 from mud_backend.core import db 
+# --- NEW: Import RT helpers ---
+from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+import time
+# --- END NEW ---
 
 def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] | None:
     """
@@ -74,6 +78,11 @@ class Absorb(BaseVerb):
     Handles the 'absorb' command. (Redundant now, but kept for alias list consistency)
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         exp_in_room = self.room.unabsorbed_social_exp
         
         if exp_in_room <= 0:
@@ -88,6 +97,11 @@ class Absorb(BaseVerb):
         self.room.unabsorbed_social_exp = 0
         # --- FIX: Use self.world.save_room ---
         self.world.save_room(self.room)
+        
+        # --- NEW: Set RT ---
+        # This is a fast social action
+        _set_action_roundtime(self.player, 1.0)
+        # --- END NEW ---
 
 
 class Search(BaseVerb):
@@ -96,6 +110,11 @@ class Search(BaseVerb):
     Searches a corpse for items, spilling them onto the ground, and removes the corpse.
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         if not self.args:
             self.player.send_message("Search what?")
             return
@@ -107,6 +126,10 @@ class Search(BaseVerb):
         if not corpse_obj:
             self.player.send_message(f"You don't see a **{target_name}** here to search.")
             return
+
+        # --- NEW: Set RT for the action ---
+        _set_action_roundtime(self.player, 5.0) # 5s RT for searching
+        # --- END NEW ---
 
         if corpse_obj.get("searched_and_emptied", False):
             self.player.send_message(f"You search the {corpse_obj['name']} but find nothing left.")
@@ -167,6 +190,11 @@ class Skin(BaseVerb):
     Attempts to skin a corpse for pelts or hides.
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         if not self.args:
             self.player.send_message("Skin what?")
             return
@@ -186,6 +214,10 @@ class Skin(BaseVerb):
         if corpse_obj.get("skinned", False):
             self.player.send_message(f"The {corpse_obj['name']} has already been skinned.")
             return
+
+        # --- NEW: Set RT for the action ---
+        _set_action_roundtime(self.player, 8.0) # 8s RT for skinning
+        # --- END NEW ---
 
         # Mark as skinned immediately
         corpse_obj["skinned"] = True

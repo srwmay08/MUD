@@ -6,6 +6,9 @@ from mud_backend.verbs.base_verb import BaseVerb
 from typing import Dict, Any, Tuple, Optional
 # --- NEW: Import config for DEBUG_MODE ---
 from mud_backend import config
+# --- NEW: Import RT helpers ---
+from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+# --- END NEW ---
 
 # --- NEW: Helper functions copied from equipment.py ---
 def _find_item_in_inventory(player, target_name: str) -> str | None:
@@ -44,6 +47,11 @@ class Give(BaseVerb):
     GIVE <player> <amount> (Transfers silver immediately)
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+        
         if len(self.args) < 2:
             self.player.send_message("Usage: GIVE <player> <item> OR GIVE <player> <amount>")
             return
@@ -98,6 +106,9 @@ class Give(BaseVerb):
             if config.DEBUG_MODE:
                 print(f"[TRADE DEBUG] {self.player.name} gave {silver_amount} silver to {target_player.name} (Immediate).")
             
+            # --- NEW: Set RT ---
+            _set_action_roundtime(self.player, 1.0) # 1s RT for giving
+            # --- END NEW ---
             return # We are done.
             # --- END MODIFICATION ---
 
@@ -155,6 +166,10 @@ class Give(BaseVerb):
             f"The offer will expire in 30 seconds."
         )
         # --- END FIX ---
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 1.0) # 1s RT for offering
+        # --- END NEW ---
 
 
 class Accept(BaseVerb):
@@ -162,6 +177,11 @@ class Accept(BaseVerb):
     Handles the 'accept' command for trades and exchanges.
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         player_key = self.player.name.lower()
         
         # 1. Check for a pending trade
@@ -238,6 +258,10 @@ class Accept(BaseVerb):
 
             # 6. Send confirmations and clear trade
             self.world.remove_pending_trade(player_key)
+            
+            # --- NEW: Set RT ---
+            _set_action_roundtime(self.player, 1.0)
+            # --- END NEW ---
 
         # --- DELETED: Silver-only branch ---
 
@@ -312,12 +336,21 @@ class Accept(BaseVerb):
                 print(f"[TRADE DEBUG] {self.player.name} ACCEPTED exchange with {giver_player.name} (Item: {item_name}, Silver: {silver_amount}).")
             
             self.world.remove_pending_trade(player_key)
+            
+            # --- NEW: Set RT ---
+            _set_action_roundtime(self.player, 1.0)
+            # --- END NEW ---
 
 class Decline(BaseVerb):
     """
     Handles the 'decline' command for trades.
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         player_key = self.player.name.lower()
         
         # 1. Check for a pending trade TO this player
@@ -341,6 +374,10 @@ class Decline(BaseVerb):
         giver_player_name_lower = trade_offer['from_player_name'].lower()
         self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} declines your offer.")
         # --- END FIX ---
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 1.0)
+        # --- END NEW ---
 
 # --- NEW: Cancel verb ---
 class Cancel(BaseVerb):
@@ -348,6 +385,11 @@ class Cancel(BaseVerb):
     Handles the 'cancel' command to retract an offer.
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+        
         giver_key = self.player.name.lower()
         offer_to_cancel = None
         receiver_name = None
@@ -375,6 +417,10 @@ class Cancel(BaseVerb):
                 print(f"[TRADE DEBUG] {self.player.name} CANCELLED offer of {item_name} to {receiver_name}.")
         else:
             self.player.send_message("You have no active offers to cancel.")
+            
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 1.0)
+        # --- END NEW ---
 
 
 # --- NEW VERB: EXCHANGE ---
@@ -384,6 +430,11 @@ class Exchange(BaseVerb):
     EXCHANGE {item} WITH {player} FOR {silvers} SILVER
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         args_str = " ".join(self.args).lower()
         
         # 1. Parse the command
@@ -488,3 +539,7 @@ class Exchange(BaseVerb):
             f"The offer will expire in 30 seconds."
         )
         # --- END FIX ---
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 1.0)
+        # --- END NEW ---

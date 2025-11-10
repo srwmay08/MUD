@@ -298,12 +298,10 @@ socket.on('char_invalid', (message) => {
 // UPDATED: Input: Listen for "Enter" key
 // ---
 input.addEventListener('keydown', async function(event) {
-    // --- NEW: Block "Enter" if RT is active ---
-    if (event.key === 'Enter' && rtTimer) {
-        event.preventDefault(); // Stop the 'Enter' key
-        return; // Do nothing
-    }
-    // --- END NEW ---
+    // --- THIS IS THE FIX ---
+    // REMOVED: if (event.key === 'Enter' && rtTimer)
+    // We now allow sending commands even if the client *thinks* we have RT
+    // --- END FIX ---
 
     if (event.key === 'Enter') {
         const commandText = input.value;
@@ -357,7 +355,7 @@ input.addEventListener('keydown', async function(event) {
 // --- UPDATED: Left-Click Menu Logic ---
 output.addEventListener('click', function(event) {
     // --- NEW: Block clicks if RT is active ---
-    if (rtTimer) return;
+    // if (rtTimer) return; // <-- We remove this block to allow clicks
     // --- END NEW ---
 
     const target = event.target;
@@ -416,7 +414,7 @@ document.addEventListener('click', function(event) {
 
 contextMenu.addEventListener('click', function(event) {
     // --- NEW: Block clicks if RT is active ---
-    if (rtTimer) return;
+    // if (rtTimer) return; // <-- We remove this block
     // --- END NEW ---
 
     const command = event.target.dataset.command;

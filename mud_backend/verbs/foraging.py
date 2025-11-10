@@ -3,7 +3,13 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 # --- REMOVED: from mud_backend.core import game_state ---
-from typing import Tuple, Optional # <-- NEW
+from typing import Tuple, Optional, TYPE_CHECKING # <-- NEW
+
+# --- NEW: Type checking for Player ---
+if TYPE_CHECKING:
+    from mud_backend.core.game_objects import Player
+# --- END NEW ---
+
 
 # --- (Helper _find_item_in_hands is unchanged) ---
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
@@ -22,10 +28,35 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
                     return item_id, slot
     return None, None
 
-# --- MODIFIED: _set_action_roundtime ---
-def _set_action_roundtime(player, duration_seconds: float):
-    """Sets a non-combat action roundtime for the player."""
+# ---
+# --- NEW: CENTRAL ROUNDTIME HELPER FUNCTIONS
+# ---
+
+def _check_action_roundtime(player: 'Player') -> bool:
+    """
+    Checks if the player is in roundtime from any action.
+    Sends a message and returns True if they are, False otherwise.
+    """
     player_id = player.name.lower()
+    current_time = time.time()
+    
+    rt_data = player.world.get_combat_state(player_id)
+    if rt_data:
+        next_action_time = rt_data.get("next_action_time", 0)
+        if current_time < next_action_time:
+            wait_time = next_action_time - current_time
+            player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
+            return True # Player is in RT
+            
+    return False # Player is free
+
+def _set_action_roundtime(player: 'Player', duration_seconds: float, message: str = ""):
+    """
+    Sets a non-combat action roundtime for the player and sends a message.
+    If 'message' is provided, it's used *instead* of the default RT message.
+    """
+    player_id = player.name.lower()
+    final_duration = max(0.5, duration_seconds) # Ensure a minimum RT
     
     # --- ADD LOCK: Use player.world ---
     with player.world.combat_lock:
@@ -34,19 +65,30 @@ def _set_action_roundtime(player, duration_seconds: float):
         if rt_data is None:
             rt_data = {}
         
-        # --- THIS IS THE FIX ---
-        # Set the action time and explicitly mark the state type
-        rt_data["next_action_time"] = time.time() + duration_seconds
-        rt_data["state_type"] = "action" # <-- NEW
+        rt_data["next_action_time"] = time.time() + final_duration
+        rt_data["state_type"] = "action" 
         
         # Explicitly remove combat keys in case they were stuck
         rt_data.pop("target_id", None)
         rt_data.pop("current_room_id", None)
-        # --- END FIX ---
         
         # Put it back in the global state
         player.world.set_combat_state(player_id, rt_data)
     # --- END LOCK ---
+    
+    # Send the RT message
+    if message:
+        player.send_message(message)
+    
+    # Send the generic RT message *only* if no custom message was provided
+    # and the duration is long enough to warrant it.
+    elif not message and final_duration >= 0.5:
+        player.send_message(f"Roundtime: {final_duration:.1f}s")
+
+# ---
+# --- END CENTRAL RT HELPERS
+# ---
+
 
 class Forage(BaseVerb):
     """
@@ -57,19 +99,11 @@ class Forage(BaseVerb):
     
     def execute(self):
         # --- Roundtime Check ---
-        player_id = self.player.name.lower()
-        current_time = time.time()
-        
-        # --- ADD LOCK: Use self.world ---
-        rt_data = self.world.get_combat_state(player_id)
-        if rt_data and current_time < rt_data.get("next_action_time", 0):
-            wait_time = rt_data["next_action_time"] - current_time
-            self.player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
+        # --- MODIFIED: Use new helper ---
+        if _check_action_roundtime(self.player):
             return
-        # --- END LOCK ---
-        # --- END RT Check ---
+        # --- END MODIFIED ---
 
-        # ... (rest of Forage class is unchanged) ...
         if not self.args:
             self.player.send_message("What are you trying to forage for? (e.g., FORAGE VIRIDIAN LEAF or FORAGE SENSE)")
             _set_action_roundtime(self.player, 1.0) # 1s RT for syntax error
@@ -119,10 +153,10 @@ class Forage(BaseVerb):
                 break
         
         if not found_plant:
-            self.player.send_message("You forage... but find nothing.")
             # 10s base RT, reduced by 1s per 15 ranks of survival
             rt_seconds = max(3.0, 10.0 - (player_survival / 15.0))
-            _set_action_roundtime(self.player, rt_seconds)
+            # --- MODIFIED: Use helper, provide custom message ---
+            _set_action_roundtime(self.player, rt_seconds, "You forage... but find nothing.")
             return
 
         # We found a matching plant, now roll against the DC
@@ -146,14 +180,14 @@ class Forage(BaseVerb):
             self.player.inventory.append(item_id)
             # 8s base RT, reduced by 1s per 15 ranks
             rt_seconds = max(2.0, 8.0 - (player_survival / 15.0))
-            self.player.send_message(f"You forage... and find {item_name}! (Roundtime: {rt_seconds:.1f}s)")
-            _set_action_roundtime(self.player, rt_seconds)
+            # --- MODIFIED: Use helper, provide custom message ---
+            _set_action_roundtime(self.player, rt_seconds, f"You forage... and find {item_name}!")
         else:
             # Failure
             # 12s base RT, reduced by 1s per 15 ranks
             rt_seconds = max(4.0, 12.0 - (player_survival / 15.0))
-            self.player.send_message(f"You forage for {item_name} but fail to find any. (Roundtime: {rt_seconds:.1f}s)")
-            _set_action_roundtime(self.player, rt_seconds)
+            # --- MODIFIED: Use helper, provide custom message ---
+            _set_action_roundtime(self.player, rt_seconds, f"You forage for {item_name} but fail to find any.")
 
 # --- (Eat and Drink classes are unchanged) ---
 class Eat(BaseVerb):
@@ -161,6 +195,11 @@ class Eat(BaseVerb):
     Handles the 'eat' command for herbs and food.
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         if not self.args:
             self.player.send_message("Eat what?")
             return
@@ -204,12 +243,22 @@ class Eat(BaseVerb):
         # Remove the item from the hand it was in
         self.player.worn_items[item_location] = None
         # --- END FIX ---
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 3.0) # 3s RT for eating
+        # --- END NEW ---
+
 
 class Drink(BaseVerb):
     """
     Handles the 'drink' command for potions.
     """
     def execute(self):
+        # --- NEW: RT Check ---
+        if _check_action_roundtime(self.player):
+            return
+        # --- END NEW ---
+
         if not self.args:
             self.player.send_message("Drink what?")
             return
@@ -253,3 +302,7 @@ class Drink(BaseVerb):
         # Remove the item from the hand it was in
         self.player.worn_items[item_location] = None
         # --- END FIX ---
+        
+        # --- NEW: Set RT ---
+        _set_action_roundtime(self.player, 3.0) # 3s RT for drinking
+        # --- END NEW ---
