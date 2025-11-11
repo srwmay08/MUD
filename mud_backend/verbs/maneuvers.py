@@ -3,9 +3,9 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-# --- MODIFIED: Import get_stat_bonus ---
-from mud_backend.core.combat_system import calculate_attack_strength, calculate_defense_strength
-from mud_backend.core.utils import get_stat_bonus
+# --- MODIFIED: Import new helpers ---
+from mud_backend.core.utils import get_stat_bonus, calculate_skill_bonus
+from mud_backend.core.combat_system import STANCE_MODIFIERS
 # --- END MODIFIED ---
 
 # Skills that can be used for tripping
@@ -46,7 +46,9 @@ class Trip(BaseVerb):
         target_name = " ".join(self.args).lower()
         target_monster = None
         for obj in self.room.objects:
-            if obj.get("is_monster") and not self.world.get_defeated_monster(obj.get("uid")):
+            # --- MODIFIED: Include NPCs ---
+            if (obj.get("is_monster") or obj.get("is_npc")) and not self.world.get_defeated_monster(obj.get("uid")):
+            # --- END MODIFIED ---
                 if (target_name == obj.get("name", "").lower() or 
                     target_name in obj.get("keywords", [])):
                     target_monster = obj
@@ -66,51 +68,113 @@ class Trip(BaseVerb):
             self.player.send_message("You must complete your training with the Grizzled Warrior before you can trip other targets.")
             return
         # --- END NEW ---
-
-        # 4. Perform CMAN Check (AS vs DS)
-        # We use a simplified AS/DS check for this maneuver
-        
-        cman_ranks = self.player.skills.get("combat_maneuvers", 0)
-        weapon_ranks = self.player.skills.get(weapon_skill, 0)
         
         # ---
-        # --- THIS IS THE FIX ---
-        # Calculate STR bonus correctly
-        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", self.player.race)
-        # --- END FIX ---
-        
-        attacker_as = (cman_ranks * 2) + weapon_ranks + str_bonus
-        
-        # Defender's "Trip DS"
-        # We'll use a simple DS based on their stats
-        defender_stats = target_monster.get("stats", {})
-        defender_race = target_monster.get("race", "Human")
-        
-        # --- NEW: Get monster's skill for DS ---
-        # A monster's DS against trip is helped by their own CMAN and weapon skill
-        defender_cman = defender_stats.get("combat_maneuvers", 0)
-        defender_wep_skill = 0
-        if "polearms" in defender_stats: defender_wep_skill = defender_stats["polearms"]
-        if "staves" in defender_stats: defender_wep_skill = max(defender_wep_skill, defender_stats["staves"])
-        if "two_handed_blunt" in defender_stats: defender_wep_skill = max(defender_wep_skill, defender_stats["two_handed_blunt"])
+        # --- NEW: Engage the warrior to prevent wandering
+        # ---
+        target_uid = target_monster.get("uid")
+        player_uid = self.player.name.lower()
 
-        defender_ds = (
-            defender_stats.get("STR", 50) + 
-            defender_stats.get("AGI", 50) + 
-            defender_stats.get("DEX", 50) +
-            defender_cman + 
-            defender_wep_skill
-        ) / 3
-        # --- END NEW ---
+        if is_training and is_warrior:
+            warrior_state = self.world.get_combat_state(target_uid)
+            is_engaged = (warrior_state and 
+                          warrior_state.get("state_type") == "combat" and 
+                          warrior_state.get("target_id") == player_uid)
+            
+            if not is_engaged:
+                # Set combat state on warrior to prevent wandering
+                self.world.set_combat_state(target_uid, {
+                    "state_type": "combat",
+                    "target_id": player_uid,
+                    "next_action_time": time.time() + 9999, # He won't attack
+                    "current_room_id": self.room.room_id
+                })
+                # Set combat state on player to allow for "flee" messages
+                self.world.set_combat_state(player_uid, {
+                    "state_type": "combat",
+                    "target_id": target_uid,
+                    "next_action_time": time.time(), # Player is free
+                    "current_room_id": self.room.room_id,
+                    "rt_type": "hard"
+                })
+        # ---
+        # --- END ENGAGE LOGIC
+        # ---
+
+        # ---
+        # --- MODIFIED: Replaced CMAN Check with new logic
+        # ---
         
-        # Apply posture modifier (harder to trip a prone target)
+        # 4. Perform CMAN Check
+        
+        # --- Attacker's Offense Bonus ---
+        # "biggest factor is... bonus in Combat Maneuvers."
+        cman_bonus = calculate_skill_bonus(self.player.skills.get("combat_maneuvers", 0))
+        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", self.player.race)
+        agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", self.player.race)
+        level_bonus = self.player.level * 2 # "Level difference plays a factor"
+        
+        attacker_bonus = cman_bonus + str_bonus + agi_bonus + level_bonus
+        
+        # --- Defender's Defense Bonus ---
+        defender_stats = target_monster.get("stats", {})
+        defender_skills = target_monster.get("skills", {})
+        defender_race = target_monster.get("race", "Human")
+        defender_level = target_monster.get("level", 1)
+
+        # "Each rank...gives...up to +15 to defend" (We use skill bonus, which is stronger)
+        def_cman_bonus = calculate_skill_bonus(defender_skills.get("combat_maneuvers", 0))
+        def_str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
+        def_agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_race)
+        def_dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
+        def_level_bonus = defender_level * 2
+        
+        defender_bonus = def_cman_bonus + def_str_bonus + def_agi_bonus + def_dex_bonus + def_level_bonus
+
+        # --- Factor in Stance ---
+        stance_mod = 0
+        attacker_stance = self.player.stance
+        if attacker_stance in ["offensive", "advance"]: stance_mod = 20
+        if attacker_stance in ["guarded", "defensive"]: stance_mod = -20
+        
+        defender_stance = target_monster.get("stance", "creature")
+        if defender_stance in ["offensive", "advance"]: stance_mod -= 20
+        if defender_stance in ["guarded", "defensive"]: stance_mod += 20
+        
+        # --- Factor in Posture ---
+        posture_mod = 0
         if target_monster.get("posture", "standing") == "prone":
-            defender_ds *= 1.5
+            posture_mod = -30 # Harder to trip a target that is already prone
+
+        # --- Factor in Stun ---
+        stun_mod = 0
+        if "stun" in target_monster.get("status_effects", []):
+            stun_mod = 10 # "A stunned target has -10 to defend"
         
-        roll = random.randint(1, 100)
-        result = (attacker_as - defender_ds) + roll
-        
+        # --- END CMAN CALCULATION ---
+
         # 5. Resolve
+        roll = random.randint(1, 100)
+        result = 0 # Default to fail
+
+        # --- THIS IS THE KEY FIX for the 50% success rate ---
+        if is_training and is_warrior:
+            self.player.send_message("[You attempt the training maneuver...]")
+            
+            # Simple 50/50 check for training, ignoring stats
+            if random.random() < 0.50: # 50% success rate
+                result = 101 # Force success
+            else:
+                result = 0 # Force fail
+        
+        else:
+            # Real combat calculation
+            # (Attacker - Defender) + Roll + Advantage + Mods
+            advantage = 50 # Base advantage (like in combat_system.py)
+            result = (attacker_bonus - defender_bonus) + roll + advantage + stance_mod + posture_mod + stun_mod
+            self.player.send_message(f"[Roll: {result} (A:{attacker_bonus} vs D:{defender_bonus}) + d100:{roll} + Adv:{advantage} + Mod:{stance_mod+posture_mod+stun_mod}]")
+
+        # 6. Check Result
         if result > 100: # Success!
             
             # --- NEW: Handle training success ---
@@ -125,9 +189,15 @@ class Trip(BaseVerb):
                     # Quest complete!
                     self.player.send_message("The warrior dusts himself off and nods. 'Alright, alright, I've had enough! You've got the hang of it. Be careful with that.'")
                     self.player.send_message("You have learned: **Trip**")
-                    self.player.known_maneuvers.remove("trip_training")
+                    if "trip_training" in self.player.known_maneuvers:
+                        self.player.known_maneuvers.remove("trip_training")
                     self.player.known_maneuvers.append("trip")
                     self.player.completed_quests.append("trip_quest_1") # Use the quest_id from quests.json
+                    
+                    # --- NEW: Disengage combat ---
+                    self.world.stop_combat_for_all(player_uid, target_uid)
+                    # --- END NEW ---
+                    
                     _set_action_roundtime(self.player, 3.0, rt_type="hard") # Shorter RT on completion
                 else:
                     # Quest in progress

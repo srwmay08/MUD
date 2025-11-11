@@ -26,14 +26,30 @@ def get_active_quest_for_npc(player: Player, npc_quest_ids: List[str]) -> Option
 
         # 1. Check if quest is already complete
         reward_spell = quest_data.get("reward_spell")
-        reward_maneuver = quest_data.get("reward_maneuver") # NEW
+        reward_maneuver = quest_data.get("reward_maneuver")
         
+        # ---
+        # --- THIS IS THE FIX ---
+        # We need to correctly check if the quest is done, specifically
+        # for the "trip_training" maneuver.
+        # ---
         is_done = False
-        if (quest_id in player.completed_quests) or \
-           (reward_spell and reward_spell in player.known_spells) or \
-           (reward_maneuver and reward_maneuver in player.known_maneuvers) or \
-           (reward_maneuver == "trip_training" and "trip" in player.known_maneuvers): # Specific check for trip
+        if quest_id in player.completed_quests:
             is_done = True
+        elif reward_spell and reward_spell in player.known_spells:
+            is_done = True
+        elif reward_maneuver:
+            if reward_maneuver == "trip_training":
+                # For this quest, only knowing the *final* skill "trip"
+                # counts as being done.
+                if "trip" in player.known_maneuvers:
+                    is_done = True
+            else:
+                # For any other maneuver (e.g., "bash"),
+                # knowing it counts as completion.
+                if reward_maneuver in player.known_maneuvers:
+                    is_done = True
+        # --- END FIX ---
 
         if is_done:
             continue # This quest is done, check the next one

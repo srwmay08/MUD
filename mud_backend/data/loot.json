@@ -2,5 +2,9 @@
     "well_monster_loot": [
         {"item_id": "pelt_ruined", "chance": 0.5, "quantity": 1, "requires_skinning": true},
         {"item_id": "monster_claw", "chance": 0.8, "quantity": [1, 2]}
+    ],
+    "orc_loot": [
+        {"item_id": "orc_ear", "chance": 0.5, "quantity": [1, 2], "requires_skinning": true},
+        {"item_id": "orc_tusk", "chance": 0.6, "quantity": [1, 2]}
     ]
 }

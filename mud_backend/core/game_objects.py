@@ -546,9 +546,30 @@ class Player:
         combat_data = self.world.get_combat_state(player_id)
         if combat_data:
             target_id = combat_data.get("target_id")
+            # ---
+            # --- THIS IS THE FIX ---
+            # ---
+            target_name = target_id # Default to UID
+            
+            # Try to find the target to get its name
+            target_obj = self.world.get_player_obj(target_id) # Is it a player?
+            if not target_obj:
+                # Not a player, search all rooms for an NPC/monster with this UID
+                for room in self.world.game_rooms.values():
+                    for obj in room.get("objects", []):
+                        if obj.get("uid") == target_id:
+                            target_obj = obj
+                            break
+                    if target_obj: break
+            
+            if target_obj:
+                target_name = target_obj.get("name", target_id) if isinstance(target_obj, dict) else target_obj.name
+            # ---
+            # --- END FIX ---
+
             self.world.stop_combat_for_all(player_id, target_id)
-            self.send_message(f"You flee from the {target_id}!")
-        # --- END REFACTOR ---
+            self.send_message(f"You flee from the {target_name}!")
+        # --- END REFACTORED ---
     
     def move_to_room(self, target_room_id: str, move_message: str):
         """

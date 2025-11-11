@@ -15,6 +15,14 @@
         "base_value": 15,
         "max_value": 25
     },
+    "orc_ear": {
+        "name": "an orc ear",
+        "description": "A large, green ear taken off a recently deceased orc.",
+        "item_type": "component",
+        "keywords": ["ear", "orc ear"],
+        "base_value": 35,
+        "max_value": 57
+    },
     "orc_tusk": {
         "name": "an orc tusk",
         "description": "A large, yellowed tusk from an orc.",
