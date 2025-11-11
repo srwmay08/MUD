@@ -140,19 +140,14 @@
         "name": "North Square", 
         "is_outdoor": true, 
         "description": {
-            "default": "You are in the northern part of the town square. The main square is to the south, and a large wooden gate blocks passage further north."
+            "default": "You are in the northern part of the town square. The main square is to the south. A well-worn path continues to the north, leading to the city's edge."
         }, 
-        "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"},
-        "objects": [
-            {
-                "name": "wooden gate", 
-                "description": "A tall, reinforced wooden gate. It looks like the main entrance to the town from the north. You could try to **ENTER** it.", 
-                "verbs": ["ENTER"], 
-                "target_room": "north_gate_inside",
-                "perception_dc": 0,
-                "keywords": ["gate", "wooden gate", "north gate"]
-            }
-        ]
+        "exits": {
+            "south": "town_square", 
+            "east": "ts_northeast", 
+            "west": "ts_northwest",
+            "north": "north_gate"
+        }
     },
     
     {
@@ -397,100 +392,67 @@
         ],
         "exits": { "out": "ts_northeast" }
     },
-    
+
     {
-        "room_id": "north_gate_inside",
-        "name": "North Gate, Inside",
+        "room_id": "north_gate",
+        "name": "North Gate",
         "is_outdoor": true,
         "description": {
-            "default": "You are just inside the northern gate of the town. The town square is to the south. A tall wooden gate leads north, out of the town."
+            "default": "A sturdy stone gatehouse marks the northern exit of the city. A path leads south back to the town square, and the gate opens to a forest path to the north. A town guardsman stands watch here."
         },
         "objects": [
             {
-                "name": "wooden gate", 
-                "description": "A tall, reinforced wooden gate. You could **ENTER** it to leave the town.", 
-                "verbs": ["ENTER"], 
-                "target_room": "north_gate_outside",
-                "perception_dc": 0,
-                "keywords": ["gate", "wooden gate", "north gate"]
+                "name": "a town guardsman",
+                "description": "A guardsman in leather armor, holding a spear. He watches the northern path warily.",
+                "verbs": ["look", "attack", "talk"],
+                "is_monster": true,
+                "monster_id": "town_guardsman"
             }
         ],
-        "exits": { "south": "ts_north" }
+        "exits": {
+            "south": "ts_north",
+            "north": "forest_clearing_1"
+        }
     },
     {
-        "room_id": "north_gate_outside",
-        "name": "North Gate, Outside",
+        "room_id": "forest_clearing_1",
+        "name": "Forest Clearing",
         "is_outdoor": true,
         "description": {
-            "default": "You are just outside the northern gate of the town. A dirt path leads north into the forest. A stern guardsman watches all who approach the gate."
+            "default": "You are in a small clearing in the forest. The trees are dense and cast deep shadows. The path back to the city gate is to the south. A smaller path continues east."
         },
         "objects": [
             {
-                "name": "wooden gate", 
-                "description": "A tall, reinforced wooden gate. You could **ENTER** it to get back into town.", 
-                "verbs": ["ENTER"], 
-                "target_room": "north_gate_inside",
-                "perception_dc": 0,
-                "keywords": ["gate", "wooden gate", "south gate"]
-            },
-            {
-                "name": "a stern guardsman",
-                "description": "A stern guardsman in polished chainmail, holding a spear. He watches the forest path intently.",
-                "keywords": ["guardsman", "stern guardsman", "guard"],
-                "is_monster": false,
-                "is_npc": true,
-                "faction": "Townsfolk",
-                "stats": { "STR": 80, "CON": 80, "DEX": 70, "AGI": 70, "LOG": 60, "INT": 60, "WIS": 60, "INF": 60, "ZEA": 60, "ESS": 60, "DIS": 60, "AUR": 60 },
-                "skills": { "polearms": 40, "chain_armor": 40, "shield_use": 30 },
-                "equipped": { "mainhand": "starter_spear", "torso": "starter_chainmail", "offhand": "starter_small_shield" }
+                "name": "an orc warrior",
+                "description": "A brutish, green-skinned humanoid. It carries a crude club and snarls at your approach.",
+                "verbs": ["look", "attack"],
+                "is_monster": true,
+                "monster_id": "orc_warrior"
             }
         ],
-        "exits": { "north": "orc_clearing_1" }
+        "exits": {
+            "south": "north_gate",
+            "east": "forest_clearing_2"
+        }
     },
     {
-        "room_id": "orc_clearing_1",
-        "name": "A Forest Clearing",
+        "room_id": "forest_clearing_2",
+        "name": "Deep Forest Clearing",
         "is_outdoor": true,
         "description": {
-            "default": "A rough path opens into a small clearing. The trees are thicker here, and a crude campfire smolders in the center. A path continues east."
+            "default": "You are deeper in the forest now. The clearing is overgrown, and you see signs of a crude camp. A path leads west."
         },
         "objects": [
             {
-                "name": "an orc",
-                "description": "A brutish, green-skinned humanoid. It sharpens a crude axe and watches you.",
+                "name": "an orc warrior",
+                "description": "A brutish, green-skinned humanoid. It carries a crude club and snarls at your approach.",
                 "verbs": ["look", "attack"],
-                "perception_dc": 0,
                 "is_monster": true,
-                "monster_id": "orc_grunt"
+                "monster_id": "orc_warrior"
             }
         ],
-        "exits": { "south": "north_gate_outside", "east": "orc_clearing_2" }
-    },
-    {
-        "room_id": "orc_clearing_2",
-        "name": "A Small Orc Camp",
-        "is_outdoor": true,
-        "description": {
-            "default": "The clearing here is muddy and smells of stale meat. Several crude tents are pitched, and a couple of orcs grunt at each other over a pile of bones."
-        },
-        "objects": [
-            {
-                "name": "an orc",
-                "description": "A brutish, green-skinned humanoid. It sharpens a crude axe and watches you.",
-                "verbs": ["look", "attack"],
-                "perception_dc": 0,
-                "is_monster": true,
-                "monster_id": "orc_grunt"
-            },
-            {
-                "name": "an orc",
-                "description": "A brutish, green-skinned humanoid. It sharpens a crude axe and watches you.",
-                "verbs": ["look", "attack"],
-                "perception_dc": 0,
-                "is_monster": true,
-                "monster_id": "orc_grunt"
-            }
-        ],
-        "exits": { "west": "orc_clearing_1" }
+        "exits": {
+            "west": "forest_clearing_1"
+        }
     }
 ]

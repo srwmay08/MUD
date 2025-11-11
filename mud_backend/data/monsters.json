@@ -4,7 +4,6 @@
         "name": "stirring monster",
         "keywords": ["monster", "stirring", "stirring monster"],
         "is_aggressive": true,
-        "faction": "Creatures",
         "description": "A pathetic, whimpering mass of shadows and wet fur, easily overlooked.",
         "verbs": ["look", "attack"],
         "perception_dc": 15,
@@ -44,36 +43,64 @@
         ]
     },
     {
-        "monster_id": "orc_grunt",
-        "name": "an orc",
-        "keywords": ["orc", "an orc", "grunt"],
+        "monster_id": "orc_warrior",
+        "name": "an orc warrior",
+        "keywords": ["orc", "warrior", "an orc warrior"],
+        "faction": "orcs",
+        "faction_adjustments_on_death": {
+            "orcs": -25,
+            "townsfolk": 5
+        },
         "is_aggressive": false,
-        "faction": "ShadowtuskOrcs",
-        "description": "A brutish, green-skinned humanoid with yellow tusks. It carries a crude, heavy axe and glares at you with undisguised hatred.",
+        "description": "A brutish, green-skinned humanoid. It carries a crude club and snarls at your approach.",
         "verbs": ["look", "attack"],
         "perception_dc": 0,
         "is_monster": true,
-        "level": 1,
-        "hp": 25,
-        "max_hp": 25,
-
-        "respawn_time_seconds": 120,
+        "hp": 12,
+        "max_hp": 12,
+        "respawn_time_seconds": 90,
         "respawn_chance_per_tick": 0.3,
-
         "movement_rules": {
             "wander_chance": 0.1,
-            "allowed_rooms": ["orc_clearing_1", "orc_clearing_2", "north_gate_outside"]
+            "allowed_rooms": ["forest_clearing_1", "forest_clearing_2", "north_gate"]
         },
-        
-        "skinnable": false,
-        
         "stats": {
-            "STR": 60, "CON": 60, "DEX": 40, "AGI": 40,
-            "LOG": 20, "INT": 20, "WIS": 30, "INF": 20,
-            "ZEA": 20, "ESS": 20, "DIS": 30, "AUR": 20
+            "STR": 40, "CON": 40, "DEX": 30, "AGI": 30,
+            "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
+            "ZEA": 10, "ESS": 10, "DIS": 10, "AUR": 10
         },
-        "skills": { "blunt_weapons": 10 },
-        "loot_table_id": "well_monster_loot",
-        "equipped": { "mainhand": "starter_club" }
+        "skills": { "small_blunt": 5 },
+        "equipped": {
+            "mainhand": "starter_club"
+        },
+        "loot_table_id": "orc_loot"
+    },
+    {
+        "monster_id": "town_guardsman",
+        "name": "a town guardsman",
+        "keywords": ["guardsman", "guard", "a town guardsman"],
+        "faction": "townsfolk",
+        "is_aggressive": false,
+        "description": "A guardsman in leather armor, holding a spear. He watches the northern path warily.",
+        "verbs": ["look", "attack", "talk"],
+        "perception_dc": 0,
+        "is_monster": true,
+        "hp": 30,
+        "max_hp": 30,
+        "respawn_time_seconds": 60,
+        "respawn_chance_per_tick": 0.8,
+        "movement_rules": {
+            "wander_chance": 0.0
+        },
+        "stats": {
+            "STR": 60, "CON": 60, "DEX": 50, "AGI": 50,
+            "LOG": 30, "INT": 30, "WIS": 30, "INF": 30,
+            "ZEA": 30, "ESS": 30, "DIS": 30, "AUR": 30
+        },
+        "skills": { "edged_weapons": 20 },
+        "equipped": {
+            "mainhand": "starter_short_sword",
+            "torso": "starter_leather_armor"
+        }
     }
 ]

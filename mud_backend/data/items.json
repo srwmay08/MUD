@@ -15,6 +15,22 @@
         "base_value": 15,
         "max_value": 25
     },
+    "orc_tusk": {
+        "name": "an orc tusk",
+        "description": "A large, yellowed tusk from an orc.",
+        "item_type": "component",
+        "keywords": ["tusk", "orc tusk"],
+        "base_value": 10,
+        "max_value": 18
+    },
+    "tattered_cloth": {
+        "name": "tattered cloth",
+        "description": "A scrap of dirty, tattered cloth.",
+        "item_type": "component",
+        "keywords": ["cloth", "tattered cloth"],
+        "base_value": 1,
+        "max_value": 3
+    },
     "short_sword": {
         "name": "a short sword",
         "description": "A simple iron short sword.",

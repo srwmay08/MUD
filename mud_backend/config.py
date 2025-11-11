@@ -120,3 +120,35 @@ TOWN_ROOM_IDS = [
 # --- END MODIFIED ---
 NODE_ROOM_IDS = ["town_square"] 
 # ---
+
+# ---
+# --- NEW: FACTION SYSTEM
+# ---
+FACTION_LEVELS = {
+    "ally": 1051,
+    "warmly": 701,
+    "kindly": 451,
+    "amiable": 51,
+    "indifferent": -49,
+    "apprehensive": -449,
+    "dubious": -699,
+    "threatening": -700, # KOS Threshold
+    "scowls": -1050
+}
+
+# User-facing names for factions
+FACTION_NAME_MAP = {
+    "townsfolk": "The Townsfolk of the City",
+    "orcs": "The Orcs of the Forest"
+}
+
+# Defines who hates whom. A value <= 'threatening' means KOS.
+FACTION_RELATIONSHIPS = {
+    "orcs": {
+        "townsfolk": -2000 # Orcs hate townsfolk
+    },
+    "townsfolk": {
+        "orcs": -2000 # Townsfolk hate orcs
+    }
+}
+# --- END NEW ---
