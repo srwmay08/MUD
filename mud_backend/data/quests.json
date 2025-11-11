@@ -40,5 +40,13 @@
         "talk_prompt": "That little jolt was just a parlor trick. You want to learn a real spell? Bring me 3 ruined pelts. I will use them to show you what a concentrated blast can do.",
         "reward_message": "You hand the elementalist the ruined pelts. 'Finally.' He sets them up and incinerates them with a powerful jolt. 'That is how it's done.' You have learned Shock!",
         "already_learned_message": "The elementalist seems annoyed. 'I have nothing more to teach you right now.'"
+    },
+    "trip_quest_1": {
+        "name": "Trip Training",
+        "reward_maneuver": "trip_training",
+        "idle_prompt": "Hmph. Another greenhorn. They walk right past, no situational awareness... they'll be flat on their back before they leave the city gates.",
+        "talk_prompt": "You! You look like you could learn a thing or two about leverage. Wield a proper weapon - a polearm, a staff, something with reach - and I'll show you how to put someone on their back. Once you're ready, try to TRIP me. We'll see if you learn anything.",
+        "reward_message": "This message is not used, the reward is handled in the TRIP verb itself.",
+        "already_learned_message": "The warrior just grunts at you."
     }
 }

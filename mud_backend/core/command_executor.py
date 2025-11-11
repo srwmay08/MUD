@@ -164,31 +164,42 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     live_room_objects = []
     all_objects = room_db_data.get("objects", []) 
     if all_objects:
+        # ---
+        # --- THIS IS THE FIX ---
+        # ---
         for obj in all_objects:
             monster_id = obj.get("monster_id")
-            if monster_id:
-                if "uid" not in obj:
-                     obj["uid"] = uuid.uuid4().hex
-                uid = obj["uid"]
+            
+            if not monster_id:
+                # Not a monster, just add it (e.g., fountain, well)
+                live_room_objects.append(obj)
+                continue
 
-                # --- REFACTORED: Check world for defeated state ---
-                is_defeated = world.get_defeated_monster(uid) is not None
-                # --- END REFACTOR ---
-                
-                if not is_defeated:
-                    if "stats" not in obj:
-                        # --- REFACTORED: Get template from world ---
-                        template = world.game_monster_templates.get(monster_id)
-                        # --- END REFACTOR ---
-                        if template:
-                            current_uid = obj["uid"]
-                            obj.update(copy.deepcopy(template))
-                            obj["uid"] = current_uid 
-                            live_room_objects.append(obj)
-                        else: 
-                             pass
-                    else: live_room_objects.append(obj)
-            else: live_room_objects.append(obj)
+            # --- It IS a monster or NPC ---
+            if "uid" not in obj:
+                 obj["uid"] = uuid.uuid4().hex
+            uid = obj["uid"]
+
+            # Check if it's defeated
+            if world.get_defeated_monster(uid) is not None:
+                continue # It's defeated, do not add to room
+
+            # It's alive, load its template data if it doesn't have stats
+            if "stats" not in obj:
+                template = world.game_monster_templates.get(monster_id)
+                if template:
+                    current_uid = obj["uid"] # Preserve the room-specific UID
+                    obj.update(copy.deepcopy(template))
+                    obj["uid"] = current_uid
+                # If template is None (like for the grizzled_warrior),
+                # we *still* add the object as-is from the room file.
+
+            # Add the living monster/NPC to the room
+            live_room_objects.append(obj)
+        # ---
+        # --- END FIX
+        # ---
+            
     room.objects = live_room_objects
     
     parts = command_line.strip().split()
