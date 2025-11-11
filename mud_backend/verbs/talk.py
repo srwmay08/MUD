@@ -8,9 +8,8 @@ def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     for obj in room.objects:
         # ---
         # --- THIS IS THE FIX ---
-        # We now find any object that has quest IDs, regardless of
-        # whether it is also a monster.
-        if obj.get("quest_giver_ids"):
+        # We now find any object that has quest IDs OR is flagged as an NPC
+        if obj.get("quest_giver_ids") or obj.get("is_npc"):
         # --- END FIX ---
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):

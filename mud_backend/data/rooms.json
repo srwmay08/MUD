@@ -117,7 +117,9 @@
                 "verbs": ["look", "attack", "talk"],
                 "is_monster": true,
                 "is_npc": true,
-                "monster_id": "grizzled_warrior"
+                "monster_id": "grizzled_warrior",
+                "keywords": ["warrior", "grizzled warrior", "a grizzled warrior"],
+                "quest_giver_ids": ["trip_quest_1"]
             }
         ],
         "exits": {
