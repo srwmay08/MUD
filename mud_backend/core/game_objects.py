@@ -158,6 +158,12 @@ class Player:
         self.known_maneuvers: List[str] = self.db_data.get("known_maneuvers", [])
         self.completed_quests: List[str] = self.db_data.get("completed_quests", [])
         # --- END NEW ---
+        
+        # ---
+        # --- NEW: Faction Standings
+        # ---
+        self.factions: Dict[str, int] = self.db_data.get("factions", {})
+        # --- END NEW ---
 
 
     @property
@@ -639,6 +645,12 @@ class Player:
             "known_spells": self.known_spells,
             "known_maneuvers": self.known_maneuvers,
             "completed_quests": self.completed_quests,
+            # --- END NEW ---
+            
+            # ---
+            # --- NEW: Save Factions
+            # ---
+            "factions": self.factions,
             # --- END NEW ---
         }
         

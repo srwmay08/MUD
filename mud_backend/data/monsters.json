@@ -4,6 +4,7 @@
         "name": "stirring monster",
         "keywords": ["monster", "stirring", "stirring monster"],
         "is_aggressive": true,
+        "faction": "Creatures",
         "description": "A pathetic, whimpering mass of shadows and wet fur, easily overlooked.",
         "verbs": ["look", "attack"],
         "perception_dc": 15,
@@ -41,5 +42,38 @@
                 "dc": 10
             }
         ]
+    },
+    {
+        "monster_id": "orc_grunt",
+        "name": "an orc",
+        "keywords": ["orc", "an orc", "grunt"],
+        "is_aggressive": false,
+        "faction": "ShadowtuskOrcs",
+        "description": "A brutish, green-skinned humanoid with yellow tusks. It carries a crude, heavy axe and glares at you with undisguised hatred.",
+        "verbs": ["look", "attack"],
+        "perception_dc": 0,
+        "is_monster": true,
+        "level": 1,
+        "hp": 25,
+        "max_hp": 25,
+
+        "respawn_time_seconds": 120,
+        "respawn_chance_per_tick": 0.3,
+
+        "movement_rules": {
+            "wander_chance": 0.1,
+            "allowed_rooms": ["orc_clearing_1", "orc_clearing_2", "north_gate_outside"]
+        },
+        
+        "skinnable": false,
+        
+        "stats": {
+            "STR": 60, "CON": 60, "DEX": 40, "AGI": 40,
+            "LOG": 20, "INT": 20, "WIS": 30, "INF": 20,
+            "ZEA": 20, "ESS": 20, "DIS": 30, "AUR": 20
+        },
+        "skills": { "blunt_weapons": 10 },
+        "loot_table_id": "well_monster_loot",
+        "equipped": { "mainhand": "starter_club" }
     }
 ]

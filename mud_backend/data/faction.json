@@ -1,0 +1,38 @@
+{
+    "config": {
+        "con_levels": [
+            { "name": "Ally", "min": 1051, "max": 2000 },
+            { "name": "Warmly", "min": 701, "max": 1050 },
+            { "name": "Kindly", "min": 451, "max": 700 },
+            { "name": "Amiable", "min": 51, "max": 450 },
+            { "name": "Indifferent", "min": -49, "max": 50 },
+            { "name": "Apprehensive", "min": -449, "max": -50 },
+            { "name": "Dubious", "min": -699, "max": -450 },
+            { "name": "Threatening", "min": -1049, "max": -700 },
+            { "name": "Scowls", "min": -2000, "max": -1050 }
+        ],
+        "default_con": "Indifferent"
+    },
+    "factions": {
+        "Townsfolk": {
+            "name": "Townsfolk of Icemule",
+            "kos_factions": ["ShadowtuskOrcs"],
+            "allies": []
+        },
+        "ShadowtuskOrcs": {
+            "name": "Shadowtusk Orcs",
+            "kos_factions": ["Townsfolk"],
+            "allies": [],
+            "on_kill": {
+                "ShadowtuskOrcs": -50,
+                "Townsfolk": 10
+            }
+        },
+        "Creatures": {
+            "name": "Wild Creatures",
+            "kos_factions": [],
+            "allies": [],
+            "on_kill": {}
+        }
+    }
+}
