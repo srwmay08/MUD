@@ -631,4 +631,3 @@ class Exchange(BaseVerb):
         # --- NEW: Set RT ---
         _set_action_roundtime(self.player, 1.0)
         # --- END NEW ---
-}
