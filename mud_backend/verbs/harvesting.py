@@ -4,9 +4,10 @@ from mud_backend.core import loot_system
 from typing import Dict, Any
 from mud_backend.core import db 
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-# --- NEW: Import math ---
+# --- NEW: Import math and config ---
 import time
 import math
+from mud_backend import config
 # --- END NEW ---
 
 def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] | None:
@@ -186,7 +187,9 @@ class Skin(BaseVerb):
         # ---
         # Using 'survival' skill as the basis for skinning
         survival_skill = self.player.skills.get("survival", 0)
-        base_rt = 15.0 # Skinning is a complex task
+        # --- THIS IS THE FIX: Read base RT from config ---
+        base_rt = getattr(config, 'SKINNING_BASE_RT', 15.0) # Skinning is a complex task
+        # --- END FIX ---
         rt_reduction = survival_skill / 10.0 # 1s off per 10 ranks
         rt = max(3.0, base_rt - rt_reduction) # 3s minimum RT
         

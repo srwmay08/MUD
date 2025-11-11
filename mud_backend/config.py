@@ -56,6 +56,9 @@ CORPSE_DECAY_TIME_SECONDS = 300   # 5 minutes
 DEFAULT_DROP_EQUIPPED_CHANCE = 1.0
 DEFAULT_DROP_CARRIED_CHANCE = 1.0
 NPC_DEFAULT_RESPAWN_CHANCE = 0.2
+# --- NEW: Config for skinning RT ---
+SKINNING_BASE_RT = 5.0           # Base 15s for skinning, reduced by skill
+# --- END NEW ---
 
 # --- Environment ---
 TIME_CHANGE_INTERVAL_TICKS = 12

@@ -64,7 +64,9 @@ class Get(BaseVerb):
     """
     
     def execute(self):
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
+        # --- END FIX ---
             return
 
         if not self.args:
@@ -177,7 +179,9 @@ class Drop(BaseVerb):
     """
     
     def execute(self):
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
+        # --- END FIX ---
             return
 
         if not self.args:
@@ -302,7 +306,9 @@ class Pour(BaseVerb):
     POUR <item> IN <target>
     """
     def execute(self):
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
+        # --- END FIX ---
             return
         
         args_str = " ".join(self.args).lower()
