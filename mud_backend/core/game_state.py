@@ -1,7 +1,7 @@
 # mud_backend/core/game_state.py
 import time
 import threading
-import copy  # <-- THIS IS THE FIX
+import copy
 from mud_backend import config
 from typing import Dict, Any, Optional, List, Tuple
 from mud_backend.core import db
@@ -19,7 +19,7 @@ class World:
     methods for accessing and modifying it.
     """
     def __init__(self):
-        self.socketio = None # <-- THIS IS THE FIX
+        self.socketio = None
         # --- State Dictionaries ---
         self.runtime_monster_hp: Dict[str, int] = {}
         self.defeated_monsters: Dict[str, Dict[str, Any]] = {}
@@ -35,7 +35,10 @@ class World:
         self.game_level_table: List[int] = []
         self.game_skills: Dict[str, Dict] = {}
         self.game_criticals: Dict[str, Any] = {}
-        self.game_quests: Dict[str, Any] = {} # <-- ADD THIS
+        self.game_quests: Dict[str, Any] = {}
+        # --- NEW: Add factions ---
+        self.game_factions: Dict[str, Any] = {}
+        # --- END NEW ---
 
         # --- Game Loop Timers ---
         self.last_game_tick_time: float = time.time()
@@ -77,8 +80,12 @@ class World:
         self.game_skills = db.fetch_all_skills()
         print("[WORLD INIT] Loading all criticals...")
         self.game_criticals = db.fetch_all_criticals()
-        print("[WORLD INIT] Loading all quests...") # <-- ADD THIS
-        self.game_quests = db.fetch_all_quests()   # <-- ADD THIS
+        print("[WORLD INIT] Loading all quests...")
+        self.game_quests = db.fetch_all_quests()
+        # --- NEW: Load factions ---
+        print("[WORLD INIT] Loading all factions...")
+        self.game_factions = db.fetch_all_factions()
+        # --- END NEW ---
         print("[WORLD INIT] Data loaded.")
 
     # --- Player Accessors (Thread-Safe) ---
@@ -268,3 +275,17 @@ class World:
         elif config.DEBUG_MODE:
                 print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} not active. Cannot send: {message}")
     # --- END NEW METHOD ---
+    
+    # --- NEW: Broadcast Helper ---
+    def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
+        """EmExamplesits a message to all players in a room, optionally skipping one."""
+        if not self.socketio:
+            if config.DEBUG_MODE:
+                print(f"[WORLD/BROADCAST-WARN] No socketio object. Cannot broadcast to {room_id}: {message}")
+            return
+        
+        if skip_sid:
+            self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
+        else:
+            self.socketio.emit(msg_type, message, to=room_id)
+    # --- END NEW ---

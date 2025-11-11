@@ -234,7 +234,8 @@ def fetch_all_rooms() -> dict:
             if room_id:
                 if "objects" in room_data:
                     for obj in room_data["objects"]:
-                        if obj.get("is_monster") and "uid" not in obj:
+                        # --- MODIFIED: Assign UID to NPCs as well ---
+                        if (obj.get("is_monster") or obj.get("is_npc")) and "uid" not in obj:
                             obj["uid"] = uuid.uuid4().hex
                 rooms_dict[room_id] = room_data
         print(f"[DB INIT] ...Cached {len(rooms_dict)} rooms.")
@@ -308,3 +309,14 @@ def fetch_all_quests() -> dict:
     quests = _load_json_data("quests.json")
     print(f"[DB INIT] ...Cached {len(quests)} quests.")
     return quests
+
+# ---
+# --- NEW: Add fetch_all_factions
+# ---
+def fetch_all_factions() -> dict:
+    """Loads faction.json into a dictionary."""
+    print("[DB INIT] Caching all factions from faction.json...")
+    factions = _load_json_data("faction.json")
+    print(f"[DB INIT] ...Cached {len(factions.get('factions', 0))} factions.")
+    return factions
+# --- END NEW ---

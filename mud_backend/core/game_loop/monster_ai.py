@@ -1,16 +1,97 @@
 # mud_backend/core/game_loop/monster_ai.py
 import random
 import copy
+import time # <-- NEW IMPORT
 from typing import Callable, Tuple, List, Dict, TYPE_CHECKING
-# --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend import config
+# --- NEW: Import faction handler ---
+from mud_backend.core import faction_handler
+from mud_backend.core import combat_system
+# --- END NEW ---
 
-# --- REFACTORED: Import World for type hinting ---
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
-# --- END REFACTORED ---
 
-# --- REFACTORED: Accept world object ---
+# ---
+# --- NEW: Helper for NPC vs NPC combat
+# ---
+def _check_and_start_npc_combat(world: 'World', npc: Dict, room_id: str):
+    """
+    Checks if the given NPC should attack another NPC in the room
+    based on KOS faction rules.
+    """
+    npc_faction = npc.get("faction")
+    if not npc_faction:
+        return # This NPC has no faction, it won't start fights
+
+    npc_uid = npc.get("uid")
+    if not npc_uid:
+        return # Should not happen, but safety check
+
+    # Check if NPC is already in combat
+    if world.get_combat_state(npc_uid):
+        return
+        
+    # Get a fresh copy of the room data
+    room_data = world.get_room(room_id)
+    if not room_data:
+        return
+
+    for other_obj in room_data.get("objects", []):
+        if other_obj.get("uid") == npc_uid:
+            continue # Don't fight self
+
+        # --- MODIFIED: Check for monster OR npc ---
+        if not (other_obj.get("is_monster") or other_obj.get("is_npc")):
+            continue # Target is not an entity
+        # --- END MODIFIED ---
+            
+        other_faction = other_obj.get("faction")
+        if not other_faction:
+            continue # Target has no faction
+
+        # --- The KOS Check ---
+        if faction_handler.are_factions_kos(world, npc_faction, other_faction):
+            other_uid = other_obj.get("uid")
+            
+            # Check if target is already in combat or defeated
+            if world.get_combat_state(other_uid) or world.get_defeated_monster(other_uid):
+                continue
+
+            # --- Start Combat! ---
+            current_time = time.time()
+            npc_name = npc.get("name", "A creature")
+            other_name = other_obj.get("name", "another creature")
+            
+            world.broadcast_to_room(room_id, f"The {npc_name} attacks the {other_name}!", "combat_broadcast", skip_sid=None)
+            
+            # Set attacker's state
+            attacker_rt = combat_system.calculate_roundtime(npc.get("stats", {}).get("AGI", 50))
+            world.set_combat_state(npc_uid, {
+                "state_type": "combat",
+                "target_id": other_uid,
+                "next_action_time": current_time + attacker_rt,
+                "current_room_id": room_id
+            })
+            if world.get_monster_hp(npc_uid) is None:
+                world.set_monster_hp(npc_uid, npc.get("max_hp", 50))
+
+            # Set defender's state
+            defender_rt = combat_system.calculate_roundtime(other_obj.get("stats", {}).get("AGI", 50))
+            world.set_combat_state(other_uid, {
+                "state_type": "combat",
+                "target_id": npc_uid,
+                "next_action_time": current_time + (defender_rt / 2), # Defender gets a faster first swing
+                "current_room_id": room_id
+            })
+            if world.get_monster_hp(other_uid) is None:
+                world.set_monster_hp(other_uid, other_obj.get("max_hp", 50))
+            
+            return # The NPC has found its target
+# ---
+# --- END NEW HELPER
+# ---
+
 def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
     """
     Processes AI for all active monsters.
@@ -20,32 +101,26 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
     
     potential_movers: List[Tuple[Dict, str]] = []
 
-    # Lock rooms while we scan to prevent concurrent modification issues
-    # --- FIX: Use world.room_lock ---
     with world.room_lock:
         for room_id, room_data in world.game_rooms.items():
             if not room_data or "objects" not in room_data:
                 continue
                 
             for obj in room_data["objects"]:
-                if obj.get("is_monster"):
-                    monster_id = obj.get("monster_id")
+                # --- MODIFIED: Include NPCs in this check ---
+                if obj.get("is_monster") or obj.get("is_npc"):
+                # --- END MODIFIED ---
+                    monster_id = obj.get("monster_id") # This is fine, NPCs won't have it
                     
-                    # --- HYDRATION CHECK ---
                     if monster_id and "movement_rules" not in obj:
-                         # --- FIX: Use world.game_monster_templates ---
                          template = world.game_monster_templates.get(monster_id)
                          if template:
                              obj.update(copy.deepcopy(template))
-                    # -----------------------
 
                     if obj.get("movement_rules"):
-                        # Don't move if in combat
                         in_combat = False
-                        # --- NEW: Use UID for combat check ---
                         monster_uid = obj.get("uid")
                         if monster_uid:
-                            # --- FIX: Use world.combat_lock and world.combat_state ---
                              with world.combat_lock:
                                  if world.combat_state.get(monster_uid, {}).get("state_type") == "combat":
                                      in_combat = True
@@ -53,7 +128,6 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                         if not in_combat:
                             potential_movers.append((obj, room_id))
 
-    # Use UIDs to track who has moved to prevent double-moves
     moved_monster_uids = set()
 
     for monster, current_room_id in potential_movers:
@@ -68,12 +142,7 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
         roll = random.random()
         should_move = roll < wander_chance
 
-        if config.DEBUG_MODE and should_move:
-             monster_name = monster.get("name", "Unknown")
-             # print(f"{log_time_prefix} - MONSTER_AI: {monster_name} in {current_room_id} decided to move (Roll {roll:.2f} < {wander_chance:.2f})")
-
         if should_move:
-            # --- FIX: Use world.game_rooms ---
             current_room = world.game_rooms.get(current_room_id)
             if not current_room or not current_room.get("exits"):
                 continue
@@ -84,7 +153,6 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
             chosen_exit = None
             destination_room_id = None
             
-            # Find a valid exit based on allowed_rooms
             for direction, target_room_id in exits:
                 if not allowed_rooms or target_room_id in allowed_rooms:
                     chosen_exit = direction
@@ -92,14 +160,13 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                     break
             
             if chosen_exit and destination_room_id:
-                # --- FIX: Use world.room_lock and world.game_rooms ---
                 with world.room_lock:
                     source_room = world.game_rooms.get(current_room_id)
                     dest_room = world.game_rooms.get(destination_room_id)
                     
                     if source_room and dest_room and "objects" in source_room and monster in source_room["objects"]:
                         source_room["objects"].remove(monster)
-                        if "objects" not in dest_room: # Ensure dest has object list
+                        if "objects" not in dest_room: 
                             dest_room["objects"] = []
                         dest_room["objects"].append(monster)
                         if monster_uid:
@@ -109,6 +176,12 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                         
                         broadcast_callback(current_room_id, f"The {monster_name} slinks off towards the {chosen_exit}.", "ambient_move")
                         broadcast_callback(destination_room_id, f"A {monster_name} slinks in.", "ambient_move")
+                        
+                        # ---
+                        # --- NEW: Check for NPC-NPC combat on arrival
+                        # ---
+                        _check_and_start_npc_combat(world, monster, destination_room_id)
+                        # --- END NEW ---
                         
                         if config.DEBUG_MODE:
                             print(f"{log_time_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
