@@ -46,7 +46,7 @@
         "monster_id": "orc_warrior",
         "name": "an orc warrior",
         "keywords": ["orc", "warrior", "an orc warrior"],
-        "faction": "orcs",
+        "faction": "ShadowtuskOrcs",
         "faction_adjustments_on_death": {
             "orcs": -25,
             "townsfolk": 5
@@ -79,7 +79,7 @@
         "monster_id": "town_guardsman",
         "name": "a town guardsman",
         "keywords": ["guardsman", "guard", "a town guardsman"],
-        "faction": "townsfolk",
+        "faction": "Townsfolk",
         "is_aggressive": false,
         "description": "A guardsman in leather armor, holding a spear. He watches the northern path warily.",
         "verbs": ["look", "attack", "talk"],
@@ -97,7 +97,7 @@
             "LOG": 30, "INT": 30, "WIS": 30, "INF": 30,
             "ZEA": 30, "ESS": 30, "DIS": 30, "AUR": 30
         },
-        "skills": { "edged_weapons": 20 },
+        "skills": { "edged_weapons": 60 },
         "equipped": {
             "mainhand": "starter_short_sword",
             "torso": "starter_leather_armor"

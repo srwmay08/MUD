@@ -298,9 +298,20 @@ def _get_critical_result(
         
     crit_table = world.game_criticals[damage_type]
     
+    # ---
+    # --- THIS IS THE FIX ---
+    #
     if location not in crit_table:
-        location = "chest"
-        
+        # Fallback: Use the first available location for this damage type
+        available_locations = list(crit_table.keys())
+        if available_locations:
+            location = available_locations[0] # e.g., for "slash", this will default to "head"
+        else:
+            # Failsafe if the crit table is empty (should not happen)
+            return {"message": "A solid hit!", "extra_damage": 1, "wound_rank": 1}
+    # ---
+    # --- END FIX ---
+            
     location_table = crit_table[location]
     
     rank_str = str(min(rank, max(int(k) for k in location_table.keys())))
