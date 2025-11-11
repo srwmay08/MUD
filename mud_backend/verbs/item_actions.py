@@ -229,8 +229,12 @@ class Drop(BaseVerb):
             item_id = self.player.worn_items.get(slot)
             if item_id:
                 item_data = game_items.get(item_id, {})
-                if (target_name == item_data.get("name", "").lower() or 
-                    target_name in item_data.get("keywords", [])):
+                # ---
+                # --- THIS IS THE FIX ---
+                # The variable `target_name` was not defined here. It should be `target_item_name`.
+                if (target_item_name == item_data.get("name", "").lower() or 
+                    target_item_name in item_data.get("keywords", [])):
+                # --- END FIX ---
                     item_id_to_drop = item_id
                     item_location = slot
                     break

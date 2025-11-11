@@ -43,8 +43,11 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     """Finds an NPC object in the room by name or keyword."""
     for obj in room.objects:
-        # Check if it's an NPC (has quest_data) and not a monster
-        if obj.get("quest_data") and not obj.get("is_monster"):
+        # ---
+        # --- THIS IS THE FIX ---
+        # Changed obj.get("quest_data") to obj.get("quest_giver_id")
+        if obj.get("quest_giver_id") and not obj.get("is_monster"):
+        # --- END FIX ---
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
                 return obj
@@ -99,9 +102,22 @@ class Give(BaseVerb):
         if silver_amount == 0 and target_item_name:
             target_npc = _find_npc_in_room(self.room, target_name_input)
             if target_npc:
-                quest_data = target_npc.get("quest_data", {})
+                # ---
+                # --- THIS IS THE FIX ---
+                # Get the quest ID from the NPC, then get the quest data from the world
+                quest_id = target_npc.get("quest_giver_id")
+                if not quest_id:
+                     self.player.send_message(f"The {target_npc.get('name')} doesn't seem to want anything.")
+                     return
+
+                quest_data = self.world.game_quests.get(quest_id)
+                if not quest_data:
+                    self.player.send_message(f"The {target_npc.get('name')} seems confused by your offer. (Error: Quest data missing)")
+                    return
+                
                 item_needed = quest_data.get("item_needed")
                 reward_spell = quest_data.get("reward_spell")
+                # --- END FIX ---
 
                 # Find the item on the player
                 item_id_to_give, item_source_location = _find_item_in_hands(self.player, target_item_name)
@@ -615,3 +631,4 @@ class Exchange(BaseVerb):
         # --- NEW: Set RT ---
         _set_action_roundtime(self.player, 1.0)
         # --- END NEW ---
+}
