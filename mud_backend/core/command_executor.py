@@ -32,7 +32,7 @@ from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
 # ---
-# --- MODIFIED: VERB ALIASES (Removed trip, prep, cast)
+# --- MODIFIED: VERB ALIASES (Added 'talk')
 # ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -87,6 +87,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     
     # Systems
     "say": ("say", "Say"),
+    "talk": ("talk", "Talk"), # <-- NEW
     "give": ("trading", "Give"), "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"),
     "exchange": ("trading", "Exchange"),
@@ -222,10 +223,10 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             # --- NEW: Check for learned spells/maneuvers ---
             if not verb_info:
                 if command in ["prep", "prepare"]:
-                    if "shock_1" in player.known_spells or "heal_1" in player.known_spells: # Check if they know *any* spell
+                    if player.known_spells: # Check if they know *any* spell
                         verb_info = ("magic", "Prep")
                 elif command == "cast":
-                     if "shock_1" in player.known_spells or "heal_1" in player.known_spells:
+                     if player.known_spells:
                         verb_info = ("magic", "Cast")
                 elif command == "trip":
                     if "trip" in player.known_maneuvers:

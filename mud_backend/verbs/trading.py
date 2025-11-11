@@ -8,6 +8,8 @@ from typing import Dict, Any, Tuple, Optional
 from mud_backend import config
 # --- NEW: Import RT helpers ---
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+# --- NEW: Import quest handler ---
+from mud_backend.core.quest_handler import get_active_quest_for_npc
 # --- END NEW ---
 
 # --- NEW: Helper functions copied from equipment.py ---
@@ -21,6 +23,16 @@ def _find_item_in_inventory(player, target_name: str) -> str | None:
                 target_name in item_data.get("keywords", [])):
                 return item_id
     return None
+
+# --- NEW: Helper to count items in inventory ---
+def _count_item_in_inventory(player, target_item_id: str) -> int:
+    """Counts how many of a specific item_id a player has in inventory."""
+    count = 0
+    for item_id in player.inventory:
+        if item_id == target_item_id:
+            count += 1
+    return count
+# --- END NEW ---
 
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """
@@ -45,8 +57,8 @@ def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     for obj in room.objects:
         # ---
         # --- THIS IS THE FIX ---
-        # Changed obj.get("quest_data") to obj.get("quest_giver_id")
-        if obj.get("quest_giver_id") and not obj.get("is_monster"):
+        # Changed obj.get("quest_giver_id") to obj.get("quest_giver_ids")
+        if obj.get("quest_giver_ids") and not obj.get("is_monster"):
         # --- END FIX ---
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
@@ -97,29 +109,15 @@ class Give(BaseVerb):
         # ---
 
         # ---
-        # --- NEW: BRANCH 0: Quest NPC Check (Items Only)
+        # --- MODIFIED: BRANCH 0: Quest NPC Check (Items Only)
         # ---
         if silver_amount == 0 and target_item_name:
             target_npc = _find_npc_in_room(self.room, target_name_input)
             if target_npc:
-                # ---
-                # --- THIS IS THE FIX ---
-                # Get the quest ID from the NPC, then get the quest data from the world
-                quest_id = target_npc.get("quest_giver_id")
-                if not quest_id:
-                     self.player.send_message(f"The {target_npc.get('name')} doesn't seem to want anything.")
-                     return
-
-                quest_data = self.world.game_quests.get(quest_id)
-                if not quest_data:
-                    self.player.send_message(f"The {target_npc.get('name')} seems confused by your offer. (Error: Quest data missing)")
-                    return
+                npc_name = target_npc.get("name", "the NPC")
+                npc_quest_ids = target_npc.get("quest_giver_ids", [])
                 
-                item_needed = quest_data.get("item_needed")
-                reward_spell = quest_data.get("reward_spell")
-                # --- END FIX ---
-
-                # Find the item on the player
+                # Find the item on the player (hands or inventory)
                 item_id_to_give, item_source_location = _find_item_in_hands(self.player, target_item_name)
                 if not item_id_to_give:
                     item_id_to_give = _find_item_in_inventory(self.player, target_item_name)
@@ -129,32 +127,81 @@ class Give(BaseVerb):
                 if not item_id_to_give:
                     self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
                     return
+                
+                item_name = self.world.game_items.get(item_id_to_give, {}).get("name", "that item")
 
-                # Check if this is the correct item for the quest
+                # Find the active quest for this player
+                active_quest = get_active_quest_for_npc(self.player, npc_quest_ids)
+                
+                if not active_quest:
+                    self.player.send_message(f"The {npc_name} does not seem interested in {item_name}.")
+                    return
+
+                # Check if this is the correct item for the active quest
+                item_needed = active_quest.get("item_needed")
+                
                 if item_id_to_give == item_needed:
-                    # Quest item match!
+                    # It's the right item, now check quantity
+                    quantity_needed = active_quest.get("item_quantity", 1)
                     
-                    # Remove item from player
-                    if item_source_location == "inventory":
-                        self.player.inventory.remove(item_id_to_give)
+                    if quantity_needed == 1:
+                        # Simple case: consume the one item
+                        if item_source_location == "inventory":
+                            self.player.inventory.remove(item_id_to_give)
+                        else:
+                            self.player.worn_items[item_source_location] = None
                     else:
-                        self.player.worn_items[item_source_location] = None
+                        # Complex case: check for multiple items in inventory
+                        item_count = _count_item_in_inventory(self.player, item_id_to_give)
+                        
+                        # Also count the one in hand, if that's what was "given"
+                        if item_source_location in ["mainhand", "offhand"]:
+                            item_count += 1
+                            
+                        if item_count < quantity_needed:
+                            self.player.send_message(f"The {npc_name} looks at your {item_name}. \"This is a good start, but I need {quantity_needed} of them. You only have {item_count}.\"")
+                            return
+                        
+                        # Player has enough, consume them
+                        items_removed = 0
+                        # First, remove from hand if that's what they "gave"
+                        if item_source_location in ["mainhand", "offhand"]:
+                            self.player.worn_items[item_source_location] = None
+                            items_removed += 1
+                        
+                        # Then, remove the rest from inventory
+                        for _ in range(quantity_needed - items_removed):
+                            if item_id_to_give in self.player.inventory:
+                                self.player.inventory.remove(item_id_to_give)
+                            else:
+                                # This should not happen if our count was correct, but safety check
+                                print(f"[QUEST ERROR] Player {self.player.name} item count mismatch for {item_id_to_give}!")
+                                break
                     
-                    # Check if player already knows the spell
-                    if reward_spell in self.player.known_spells:
-                        self.player.send_message(quest_data.get("already_learned_message", "You have already completed this task."))
+                    # --- Grant Reward ---
+                    quest_id = active_quest.get("name", "unknown_quest") # Note: quest.json doesn't have quest_id, using name
+                    reward_spell = active_quest.get("reward_spell")
+                    
+                    if reward_spell:
+                        if reward_spell in self.player.known_spells:
+                            self.player.send_message(active_quest.get("already_learned_message", "You have already completed this task."))
+                        else:
+                            self.player.known_spells.append(reward_spell)
+                            self.player.send_message(active_quest.get("reward_message", "You have learned something new!"))
                     else:
-                        # Grant reward
-                        self.player.known_spells.append(reward_spell)
-                        self.player.send_message(quest_data.get("reward_message", "You have learned a new spell!"))
+                        # Handle non-spell rewards later
+                        self.player.send_message(active_quest.get("reward_message", "You have completed the task!"))
+                    
+                    # Mark quest as complete
+                    self.player.completed_quests.append(quest_id)
                     
                     _set_action_roundtime(self.player, 1.0) # 1s RT for giving
                     return # Quest complete, verb is done.
                 else:
-                    self.player.send_message(f"The {target_npc.get('name')} does not seem interested in that.")
+                    self.player.send_message(f"The {npc_name} does not seem interested in that.")
                     return
         # ---
-        # --- END NEW BRANCH
+        # --- END MODIFIED BRANCH
         # ---
 
         # 1. Check if target player is real and in the same room
@@ -617,7 +664,10 @@ class Exchange(BaseVerb):
             f"Type '<span class='keyword' data-command='cancel'>CANCEL</span>' to prematurely cancel the offer."
         )
         
-        # --- THIS IS THE FIX ---
+        # ---
+        # --- THIS IS THE BUG FIX ---
+        # Removed the extra '}' at the end of the f-string
+        #
         # To Buyer (target)
         self.world.send_message_to_player(
             target_player.name.lower(),
@@ -626,7 +676,7 @@ class Exchange(BaseVerb):
             f"'<span class='keyword' data-command='decline'>DECLINE</span>' to decline it. "
             f"The offer will expire in 30 seconds."
         )
-        # --- END FIX ---
+        # --- END BUG FIX ---
         
         # --- NEW: Set RT ---
         _set_action_roundtime(self.player, 1.0)

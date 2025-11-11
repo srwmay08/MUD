@@ -2,15 +2,43 @@
     "heal_quest_1": {
         "name": "Healing the Hurt",
         "item_needed": "viridian_leaf",
+        "item_quantity": 1,
         "reward_spell": "heal_1",
+        "idle_prompt": "If only I had more viridian leaves, I could ease so much suffering...",
+        "talk_prompt": "Thank you for asking. My supplies are terribly low. If you could bring me a viridian leaf, I can teach you a basic prayer of healing.",
         "reward_message": "The priest accepts the viridian leaf gratefully. 'Thank you, traveler. Your spirit is strong. Let me show you how to channel it to restore the body.' You have learned Minor Heal!",
         "already_learned_message": "The priest smiles. 'Thank you again for your help, traveler. May your light shine bright.'"
+    },
+    "priest_quest_2": {
+        "name": "A Sturdier Spirit",
+        "prereq_spell": "heal_1",
+        "item_needed": "pelt_ruined",
+        "item_quantity": 3,
+        "reward_spell": "spirit_shield",
+        "idle_prompt": "These poor patrons... they need more than just healing. They need protection. Some ruined pelts would make for good practice dummies...",
+        "talk_prompt": "You've learned to heal, but now you must learn to protect. Bring me 3 ruined pelts so I can demonstrate how to shield the spirit from harm.",
+        "reward_message": "You hand over the ruined pelts. The priest nods, 'Good. Now watch closely...' You learn how to form a Spirit Shield!",
+        "already_learned_message": "The priest nods. 'Your spirit is well protected now.'"
     },
     "shock_quest_1": {
         "name": "Arcane Components",
         "item_needed": "monster_claw",
+        "item_quantity": 1,
         "reward_spell": "shock_1",
+        "idle_prompt": "This research is... lacking! I need components with a strong energetic signature, like a monster claw.",
+        "talk_prompt": "You want to learn? Knowledge is not free. Bring me a monster claw. I need it for my research, and perhaps I'll show you a simple spark.",
         "reward_message": "The elementalist snatches the claw. 'Good. These have the right energetic signature.' They show you a simple gesture, and you feel a jolt of power. You have learned Minor Shock!",
         "already_learned_message": "The elementalist nods. 'More claws? I suppose I can take them. Your knowledge is already secure.'"
+    },
+    "elementalist_quest_2": {
+        "name": "Conductive Materials",
+        "prereq_spell": "shock_1",
+        "item_needed": "pelt_ruined",
+        "item_quantity": 3,
+        "reward_spell": "shock_2",
+        "idle_prompt": "A simple spark is nothing. To channel true power, one needs... insulators. Ruined pelts are poor, but they will suffice for target practice.",
+        "talk_prompt": "That little jolt was just a parlor trick. You want to learn a real spell? Bring me 3 ruined pelts. I will use them to show you what a concentrated blast can do.",
+        "reward_message": "You hand the elementalist the ruined pelts. 'Finally.' He sets them up and incinerates them with a powerful jolt. 'That is how it's done.' You have learned Shock!",
+        "already_learned_message": "The elementalist seems annoyed. 'I have nothing more to teach you right now.'"
     }
 }

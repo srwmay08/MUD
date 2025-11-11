@@ -9,7 +9,7 @@ from mud_backend.core import combat_system
 from mud_backend import config # <-- Added config import
 
 # --- Spell Definitions ---
-# --- MODIFIED: Changed "heal" to use spirit_cost ---
+# --- MODIFIED: Added 'shock_2' ---
 SPELL_BOOK = {
     "heal_1": {
         "name": "Minor Heal",
@@ -18,6 +18,11 @@ SPELL_BOOK = {
     "shock_1": {
         "name": "Minor Shock",
         "mana_cost": 10
+    },
+    "shock_2": {
+        "name": "Shock",
+        "mana_cost": 20
+        # This spell will need to be added to the Cast verb logic to function
     },
     "spirit_shield": {
         "name": "Spirit Shield",
@@ -54,7 +59,8 @@ class Prep(BaseVerb):
         # --- MODIFIED: Check player's known_spells list ---
         for known_spell_id in self.player.known_spells:
             spell_data = SPELL_BOOK.get(known_spell_id)
-            if spell_data and spell_name in spell_data["name"].lower():
+            # Find by exact match or starting keyword
+            if spell_data and (spell_name == spell_data["name"].lower() or spell_data["name"].lower().startswith(spell_name)):
                 spell_id = known_spell_id
                 spell_display_name = spell_data["name"]
                 break
@@ -171,7 +177,7 @@ class Cast(BaseVerb):
         # ---
         # --- Branch 3: Shock (Targeted attack spell)
         # ---
-        if spell_id == "shock_1":
+        if spell_id == "shock_1" or spell_id == "shock_2":
             if not self.args:
                 self.player.send_message("Who do you want to cast that on?")
                 return
@@ -190,7 +196,13 @@ class Cast(BaseVerb):
                 return
 
             self.player.send_message(f"You gesture at a {target_monster.get('name')}.")
-            self.player.send_message(f"You hurl a small surge of electricity at a {target_monster.get('name')}!")
+            
+            # --- NEW: Different message for shock_2 ---
+            if spell_id == "shock_1":
+                self.player.send_message(f"You hurl a small surge of electricity at a {target_monster.get('name')}!")
+            else:
+                self.player.send_message(f"You unleash a powerful bolt of electricity at a {target_monster.get('name')}!")
+
 
             # --- Spell Combat ---
             # AS: (Elemental Lore skill bonus * 4) <-- CHANGED
@@ -200,6 +212,10 @@ class Cast(BaseVerb):
             # --- END FIX ---
             
             spell_as = calculate_skill_bonus(lore_ranks) * 4 # Per your example
+            
+            # --- NEW: Bonus for shock_2 ---
+            if spell_id == "shock_2":
+                spell_as += 20 # Add +20 AS for the bigger spell
             
             # DS: (Target's WIS bonus)
             spell_ds = get_stat_bonus(
@@ -226,10 +242,19 @@ class Cast(BaseVerb):
                 endroll_success_margin = combat_roll_result - config.COMBAT_HIT_THRESHOLD
                 damage_factor = 0.25 # Magic damage factor
                 
+                # --- NEW: Bonus for shock_2 ---
+                if spell_id == "shock_2":
+                    damage_factor = 0.35 # More powerful
+                
                 raw_damage = max(1, endroll_success_margin * damage_factor)
                 
                 critical_divisor = 5 # Magic has a low divisor
                 base_crit_rank = math.trunc(raw_damage / critical_divisor)
+                
+                # --- NEW: Bonus for shock_2 ---
+                if spell_id == "shock_2":
+                    base_crit_rank += 1 # Add +1 to base crit rank
+                    
                 final_crit_rank = combat_system._get_randomized_crit_rank(base_crit_rank)
                 hit_location = combat_system._get_random_hit_location()
                 
@@ -267,4 +292,9 @@ class Cast(BaseVerb):
                 # --- Miss! ---
                 self.player.send_message(f"The surge of electricity dissipates harmlessly near the {target_monster.get('name')}.")
 
+            return
+            
+        # --- Handle other spells ---
+        else:
+            self.player.send_message("You cast the spell, but nothing seems to happen...")
             return

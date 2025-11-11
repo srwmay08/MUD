@@ -5,6 +5,7 @@ import time
 import datetime
 import threading 
 import math
+import random # <-- NEW IMPORT
 # --- MODIFIED: Import session ---
 from flask import Flask, request, jsonify, render_template, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -23,6 +24,11 @@ from mud_backend.core import db
 from mud_backend.core import combat_system 
 from mud_backend.core.game_loop import monster_ai
 from mud_backend import config
+
+# --- NEW: Import quest handler and Player type ---
+from mud_backend.core.quest_handler import get_active_quest_for_npc
+from mud_backend.core.game_objects import Player
+# --- END NEW ---
 
 def _get_absorption_room_type(room_id: str) -> str:
     """Determines the room type for experience absorption."""
@@ -56,6 +62,68 @@ else:
 @app.route("/")
 def index():
     return render_template("index.html")
+
+# ---
+# --- NEW: Helper function for idle NPC dialogue
+# ---
+def _handle_npc_idle_dialogue(world: World, player_name: str, room_id: str):
+    """
+    Waits a random time, then checks for NPCs and sends idle quest prompts.
+    This is run in a background thread by socketio.
+    """
+    try:
+        # 1. Wait for 3-10 seconds
+        delay = random.randint(3, 10)
+        socketio.sleep(delay)
+
+        # 2. Get the player object
+        player_obj = world.get_player_obj(player_name.lower())
+        if not player_obj:
+            return # Player logged out
+
+        # 3. Check if player is still in the same room
+        if player_obj.current_room_id != room_id:
+            return # Player moved
+
+        # 4. Get room data (use the world's cache, not a fresh db call)
+        room_data = world.game_rooms.get(room_id)
+        if not room_data:
+            return
+            
+        # 5. Find all quest-giving NPCs in the room
+        npcs = []
+        for obj in room_data.get("objects", []):
+            if obj.get("quest_giver_ids") and not obj.get("is_monster"):
+                npcs.append(obj)
+        
+        if not npcs:
+            return
+            
+        # 6. For each NPC, find their active quest and send the idle prompt
+        for npc in npcs:
+            npc_quest_ids = npc.get("quest_giver_ids", [])
+            active_quest = get_active_quest_for_npc(player_obj, npc_quest_ids)
+            
+            if active_quest:
+                idle_prompt = active_quest.get("idle_prompt")
+                if idle_prompt:
+                    # Check again if player is still here before sending
+                    if player_obj.current_room_id == room_id:
+                        npc_name = npc.get("name", "Someone")
+                        world.send_message_to_player(
+                            player_name.lower(),
+                            f"The {npc_name} says, \"{idle_prompt}\"",
+                            "message"
+                        )
+                        # Only send one idle message per room entry (from the first NPC)
+                        return 
+                        
+    except Exception as e:
+        print(f"[IDLE_DIALOGUE_ERROR] Error in _handle_npc_idle_dialogue: {e}")
+# ---
+# --- END NEW HELPER
+# ---
+
 
 # --- REFACTORED: Pass 'world' object to the thread ---
 def game_tick_thread(world_instance: World):
@@ -341,6 +409,14 @@ def handle_command_event(data):
                     join_room(room_id, sid=sid)
                     arrives_message = f'<span class="keyword" data-name="{char_name}" data-verbs="look">{char_name}</span> arrives.'
                     emit("message", arrives_message, to=room_id, skip_sid=sid)
+                    # --- NEW: Trigger idle dialogue ---
+                    socketio.start_background_task(
+                        _handle_npc_idle_dialogue, 
+                        world, 
+                        char_name, 
+                        room_id
+                    )
+                    # --- END NEW ---
             
             emit("command_response", result_data, to=sid)
 
@@ -372,6 +448,15 @@ def handle_command_event(data):
                 join_room(new_room_id, sid=sid)
                 arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
                 emit("message", arrives_message, to=new_room_id, skip_sid=sid)
+                
+                # --- NEW: Trigger idle dialogue on move ---
+                socketio.start_background_task(
+                    _handle_npc_idle_dialogue, 
+                    world, 
+                    player_name, 
+                    new_room_id
+                )
+                # --- END NEW ---
                 
             emit("command_response", result_data, to=sid)
 

@@ -356,9 +356,10 @@
             },
             {
                 "name": "priest",
-                "description": "A kindly priest moves between cots, offering water and bandages. He looks tired and his supplies seem low. You could try to 'GIVE' him items.",
+                "description": "A kindly priest moves between cots, offering water and bandages. He looks tired and his supplies seem low. You could try to 'GIVE' him items or 'TALK TO' him.",
                 "keywords": ["priest", "robed priest"],
-                "quest_giver_id": "heal_quest_1"
+                "quest_giver_ids": ["heal_quest_1", "priest_quest_2"],
+                "all_quests_done_message": "The priest smiles warmly. 'You have learned all I can teach. Go with light, traveler.'"
             },
             {
                 "name": "hurt patron",
@@ -378,9 +379,10 @@
         "objects": [
             {
                 "name": "elementalist",
-                "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research. You could try to 'GIVE' them items.",
+                "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research. You could try to 'GIVE' them items or 'TALK TO' them.",
                 "keywords": ["elementalist", "trainer"],
-                "quest_giver_id": "shock_quest_1"
+                "quest_giver_ids": ["shock_quest_1", "elementalist_quest_2"],
+                "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'"
             }
         ],
         "exits": { "out": "ts_northeast" }
