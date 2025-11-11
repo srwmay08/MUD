@@ -1,15 +1,11 @@
 # mud_backend/verbs/movement.py
 from mud_backend.verbs.base_verb import BaseVerb
-# --- REMOVED: fetch_room_data, Room, show_room_to_player ---
 from mud_backend.core.command_executor import DIRECTION_MAP
-# --- REFACTORED: Removed unused game_state import ---
-# --- NEW: Import RT helpers ---
+# --- NEW: Import random for climb roll ---
+import random
+# --- END NEW ---
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
-# --- END NEW ---
-
-
-# --- REMOVED: _stop_player_combat helper function ---
 
 
 # --- Class from enter.py ---
@@ -17,10 +13,8 @@ class Enter(BaseVerb):
     """Handles the 'enter' command to move through doors, portals, etc."""
     
     def execute(self):
-        # --- MODIFIED: RT Check ---
         if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END MODIFIED ---
 
         if not self.args:
             self.player.send_message("Enter what?")
@@ -28,7 +22,6 @@ class Enter(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         
-        # 1. Find the object the player wants to enter
         enterable_object = next((obj for obj in self.room.objects 
                                  if obj['name'].lower() == target_name and "ENTER" in obj.get("verbs", [])), None)
 
@@ -42,25 +35,37 @@ class Enter(BaseVerb):
             self.player.send_message(f"The {target_name} leads nowhere right now.")
             return
             
-        # --- NEW: Posture Check ---
         current_posture = self.player.posture
+        
+        # ---
+        # --- MODIFIED: Variable RT for Enter
+        # ---
+        rt = 0.0 # Default to 0
+        move_msg = ""
+        
+        # Check keywords for "door" or "gate"
+        obj_keywords = enterable_object.get("keywords", [])
+        is_door_or_gate = "door" in obj_keywords or "gate" in obj_keywords
         
         if current_posture == "standing":
             move_msg = f"You enter the {target_name}..."
-            rt = 3.0
+            # Only apply RT if it's NOT a door or gate
+            if not is_door_or_gate:
+                rt = 3.0
         elif current_posture == "prone":
             move_msg = f"You crawl through the {target_name}..."
-            rt = 8.0
+            if not is_door_or_gate:
+                rt = 8.0
         else: # sitting or kneeling
             self.player.send_message("You must stand up first.")
             return
-        # --- END NEW ---
+        # --- END MODIFIED ---
 
-        # 2. Call the new Player method
         self.player.move_to_room(target_room_id, move_msg)
         
-        # 3. Set Roundtime
-        _set_action_roundtime(self.player, rt)
+        # --- MODIFIED: Only set RT if it's greater than 0 ---
+        if rt > 0:
+            _set_action_roundtime(self.player, rt)
 
 
 # --- Class from climb.py ---
@@ -68,18 +73,15 @@ class Climb(BaseVerb):
     """Handles the 'climb' command to move between connected objects (like wells/ropes)."""
     
     def execute(self):
-        # --- MODIFIED: RT Check ---
         if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END MODIFIED ---
 
         if not self.args:
             self.player.send_message("Climb what? (e.g., CLIMB ROPE or CLIMB WELL)")
             return
 
-        target_name = " ".join(self.args).lower() # --- FIX: Allow multi-word targets like "stone well" ---
+        target_name = " ".join(self.args).lower() 
         
-        # 1. Find the object
         climbable_object = None
         for obj in self.room.objects:
             if "CLIMB" in obj.get("verbs", []):
@@ -98,18 +100,35 @@ class Climb(BaseVerb):
             self.player.send_message(f"The {target_name} leads nowhere right now.")
             return
             
-        # --- NEW: Posture Check ---
         if self.player.posture != "standing":
             self.player.send_message("You must stand up first to climb.")
             return
-        # --- END NEW ---
             
-        # 2. Call the new Player method
-        move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
+        # ---
+        # --- MODIFIED: Variable RT for Climb
+        # ---
+        climbing_skill = self.player.skills.get("climbing", 0)
+        dc = climbable_object.get("climb_dc", 20) # Default DC is 20
+        
+        roll = random.randint(1, 100) + climbing_skill
+        success_margin = roll - dc
+        
+        rt = 3.0 # Default RT
+        
+        if success_margin < 0: # Failure
+            # Takes longer if you fail the roll
+            rt = max(3.0, 10.0 - (climbing_skill / 10.0))
+            move_msg = f"You struggle with the {target_name} but eventually make it..."
+        else: # Success
+            # Faster if you succeed
+            rt = max(1.0, 5.0 - (success_margin / 20.0))
+            move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
+        # --- END MODIFIED ---
+            
         self.player.move_to_room(target_room_id, move_msg)
         
-        # 3. Set Roundtime
-        _set_action_roundtime(self.player, 5.0) # 5s RT for climbing
+        # Set variable roundtime
+        _set_action_roundtime(self.player, rt)
 
 # --- Class from move.py ---
 class Move(BaseVerb):
@@ -119,10 +138,8 @@ class Move(BaseVerb):
     """
     
     def execute(self):
-        # --- MODIFIED: RT Check ---
         if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END MODIFIED ---
 
         if not self.args:
             self.player.send_message("Move where? (e.g., NORTH, SOUTH, E, W, etc.)")
@@ -130,38 +147,37 @@ class Move(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         
-        # 1. Normalize the direction (e.g., "n" -> "north")
         normalized_direction = DIRECTION_MAP.get(target_name, target_name)
         
-        # --- CHECK 1: Is it a cardinal exit? ---
         target_room_id = self.room.exits.get(normalized_direction)
         
         if target_room_id:
-            # --- Found a cardinal exit ---
-            
-            # --- NEW: Posture Check ---
+            # ---
+            # --- MODIFIED: Cardinal Movement RT
+            # ---
             current_posture = self.player.posture
             move_msg = ""
-            rt = 0.0
+            rt = 0.0 # <-- RT is now 0 for directional move
             
             if current_posture == "standing":
                 move_msg = f"You move {normalized_direction}..."
-                rt = 3.0 # 3s RT for walking
+                # rt = 3.0 # <-- Original
             elif current_posture == "prone":
                 move_msg = f"You crawl {normalized_direction}..."
-                rt = 8.0 # 8s RT for crawling
+                # rt = 8.0 # <-- Original
             else: # sitting or kneeling
                 self.player.send_message("You must stand up first.")
                 return
-            # --- END NEW ---
+            # --- END MODIFIED ---
             
             self.player.move_to_room(target_room_id, move_msg)
-            _set_action_roundtime(self.player, rt)
+            
+            # --- MODIFIED: Only set RT if it's greater than 0 ---
+            if rt > 0:
+                _set_action_roundtime(self.player, rt)
             return
 
         # --- CHECK 2: Is it an object you can 'enter'? ---
-        # (This handles 'go door', 'move door')
-        # --- FIX: Check keywords as well ---
         enterable_object = None
         for obj in self.room.objects:
              if "ENTER" in obj.get("verbs", []):
@@ -171,61 +187,54 @@ class Move(BaseVerb):
                     break
                                  
         if enterable_object:
-            # --- Found an enterable object ---
-            # We can just create an instance of the Enter verb and run it
-            # No import needed, class is in the same file!
-            # --- FIX: Pass the *actual target name* to the Enter verb ---
+            # Found an enterable object, run the Enter verb
             enter_verb = Enter(self.world, self.player, self.room, enterable_object['name'].lower().split())
-            enter_verb.execute() # This will handle its own combat/posture check
+            enter_verb.execute() # This will handle its own RT checks
             return
 
-        # --- If neither, fail ---
         self.player.send_message("You cannot go that way.")
 
 # --- Class from exit.py ---
 class Exit(BaseVerb):
     """
     Handles the 'exit' and 'out' commands.
-    Tries to find a special "out" exit first.
-    If that fails, or if args are given (e.g., "exit door"),
-    it tries to find an enterable object.
     """
     
     def execute(self):
-        # --- MODIFIED: RT Check ---
         if _check_action_roundtime(self.player, action_type="move"):
             return
-        # --- END MODIFIED ---
         
         if not self.args:
             # --- CHECK 1: Handle 'exit' or 'out' (no args) ---
-            # Try to find the special "out" exit
             target_room_id = self.room.exits.get("out")
 
             if target_room_id:
-                # --- Found the "out" exit ---
-                # --- NEW: Posture Check ---
+                # ---
+                # --- MODIFIED: 'out' exit RT
+                # ---
                 current_posture = self.player.posture
                 move_msg = ""
-                rt = 0.0
+                rt = 0.0 # <-- RT is now 0 for 'out'
                 
                 if current_posture == "standing":
                     move_msg = "You head out..."
-                    rt = 3.0
+                    # rt = 3.0 # <-- Original
                 elif current_posture == "prone":
                     move_msg = "You crawl out..."
-                    rt = 8.0
+                    # rt = 8.0 # <-- Original
                 else: # sitting or kneeling
                     self.player.send_message("You must stand up first.")
                     return
-                # --- END NEW ---
+                # --- END MODIFIED ---
 
                 self.player.move_to_room(target_room_id, move_msg)
-                _set_action_roundtime(self.player, rt)
+                
+                # --- MODIFIED: Only set RT if it's greater than 0 ---
+                if rt > 0:
+                    _set_action_roundtime(self.player, rt)
                 return
             else:
                 # --- No "out" exit, try to "enter" the most obvious exit object ---
-                # --- FIX: Find a default "door" or "out" object ---
                 default_exit_obj = None
                 for obj in self.room.objects:
                     if "ENTER" in obj.get("verbs", []):
@@ -236,7 +245,7 @@ class Exit(BaseVerb):
                 if default_exit_obj:
                     obj_name_args = default_exit_obj['name'].lower().split()
                     enter_verb = Enter(self.world, self.player, self.room, obj_name_args)
-                    enter_verb.execute()
+                    enter_verb.execute() # This will handle its own RT checks
                 else:
                     self.player.send_message("You can't seem to find an exit.")
                 return
@@ -245,5 +254,5 @@ class Exit(BaseVerb):
             # --- CHECK 2: Handle 'exit <object>' (e.g., "exit door") ---
             # This is the same as "enter <object>"
             enter_verb = Enter(self.world, self.player, self.room, self.args)
-            enter_verb.execute() # This will handle its own combat check
+            enter_verb.execute() 
             return

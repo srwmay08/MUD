@@ -1,12 +1,12 @@
 # mud_backend/verbs/harvesting.py
 from mud_backend.verbs.base_verb import BaseVerb
-# --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend.core import loot_system
 from typing import Dict, Any
 from mud_backend.core import db 
-# --- NEW: Import RT helpers ---
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+# --- NEW: Import math ---
 import time
+import math
 # --- END NEW ---
 
 def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] | None:
@@ -22,7 +22,6 @@ def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] 
         if not obj.get("is_corpse"):
             continue
             
-        # Check if the target name matches the object's name OR is in its keywords
         if (target_name == obj.get("name", "").lower() or 
             target_name in obj.get("keywords", [])):
             
@@ -31,23 +30,19 @@ def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] 
             else:
                 unsearched_matches.append(obj)
 
-    # Prioritize the unsearched list first
     if unsearched_matches:
         return unsearched_matches[0]
     
-    # If no unsearched ones, return the first searched one (if any)
     if searched_matches:
         return searched_matches[0]
 
-    return None # No matches at all
+    return None
 
-# --- REFACTORED: Accept world object ---
 def _spill_item_into_room(world: 'World', room_objects: list, item_id: str) -> str | None:
     """
     Creates an item object and adds it to the room's object list.
     Returns the item's name if successful.
     """
-    # --- FIX: Use world.game_items ---
     item_data = world.game_items.get(item_id)
     if not item_data:
         print(f"[LOOT_SYSTEM] WARNING: Could not find item_id '{item_id}' in GAME_ITEMS.")
@@ -78,10 +73,8 @@ class Absorb(BaseVerb):
     Handles the 'absorb' command. (Redundant now, but kept for alias list consistency)
     """
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
 
         exp_in_room = self.room.unabsorbed_social_exp
         
@@ -89,19 +82,12 @@ class Absorb(BaseVerb):
             self.player.send_message("There is no experience here to absorb.")
             return
 
-        # Uses the passive absorption function
-        # We call it here manually if a player uses the command, even though it's now tick-based
         self.player.absorb_exp_pulse()
         
-        # Clear the experience from the room
         self.room.unabsorbed_social_exp = 0
-        # --- FIX: Use self.world.save_room ---
         self.world.save_room(self.room)
         
-        # --- NEW: Set RT ---
-        # This is a fast social action
         _set_action_roundtime(self.player, 1.0, rt_type="hard")
-        # --- END NEW ---
 
 
 class Search(BaseVerb):
@@ -110,10 +96,8 @@ class Search(BaseVerb):
     Searches a corpse for items, spilling them onto the ground, and removes the corpse.
     """
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
 
         if not self.args:
             self.player.send_message("Search what?")
@@ -127,21 +111,17 @@ class Search(BaseVerb):
             self.player.send_message(f"You don't see a **{target_name}** here to search.")
             return
 
-        # --- NEW: Set RT for the action ---
-        _set_action_roundtime(self.player, 5.0, rt_type="hard") # 5s RT for searching
-        # --- END NEW ---
+        # Note: We do NOT change this RT per user request.
+        # This is the "search" action, not the "looting" action.
+        _set_action_roundtime(self.player, 5.0, rt_type="hard") 
 
         if corpse_obj.get("searched_and_emptied", False):
             self.player.send_message(f"You search the {corpse_obj['name']} but find nothing left.")
-            # --- THIS IS THE FIX ---
-            # Remove the already-searched corpse
             if corpse_obj in self.room.objects:
                 self.room.objects.remove(corpse_obj)
             self.world.save_room(self.room)
-            # --- END FIX ---
             return
 
-        # Mark as searched immediately (so it can't be searched again)
         corpse_obj["searched_and_emptied"] = True
         
         item_ids_to_drop = corpse_obj.get("inventory", [])
@@ -149,39 +129,27 @@ class Search(BaseVerb):
         if not item_ids_to_drop:
             self.player.send_message(f"You search the {corpse_obj['name']} but find nothing.")
             
-            # --- THIS IS THE FIX ---
-            # Remove the empty corpse from the room
             if corpse_obj in self.room.objects:
                 self.room.objects.remove(corpse_obj)
-            # --- FIX: Use self.world.save_room ---
-            self.world.save_room(self.room) # Save the room state
-            # --- END FIX ---
+            self.world.save_room(self.room) 
             return
 
         self.player.send_message(f"You search the {corpse_obj['name']} and find:")
         
         found_items_names = []
         for item_id in item_ids_to_drop:
-            # --- FIX: Pass self.world ---
             item_name = _spill_item_into_room(self.world, self.room.objects, item_id)
             if item_name:
                 found_items_names.append(item_name)
         
-        # Send a summary of found items
         for name in found_items_names:
             self.player.send_message(f"- {name}")
 
-        # --- THIS IS THE FIX ---
-        # Clear the corpse's inventory (redundant, but good practice)
         corpse_obj["inventory"] = []
-        # Remove the searched corpse from the room
         if corpse_obj in self.room.objects:
             self.room.objects.remove(corpse_obj)
         
-        # Save the room state *after* spilling items and removing corpse
-        # --- FIX: Use self.world.save_room ---
         self.world.save_room(self.room)
-        # --- END FIX ---
 
 
 class Skin(BaseVerb):
@@ -190,10 +158,8 @@ class Skin(BaseVerb):
     Attempts to skin a corpse for pelts or hides.
     """
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
 
         if not self.args:
             self.player.send_message("Skin what?")
@@ -215,38 +181,35 @@ class Skin(BaseVerb):
             self.player.send_message(f"The {corpse_obj['name']} has already been skinned.")
             return
 
-        # --- NEW: Set RT for the action ---
-        _set_action_roundtime(self.player, 8.0, rt_type="hard") # 8s RT for skinning
-        # --- END NEW ---
+        # ---
+        # --- MODIFIED: Variable RT for Skinning
+        # ---
+        # Using 'survival' skill as the basis for skinning
+        survival_skill = self.player.skills.get("survival", 0)
+        base_rt = 15.0 # Skinning is a complex task
+        rt_reduction = survival_skill / 10.0 # 1s off per 10 ranks
+        rt = max(3.0, base_rt - rt_reduction) # 3s minimum RT
+        
+        _set_action_roundtime(self.player, rt, rt_type="hard")
+        # --- END MODIFIED ---
 
-        # Mark as skinned immediately
         corpse_obj["skinned"] = True
         
-        # Get the original monster template
         template_key = corpse_obj.get("original_template_key")
         if not template_key:
             self.player.send_message("You try to skin it, but the corpse is unidentifiable.")
-            # --- FIX: Use self.world.save_room ---
-            self.world.save_room(self.room) # Save the 'skinned' flag
+            self.world.save_room(self.room)
             return
             
-        # --- FIX: Use self.world.game_monster_templates ---
         monster_template = self.world.game_monster_templates.get(template_key)
         if not monster_template:
             self.player.send_message("You can't seem to find a way to skin this creature.")
-            # --- FIX: Use self.world.save_room ---
-            self.world.save_room(self.room) # Save the 'skinned' flag
+            self.world.save_room(self.room)
             return
 
-        # Get player's skinning skill
-        # --- FIX: 'skinning' is not a skill, 'survival' might be used?
-        # Let's assume 'survival' is the skill for skinning for
-        # Re-checking skills.json... there is no 'skinning' skill.
-        # I will use 'survival'
+        # Using 'survival' skill for the roll
         player_skill = self.player.skills.get("survival", 0)
         
-        # Call the loot_system function
-        # --- FIX: Pass self.world.game_items ---
         item_ids_to_drop = loot_system.generate_skinning_loot(
             monster_template=monster_template,
             player_skill_value=player_skill,
@@ -255,21 +218,16 @@ class Skin(BaseVerb):
         
         if not item_ids_to_drop:
             self.player.send_message("You try to skin the creature, but fail to produce anything of use.")
-            # --- FIX: Use self.world.save_room ---
-            self.world.save_room(self.room) # Save the 'skinned' flag
+            self.world.save_room(self.room)
             return
             
         for item_id in item_ids_to_drop:
-            # --- FIX: Pass self.world ---
             item_name = _spill_item_into_room(self.world, self.room.objects, item_id)
             if item_name:
-                # Check if it was a failure item
                 skinning_info = monster_template.get("skinning", {})
                 if item_id == skinning_info.get("item_yield_failed_key"):
                     self.player.send_message(f"You try to skin the {corpse_obj['original_name']} but ruin it, producing {item_name}.")
                 else:
                     self.player.send_message(f"You skillfully skin the {corpse_obj['original_name']}, producing {item_name}.")
         
-        # Save the room state after spilling items
-        # --- FIX: Use self.world.save_room ---
         self.world.save_room(self.room)
