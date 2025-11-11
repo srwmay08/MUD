@@ -4,8 +4,87 @@
         "name": "The Great Town Square", 
         "description": {
             "default": "A bustling place with a magnificent fountain in the center. Paths lead in all directions, and a stone well stands near the eastern corner.",
-            "storm": "The square is desolate, pounded by rain. The fountain's spray is lost in the downpour. Paths lead in all directions, and a stone well stands near the eastern corner.",
-            "fog": "The town square is wrapped in a thick, silent fog. The fountain is just a faint sound of splashing water nearby. Paths are barely visible in all directions."
+            
+            "DAWN": {
+                "clear": "The first faint light of dawn breaks, painting the sky in hues of orange and pink. The fountain is still, its water like glass. A few early risers are beginning to move about.",
+                "light clouds": "A pale, grey light filters through the high, thin clouds of dawn. The air is cool and still, and the square is quiet.",
+                "overcast": "A heavy, grey ceiling of clouds robs the dawn of its color, plunging the square into a dim, oppressive light. The fountain is a dark shape in the center.",
+                "fog": "A thick, cold fog clings to the ground, obscuring the cobblestones. The dawn light struggles to pierce the mist, and the fountain is only a faint sound of dripping water.",
+                "light rain": "A chilly, light rain patters on the stones as dawn breaks. The square is empty, its surfaces slick and reflective in the dim light.",
+                "rain": "Dawn arrives with a steady, drenching rain. The sound of the downpour drowns out all else, and the fountain's basin is already overflowing.",
+                "heavy rain": "A torrential downpour greets the dawn. The square is a churning mass of water, and the well near the eastern corner looks precariously full.",
+                "storm": "Dawn is heralded by a flash of lightning and a crack of thunder. The storm rages, making the square a dangerous, windswept place."
+            },
+            "MORNING": {
+                "clear": "The bright morning sun warms the cobblestones. The square is bustling with merchants setting up stalls and townsfolk going about their day. The fountain sparkles brightly.",
+                "light clouds": "Wispy clouds drift across the morning sky, offering brief moments of shade. The square is busy, filled with the sounds of commerce and conversation.",
+                "overcast": "A flat, grey overcast sky dulls the morning. The square is busy, but the mood is subdued under the shadowless light. The fountain's spray seems less vibrant.",
+                "fog": "The morning fog lingers, reducing visibility to a few dozen feet. Shapes move through the mist, and the fountain's splashing sounds strangely close.",
+                "light rain": "A persistent light rain dampens the square. People huddle under awnings, and the fountain's spray is lost in the general drizzle.",
+                "rain": "A steady rain falls, clearing the square of all but the most determined. The cobblestones are slick, and the well is surrounded by puddles.",
+                "heavy rain": "Heavy rain hammers the square, sending everyone running for cover. The fountain is a churning mass, its spray indistinguishable from the rain.",
+                "storm": "The morning storm continues to rage. Lightning flashes intermittently, and the well near the eastern corner looks dangerously full."
+            },
+            "NOON": {
+                "clear": "The sun hangs high overhead, beating down on the square. It's the peak of the day, and the fountain's mist is a welcome relief from the heat.",
+                "light clouds": "A few fluffy clouds offer little relief from the high sun. The square is active, though many seek the shade of the buildings.",
+                "overcast": "A thick blanket of clouds makes noon feel like late afternoon. The light is flat and grey, and the fountain's water seems dark.",
+                "fog": "It is bizarre to have fog at noon. The thick, damp air is disorienting, and the sun is just a faint, white disc somewhere above.",
+                "light rain": "A warm, light rain falls from the sky. The square is less crowded, and the air smells of wet stone and ozone.",
+                "rain": "The steady rain at noon has driven most indoors. The square is quiet, save for the drumming of the rain and the splash of the fountain.",
+                "heavy rain": "A torrential downpour at midday. The square is flooded, and the fountain's basin is completely overwhelmed by the deluge.",
+                "storm": "A violent thunderstorm rages at noon. The sky is nearly as dark as night, lit only by flashes of lightning."
+            },
+            "AFTERNOON": {
+                "clear": "The late afternoon sun casts long shadows across the square. The magnificent fountain's shadow stretches eastward, nearly touching the stone well.",
+                "light clouds": "The afternoon sun breaks through scattered clouds, dappling the square in light and shadow. The fountain's shadow grows long, creeping toward the well.",
+                "overcast": "The overcast sky of the afternoon creates a dim, shadowless light. The day feels like it's ending prematurely.",
+                "fog": "A strange afternoon fog has rolled in, swallowing the square. The long shadows of the day are lost in the oppressive, grey mist.",
+                "light rain": "A light rain continues into the afternoon. The fountain's shadow is invisible, and the square is slick with water.",
+                "rain": "Rain drums steadily on the cobblestones. The fountain's long afternoon shadow is completely obscured by the downpour.",
+                "heavy rain": "Heavy rain lashes the square. The long shadow of the fountain is a concept lost to the driving sheets of water.",
+                "storm": "A fierce afternoon storm darkens the sky. The fountain's shadow is non-existent as lightning illuminates the square."
+            },
+            "DUSK": {
+                "clear": "The sun dips below the horizon, painting the sky in fiery colors. The first lamps are being lit, and the fountain's water glows in the twilight.",
+                "light clouds": "The clouds on the horizon are tinged with the red and purple of sunset. The square grows quiet as people head home for the evening.",
+                "overcast": "The overcast sky turns a bruised purple as dusk settles. The square becomes dark quickly, and the fountain is a gloomy silhouette.",
+                "fog": "The fog thickens as dusk falls, mixing with the growing shadows. The square is eerie and silent, the fountain's splashing muffled and close.",
+                "light rain": "A cool, light rain falls in the twilight. The few lamps that are lit cast shimmering reflections on the wet cobblestones.",
+                "rain": "Rain continues to fall as darkness settles. The square is deserted, and the fountain is a noisy, wet presence in the gloom.",
+                "heavy rain": "It is dark and storming. The heavy rain at dusk is relentless, and the square is a hazardous, flooded place.",
+                "storm": "Dusk is swallowed by the storm. It is pitch black, save for the flashes of lightning that reveal the rain-swept, empty square."
+            },
+            "EVENING": {
+                "clear": "The sky is clear and filled with stars. Lamps around the square cast pools of warm light, and the fountain murmurs peacefully in the cool night air.",
+                "light clouds": "Thin clouds scud across the moon. The square is quiet, with only a few people moving through the lamplit shadows.",
+                "overcast": "A low, dark ceiling of clouds blocks all starlight, making the square feel claustrophobic. The lamps seem to struggle against the oppressive dark.",
+                "fog": "The night fog is thick and cold. The lamps cast hazy, isolated glows, and the fountain is an invisible source of splashing in the dark.",
+                "light rain": "A light rain mists through the lamplit air. The square is empty, its stones glistening wetly.",
+                "rain": "A steady rain falls on the dark square. The sound is soothing, but the air is cold and damp.",
+                "heavy rain": "Heavy rain hammers the dark, empty square. The fountain is a roaring, churning mass in the center of the deluge.",
+                "storm": "A thunderstorm rages in the dead of night. The square is lit in stark, terrifying flashes of white, revealing the stone well and the thrashing fountain."
+            },
+            "NIGHT": {
+                "clear": "The world is dark, lit only by a clear, starry sky and the moon. The square is silent, and the fountain's water shimmers under the moonlight.",
+                "light clouds": "Thin clouds drift past the moon, casting fleeting shadows over the dark square. The fountain murmurs quietly.",
+                "overcast": "The sky is a black, featureless void. The square is plunged into deep darkness, and the fountain is just a sound in the night.",
+                "fog": "A thick, cold fog blankets the square. It's impossible to see more than a few feet, and the stone well is completely hidden in the mist.",
+                "light rain": "A cold, light rain falls from the black sky. The square is silent, save for the patter of the rain and the splash of the fountain.",
+                "rain": "A steady, cold rain falls on the deserted square. Puddles are forming around the well, and the fountain sounds loud in the silence.",
+                "heavy rain": "A drenching, heavy rain pours down, flooding the square in the dead of night. The sound is a deafening roar.",
+                "storm": "A fierce storm rages in the darkness. The square is a chaotic place of wind, rain, and the occasional, blinding flash of lightning."
+            },
+            "MIDNIGHT": {
+                "clear": "The hour of midnight passes. The moon is high, casting stark, pale shadows across the silent square. The fountain's water glitters like silver.",
+                "light clouds": "The moon is hidden behind passing clouds, plunging the square into darkness before reappearing. The air is still and cold.",
+                "overcast": "It is pitch black at midnight. The overcast sky blocks all light, and the square is an oppressive, silent void.",
+                "fog": "A thick, icy fog blankets the square at midnight. The world is reduced to a few feet of visibility, and a sense of isolation is total.",
+                "light rain": "A cold, miserable drizzle falls at midnight. The square is empty and dark, the sound of the rain barely audible.",
+                "rain": "A steady rain drums on the cobblestones in the pitch dark. The fountain's splashing is a lonely sound.",
+                "heavy rain": "A torrential downpour rages at midnight. The square is flooded, and the sound is a deafening, chaotic roar.",
+                "storm": "The storm reaches its peak at midnight. Lightning flashes reveal the square being torn apart by wind and rain. The fountain is a white, churning mass."
+            }
         },
         "unabsorbed_social_exp": 100,
         "is_outdoor": true,

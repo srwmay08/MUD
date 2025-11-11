@@ -61,8 +61,8 @@ SKINNING_BASE_RT = 5.0           # Base 15s for skinning, reduced by skill
 # --- END NEW ---
 
 # --- Environment ---
-TIME_CHANGE_INTERVAL_TICKS = 12
-WEATHER_CHANGE_INTERVAL_TICKS = 10
+TIME_CHANGE_INTERVAL_TICKS = 2
+WEATHER_CHANGE_INTERVAL_TICKS = 1
 WEATHER_SEVERITY_ORDER = [
     "clear", "light clouds", "overcast", "fog",
     "light rain", "rain", "heavy rain", "storm"
