@@ -110,6 +110,14 @@
                 "target_room": "well_bottom",
                 "perception_dc": 0,
                 "keywords": ["well", "stone well"]
+            },
+            {
+                "name": "a grizzled warrior",
+                "description": "A grizzled old warrior paces the square, his eyes scanning for... something. He carries a long spear.",
+                "verbs": ["look", "attack", "talk"],
+                "is_monster": true,
+                "is_npc": true,
+                "monster_id": "grizzled_warrior"
             }
         ],
         "exits": {

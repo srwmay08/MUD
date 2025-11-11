@@ -32,7 +32,7 @@ from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
 # ---
-# --- MODIFIED: VERB ALIASES (Added 'talk')
+# --- MODIFIED: VERB ALIASES (Added 'talk', removed 'trip')
 # ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -75,7 +75,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "stat": ("stats", "Stats"), "stats": ("stats", "Stats"),
     "skill": ("skills", "Skills"), "skills": ("skills", "Skills"),
     "experience": ("experience", "Experience"), "exp": ("experience", "Experience"),
-    # "trip": ("maneuvers", "Trip"), # <-- REMOVED
+    # "trip": ("maneuvers", "Trip"), # <-- REMOVED (now handled conditionally)
 
     # Activities
     "search": ("harvesting", "Search"), "skin": ("harvesting", "Skin"),
@@ -220,7 +220,9 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         else:
             verb_info = VERB_ALIASES.get(command)
             
-            # --- NEW: Check for learned spells/maneuvers ---
+            # ---
+            # --- MODIFIED: Check for learned spells/maneuvers
+            # ---
             if not verb_info:
                 if command in ["prep", "prepare"]:
                     if player.known_spells: # Check if they know *any* spell
@@ -229,9 +231,12 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                      if player.known_spells:
                         verb_info = ("magic", "Cast")
                 elif command == "trip":
-                    if "trip" in player.known_maneuvers:
+                    # Check for EITHER the training or final maneuver
+                    if "trip" in player.known_maneuvers or "trip_training" in player.known_maneuvers:
                         verb_info = ("maneuvers", "Trip")
-            # --- END NEW ---
+            # ---
+            # --- END MODIFIED
+            # ---
 
             if not verb_info: player.send_message(f"I don't know the command **'{command}'**.")
             else:

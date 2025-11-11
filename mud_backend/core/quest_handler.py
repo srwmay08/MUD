@@ -1,6 +1,10 @@
 # mud_backend/core/quest_handler.py
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from mud_backend.core.game_objects import Player
+
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+    from mud_backend.core.game_objects import Player
 
 def get_active_quest_for_npc(player: Player, npc_quest_ids: List[str]) -> Optional[Dict[str, Any]]:
     """
@@ -22,8 +26,16 @@ def get_active_quest_for_npc(player: Player, npc_quest_ids: List[str]) -> Option
 
         # 1. Check if quest is already complete
         reward_spell = quest_data.get("reward_spell")
-        if (reward_spell and reward_spell in player.known_spells) or \
-           (quest_id in player.completed_quests):
+        reward_maneuver = quest_data.get("reward_maneuver") # NEW
+        
+        is_done = False
+        if (quest_id in player.completed_quests) or \
+           (reward_spell and reward_spell in player.known_spells) or \
+           (reward_maneuver and reward_maneuver in player.known_maneuvers) or \
+           (reward_maneuver == "trip_training" and "trip" in player.known_maneuvers): # Specific check for trip
+            is_done = True
+
+        if is_done:
             continue # This quest is done, check the next one
 
         # 2. Check prerequisites
@@ -37,3 +49,4 @@ def get_active_quest_for_npc(player: Player, npc_quest_ids: List[str]) -> Option
 
     # No active quests found for this player
     return None
+}

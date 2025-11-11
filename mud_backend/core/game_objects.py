@@ -165,6 +165,10 @@ class Player:
         self.factions: Dict[str, int] = self.db_data.get("factions", {})
         # --- END NEW ---
 
+        # --- NEW: Quest Trackers ---
+        self.quest_trip_counter: int = self.db_data.get("quest_trip_counter", 0)
+        # --- END NEW ---
+
 
     @property
     def con_bonus(self) -> int:
@@ -651,6 +655,10 @@ class Player:
             # --- NEW: Save Factions
             # ---
             "factions": self.factions,
+            # --- END NEW ---
+            
+            # --- NEW: Save Quest Trackers ---
+            "quest_trip_counter": self.quest_trip_counter
             # --- END NEW ---
         }
         

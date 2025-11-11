@@ -45,10 +45,21 @@ class Talk(BaseVerb):
             if talk_prompt:
                 self.player.send_message(f"You talk to the {npc_name}.")
                 self.player.send_message(f"The {npc_name} says, \"{talk_prompt}\"")
+                
+                # --- NEW: Grant "trip_training" maneuver ---
+                reward_maneuver = active_quest.get("reward_maneuver")
+                if reward_maneuver and reward_maneuver not in self.player.known_maneuvers:
+                    self.player.known_maneuvers.append(reward_maneuver)
+                    self.player.send_message(f"You feel you understand the basics of **{reward_maneuver.replace('_', ' ').title()}**.")
+                    # Initialize the counter
+                    if reward_maneuver == "trip_training":
+                        self.player.quest_trip_counter = 0
+                # --- END NEW ---
             else:
                 self.player.send_message(f"The {npc_name} doesn't seem to have much to say.")
         else:
             # 4. No active quest, check for a "completed all" message
+            # --- MODIFIED: Use the message from monsters.json ---
             all_quests_done_message = target_npc.get("all_quests_done_message", f"The {npc_name} nods at you politely.")
             
             # Check if all quests for this NPC are *actually* done
@@ -56,10 +67,22 @@ class Talk(BaseVerb):
             for q_id in npc_quest_ids:
                 quest_data = self.world.game_quests.get(q_id)
                 if not quest_data: continue
-                reward = quest_data.get("reward_spell")
-                if (reward and reward not in self.player.known_spells) and (q_id not in self.player.completed_quests):
+                
+                # --- NEW: Check spells and maneuvers ---
+                reward_spell = quest_data.get("reward_spell")
+                reward_maneuver = quest_data.get("reward_maneuver")
+                
+                is_done = False
+                if (q_id in self.player.completed_quests) or \
+                   (reward_spell and reward_spell in self.player.known_spells) or \
+                   (reward_maneuver and reward_maneuver in self.player.known_maneuvers) or \
+                   (reward_maneuver == "trip_training" and "trip" in self.player.known_maneuvers):
+                    is_done = True
+                
+                if not is_done:
                     all_done = False # Found one not completed
                     break
+                # --- END NEW ---
             
             if all_done:
                  self.player.send_message(all_quests_done_message)

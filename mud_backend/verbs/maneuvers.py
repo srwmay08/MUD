@@ -18,6 +18,12 @@ class Trip(BaseVerb):
     """
 
     def execute(self):
+        # --- NEW: Gating check ---
+        if "trip" not in self.player.known_maneuvers and "trip_training" not in self.player.known_maneuvers:
+            self.player.send_message("You do not know how to perform that maneuver.")
+            return
+        # --- END NEW ---
+
         # 1. Check Roundtime
         if _check_action_roundtime(self.player, action_type="attack"):
             return
@@ -52,10 +58,18 @@ class Trip(BaseVerb):
 
         target_name = target_monster.get("name", "the creature")
 
+        # --- NEW: Check if training ---
+        is_training = "trip_training" in self.player.known_maneuvers
+        is_warrior = target_monster.get("monster_id") == "grizzled_warrior"
+        
+        if is_training and not is_warrior:
+            self.player.send_message("You must complete your training with the Grizzled Warrior before you can trip other targets.")
+            return
+        # --- END NEW ---
+
         # 4. Perform CMAN Check (AS vs DS)
         # We use a simplified AS/DS check for this maneuver
         
-        # Attacker's "Trip AS"
         cman_ranks = self.player.skills.get("combat_maneuvers", 0)
         weapon_ranks = self.player.skills.get(weapon_skill, 0)
         
@@ -72,12 +86,22 @@ class Trip(BaseVerb):
         defender_stats = target_monster.get("stats", {})
         defender_race = target_monster.get("race", "Human")
         
-        # Calculate a basic DS for the monster (without evasion/parry/block)
+        # --- NEW: Get monster's skill for DS ---
+        # A monster's DS against trip is helped by their own CMAN and weapon skill
+        defender_cman = defender_stats.get("combat_maneuvers", 0)
+        defender_wep_skill = 0
+        if "polearms" in defender_stats: defender_wep_skill = defender_stats["polearms"]
+        if "staves" in defender_stats: defender_wep_skill = max(defender_wep_skill, defender_stats["staves"])
+        if "two_handed_blunt" in defender_stats: defender_wep_skill = max(defender_wep_skill, defender_stats["two_handed_blunt"])
+
         defender_ds = (
             defender_stats.get("STR", 50) + 
             defender_stats.get("AGI", 50) + 
-            defender_stats.get("DEX", 50)
+            defender_stats.get("DEX", 50) +
+            defender_cman + 
+            defender_wep_skill
         ) / 3
+        # --- END NEW ---
         
         # Apply posture modifier (harder to trip a prone target)
         if target_monster.get("posture", "standing") == "prone":
@@ -88,15 +112,44 @@ class Trip(BaseVerb):
         
         # 5. Resolve
         if result > 100: # Success!
-            target_monster["posture"] = "prone"
-            self.player.send_message(f"You swing your {weapon_name} low and sweep {target_name}'s legs!")
-            self.player.send_message(f"The {target_name} topples to the ground!")
             
-            # Set RT for success
-            _set_action_roundtime(self.player, 5.0, rt_type="hard")
+            # --- NEW: Handle training success ---
+            if is_training and is_warrior:
+                self.player.quest_trip_counter += 1
+                count = self.player.quest_trip_counter
+                
+                self.player.send_message(f"You swing your {weapon_name} low and sweep {target_name}'s legs!")
+                self.player.send_message(f"The {target_name} topples to the ground!")
+                
+                if count >= 10:
+                    # Quest complete!
+                    self.player.send_message("The warrior dusts himself off and nods. 'Alright, alright, I've had enough! You've got the hang of it. Be careful with that.'")
+                    self.player.send_message("You have learned: **Trip**")
+                    self.player.known_maneuvers.remove("trip_training")
+                    self.player.known_maneuvers.append("trip")
+                    self.player.completed_quests.append("trip_quest_1") # Use the quest_id from quests.json
+                    _set_action_roundtime(self.player, 3.0, rt_type="hard") # Shorter RT on completion
+                else:
+                    # Quest in progress
+                    self.player.send_message(f"The {target_name} scrambles back to his feet. 'Not bad! Again! ({count}/10)'")
+                    _set_action_roundtime(self.player, 5.0, rt_type="hard") # The 5s RT
             
-            # TODO: Start monster combat?
+            else:
+                # --- Original success logic ---
+                target_monster["posture"] = "prone"
+                self.player.send_message(f"You swing your {weapon_name} low and sweep {target_name}'s legs!")
+                self.player.send_message(f"The {target_name} topples to the ground!")
+                
+                # Set RT for success
+                _set_action_roundtime(self.player, 5.0, rt_type="hard")
             
         else: # Failure
-            self.player.send_message(f"You attempt to trip {target_name} but fail to knock them down.")
+            # --- NEW: Handle training failure ---
+            if is_training and is_warrior:
+                self.player.send_message(f"You attempt to trip {target_name} but fail.")
+                self.player.send_message(f"The {target_name} scoffs. 'Too slow! Again!'")
+            else:
+                # --- Original failure logic ---
+                self.player.send_message(f"You attempt to trip {target_name} but fail to knock them down.")
+            
             _set_action_roundtime(self.player, 3.0, rt_type="hard")
