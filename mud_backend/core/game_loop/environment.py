@@ -238,4 +238,9 @@ def update_environment_state(world: 'World',
     if config.DEBUG_MODE:
         if game_tick_counter > 0 and (game_tick_counter % weather_change_interval == 0 or game_tick_counter % time_change_interval == 0):
             if not time_changed_this_tick and not weather_changed_this_tick:
-                print(f"{log_time_prefix} - ENV_SYSTEM: Tick event ran, but no new messages
+                # --- THIS IS THE SYNTAX FIX ---
+                # The f-string is now correctly on one line.
+                print(f"{log_time_prefix} - ENV_SYSTEM: Tick event ran, but no new messages were generated.")
+                # --- END SYNTAX FIX ---
+            elif not time_broadcast_msg and not weather_broadcast_msg:
+                 print(f"{log_time_prefix} - ENV_SYSTEM: Tick event ran, but no new *broadcast* messages were generated (e.g., time changed but group didn't).")
