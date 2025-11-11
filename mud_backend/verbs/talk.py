@@ -6,8 +6,12 @@ from typing import Dict, Any, Optional
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     """Finds an NPC object in the room by name or keyword."""
     for obj in room.objects:
-        # Check for quest givers that are not monsters
-        if obj.get("quest_giver_ids") and not obj.get("is_monster"):
+        # ---
+        # --- THIS IS THE FIX ---
+        # We now find any object that has quest IDs, regardless of
+        # whether it is also a monster.
+        if obj.get("quest_giver_ids"):
+        # --- END FIX ---
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
                 return obj
@@ -26,6 +30,11 @@ class Talk(BaseVerb):
         target_name = " ".join(self.args).lower()
         if target_name.startswith("to "):
             target_name = target_name[3:].strip()
+            
+        # --- NEW: Handle "talk a grizzled warrior" ---
+        if target_name.startswith("a "):
+            target_name = target_name[2:].strip()
+        # --- END NEW ---
 
         # 1. Find the NPC
         target_npc = _find_npc_in_room(self.room, target_name)

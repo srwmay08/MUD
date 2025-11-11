@@ -49,4 +49,3 @@ def get_active_quest_for_npc(player: Player, npc_quest_ids: List[str]) -> Option
 
     # No active quests found for this player
     return None
-}
