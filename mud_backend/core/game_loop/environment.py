@@ -227,7 +227,13 @@ def update_environment_state(world: 'World',
         # --- FIX: Use active_players_dict (passed in) ---
         for player_name, player_data in active_players_dict.items():
         # --- END FIX ---
-            player_obj = player_data.get("player_obj")
+            
+            # ---
+            # --- THIS IS THE FIX ---
+            # player_data is the Player object itself, not the info dict
+            player_obj = player_data 
+            # --- END FIX ---
+
             if player_obj and player_obj.current_room_id in exposed_room_ids:
                 if time_broadcast_msg:
                     # Use the world's socketio instance via the player
