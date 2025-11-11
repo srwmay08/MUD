@@ -2,7 +2,11 @@
     {
         "room_id": "town_square", 
         "name": "The Great Town Square", 
-        "description": "A bustling place with a magnificent fountain in the center. Paths lead in all directions, and a stone well stands near the eastern corner.",
+        "description": {
+            "default": "A bustling place with a magnificent fountain in the center. Paths lead in all directions, and a stone well stands near the eastern corner.",
+            "storm": "The square is desolate, pounded by rain. The fountain's spray is lost in the downpour. Paths lead in all directions, and a stone well stands near the eastern corner.",
+            "fog": "The town square is wrapped in a thick, silent fog. The fountain is just a faint sound of splashing water nearby. Paths are barely visible in all directions."
+        },
         "unabsorbed_social_exp": 100,
         "is_outdoor": true,
         "objects": [ 
@@ -35,9 +39,12 @@
         }
     },
     {
-        "room_id": "ts_south", "name": "South Square", 
+        "room_id": "ts_south", 
+        "name": "South Square", 
         "is_outdoor": true,
-        "description": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here.", 
+        "description": {
+            "default": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here."
+        },
         "exits": {"north": "town_square", "east": "ts_southeast", "west": "ts_southwest"}, 
         "objects": [
             {
@@ -53,7 +60,9 @@
     {
         "room_id": "well_bottom", 
         "name": "The Bottom of the Well", 
-        "description": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur. You notice some strange plants growing in the muck near the wall. Dark passages lead east and west.",
+        "description": {
+            "default": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur. You notice some strange plants growing in the muck near the wall. Dark passages lead east and west."
+        },
         "objects": [
             {
                 "name": "rope", 
@@ -92,7 +101,9 @@
     {
         "room_id": "cave_east",
         "name": "A Dark Cave",
-        "description": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in.",
+        "description": {
+            "default": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
+        },
         "objects": [
             {
                 "name": "stirring monster",
@@ -108,7 +119,9 @@
     {
         "room_id": "cave_west",
         "name": "A Dark Cave",
-        "description": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in.",
+        "description": {
+            "default": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
+        },
         "objects": [
             {
                 "name": "stirring monster",
@@ -122,13 +135,23 @@
         "exits": { "east": "well_bottom" }
     },
     
-    {"room_id": "ts_north", "name": "North Square", "is_outdoor": true, "description": "You are in the northern part of the town square. The main square is to the south.", "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}},
+    {
+        "room_id": "ts_north", 
+        "name": "North Square", 
+        "is_outdoor": true, 
+        "description": {
+            "default": "You are in the northern part of the town square. The main square is to the south."
+        }, 
+        "exits": {"south": "town_square", "east": "ts_northeast", "west": "ts_northwest"}
+    },
     
     {
         "room_id": "ts_east", 
         "name": "East Square", 
         "is_outdoor": true, 
-        "description": "You are in the eastern part of the town square. The main square is to the west. A set of tall, oaken doors stand here, open to the public.", 
+        "description": {
+            "default": "You are in the eastern part of the town square. The main square is to the west. A set of tall, oaken doors stand here, open to the public."
+        },
         "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, 
         "objects": [
             {
@@ -143,9 +166,12 @@
     },
     
     {
-        "room_id": "ts_west", "name": "West Square", 
+        "room_id": "ts_west", 
+        "name": "West Square", 
         "is_outdoor": true, 
-        "description": "You are in the western part of the town square. The main square is to the east. A wide marble arch leads into the bank here.", 
+        "description": {
+            "default": "You are in the western part of the town square. The main square is to the east. A wide marble arch leads into the bank here."
+        },
         "exits": {"east": "town_square", "north": "ts_northwest", "south": "ts_southwest"},
         "objects": [
             {
@@ -163,7 +189,9 @@
         "room_id": "ts_northeast", 
         "name": "Northeast Square", 
         "is_outdoor": true, 
-        "description": "You are in the northeast corner of the town square. A small, rune-etched door is set into an alley here.", 
+        "description": {
+            "default": "You are in the northeast corner of the town square. A small, rune-etched door is set into an alley here."
+        },
         "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"},
         "objects": [
             {
@@ -178,9 +206,12 @@
     },
     
     {
-        "room_id": "ts_northwest", "name": "Northwest Square", 
+        "room_id": "ts_northwest", 
+        "name": "Northwest Square", 
         "is_outdoor": true, 
-        "description": "You are in the northwest corner of the town square. A solid oak door with an iron anvil sigil marks the armory.", 
+        "description": {
+            "default": "You are in the northwest corner of the town square. A solid oak door with an iron anvil sigil marks the armory."
+        },
         "exits": {"southeast": "town_square", "south": "ts_west", "east": "ts_north"},
         "objects": [
             {
@@ -194,12 +225,23 @@
         ]
     },
     
-    {"room_id": "ts_southeast", "name": "Southeast Square", "is_outdoor": true, "description": "You are in the southeast corner of the town square.", "exits": {"northwest": "town_square", "north": "ts_east", "west": "ts_south"}},
+    {
+        "room_id": "ts_southeast", 
+        "name": "Southeast Square", 
+        "is_outdoor": true, 
+        "description": {
+            "default": "You are in the southeast corner of the town square."
+        }, 
+        "exits": {"northwest": "town_square", "north": "ts_east", "west": "ts_south"}
+    },
     
     {
-        "room_id": "ts_southwest", "name": "Southwest Square", 
+        "room_id": "ts_southwest", 
+        "name": "Southwest Square", 
         "is_outdoor": true, 
-        "description": "You are in the southwest corner of the town square. The door to a small furrier's shop is here, a crude sign of a pelt hanging above it.", 
+        "description": {
+            "default": "You are in the southwest corner of the town square. The door to a small furrier's shop is here, a crude sign of a pelt hanging above it."
+        },
         "exits": {"northeast": "town_square", "north": "ts_west", "east": "ts_south"},
         "objects": [
             {
@@ -216,7 +258,9 @@
     {
         "room_id": "inn_room",
         "name": "A Room at the Inn",
-        "description": "You are in a simple, comfortable room... You feel as though you just woke from a long, hazy dream...",
+        "description": {
+            "default": "You are in a simple, comfortable room... You feel as though you just woke from a long, hazy dream..."
+        },
         "objects": [
             {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"]},
             {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"]}
@@ -227,7 +271,9 @@
     {
         "room_id": "furrier_shop",
         "name": "The Furrier's Shop",
-        "description": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter.",
+        "description": {
+            "default": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter."
+        },
         "objects": [
             {
                 "name": "furrier",
@@ -246,7 +292,9 @@
     {
         "room_id": "bank_lobby",
         "name": "The Bank of MUD",
-        "description": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall.",
+        "description": {
+            "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall."
+        },
         "objects": [
             {
                 "name": "teller",
@@ -266,7 +314,9 @@
     {
         "room_id": "armory_shop",
         "name": "The Town Armory",
-        "description": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow.",
+        "description": {
+            "default": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow."
+        },
         "objects": [
             {
                 "name": "armorer",
@@ -295,7 +345,9 @@
     {
         "room_id": "temple_of_light",
         "name": "Temple of Light",
-        "description": "A quiet, peaceful temple. Incense burns softly in the air, and sunlight streams through a high, stained-glass window, illuminating a stone altar in the center of the room. A robed priest tends to several hurt patrons on cots.",
+        "description": {
+            "default": "A quiet, peaceful temple. Incense burns softly in the air, and sunlight streams through a high, stained-glass window, illuminating a stone altar in the center of the room. A robed priest tends to several hurt patrons on cots."
+        },
         "objects": [
             {
                 "name": "stone altar",
@@ -306,13 +358,7 @@
                 "name": "priest",
                 "description": "A kindly priest moves between cots, offering water and bandages. He looks tired and his supplies seem low. You could try to 'GIVE' him items.",
                 "keywords": ["priest", "robed priest"],
-                "quest_data": {
-                    "quest_id": "heal_quest_1",
-                    "item_needed": "viridian_leaf",
-                    "reward_spell": "heal_1",
-                    "reward_message": "The priest accepts the viridian leaf gratefully. 'Thank you, traveler. Your spirit is strong. Let me show you how to channel it to restore the body.' You have learned Minor Heal!",
-                    "already_learned_message": "The priest smiles. 'Thank you again for your help, traveler. May your light shine bright.'"
-                }
+                "quest_giver_id": "heal_quest_1"
             },
             {
                 "name": "hurt patron",
@@ -326,19 +372,15 @@
     {
         "room_id": "elementalist_study",
         "name": "Elementalist's Study",
-        "description": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter.",
+        "description": {
+            "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
+        },
         "objects": [
             {
                 "name": "elementalist",
                 "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research. You could try to 'GIVE' them items.",
                 "keywords": ["elementalist", "trainer"],
-                "quest_data": {
-                    "quest_id": "shock_quest_1",
-                    "item_needed": "monster_claw",
-                    "reward_spell": "shock_1",
-                    "reward_message": "The elementalist snatches the claw. 'Good. These have the right energetic signature.' They show you a simple gesture, and you feel a jolt of power. You have learned Minor Shock!",
-                    "already_learned_message": "The elementalist nods. 'More claws? I suppose I can take them. Your knowledge is already secure.'"
-                }
+                "quest_giver_id": "shock_quest_1"
             }
         ],
         "exits": { "out": "ts_northeast" }

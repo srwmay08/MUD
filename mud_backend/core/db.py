@@ -301,3 +301,10 @@ def fetch_all_criticals() -> dict:
     criticals = _load_json_data("criticals.json")
     print(f"[DB INIT] ...Cached {len(criticals)} critical tables.")
     return criticals
+
+def fetch_all_quests() -> dict:
+    """Loads quests.json into a dictionary."""
+    print("[DB INIT] Caching all quests from quests.json...")
+    quests = _load_json_data("quests.json")
+    print(f"[DB INIT] ...Cached {len(quests)} quests.")
+    return quests

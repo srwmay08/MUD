@@ -34,7 +34,8 @@ class World:
         self.game_items: Dict[str, Dict] = {}
         self.game_level_table: List[int] = []
         self.game_skills: Dict[str, Dict] = {}
-        self.game_criticals: Dict[str, Any] = {} # <-- ADD THIS
+        self.game_criticals: Dict[str, Any] = {}
+        self.game_quests: Dict[str, Any] = {} # <-- ADD THIS
 
         # --- Game Loop Timers ---
         self.last_game_tick_time: float = time.time()
@@ -75,7 +76,9 @@ class World:
         print("[WORLD INIT] Loading all skills...")
         self.game_skills = db.fetch_all_skills()
         print("[WORLD INIT] Loading all criticals...")
-        self.game_criticals = db.fetch_all_criticals() # <-- ADD THIS
+        self.game_criticals = db.fetch_all_criticals()
+        print("[WORLD INIT] Loading all quests...") # <-- ADD THIS
+        self.game_quests = db.fetch_all_quests()   # <-- ADD THIS
         print("[WORLD INIT] Data loaded.")
 
     # --- Player Accessors (Thread-Safe) ---

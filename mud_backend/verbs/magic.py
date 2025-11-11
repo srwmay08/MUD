@@ -6,6 +6,7 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core import combat_system
+from mud_backend import config # <-- Added config import
 
 # --- Spell Definitions ---
 # --- MODIFIED: Changed "heal" to use spirit_cost ---
@@ -130,10 +131,18 @@ class Cast(BaseVerb):
         # --- Branch 1: Heal (Self-cast)
         # ---
         if spell_id == "heal_1":
-            heal_amount = 10 # Rank 1
+            # --- NEW: Make heal amount scale with Spiritual Lore ---
+            lore_ranks = self.player.skills.get("spiritual_lore", 0)
+            lore_bonus = calculate_skill_bonus(lore_ranks)
+            
+            # Formula: 10 base heal + (lore_bonus / 10)
+            base_heal = 10
+            bonus_heal = math.trunc(lore_bonus / 10)
+            heal_amount = base_heal + bonus_heal 
+            # --- END NEW ---
+            
             self.player.hp = min(self.player.max_hp, self.player.hp + heal_amount)
-            self.player.send_message("A warm, restorative light washes over you. You feel a bit better.")
-            # TODO: Add target logic
+            self.player.send_message(f"A warm, restorative light washes over you. You heal for {heal_amount} HP.")
             return
 
         # ---
@@ -184,8 +193,12 @@ class Cast(BaseVerb):
             self.player.send_message(f"You hurl a small surge of electricity at a {target_monster.get('name')}!")
 
             # --- Spell Combat ---
-            # AS: (Spiritual Lore skill bonus * 4)
-            lore_ranks = self.player.skills.get("spiritual_lore", 0)
+            # AS: (Elemental Lore skill bonus * 4) <-- CHANGED
+            
+            # --- THIS IS THE FIX ---
+            lore_ranks = self.player.skills.get("elemental_lore", 0) # Was "spiritual_lore"
+            # --- END FIX ---
+            
             spell_as = calculate_skill_bonus(lore_ranks) * 4 # Per your example
             
             # DS: (Target's WIS bonus)

@@ -53,10 +53,10 @@ class Wear(BaseVerb):
     """
     
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
+        # --- END FIX ---
         
         if not self.args:
             self.player.send_message("Wear what?")
@@ -129,10 +129,10 @@ class Remove(BaseVerb):
     """
     
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
+        # --- END FIX ---
 
         if not self.args:
             self.player.send_message("Remove what?")

@@ -1,18 +1,34 @@
 # mud_backend/core/room_handler.py
 from mud_backend.core.game_objects import Player, Room
-# --- REMOVED: from mud_backend.core import game_state ---
-# --- NEW: Import environment module ---
+# --- MODIFIED: Import environment module and global weather ---
 from mud_backend.core.game_loop import environment
-# --- END NEW ---
 
 def show_room_to_player(player: Player, room: Room):
     """
     Sends all room information (name, desc, objects, exits, players) to the player.
     """
     player.send_message(f"**{room.name}**")
-    player.send_message(room.description)
     
-    # --- NEW: Add ambient time/weather description ---
+    # --- NEW LOGIC FOR DESCRIPTIONS ---
+    room_descriptions = room.description
+    current_weather = environment.current_weather # Get current weather
+    
+    room_desc_text = ""
+    if isinstance(room_descriptions, dict):
+        # Try to find a description for the specific weather
+        if current_weather in room_descriptions:
+            room_desc_text = room_descriptions[current_weather]
+        else:
+            # Otherwise, use the default
+            room_desc_text = room_descriptions.get("default", "It is a room.")
+    else:
+        # Fallback for old-style string descriptions
+        room_desc_text = room_descriptions
+        
+    player.send_message(room_desc_text)
+    # --- END NEW LOGIC ---
+    
+    # --- Get ambient time/weather description ---
     ambient_desc = environment.get_ambient_description(room.db_data)
     if ambient_desc:
         player.send_message(ambient_desc)

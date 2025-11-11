@@ -60,10 +60,10 @@ class Give(BaseVerb):
     GIVE <npc> <item> (Handles quests)
     """
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
+        # --- END FIX ---
         
         if len(self.args) < 2:
             self.player.send_message("Usage: GIVE <target> <item> OR GIVE <player> <amount>")
@@ -249,10 +249,10 @@ class Accept(BaseVerb):
     Handles the 'accept' command for trades and exchanges.
     """
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
+        # --- END FIX ---
 
         player_key = self.player.name.lower()
         
@@ -418,10 +418,10 @@ class Decline(BaseVerb):
     Handles the 'decline' command for trades.
     """
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
+        # --- END FIX ---
 
         player_key = self.player.name.lower()
         
@@ -457,10 +457,10 @@ class Cancel(BaseVerb):
     Handles the 'cancel' command to retract an offer.
     """
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
+        # --- END FIX ---
         
         giver_key = self.player.name.lower()
         offer_to_cancel = None
@@ -502,10 +502,10 @@ class Exchange(BaseVerb):
     EXCHANGE {item} WITH {player} FOR {silvers} SILVER
     """
     def execute(self):
-        # --- NEW: RT Check ---
-        if _check_action_roundtime(self.player):
+        # --- THIS IS THE FIX ---
+        if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
+        # --- END FIX ---
 
         args_str = " ".join(self.args).lower()
         

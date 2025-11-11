@@ -57,7 +57,8 @@ def is_room_exposed(room_data):
     
     # --- MODIFIED: Check all town rooms ---
     # (This ensures descriptions appear in all parts of the town)
-    if room_data.get("room_id") in config.TOWN_ROOM_IDS:
+    # --- FIX: Use getattr to safely access config ---
+    if room_data.get("room_id") in getattr(config, 'TOWN_ROOM_IDS', []):
         return True
     # --- END MODIFIED ---
         
@@ -159,6 +160,9 @@ def update_environment_state(world: 'World',
 
     # --- (Debugging block... no changes) ---
     if config.DEBUG_MODE:
+        # ---
+        # --- THIS IS THE FIX: Changed log_prefix to log_time_prefix
+        # ---
         print(f"{log_time_prefix} - ENV_SYSTEM: Checking for events...")
         print(f"{log_time_prefix} - ENV_SYSTEM: Tick count is {game_tick_counter}.")
         # Check if it's time for a weather event
@@ -167,7 +171,7 @@ def update_environment_state(world: 'World',
         # Check if it's time for a time event
         is_time_tick = (game_tick_counter > 0 and game_tick_counter % time_change_interval == 0)
         print(f"{log_time_prefix} - ENV_SYSTEM: Time changes every {time_change_interval} ticks. (Will run: {is_time_tick})")
-    # --- END NEW DEBUGGING BLOCK ---
+    # --- END NEW DEBUGGING BLOCK (AND FIX) ---
 
     time_changed_this_tick = False
     weather_changed_this_tick = False
@@ -180,7 +184,9 @@ def update_environment_state(world: 'World',
         current_time_of_day = TIME_CYCLE[(current_time_index + 1) % len(TIME_CYCLE)]
         time_changed_this_tick = True
         if config.DEBUG_MODE: 
+            # --- THIS IS THE FIX ---
             print(f"{log_time_prefix} - ENV_SYSTEM: Time shifted from {old_time} to {current_time_of_day}")
+            # --- END FIX ---
 
     # --- Update Weather (no changes) ---
     if game_tick_counter > 0 and game_tick_counter % weather_change_interval == 0:
@@ -216,10 +222,14 @@ def update_environment_state(world: 'World',
             weather_changed_this_tick = True
             if config.DEBUG_MODE: 
                 worsen_info = f" (Worsen chance was {current_worsen_chance:.2f}, {consecutive_clear_checks} clear checks prior)" if old_weather == WEATHER_ORDER[0] else ""
+                # --- THIS IS THE FIX ---
                 print(f"{log_time_prefix} - ENV_SYSTEM: Weather changed from {old_weather} to {current_weather}.{worsen_info}")
+                # --- END FIX ---
         else:
              if config.DEBUG_MODE:
+                # --- THIS IS THE FIX ---
                 print(f"{log_time_prefix} - ENV_SYSTEM: Weather check rolled, but weather stayed the same: {current_weather}")
+                # --- END FIX ---
 
 
     # ---
@@ -231,4 +241,6 @@ def update_environment_state(world: 'World',
     if config.DEBUG_MODE:
         if game_tick_counter > 0 and (game_tick_counter % weather_change_interval == 0 or game_tick_counter % time_change_interval == 0):
             if not time_changed_this_tick and not weather_changed_this_tick:
+                # --- THIS IS THE FIX ---
                 print(f"{log_time_prefix} - ENV_SYSTEM: Tick event ran, but no new messages were generated.")
+                # --- END FIX ---

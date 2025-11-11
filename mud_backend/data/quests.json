@@ -1,0 +1,16 @@
+{
+    "heal_quest_1": {
+        "name": "Healing the Hurt",
+        "item_needed": "viridian_leaf",
+        "reward_spell": "heal_1",
+        "reward_message": "The priest accepts the viridian leaf gratefully. 'Thank you, traveler. Your spirit is strong. Let me show you how to channel it to restore the body.' You have learned Minor Heal!",
+        "already_learned_message": "The priest smiles. 'Thank you again for your help, traveler. May your light shine bright.'"
+    },
+    "shock_quest_1": {
+        "name": "Arcane Components",
+        "item_needed": "monster_claw",
+        "reward_spell": "shock_1",
+        "reward_message": "The elementalist snatches the claw. 'Good. These have the right energetic signature.' They show you a simple gesture, and you feel a jolt of power. You have learned Minor Shock!",
+        "already_learned_message": "The elementalist nods. 'More claws? I suppose I can take them. Your knowledge is already secure.'"
+    }
+}
