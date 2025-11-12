@@ -1,11 +1,13 @@
 # mud_backend/verbs/movement.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.command_executor import DIRECTION_MAP
-# --- NEW: Import random for climb roll ---
 import random
-# --- END NEW ---
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
+# --- NEW: Import deque for pathfinding ---
+from collections import deque
+from typing import Optional, List, Dict, Set
+# --- END NEW ---
 
 # ---
 # --- NEW: GOTO Target Map
@@ -55,6 +57,52 @@ def _check_toll_gate(player, target_room_id: str) -> bool:
     return False # Allow movement
 # ---
 # --- END FIX
+# ---
+
+# ---
+# --- NEW: Pathfinding Function (BFS)
+# ---
+def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str]]:
+    """
+    Finds the shortest path from start to end room using BFS.
+    Returns a list of directions (e.g., ["north", "east"]) or None.
+    """
+    queue = deque([(start_room_id, [])])  # (current_room_id, path_list)
+    visited: Set[str] = {start_room_id}
+
+    while queue:
+        current_room_id, path = queue.popleft()
+
+        if current_room_id == end_room_id:
+            return path  # Found the destination
+
+        room = world.get_room(current_room_id)
+        if not room:
+            continue
+
+        exits = room.get("exits", {})
+        
+        # --- NEW: Also check 'objects' for 'ENTER' verbs ---
+        # This allows pathing through doors, portals, etc.
+        objects = room.get("objects", [])
+        for obj in objects:
+            if "ENTER" in obj.get("verbs", []):
+                target_room = obj.get("target_room")
+                # Use the first keyword as the "direction"
+                keyword = obj.get("keywords", [obj.get("name", "portal")])[0]
+                if target_room:
+                    exits[keyword] = target_room
+        # --- END NEW ---
+
+        for direction, next_room_id in exits.items():
+            if next_room_id not in visited:
+                visited.add(next_room_id)
+                new_path = path + [direction]
+                queue.append((next_room_id, new_path))
+
+    return None  # No path found
+# ---
+# --- END NEW FUNCTION
 # ---
 
 
@@ -329,11 +377,12 @@ class Exit(BaseVerb):
             return
 
 # ---
-# --- NEW GOTO VERB
+# --- MODIFIED: GOTO VERB
 # ---
 class GOTO(BaseVerb):
     """
     Handles the 'goto' command for fast-travel to known locations.
+    Finds the shortest path and executes the first step.
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="move"):
@@ -359,7 +408,8 @@ class GOTO(BaseVerb):
             self.player.send_message("You are already there!")
             return
             
-        # --- Check for toll gates before moving ---
+        # --- Check for toll gates before moving (e.g. if GOTO points past one) ---
+        # This is a simple check; a real one would check the whole path.
         if _check_toll_gate(self.player, target_room_id):
             return # Movement is blocked
             
@@ -371,10 +421,40 @@ class GOTO(BaseVerb):
             
         target_room_name = target_room_data.get("name", "your destination")
         
-        move_msg = f"You walk purposefully to {target_room_name}..."
+        # --- NEW: Find path ---
+        path = _find_path(self.world, self.player.current_room_id, target_room_id)
         
-        # Move the player
-        self.player.move_to_room(target_room_id, move_msg)
+        if not path:
+            self.player.send_message(f"You can't seem to find a path to {target_room_name} from here.")
+            return
+            
+        # --- Get the first step ---
+        move_direction = path[0]
         
-        # Set a 3s RT for fast travel
-        _set_action_roundtime(self.player, 3.0)
+        # --- Instantiate and execute the 'Move' or 'Enter' verb ---
+        # This is a bit of a hack, but it reuses the existing logic
+        if move_direction in DIRECTION_MAP:
+            # It's a cardinal direction, use Move
+            move_verb = Move(self.world, self.player, self.room, [move_direction], move_direction)
+            move_verb.execute()
+        else:
+            # It's an object/keyword, use Enter
+            enter_verb = Enter(self.world, self.player, self.room, [move_direction], "enter")
+            enter_verb.execute()
+            
+        # Check if the move was successful (player's room actually changed)
+        # Note: move_verb.execute() already sent the "You move..." message
+        if self.player.current_room_id != self.room.room_id:
+            # Add a small RT for the 'goto' command itself
+            _set_action_roundtime(self.player, 1.0)
+            
+            # Send a follow-up message with the remaining path
+            if len(path) > 1:
+                self.player.send_message(f"(Path to {target_room_name}: {', '.join(path[1:])})")
+            else:
+                # This was the last step
+                pass # The move_to_room already showed the final room
+        else:
+            # Move failed (e.g., "You must stand up first")
+            # The 'Move' or 'Enter' verb already sent the error message.
+            pass

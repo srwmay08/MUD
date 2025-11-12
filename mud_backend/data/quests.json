@@ -62,6 +62,7 @@
     },
     "clerk_quest_1": {
         "name": "Ore for the Smith",
+        "prereq_quest": "innkeeper_quest_1",
         "item_needed": "ore_requisition",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -72,6 +73,7 @@
     },
     "blacksmith_quest_1": {
         "name": "Leather for the Smith",
+        "prereq_quest": "clerk_quest_1",
         "item_needed": "leather_order",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -82,6 +84,7 @@
     },
     "furrier_quest_1": {
         "name": "Sinew for the Alchemist",
+        "prereq_quest": "blacksmith_quest_1",
         "item_needed": "cured_sinew_bundle",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -92,6 +95,7 @@
     },
     "apothecary_quest_1": {
         "name": "Salves for the Temple",
+        "prereq_quest": "furrier_quest_1",
         "item_needed": "salve_box",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -102,6 +106,7 @@
     },
     "priest_quest_errand_1": {
         "name": "A Chilly Welcome",
+        "prereq_quest": "apothecary_quest_1",
         "item_needed": "letter_of_welcome",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -112,6 +117,7 @@
     },
     "elementalist_quest_errand_1": {
         "name": "Notice for the Watch",
+        "prereq_quest": "priest_quest_errand_1",
         "item_needed": "patrol_notice",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -122,6 +128,7 @@
     },
     "captain_quest_1": {
         "name": "Poster for the Library",
+        "prereq_quest": "elementalist_quest_errand_1",
         "item_needed": "recruitment_poster",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -132,6 +139,7 @@
     },
     "librarian_quest_1": {
         "name": "The Overdue Books",
+        "prereq_quest": "captain_quest_1",
         "item_needed": "overdue_books",
         "item_quantity": 1,
         "reward_xp": 250,
@@ -142,6 +150,7 @@
     },
     "theatre_quest_1": {
         "name": "The Final Receipt",
+        "prereq_quest": "librarian_quest_1",
         "item_needed": "final_receipt",
         "item_quantity": 1,
         "reward_xp": 250,

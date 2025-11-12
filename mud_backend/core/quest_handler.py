@@ -58,6 +58,12 @@ def get_active_quest_for_npc(player: Player, npc_quest_ids: List[str]) -> Option
         prereq_spell = quest_data.get("prereq_spell")
         if prereq_spell and prereq_spell not in player.known_spells:
             continue # Player doesn't meet the prereq, so this isn't active yet
+            
+        # --- NEW: Check for quest prerequisite ---
+        prereq_quest = quest_data.get("prereq_quest")
+        if prereq_quest and prereq_quest not in player.completed_quests:
+            continue # Player hasn't completed the prerequisite quest
+        # --- END NEW ---
 
         # 3. If we are here, the quest is not complete AND prerequisites are met.
         # This is the active quest.
