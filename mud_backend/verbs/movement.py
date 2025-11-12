@@ -36,7 +36,7 @@ GOTO_MAP = {
     "archives": "library_archives",
     "librarian": "library_archives",
     "theatre": "theatre",
-    "inn": "ts_south"
+    "inn": "inn_front_desk" # <-- MODIFIED
 }
 
 # ---
@@ -475,7 +475,14 @@ class GOTO(BaseVerb):
             # --- Manually call move_to_room ---
             # This is the core of the 'fast travel'
             self.player.move_to_room(target_room_id_step, move_msg)
-            total_rt += 1.0 # 1 second per room
+            
+            # ---
+            # --- THIS IS THE FIX: Apply 3s RT per room
+            # ---
+            total_rt += 3.0 # 3 seconds per room
+            # ---
+            # --- END FIX
+            # ---
             
             # Update the verb's room object to the new room for the next loop iteration
             new_room_data = self.world.get_room(target_room_id_step)

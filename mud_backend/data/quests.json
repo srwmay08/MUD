@@ -62,7 +62,7 @@
         "reward_item": "ore_requisition",
         "idle_prompt": "Ah, you're awake. Come see me when you're ready to settle your bill.",
         "talk_prompt": "Ah, you're awake! About your bill... you can check your <span class='keyword' data-command='wealth'>WEALTH</span>, but I suspect you're a bit light. No matter. I have an arrangement with the Town Clerk. Take this late 'Lodging Tax' payment to him at the Town Hall. You can use <span class='keyword' data-command='goto townhall'>GOTO TOWNHALL</span>. He'll... have more for you to do. Welcome to the city.",
-        "reward_message": "The Town Clerk takes the envelope. 'The Innkeeper's late again... Thank you. Listen, I'm buried in work. Could you run a few more deliveries? First, take this ore requisition to the Blacksmith at the Armory.'",
+        "reward_message": "The Town Clerk takes the envelope. 'The Innkeeper's late again... Thank you. Listen, I'm buried in work. Could you run a few more deliveries? First, take this ore requisition to the Blacksmith at the Armory. You can <span class='keyword' data-command='goto armory'>GOTO ARMORY</span>.'",
         "already_learned_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
     },
     "clerk_quest_1": {
@@ -73,8 +73,8 @@
         "give_target_name": "an armorer",
         "reward_xp": 250,
         "reward_item": "leather_order",
-        "talk_prompt": "Have you delivered that ore requisition to the armorer yet?",
-        "reward_message": "The Blacksmith takes the form. 'Good. I can't make swords without ore. The clerk needs this leather order taken to the Furrier now.'",
+        "talk_prompt": "Have you delivered that ore requisition to the armorer at the <span class='keyword' data-command='goto armory'>Armory</span> yet?",
+        "reward_message": "The Blacksmith takes the form. 'Good. I can't make swords without ore. The clerk needs this leather order taken to the Furrier now. He's in the <span class='keyword' data-command='goto furrier'>Furrier's Shop</span>.'",
         "already_learned_message": "The Blacksmith is busy at his forge."
     },
     "blacksmith_quest_1": {
@@ -85,8 +85,8 @@
         "give_target_name": "a grizzled furrier",
         "reward_xp": 250,
         "reward_item": "cured_sinew_bundle",
-        "talk_prompt": "Did you take that leather order to the furrier?",
-        "reward_message": "The Furrier grunts and takes the order. 'Leather strapping. Fine. Speaking of components, the Apothecary needed this bundle of cured sinew. Take it to her shop.'",
+        "talk_prompt": "Did you take that leather order to the <span class='keyword' data-command='goto furrier'>Furrier</span>?",
+        "reward_message": "The Furrier grunts and takes the order. 'Leather strapping. Fine. Speaking of components, the Apothecary needed this bundle of cured sinew. Take it to her shop. You can <span class='keyword' data-command='goto apothecary'>GOTO APOTHECARY</span>.'",
         "already_learned_message": "The Furrier is busy skinning a pelt."
     },
     "furrier_quest_1": {
@@ -97,8 +97,8 @@
         "give_target_name": "an apothecary",
         "reward_xp": 250,
         "reward_item": "salve_box",
-        "talk_prompt": "The apothecary is still waiting for that sinew.",
-        "reward_message": "The Apothecary smiles. 'Wonderful! Can't brew without a binder. My weekly tithe is also ready. Take this box of salves to the Priest at the Temple. Bless his work.'",
+        "talk_prompt": "The <span class='keyword' data-command='goto apothecary'>Apothecary</span> is still waiting for that sinew.",
+        "reward_message": "The Apothecary smiles. 'Wonderful! Can't brew without a binder. My weekly tithe is also ready. Take this box of salves to the Priest at the Temple. Bless his work. You can <span class='keyword' data-command='goto temple'>GOTO TEMPLE</span>.'",
         "already_learned_message": "The Apothecary is busy at her workbench."
     },
     "apothecary_quest_1": {
@@ -109,8 +109,8 @@
         "give_target_name": "a robed priest",
         "reward_xp": 250,
         "reward_item": "letter_of_welcome",
-        "talk_prompt": "The priest is expecting those salves.",
-        "reward_message": "The Priest accepts the box. 'The Apothecary is a kind soul. These will help many. Ah, this also arrived... A new 'mercenary' from the Bound Legion is in town. Please deliver this 'Letter of Welcome' to the Elementalist.'",
+        "talk_prompt": "The priest at the <span class='keyword' data-command='goto temple'>Temple</span> is expecting those salves.",
+        "reward_message": "The Priest accepts the box. 'The Apothecary is a kind soul. These will help many. Ah, this also arrived... A new 'mercenary' from the Bound Legion is in town. Please deliver this 'Letter of Welcome' to the Elementalist at his <span class='keyword' data-command='goto elementalist'>Study</span>.'",
         "already_learned_message": "The Priest nods to you in thanks."
     },
     "priest_quest_errand_1": {
@@ -121,8 +121,8 @@
         "give_target_name": "an elementalist",
         "reward_xp": 250,
         "reward_item": "patrol_notice",
-        "talk_prompt": "That letter for the elementalist is important. Best be on your way.",
-        "reward_message": "The Elementalist scoffs at the letter. 'A 'welcome'? Hah. They fear what they can't control. I have no time for this. The city watch needs to know where my 'soldiers' will be. Take this patrol notice to the Guard Captain at the Barracks.'",
+        "talk_prompt": "That letter for the <span class='keyword' data-command='goto elementalist'>Elementalist</span> is important. Best be on your way.",
+        "reward_message": "The Elementalist scoffs at the letter. 'A 'welcome'? Hah. They fear what they can't control. I have no time for this. The city watch needs to know where my 'soldiers' will be. Take this patrol notice to the Guard Captain at the <span class='keyword' data-command='goto barracks'>Barracks</span>.'",
         "already_learned_message": "The Elementalist is busy with his research."
     },
     "elementalist_quest_errand_1": {
@@ -133,8 +133,8 @@
         "give_target_name": "a guard captain",
         "reward_xp": 250,
         "reward_item": "recruitment_poster",
-        "talk_prompt": "Don't keep the Guard Captain waiting for that notice.",
-        "reward_message": "The Guard Captain reads the note and sighs. 'Elementals... great. More paperwork. Listen, you're getting to know the town. We need more eyes and ears. Take this recruitment poster to the Librarian at the archives.'",
+        "talk_prompt": "Don't keep the Guard Captain waiting for that notice. He's at the <span class='keyword' data-command='goto barracks'>Barracks</span>.",
+        "reward_message": "The Guard Captain reads the note and sighs. 'Elementals... great. More paperwork. Listen, you're getting to know the town. We need more eyes and ears. Take this recruitment poster to the Librarian at the <span class='keyword' data-command='goto library'>Library</span>.'",
         "already_learned_message": "The Guard Captain is busy shouting at recruits."
     },
     "captain_quest_1": {
@@ -145,8 +145,8 @@
         "give_target_name": "a librarian",
         "reward_xp": 250,
         "reward_item": "overdue_books",
-        "talk_prompt": "Please get that poster to the library archives.",
-        "reward_message": "The Librarian files the poster. 'More guards... always a need. Now, a small matter. The Theatre Master has several very overdue books on 'Illusory Set Design.' Please retrieve them. Firmly.'",
+        "talk_prompt": "Please get that poster to the <span class='keyword' data-command='goto library'>Library</span> archives.",
+        "reward_message": "The Librarian files the poster. 'More guards... always a need. Now, a small matter. The Theatre Master has several very overdue books on 'Illusory Set Design.' Please retrieve them from the <span class='keyword' data-command='goto theatre'>Theatre</span>. Firmly.'",
         "already_learned_message": "The Librarian is busy cataloging scrolls."
     },
     "librarian_quest_1": {
@@ -157,8 +157,8 @@
         "give_target_name": "a theatre master",
         "reward_xp": 250,
         "reward_item": "final_receipt",
-        "talk_prompt": "The Theatre Master has had those books for too long! Please retrieve them.",
-        "reward_message": "The Theatre Master sighs dramatically. 'Oh, fine! Here! He has no appreciation for art! Now be a darling and run this final receipt back to the Town Clerk. It proves I've 'returned' his precious books.'",
+        "talk_prompt": "The <span class='keyword' data-command='goto theatre'>Theatre</span> Master has had those books for too long! Please retrieve them.",
+        "reward_message": "The Theatre Master sighs dramatically. 'Oh, fine! Here! He has no appreciation for art! Now be a darling and run this final receipt back to the Town Clerk at the <span class='keyword' data-command='goto townhall'>Town Hall</span>. It proves I've 'returned' his precious books.'",
         "already_learned_message": "The Theatre Master is busy rehearsing."
     },
     "theatre_quest_1": {
@@ -169,8 +169,8 @@
         "give_target_name": "a town clerk",
         "reward_xp": 250,
         "reward_silver": 500,
-        "talk_prompt": "That receipt needs to get back to the Town Clerk!",
-        "reward_message": "The Town Clerk is relieved. 'That's... all of them? Amazing! You've been a huge help. Here is your pay. I'll let the Innkeeper know your debt is clear. You've earned it.'",
+        "talk_prompt": "That receipt needs to get back to the Town Clerk at the <span class='keyword' data-command='goto townhall'>Town Hall</span>!",
+        "reward_message": "The Town Clerk is relieved. 'That's... all of them? Amazing! You've been a huge help. Here is your pay. I'll let the Innkeeper know your debt is clear. You've earned it.' You are awarded 500 silver.",
         "already_learned_message": "The Town Clerk nods. 'Thank you again for your help.'"
     }
 }

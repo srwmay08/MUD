@@ -294,6 +294,14 @@ def _handle_appearance_input(player: Player, text_input: str):
         # We move them first so the "look" shows the new room
         player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
         
+        # ---
+        # --- THIS IS THE FIX: Add explicit item message
+        # ---
+        player.send_message("You find a sealed envelope on the table, marked 'Lodging Tax Payment'. You pick it up.")
+        # ---
+        # --- END FIX
+        # ---
+
         # --- MODIFICATION: Make keywords clickable ---
         player.send_message(
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... and in debt. "

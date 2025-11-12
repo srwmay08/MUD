@@ -134,7 +134,7 @@
         "name": "South Square", 
         "is_outdoor": true,
         "description": {
-            "default": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here, and a portly innkeeper stands by the door, polishing a mug."
+            "default": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here."
         },
         "exits": {"north": "town_square", "east": "ts_southeast", "west": "ts_southwest"}, 
         "objects": [
@@ -142,18 +142,9 @@
                 "name": "door", 
                 "description": "The sturdy wooden door to the inn. You could probably **ENTER** it.", 
                 "verbs": ["ENTER", "look", "examine"], 
-                "target_room": "inn_room",
+                "target_room": "inn_front_desk",
                 "perception_dc": 0,
                 "keywords": ["door", "wooden door", "inn"]
-            },
-            {
-                "name": "an innkeeper",
-                "description": "A portly, cheerful-looking man who seems to be watching all the newcomers. He spots you and waves you over.",
-                "keywords": ["innkeeper", "man", "portly man"],
-                "verbs": ["look", "talk to", "examine"],
-                "is_npc": true,
-                "quest_giver_ids": ["innkeeper_quest_1"],
-                "all_quests_done_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
             }
         ]
     },
@@ -415,6 +406,33 @@
             {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"], "verbs": ["look", "examine"]},
             {"name": "note", "description": "The note reads: 'Welcome, traveler. Please see me at the front desk when you are ready to settle your bill. - The Innkeeper'", "perception_dc": 0, "keywords": ["note", "table"], "verbs": ["look", "examine"]}
         ],
+        "exits": { "out": "inn_front_desk" } 
+    },
+    {
+        "room_id": "inn_front_desk",
+        "name": "Inn - Front Desk",
+        "description": {
+            "default": "You are at the front desk of the inn. A portly innkeeper stands here, polishing a mug. A door leads back to your room, and the main exit leads **OUT** to the town square."
+        },
+        "objects": [
+            {
+                "name": "an innkeeper",
+                "description": "A portly, cheerful-looking man who seems to be watching all the newcomers. He spots you and waves you over.",
+                "keywords": ["innkeeper", "man", "portly man"],
+                "verbs": ["look", "talk to", "examine"],
+                "is_npc": true,
+                "quest_giver_ids": ["innkeeper_quest_1"],
+                "all_quests_done_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
+            },
+            {
+                "name": "door", 
+                "description": "A simple wooden door leading back to your rented room.", 
+                "verbs": ["ENTER", "look", "examine"], 
+                "target_room": "inn_room",
+                "perception_dc": 0,
+                "keywords": ["door", "room", "inn room"]
+            }
+        ],
         "exits": { "out": "ts_south" } 
     },
 
@@ -520,7 +538,7 @@
                 "keywords": ["priest", "robed priest", "a robed priest"],
                 "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
-                "quest_giver_ids": ["heal_quest_1", "priest_quest_2", "priest_quest_errand_1"],
+                "quest_giver_ids": ["heal_quest_1", "priest_quest_2", "apothecary_quest_1"],
                 "all_quests_done_message": "The priest smiles warmly. 'You have learned all I can teach. Go with light, traveler.'"
             },
             {
@@ -546,7 +564,7 @@
                 "keywords": ["elementalist", "trainer", "an elementalist"],
                 "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
-                "quest_giver_ids": ["shock_quest_1", "elementalist_quest_2", "elementalist_quest_errand_1"],
+                "quest_giver_ids": ["shock_quest_1", "elementalist_quest_2", "priest_quest_errand_1"],
                 "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'"
             }
         ],
@@ -648,7 +666,7 @@
                 "keywords": ["apothecary", "woman", "shopkeep", "an apothecary"],
                 "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
-                "quest_giver_ids": ["apothecary_quest_1"],
+                "quest_giver_ids": ["furrier_quest_1"],
                 "all_quests_done_message": "The Apothecary is busy at her workbench."
             }
         ],
@@ -667,7 +685,7 @@
                 "keywords": ["captain", "guard captain", "a guard captain"],
                 "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
-                "quest_giver_ids": ["captain_quest_1"],
+                "quest_giver_ids": ["elementalist_quest_errand_1"],
                 "all_quests_done_message": "The Guard Captain is busy shouting at recruits."
             }
         ],
@@ -686,7 +704,7 @@
                 "keywords": ["librarian", "a librarian"],
                 "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
-                "quest_giver_ids": ["librarian_quest_1"],
+                "quest_giver_ids": ["captain_quest_1"],
                 "all_quests_done_message": "The Librarian is busy cataloging scrolls."
             }
         ],
@@ -706,7 +724,7 @@
                 "keywords": ["master", "theatre master", "a theatre master"],
                 "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
-                "quest_giver_ids": ["theatre_quest_1"],
+                "quest_giver_ids": ["librarian_quest_1"],
                 "all_quests_done_message": "The Theatre Master is busy rehearsing."
             }
         ],
