@@ -111,11 +111,13 @@ EQUIPMENT_SLOTS = {
 }
 
 # --- NEW: EXP ABSORPTION ROOMS ---
-# --- MODIFIED: Added new temple/study rooms to the town list ---
+# --- MODIFIED: Added all new town/shop rooms to the list ---
 TOWN_ROOM_IDS = [
     "town_square", "ts_south", "inn_room", "ts_north", "ts_east", "ts_west", 
     "ts_northeast", "ts_northwest", "ts_southeast", "ts_southwest",
-    "temple_of_light", "elementalist_study" # <-- NEW
+    "temple_of_light", "elementalist_study", "armory_shop", "furrier_shop",
+    "bank_lobby", "town_hall", "apothecary_shop", "barracks",
+    "library_archives", "theatre"
 ]
 # --- END MODIFIED ---
 NODE_ROOM_IDS = ["town_square"] 

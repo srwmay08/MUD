@@ -117,9 +117,10 @@
                 "verbs": ["look", "attack", "talk"],
                 "is_monster": true,
                 "is_npc": true,
-                "monster_id": "grizzled_old_warrior",
+                "monster_id": "grizzled_warrior",
                 "keywords": ["warrior", "grizzled warrior", "a grizzled warrior"],
-                "quest_giver_ids": ["trip_quest_1"]
+                "quest_giver_ids": ["trip_quest_1"],
+                "all_quests_done_message": "The warrior nods at you. 'You've got the hang of it. Now go practice on something... uglier.'"
             }
         ],
         "exits": {
@@ -132,7 +133,7 @@
         "name": "South Square", 
         "is_outdoor": true,
         "description": {
-            "default": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here."
+            "default": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here, and a portly innkeeper stands by the door, polishing a mug."
         },
         "exits": {"north": "town_square", "east": "ts_southeast", "west": "ts_southwest"}, 
         "objects": [
@@ -143,6 +144,14 @@
                 "target_room": "inn_room",
                 "perception_dc": 0,
                 "keywords": ["door", "wooden door", "inn"]
+            },
+            {
+                "name": "an innkeeper",
+                "description": "A portly, cheerful-looking man who seems to be watching all the newcomers. He spots you and waves you over.",
+                "keywords": ["innkeeper", "man", "portly man"],
+                "is_npc": true,
+                "quest_giver_ids": ["innkeeper_quest_1"],
+                "all_quests_done_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
             }
         ]
     },
@@ -229,14 +238,24 @@
         "name": "North Square", 
         "is_outdoor": true, 
         "description": {
-            "default": "You are in the northern part of the town square. The main square is to the south. A well-worn path continues to the north, leading to the city's edge."
+            "default": "You are in the northern part of the town square. The main square is to the south. A well-worn path continues to the north, leading to the city's edge. A stately building with tall, narrow windows stands to the east, its entrance marked 'Library & Archives'."
         }, 
         "exits": {
             "south": "town_square", 
             "east": "ts_northeast", 
             "west": "ts_northwest",
             "north": "north_gate"
-        }
+        },
+        "objects": [
+            {
+                "name": "library entrance", 
+                "description": "The entrance to the Library & Archives. You could probably **ENTER** it.", 
+                "verbs": ["ENTER"], 
+                "target_room": "library_archives",
+                "perception_dc": 0,
+                "keywords": ["door", "entrance", "library", "archives"]
+            }
+        ]
     },
     
     {
@@ -244,7 +263,7 @@
         "name": "East Square", 
         "is_outdoor": true, 
         "description": {
-            "default": "You are in the eastern part of the town square. The main square is to the west. A set of tall, oaken doors stand here, open to the public."
+            "default": "You are in the eastern part of the town square. The main square is to the west. A set of tall, oaken doors stand here, open to the public. To the north, a grand archway leads into the Town Hall."
         },
         "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, 
         "objects": [
@@ -255,6 +274,14 @@
                 "target_room": "temple_of_light",
                 "perception_dc": 0,
                 "keywords": ["doors", "oaken doors", "temple"]
+            },
+            {
+                "name": "grand archway", 
+                "description": "A grand archway leading into the Town Hall. You can **ENTER** it.", 
+                "verbs": ["ENTER"], 
+                "target_room": "town_hall",
+                "perception_dc": 0,
+                "keywords": ["archway", "grand archway", "hall", "town hall"]
             }
         ]
     },
@@ -264,7 +291,7 @@
         "name": "West Square", 
         "is_outdoor": true, 
         "description": {
-            "default": "You are in the western part of the town square. The main square is to the east. A wide marble arch leads into the bank here."
+            "default": "You are in the western part of the town square. The main square is to the east. A wide marble arch leads into the bank here. To the south, you can hear the sounds of a crowd from the open-air theatre."
         },
         "exits": {"east": "town_square", "north": "ts_northwest", "south": "ts_southwest"},
         "objects": [
@@ -275,6 +302,14 @@
                 "target_room": "bank_lobby",
                 "perception_dc": 0,
                 "keywords": ["arch", "marble arch", "bank"]
+            },
+            {
+                "name": "theatre arch", 
+                "description": "An open archway leading to the theatre.", 
+                "verbs": ["ENTER"], 
+                "target_room": "theatre",
+                "perception_dc": 0,
+                "keywords": ["theatre", "theatre arch"]
             }
         ]
     },
@@ -284,7 +319,7 @@
         "name": "Northeast Square", 
         "is_outdoor": true, 
         "description": {
-            "default": "You are in the northeast corner of the town square. A small, rune-etched door is set into an alley here."
+            "default": "You are in the northeast corner of the town square. A small, rune-etched door is set into an alley here. You also see the heavy, reinforced door of the Town Barracks."
         },
         "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"},
         "objects": [
@@ -295,6 +330,14 @@
                 "target_room": "elementalist_study",
                 "perception_dc": 0,
                 "keywords": ["door", "rune-etched door", "study"]
+            },
+            {
+                "name": "barracks door", 
+                "description": "A heavy, reinforced door. You can **ENTER** the barracks.", 
+                "verbs": ["ENTER"], 
+                "target_room": "barracks",
+                "perception_dc": 0,
+                "keywords": ["door", "barracks", "barracks door"]
             }
         ]
     },
@@ -324,9 +367,19 @@
         "name": "Southeast Square", 
         "is_outdoor": true, 
         "description": {
-            "default": "You are in the southeast corner of the town square."
+            "default": "You are in the southeast corner of the town square. A small shop with a sign of a mortar and pestle is tucked away here, emanating strange, herbal scents."
         }, 
-        "exits": {"northwest": "town_square", "north": "ts_east", "west": "ts_south"}
+        "exits": {"northwest": "town_square", "north": "ts_east", "west": "ts_south"},
+        "objects": [
+            {
+                "name": "shop door", 
+                "description": "A small shop door with a sign of a mortar and pestle. This is the Apothecary. You can **ENTER**.", 
+                "verbs": ["ENTER"], 
+                "target_room": "apothecary_shop",
+                "perception_dc": 0,
+                "keywords": ["door", "shop door", "apothecary"]
+            }
+        ]
     },
     
     {
@@ -353,11 +406,12 @@
         "room_id": "inn_room",
         "name": "A Room at the Inn",
         "description": {
-            "default": "You are in a simple, comfortable room... You feel as though you just woke from a long, hazy dream..."
+            "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A note has been left on the table. A single door leads **OUT**."
         },
         "objects": [
             {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"]},
-            {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"]}
+            {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"]},
+            {"name": "note", "description": "The note reads: 'Welcome, traveler. Please see me at the front desk when you are ready to settle your bill. - The Innkeeper'", "perception_dc": 0, "keywords": ["note", "table"]}
         ],
         "exits": { "out": "ts_south" } 
     },
@@ -370,13 +424,16 @@
         },
         "objects": [
             {
-                "name": "furrier",
+                "name": "a grizzled furrier",
                 "description": "A grizzled man skinning a small animal. He looks like he's seen better days.",
-                "keywords": ["furrier", "man", "shopkeep"],
+                "keywords": ["furrier", "man", "shopkeep", "grizzled furrier"],
+                "is_npc": true,
+                "quest_giver_ids": ["furrier_quest_1"],
+                "all_quests_done_message": "The Furrier is busy skinning a pelt.",
                 "shop_data": {
                     "type": "furrier",
                     "inventory": [],
-                    "will_buy": ["pelt_ruined", "monster_claw", "viridian_leaf", "althion_stem"]
+                    "will_buy": ["pelt_ruined", "monster_claw", "viridian_leaf", "althion_stem", "orc_ear", "orc_tusk"]
                 }
             }
         ],
@@ -413,9 +470,12 @@
         },
         "objects": [
             {
-                "name": "armorer",
+                "name": "an armorer",
                 "description": "A large, muscular man with soot on his face. He nods at you.",
-                "keywords": ["armorer", "man", "shopkeep"],
+                "keywords": ["armorer", "man", "shopkeep", "blacksmith", "an armorer"],
+                "is_npc": true,
+                "quest_giver_ids": ["blacksmith_quest_1"],
+                "all_quests_done_message": "The Blacksmith is busy at his forge.",
                 "shop_data": {
                     "type": "armory",
                     "inventory": [
@@ -449,10 +509,11 @@
                 "keywords": ["altar", "stone altar"]
             },
             {
-                "name": "priest",
+                "name": "a robed priest",
                 "description": "A kindly priest moves between cots, offering water and bandages. He looks tired and his supplies seem low. You could try to 'GIVE' him items or 'TALK TO' him.",
-                "keywords": ["priest", "robed priest"],
-                "quest_giver_ids": ["heal_quest_1", "priest_quest_2"],
+                "keywords": ["priest", "robed priest", "a robed priest"],
+                "is_npc": true,
+                "quest_giver_ids": ["heal_quest_1", "priest_quest_2", "priest_quest_errand_1"],
                 "all_quests_done_message": "The priest smiles warmly. 'You have learned all I can teach. Go with light, traveler.'"
             },
             {
@@ -472,10 +533,11 @@
         },
         "objects": [
             {
-                "name": "elementalist",
+                "name": "an elementalist",
                 "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research. You could try to 'GIVE' them items or 'TALK TO' them.",
-                "keywords": ["elementalist", "trainer"],
-                "quest_giver_ids": ["shock_quest_1", "elementalist_quest_2"],
+                "keywords": ["elementalist", "trainer", "an elementalist"],
+                "is_npc": true,
+                "quest_giver_ids": ["shock_quest_1", "elementalist_quest_2", "elementalist_quest_errand_1"],
                 "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'"
             }
         ],
@@ -544,5 +606,96 @@
         "exits": {
             "west": "forest_clearing_1"
         }
+    },
+    {
+        "room_id": "town_hall",
+        "name": "Town Hall",
+        "description": {
+            "default": "This is the central hub of the city's administration. Desks are piled high with papers, and stressed-looking officials bustle about. A man at the central desk, the Town Clerk, looks up as you enter."
+        },
+        "objects": [
+            {
+                "name": "a town clerk",
+                "description": "A man buried in a mountain of paperwork. He looks stressed but efficient.",
+                "keywords": ["clerk", "town clerk", "a town clerk"],
+                "is_npc": true,
+                "quest_giver_ids": ["clerk_quest_1", "theatre_quest_1"],
+                "all_quests_done_message": "The Town Clerk nods. 'Thank you again for your help.'"
+            }
+        ],
+        "exits": { "out": "ts_east" }
+    },
+    {
+        "room_id": "apothecary_shop",
+        "name": "The Apothecary",
+        "description": {
+            "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
+        },
+        "objects": [
+            {
+                "name": "an apothecary",
+                "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile.",
+                "keywords": ["apothecary", "woman", "shopkeep", "an apothecary"],
+                "is_npc": true,
+                "quest_giver_ids": ["apothecary_quest_1"],
+                "all_quests_done_message": "The Apothecary is busy at her workbench."
+            }
+        ],
+        "exits": { "out": "ts_southeast" }
+    },
+    {
+        "room_id": "barracks",
+        "name": "Town Barracks",
+        "description": {
+            "default": "The barracks is a functional, spartan room filled with weapon racks and training dummies. Recruits are being shouted at in a yard visible through a western window. The Guard Captain stands at a table, reviewing a map."
+        },
+        "objects": [
+            {
+                "name": "a guard captain",
+                "description": "A tall, no-nonsense woman in polished chainmail. She looks up from her map with a stern expression.",
+                "keywords": ["captain", "guard captain", "a guard captain"],
+                "is_npc": true,
+                "quest_giver_ids": ["captain_quest_1"],
+                "all_quests_done_message": "The Guard Captain is busy shouting at recruits."
+            }
+        ],
+        "exits": { "out": "ts_northeast" }
+    },
+    {
+        "room_id": "library_archives",
+        "name": "Library & Archives",
+        "description": {
+            "default": "The smell of old paper and leather fills this quiet, dusty room. Tall shelves stretch up into the shadows, filled with countless books and scrolls. A Librarian sits at a desk, meticulously cataloging new arrivals."
+        },
+        "objects": [
+            {
+                "name": "a librarian",
+                "description": "A person of indeterminate age, peering at you over a pair of spectacles. They seem to value silence.",
+                "keywords": ["librarian", "a librarian"],
+                "is_npc": true,
+                "quest_giver_ids": ["librarian_quest_1"],
+                "all_quests_done_message": "The Librarian is busy cataloging scrolls."
+            }
+        ],
+        "exits": { "out": "ts_north" }
+    },
+    {
+        "room_id": "theatre",
+        "name": "The Open-Air Theatre",
+        "is_outdoor": true,
+        "description": {
+            "default": "You are in a small, open-air theatre. A raised wooden stage stands at one end, surrounded by simple wooden benches. A flamboyantly dressed man, the Theatre Master, is directing a pair of unenthusiastic actors."
+        },
+        "objects": [
+            {
+                "name": "a theatre master",
+                "description": "A man in a velvet coat and a feathered cap, waving his arms about dramatically.",
+                "keywords": ["master", "theatre master", "a theatre master"],
+                "is_npc": true,
+                "quest_giver_ids": ["theatre_quest_1"],
+                "all_quests_done_message": "The Theatre Master is busy rehearsing."
+            }
+        ],
+        "exits": { "out": "ts_west" }
     }
 ]

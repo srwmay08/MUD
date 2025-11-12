@@ -49,7 +49,6 @@
         "reward_message": "This message is not used, the reward is handled in the TRIP verb itself.",
         "already_learned_message": "The warrior just grunts at you."
     },
-
     "innkeeper_quest_1": {
         "name": "Clearing the Debt",
         "item_needed": "lodging_tax_payment",
