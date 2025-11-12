@@ -88,7 +88,7 @@ class Talk(BaseVerb):
                                  self.player.send_message(
                                     "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You are now holding the item. "
                                     "To put it in your backpack, you can "
-                                    f"<span class='keyword' data-command='stow {item_name}'>STOW {item_name.upper()}</span>."
+                                    f"<span class='keyword' data-command='stow {item_name.lower()}'>STOW {item_name.upper()}</span>."
                                  )
                                  self.player.completed_quests.append("intro_stow")
                         else:
