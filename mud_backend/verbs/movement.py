@@ -100,19 +100,33 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
 
         exits = room.get("exits", {})
         
-        # --- NEW: Also check 'objects' for 'ENTER' verbs ---
-        # This allows pathing through doors, portals, etc.
+        # ---
+        # --- THIS IS THE FIX: Correctly find all object exits
+        # ---
         objects = room.get("objects", [])
+        temp_object_exits = {} # Use a temp dict to avoid modifying 'exits' while iterating
+
         for obj in objects:
             if "ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", []):
                 target_room = obj.get("target_room")
-                # Use the first keyword as the "direction"
-                keyword = obj.get("keywords", [obj.get("name", "portal")])[0]
                 if target_room:
-                    # Make sure not to overwrite an existing exit
-                    if keyword not in exits:
-                        exits[keyword] = target_room
-        # --- END NEW ---
+                    # Use all keywords as potential directions
+                    for keyword in obj.get("keywords", []):
+                        # Only add if it's not a cardinal exit and not already mapped
+                        if keyword not in exits and keyword not in temp_object_exits:
+                            temp_object_exits[keyword] = target_room
+                    
+                    # As a fallback, use the object's name if no keywords
+                    if not obj.get("keywords"):
+                        name_key = obj.get("name", "").lower()
+                        if name_key and name_key not in exits and name_key not in temp_object_exits:
+                             temp_object_exits[name_key] = target_room
+                             
+        # Add the valid object exits to the main exits dict for this BFS step
+        exits.update(temp_object_exits)
+        # ---
+        # --- END FIX
+        # ---
 
         for direction, next_room_id in exits.items():
             if next_room_id not in visited:
@@ -220,13 +234,13 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         if old_room_id and new_room_id != old_room_id:
             # ---
-            # --- THIS IS THE FIX: Use world.socketio.server methods
+            # --- THIS IS THE FIX: Use socketio.leave_room and socketio.enter_room
             # ---
-            world.socketio.server.leave_room(sid, old_room_id)
+            world.socketio.leave_room(sid, old_room_id)
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
             world.socketio.emit("message", leaves_message, to=old_room_id)
             
-            world.socketio.server.enter_room(sid, new_room_id)
+            world.socketio.enter_room(sid, new_room_id)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
             world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
             # ---
