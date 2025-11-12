@@ -18,7 +18,14 @@ from mud_backend.core.game_objects import Room
 # ---
 # --- NEW: Add imports needed for background task ---
 from mud_backend.core.room_handler import show_room_to_player
-# --- END NEW ---
+# ---
+# --- THIS IS THE FIX: Import join_room and leave_room
+# ---
+from flask_socketio import join_room, leave_room
+# ---
+# --- END FIX
+# ---
+
 
 # ---
 # --- NEW: GOTO Target Map
@@ -212,13 +219,19 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         new_room_id = target_room_id_step
         
         if old_room_id and new_room_id != old_room_id:
-            world.socketio.leave_room(old_room_id, sid=sid)
+            # ---
+            # --- THIS IS THE FIX: Call the imported functions directly
+            # ---
+            leave_room(old_room_id, sid=sid)
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
             world.socketio.emit("message", leaves_message, to=old_room_id)
             
-            world.socketio.join_room(new_room_id, sid=sid)
+            join_room(new_room_id, sid=sid)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
             world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
+            # ---
+            # --- END FIX
+            # ---
         
         world.socketio.emit('command_response', 
                                  {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
