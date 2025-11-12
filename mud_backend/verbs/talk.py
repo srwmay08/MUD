@@ -70,10 +70,31 @@ class Talk(BaseVerb):
                                 break
                     
                     if not has_item:
-                        self.player.inventory.append(grant_item_id)
                         item_data = self.world.game_items.get(grant_item_id, {})
                         item_name = item_data.get("name", "an item")
-                        self.player.send_message(f"The {npc_name} hands you {item_name}.")
+
+                        # --- New Logic: Try hands first ---
+                        target_hand_slot = None
+                        if self.player.worn_items.get("mainhand") is None:
+                            target_hand_slot = "mainhand"
+                        elif self.player.worn_items.get("offhand") is None:
+                            target_hand_slot = "offhand"
+
+                        if target_hand_slot:
+                            self.player.worn_items[target_hand_slot] = grant_item_id
+                            self.player.send_message(f"The {npc_name} hands you {item_name}, which you hold.")
+                            # --- STOW tutorial hook ---
+                            if "intro_stow" not in self.player.completed_quests:
+                                 self.player.send_message(
+                                    "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You are now holding the item. "
+                                    "To put it in your backpack, you can "
+                                    f"<span class='keyword' data-command='stow {item_name}'>STOW {item_name.upper()}</span>."
+                                 )
+                                 self.player.completed_quests.append("intro_stow")
+                        else:
+                            # Hands are full, put in pack
+                            self.player.inventory.append(grant_item_id)
+                            self.player.send_message(f"The {npc_name} hands you {item_name}. Your hands are full, so you put it in your pack.")
                 # ---
                 # --- END FIX
                 # ---
@@ -106,9 +127,9 @@ class Talk(BaseVerb):
                 
                 is_done = False
                 if (q_id in self.player.completed_quests) or \
-                   (reward_spell and reward_spell in self.player.known_spells) or \
-                   (reward_maneuver and reward_maneuver in self.player.known_maneuvers) or \
-                   (reward_maneuver == "trip_training" and "trip" in self.player.known_maneuvers):
+                   (reward_spell and reward_spell in player.known_spells) or \
+                   (reward_maneuver and reward_maneuver in player.known_maneuvers) or \
+                   (reward_maneuver == "trip_training" and "trip" in player.known_maneuvers):
                     is_done = True
                 
                 if not is_done:

@@ -581,27 +581,27 @@ def attempt_skill_learning(player: Player, skill_id: str):
     current_rank = player.skills.get(skill_id, 0)
     
     # 1. Define Gain Chance
-    base_learn_chance = 50.0 # 50%
-    diminishing_return = 0.1 # Per rank
-    # Per your formula: max(5, 50 - (10 * 0.1)) = 49, not 16.
-    # Ah, I see. Your example (Rank 10): 50 - (10 * 0.1) = 49%.
-    # Example (Rank 100): 50 - (100 * 0.1) = 40%.
-    # This seems to be a different formula than your examples.
-    # Let's re-read your examples:
-    # Example (Rank 10): 50 - (10 * 0.1) = 16% chance.
-    # Example (Rank 100): 50 - (100 * 0.1) = 1% chance.
-    # This implies the formula is NOT `50 - (Rank * 0.1)`.
-    # Let's assume the examples are correct and the formula has a typo.
-    # To get 16% from Rank 10... 50 - (10 * X) = 16 -> 34 = 10 * X -> X = 3.4
-    # To get 1% from Rank 100... 50 - (100 * X) = 1 -> 49 = 100 * X -> X = 0.49
-    # The examples are inconsistent.
+    # Per your formula: Learn_Chance_Percent = max(5, Base_Learn_Chance - (Current_Rank * Diminishing_Return))
+    base_learn_chance = 50.0 
+    diminishing_return = 0.1
+    # ---
+    # --- THIS IS THE FIX: Your examples were contradictory, but your *formula text* was not.
+    # --- Example (Rank 10): 50 - (10 * 3.4) = 16%
+    # --- Example (Rank 100): 50 - (100 * 0.49) = 1%
+    # --- This implies the diminishing return is not linear.
+    # --- Let's use your *example* math, as it's more balanced.
+    # --- 50 - (10 * 3.4) = 16
+    # --- 50 - (100 * 0.49) = 1
+    # --- This suggests a diminishing return on the diminishing return itself.
+    # --- Let's try a simpler formula that hits your examples:
+    # --- Chance = 50 * (0.95 ^ Rank) --- Rank 10 = 29.9%
+    # --- Chance = 50 / (1 + Rank * 0.35) --- Rank 10 = 11.1%, Rank 100 = 1.3% (This is better!)
+    # --- Let's use: 50.0 / (1.0 + (current_rank * 0.35))
     
-    # Let's trust the formula text `Base_Learn_Chance - (Current_Rank * Diminishing_Return)`
-    # And assume the examples `(10 * 0.1) = 16%` and `(100 * 0.1) = 1%` have typos.
-    # The formula `50 - (10 * 0.1)` = 49%.
-    # The formula `50 - (100 * 0.1)` = 40%.
-    # This seems reasonable. Let's use the provided formula.
-    
+    # ---
+    # --- RE-FIX: Let's stick to your *written formula* for simplicity, as the examples are confusing.
+    # --- `Learn_Chance_Percent = max(5, Base_Learn_Chance - (Current_Rank * Diminishing_Return))`
+    # ---
     learn_chance_percent = max(5.0, base_learn_chance - (current_rank * diminishing_return))
     
     roll = random.random() * 100 # Roll 0.0 to 99.99...
@@ -632,11 +632,9 @@ def attempt_skill_learning(player: Player, skill_id: str):
     current_points += points_gained
     
     # Define Threshold
-    # User Example: Rank 0 -> 1: 1000 points.
-    # User Formula: (Current_Rank + 1) * 100.
-    # These are contradictory. (0+1)*100 = 100.
-    # Let's trust the *examples* (1000, 2000, 51000)
-    # This implies the formula is (Current_Rank + 1) * 1000.
+    # User Formula: (Current_Rank + 1) * 100
+    # User Example: Rank 0 -> 1: 1000 points
+    # --- I will trust the EXAMPLE (1000 points) over the formula (100 points) ---
     points_for_next_rank = (current_rank + 1) * 1000
     
     if current_points >= points_for_next_rank:
@@ -649,9 +647,9 @@ def attempt_skill_learning(player: Player, skill_id: str):
         
         player.send_message(f"**You have advanced to rank {new_rank} in {skill_name}!**")
         
-        # Check for another rank up (for massive XP gains)
-        # We'll call the function again, but this is a simple implementation
-        # A loop would be better, but for now this is fine.
+        # Check for another rank up (in case of massive overflow)
+        # This simple recursive call will handle it
+        attempt_skill_learning(player, skill_id)
         
     else:
         # --- Gained Points ---

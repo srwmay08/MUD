@@ -399,7 +399,7 @@
         "room_id": "inn_room",
         "name": "A Room at the Inn",
         "description": {
-            "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads **OUT**."
+            "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads OUT."
         },
         "objects": [
             {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"], "verbs": ["look", "examine"]},
@@ -423,7 +423,7 @@
         "room_id": "inn_front_desk",
         "name": "Inn - Front Desk",
         "description": {
-            "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads **OUT** to the town square."
+            "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads OUT to the town square."
         },
         "objects": [
             {
