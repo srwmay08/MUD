@@ -5,9 +5,9 @@ from mud_backend.core.game_loop import environment
 from typing import Dict, Any, Optional
 
 # ---
-# --- NEW HELPER FUNCTION ---
+# --- NEW HELPER FUNCTION
 # ---
-
+# ... (rest of _get_time_grouping and _get_dynamic_description are unchanged) ...
 def _get_time_grouping(time_of_day_str: str) -> str:
     """Categorizes the 16-step time into 5 broad groups for fallbacks."""
     # Specific keys are checked first
@@ -150,5 +150,9 @@ def show_room_to_player(player: Player, room: Room):
 
     # 2. Show Exits
     if room.exits:
-        exit_names = [name.capitalize() for name in room.exits.keys()]
+        # --- MODIFICATION: Create clickable exit links ---
+        exit_names = []
+        for name in room.exits.keys():
+            exit_names.append(f'<span class="keyword" data-command="{name}">{name.capitalize()}</span>')
         player.send_message(f"Obvious exits: {', '.join(exit_names)}")
+        # --- END MODIFICATION ---

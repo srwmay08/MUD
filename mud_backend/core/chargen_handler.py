@@ -293,10 +293,15 @@ def _handle_appearance_input(player: Player, text_input: str):
         # 5. Send new intro message and move to room
         # We move them first so the "look" shows the new room
         player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
-        player.send_message("\nYou awaken in a simple room at the inn. You feel a bit groggy... and in debt. A note on the table indicates you should **SPEAK** to the **Innkeeper** about your bill. You should head **OUT**.")
-        # ---
-        # --- END MODIFIED
-        # ---
+        
+        # --- MODIFICATION: Make keywords clickable ---
+        player.send_message(
+            "\nYou awaken in a simple room at the inn. You feel a bit groggy... and in debt. "
+            "A note on the table indicates you should <span class='keyword' data-command='talk to innkeeper'>SPEAK</span> "
+            "to the <span class='keyword' data-command='talk to innkeeper'>Innkeeper</span> about your bill. "
+            "You should head <span class='keyword' data-command='out'>OUT</span>."
+        )
+        # --- END MODIFICATION ---
         
 # ---
 # (Main Input Router is unchanged)

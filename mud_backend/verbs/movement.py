@@ -9,8 +9,6 @@ from collections import deque
 from typing import Optional, List, Dict, Set
 # --- END NEW ---
 
-from mud_backend.core.game_objects import Room # <--- ADD THIS LINE
-
 # ---
 # --- NEW: GOTO Target Map
 # ---

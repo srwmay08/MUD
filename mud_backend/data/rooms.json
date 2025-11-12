@@ -94,6 +94,7 @@
                 "description": "The fountain depicts the Goddess of Wealth pouring endless gold into the city. Its water is cool and clear.",
                 "perception_dc": 0,
                 "keywords": ["fountain"],
+                "verbs": ["look", "examine"],
                 "details": [
                     {
                         "name": "water",
@@ -106,7 +107,7 @@
             {
                 "name": "well", 
                 "description": "A weathered stone well. You can see a dark, winding rope tied to the lip, leading down. You could probably **CLIMB** the rope.", 
-                "verbs": ["CLIMB"], 
+                "verbs": ["CLIMB", "look", "examine"], 
                 "target_room": "well_bottom",
                 "perception_dc": 0,
                 "keywords": ["well", "stone well"]
@@ -114,7 +115,7 @@
             {
                 "name": "a grizzled warrior",
                 "description": "A grizzled old warrior paces the square, his eyes scanning for... something. He carries a long spear.",
-                "verbs": ["look", "attack", "talk"],
+                "verbs": ["look", "attack", "talk to"],
                 "is_monster": true,
                 "is_npc": true,
                 "monster_id": "grizzled_warrior",
@@ -140,7 +141,7 @@
             {
                 "name": "door", 
                 "description": "The sturdy wooden door to the inn. You could probably **ENTER** it.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "inn_room",
                 "perception_dc": 0,
                 "keywords": ["door", "wooden door", "inn"]
@@ -149,6 +150,7 @@
                 "name": "an innkeeper",
                 "description": "A portly, cheerful-looking man who seems to be watching all the newcomers. He spots you and waves you over.",
                 "keywords": ["innkeeper", "man", "portly man"],
+                "verbs": ["look", "talk to", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["innkeeper_quest_1"],
                 "all_quests_done_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
@@ -250,7 +252,7 @@
             {
                 "name": "library entrance", 
                 "description": "The entrance to the Library & Archives. You could probably **ENTER** it.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "library_archives",
                 "perception_dc": 0,
                 "keywords": ["door", "entrance", "library", "archives"]
@@ -270,7 +272,7 @@
             {
                 "name": "oaken doors", 
                 "description": "Tall, oaken doors carved with symbols of light and healing. This is the entrance to the temple.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "temple_of_light",
                 "perception_dc": 0,
                 "keywords": ["doors", "oaken doors", "temple"]
@@ -278,7 +280,7 @@
             {
                 "name": "grand archway", 
                 "description": "A grand archway leading into the Town Hall. You can **ENTER** it.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "town_hall",
                 "perception_dc": 0,
                 "keywords": ["archway", "grand archway", "hall", "town hall"]
@@ -298,7 +300,7 @@
             {
                 "name": "arch", 
                 "description": "A grand marble arch, polished and imposing, serving as the entrance to the bank.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "bank_lobby",
                 "perception_dc": 0,
                 "keywords": ["arch", "marble arch", "bank"]
@@ -306,7 +308,7 @@
             {
                 "name": "theatre arch", 
                 "description": "An open archway leading to the theatre.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "theatre",
                 "perception_dc": 0,
                 "keywords": ["theatre", "theatre arch"]
@@ -326,7 +328,7 @@
             {
                 "name": "rune-etched door", 
                 "description": "This door is barred by a faint, shimmering field of energy. A small plaque reads: 'Elementalist's Study. Apprentices only.'", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "elementalist_study",
                 "perception_dc": 0,
                 "keywords": ["door", "rune-etched door", "study"]
@@ -334,7 +336,7 @@
             {
                 "name": "barracks door", 
                 "description": "A heavy, reinforced door. You can **ENTER** the barracks.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "barracks",
                 "perception_dc": 0,
                 "keywords": ["door", "barracks", "barracks door"]
@@ -354,7 +356,7 @@
             {
                 "name": "door", 
                 "description": "A heavy oak door with a sigil of an anvil and hammer. This is the town armory.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "armory_shop",
                 "perception_dc": 0,
                 "keywords": ["door", "oak door", "armory"]
@@ -374,7 +376,7 @@
             {
                 "name": "shop door", 
                 "description": "A small shop door with a sign of a mortar and pestle. This is the Apothecary. You can **ENTER**.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "apothecary_shop",
                 "perception_dc": 0,
                 "keywords": ["door", "shop door", "apothecary"]
@@ -394,7 +396,7 @@
             {
                 "name": "door", 
                 "description": "A simple wooden door under a sign of a stretched pelt. This appears to be the furrier.", 
-                "verbs": ["ENTER"], 
+                "verbs": ["ENTER", "look", "examine"], 
                 "target_room": "furrier_shop",
                 "perception_dc": 0,
                 "keywords": ["door", "wooden door", "furrier", "shop"]
@@ -408,11 +410,10 @@
         "description": {
             "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A note has been left on the table. A single door leads **OUT**."
         },
-                "is_outdoor": false,
         "objects": [
-            {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"]},
-            {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"]},
-            {"name": "note", "description": "The note reads: 'Welcome, traveler. Please see me at the front desk when you are ready to settle your bill. - The Innkeeper'", "perception_dc": 0, "keywords": ["note", "table"]}
+            {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"], "verbs": ["look", "examine"]},
+            {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"], "verbs": ["look", "examine"]},
+            {"name": "note", "description": "The note reads: 'Welcome, traveler. Please see me at the front desk when you are ready to settle your bill. - The Innkeeper'", "perception_dc": 0, "keywords": ["note", "table"], "verbs": ["look", "examine"]}
         ],
         "exits": { "out": "ts_south" } 
     },
@@ -423,12 +424,12 @@
         "description": {
             "default": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter."
         },
-                        "is_outdoor": false,
         "objects": [
             {
                 "name": "a grizzled furrier",
                 "description": "A grizzled man skinning a small animal. He looks like he's seen better days.",
                 "keywords": ["furrier", "man", "shopkeep", "grizzled furrier"],
+                "verbs": ["look", "talk to", "list", "buy", "sell", "appraise"],
                 "is_npc": true,
                 "quest_giver_ids": ["furrier_quest_1"],
                 "all_quests_done_message": "The Furrier is busy skinning a pelt.",
@@ -448,7 +449,6 @@
         "description": {
             "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall."
         },
-                        "is_outdoor": false,
         "objects": [
             {
                 "name": "teller",
@@ -459,7 +459,8 @@
             {
                 "name": "counter",
                 "description": "A long, polished counter of dark wood.",
-                "keywords": ["counter"]
+                "keywords": ["counter"],
+                "verbs": ["look", "examine"]
             }
         ],
         "exits": { "out": "ts_west" }
@@ -471,12 +472,12 @@
         "description": {
             "default": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow."
         },
-        "is_outdoor": false,
         "objects": [
             {
                 "name": "an armorer",
                 "description": "A large, muscular man with soot on his face. He nods at you.",
                 "keywords": ["armorer", "man", "shopkeep", "blacksmith", "an armorer"],
+                "verbs": ["look", "talk to", "list", "buy", "sell", "appraise"],
                 "is_npc": true,
                 "quest_giver_ids": ["blacksmith_quest_1"],
                 "all_quests_done_message": "The Blacksmith is busy at his forge.",
@@ -506,17 +507,18 @@
         "description": {
             "default": "A quiet, peaceful temple. Incense burns softly in the air, and sunlight streams through a high, stained-glass window, illuminating a stone altar in the center of the room. A robed priest tends to several hurt patrons on cots."
         },
-        "is_outdoor": false,
         "objects": [
             {
                 "name": "stone altar",
                 "description": "A simple, flat altar of white stone. It feels cold to the touch. This is where you awaken if you are slain.",
-                "keywords": ["altar", "stone altar"]
+                "keywords": ["altar", "stone altar"],
+                "verbs": ["look", "examine"]
             },
             {
                 "name": "a robed priest",
                 "description": "A kindly priest moves between cots, offering water and bandages. He looks tired and his supplies seem low. You could try to 'GIVE' him items or 'TALK TO' him.",
                 "keywords": ["priest", "robed priest", "a robed priest"],
+                "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["heal_quest_1", "priest_quest_2", "priest_quest_errand_1"],
                 "all_quests_done_message": "The priest smiles warmly. 'You have learned all I can teach. Go with light, traveler.'"
@@ -524,7 +526,8 @@
             {
                 "name": "hurt patron",
                 "description": "A citizen lying on a cot, groaning softly.",
-                "keywords": ["patron", "hurt patron", "citizen"]
+                "keywords": ["patron", "hurt patron", "citizen"],
+                "verbs": ["look", "examine"]
             }
         ],
         "exits": { "out": "ts_east" }
@@ -536,12 +539,12 @@
         "description": {
             "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
         },
-        "is_outdoor": false,
         "objects": [
             {
                 "name": "an elementalist",
                 "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research. You could try to 'GIVE' them items or 'TALK TO' them.",
                 "keywords": ["elementalist", "trainer", "an elementalist"],
+                "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["shock_quest_1", "elementalist_quest_2", "elementalist_quest_errand_1"],
                 "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'"
@@ -561,7 +564,7 @@
             {
                 "name": "a town guardsman",
                 "description": "A guardsman in leather armor, holding a spear. He watches the northern path warily.",
-                "verbs": ["look", "attack", "talk"],
+                "verbs": ["look", "attack", "talk to"],
                 "is_monster": true,
                 "monster_id": "town_guardsman"
             }
@@ -619,12 +622,12 @@
         "description": {
             "default": "This is the central hub of the city's administration. Desks are piled high with papers, and stressed-looking officials bustle about. A man at the central desk, the Town Clerk, looks up as you enter."
         },
-        "is_outdoor": false,
         "objects": [
             {
                 "name": "a town clerk",
                 "description": "A man buried in a mountain of paperwork. He looks stressed but efficient.",
                 "keywords": ["clerk", "town clerk", "a town clerk"],
+                "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["clerk_quest_1", "theatre_quest_1"],
                 "all_quests_done_message": "The Town Clerk nods. 'Thank you again for your help.'"
@@ -638,12 +641,12 @@
         "description": {
             "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
         },
-        "is_outdoor": false,
         "objects": [
             {
                 "name": "an apothecary",
                 "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile.",
                 "keywords": ["apothecary", "woman", "shopkeep", "an apothecary"],
+                "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["apothecary_quest_1"],
                 "all_quests_done_message": "The Apothecary is busy at her workbench."
@@ -657,12 +660,12 @@
         "description": {
             "default": "The barracks is a functional, spartan room filled with weapon racks and training dummies. Recruits are being shouted at in a yard visible through a western window. The Guard Captain stands at a table, reviewing a map."
         },
-        "is_outdoor": false,
         "objects": [
             {
                 "name": "a guard captain",
                 "description": "A tall, no-nonsense woman in polished chainmail. She looks up from her map with a stern expression.",
                 "keywords": ["captain", "guard captain", "a guard captain"],
+                "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["captain_quest_1"],
                 "all_quests_done_message": "The Guard Captain is busy shouting at recruits."
@@ -676,12 +679,12 @@
         "description": {
             "default": "The smell of old paper and leather fills this quiet, dusty room. Tall shelves stretch up into the shadows, filled with countless books and scrolls. A Librarian sits at a desk, meticulously cataloging new arrivals."
         },
-        "is_outdoor": false,        
         "objects": [
             {
                 "name": "a librarian",
                 "description": "A person of indeterminate age, peering at you over a pair of spectacles. They seem to value silence.",
                 "keywords": ["librarian", "a librarian"],
+                "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["librarian_quest_1"],
                 "all_quests_done_message": "The Librarian is busy cataloging scrolls."
@@ -701,6 +704,7 @@
                 "name": "a theatre master",
                 "description": "A man in a velvet coat and a feathered cap, waving his arms about dramatically.",
                 "keywords": ["master", "theatre master", "a theatre master"],
+                "verbs": ["look", "talk to", "give", "examine"],
                 "is_npc": true,
                 "quest_giver_ids": ["theatre_quest_1"],
                 "all_quests_done_message": "The Theatre Master is busy rehearsing."

@@ -61,7 +61,7 @@
         "reward_xp": 250,
         "reward_item": "ore_requisition",
         "idle_prompt": "Ah, you're awake. Come see me when you're ready to settle your bill.",
-        "talk_prompt": "Ah, you're awake! About your bill... you can check your WEALTH, but I suspect you're a bit light. No matter. I have an arrangement with the Town Clerk. Take this late 'Lodging Tax' payment to him at the Town Hall. You can use GOTO TOWNHALL. He'll... have more for you to do. Welcome to the city.",
+        "talk_prompt": "Ah, you're awake! About your bill... you can check your <span class='keyword' data-command='wealth'>WEALTH</span>, but I suspect you're a bit light. No matter. I have an arrangement with the Town Clerk. Take this late 'Lodging Tax' payment to him at the Town Hall. You can use <span class='keyword' data-command='goto townhall'>GOTO TOWNHALL</span>. He'll... have more for you to do. Welcome to the city.",
         "reward_message": "The Town Clerk takes the envelope. 'The Innkeeper's late again... Thank you. Listen, I'm buried in work. Could you run a few more deliveries? First, take this ore requisition to the Blacksmith at the Armory.'",
         "already_learned_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
     },
