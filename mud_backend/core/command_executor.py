@@ -32,7 +32,7 @@ from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
 # ---
-# --- MODIFIED: VERB ALIASES (Added 'talk', removed 'trip')
+# --- MODIFIED: VERB ALIASES (Added 'goto')
 # ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -47,6 +47,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "sw": ("movement", "Move"), "southwest": ("movement", "Move"),
     "enter": ("movement", "Enter"), "climb": ("movement", "Climb"),
     "exit": ("movement", "Exit"), "out": ("movement", "Exit"),
+    "goto": ("movement", "GOTO"), # <-- NEW
     
     # Interaction & Items
     "get": ("item_actions", "Get"), "take": ("item_actions", "Take"),
@@ -87,7 +88,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     
     # Systems
     "say": ("say", "Say"),
-    "talk": ("talk", "Talk"), # <-- NEW
+    "talk": ("talk", "Talk"), 
     "give": ("trading", "Give"), "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"),
     "exchange": ("trading", "Exchange"),
@@ -168,9 +169,14 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         # --- THIS IS THE FIX ---
         # ---
         for obj in all_objects:
-            monster_id = obj.get("monster_id")
+            # ---
+            # --- MODIFIED: Handle non-monster NPCs (like quest givers)
+            # ---
+            is_monster = obj.get("is_monster")
+            is_npc = obj.get("is_npc")
             
-            if not monster_id:
+            if not is_monster and not is_npc:
+            # --- END MODIFIED ---
                 # Not a monster, just add it (e.g., fountain, well)
                 live_room_objects.append(obj)
                 continue
@@ -185,7 +191,12 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                 continue # It's defeated, do not add to room
 
             # It's alive, load its template data if it doesn't have stats
-            if "stats" not in obj:
+            # ---
+            # --- MODIFIED: Only load from template if it's a monster
+            # ---
+            monster_id = obj.get("monster_id")
+            if monster_id and "stats" not in obj:
+            # --- END MODIFIED ---
                 template = world.game_monster_templates.get(monster_id)
                 if template:
                     current_uid = obj["uid"] # Preserve the room-specific UID

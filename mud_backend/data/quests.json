@@ -48,5 +48,107 @@
         "talk_prompt": "You! You look like you could learn a thing or two about leverage. Wield a proper weapon - a polearm, a staff, something with reach - and I'll show you how to put someone on their back. Once you're ready, try to TRIP me. We'll see if you learn anything.",
         "reward_message": "This message is not used, the reward is handled in the TRIP verb itself.",
         "already_learned_message": "The warrior just grunts at you."
+    },
+
+    "innkeeper_quest_1": {
+        "name": "Clearing the Debt",
+        "item_needed": "lodging_tax_payment",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "ore_requisition",
+        "idle_prompt": "Ah, you're awake. Come see me when you're ready to settle your bill.",
+        "talk_prompt": "Ah, you're awake! About your bill... you can check your WEALTH, but I suspect you're a bit light. No matter. I have an arrangement with the Town Clerk. Take this late 'Lodging Tax' payment to him at the Town Hall. You can use GOTO TOWNHALL. He'll... have more for you to do. Welcome to the city.",
+        "reward_message": "The Town Clerk takes the envelope. 'The Innkeeper's late again... Thank you. Listen, I'm buried in work. Could you run a few more deliveries? First, take this ore requisition to the Blacksmith at the Armory.'",
+        "already_learned_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room.'"
+    },
+    "clerk_quest_1": {
+        "name": "Ore for the Smith",
+        "item_needed": "ore_requisition",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "leather_order",
+        "talk_prompt": "Still have that ore requisition for me?",
+        "reward_message": "The Blacksmith takes the form. 'Good. I can't make swords without ore. The clerk needs this leather order taken to the Furrier now.'",
+        "already_learned_message": "The Blacksmith is busy at his forge."
+    },
+    "blacksmith_quest_1": {
+        "name": "Leather for the Smith",
+        "item_needed": "leather_order",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "cured_sinew_bundle",
+        "talk_prompt": "Do you have something for me?",
+        "reward_message": "The Furrier grunts and takes the order. 'Leather strapping. Fine. Speaking of components, the Apothecary needed this bundle of cured sinew. Take it to her shop.'",
+        "already_learned_message": "The Furrier is busy skinning a pelt."
+    },
+    "furrier_quest_1": {
+        "name": "Sinew for the Alchemist",
+        "item_needed": "cured_sinew_bundle",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "salve_box",
+        "talk_prompt": "What is it? More deliveries?",
+        "reward_message": "The Apothecary smiles. 'Wonderful! Can't brew without a binder. My weekly tithe is also ready. Take this box of salves to the Priest at the Temple. Bless his work.'",
+        "already_learned_message": "The Apothecary is busy at her workbench."
+    },
+    "apothecary_quest_1": {
+        "name": "Salves for the Temple",
+        "item_needed": "salve_box",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "letter_of_welcome",
+        "talk_prompt": "Do you have something for the temple?",
+        "reward_message": "The Priest accepts the box. 'The Apothecary is a kind soul. These will help many. Ah, this also arrived... A new 'mercenary' from the Bound Legion is in town. Please deliver this 'Letter of Welcome' to the Elementalist.'",
+        "already_learned_message": "The Priest nods to you in thanks."
+    },
+    "priest_quest_errand_1": {
+        "name": "A Chilly Welcome",
+        "item_needed": "letter_of_welcome",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "patrol_notice",
+        "talk_prompt": "What do you want? More prayers?",
+        "reward_message": "The Elementalist scoffs at the letter. 'A 'welcome'? Hah. They fear what they can't control. I have no time for this. The city watch needs to know where my 'soldiers' will be. Take this patrol notice to the Guard Captain at the Barracks.'",
+        "already_learned_message": "The Elementalist is busy with his research."
+    },
+    "elementalist_quest_errand_1": {
+        "name": "Notice for the Watch",
+        "item_needed": "patrol_notice",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "recruitment_poster",
+        "talk_prompt": "What is it, citizen?",
+        "reward_message": "The Guard Captain reads the note and sighs. 'Elementals... great. More paperwork. Listen, you're getting to know the town. We need more eyes and ears. Take this recruitment poster to the Librarian at the archives.'",
+        "already_learned_message": "The Guard Captain is busy shouting at recruits."
+    },
+    "captain_quest_1": {
+        "name": "Poster for the Library",
+        "item_needed": "recruitment_poster",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "overdue_books",
+        "talk_prompt": "Can I help you?",
+        "reward_message": "The Librarian files the poster. 'More guards... always a need. Now, a small matter. The Theatre Master has several very overdue books on 'Illusory Set Design.' Please retrieve them. Firmly.'",
+        "already_learned_message": "The Librarian is busy cataloging scrolls."
+    },
+    "librarian_quest_1": {
+        "name": "The Overdue Books",
+        "item_needed": "overdue_books",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_item": "final_receipt",
+        "talk_prompt": "What is it, darling? Here to see the show?",
+        "reward_message": "The Theatre Master sighs dramatically. 'Oh, fine! Here! He has no appreciation for art! Now be a darling and run this final receipt back to the Town Clerk. It proves I've 'returned' his precious books.'",
+        "already_learned_message": "The Theatre Master is busy rehearsing."
+    },
+    "theatre_quest_1": {
+        "name": "The Final Receipt",
+        "item_needed": "final_receipt",
+        "item_quantity": 1,
+        "reward_xp": 250,
+        "reward_silver": 500,
+        "talk_prompt": "Yes? Do you have something for me?",
+        "reward_message": "The Town Clerk is relieved. 'That's... all of them? Amazing! You've been a huge help. Here is your pay. I'll let the Innkeeper know your debt is clear. You've earned it.'",
+        "already_learned_message": "The Town Clerk nods. 'Thank you again for your help.'"
     }
 }

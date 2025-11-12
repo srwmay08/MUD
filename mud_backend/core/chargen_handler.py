@@ -269,7 +269,7 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.chargen_step = 99 
         
         # ---
-        # --- NEW ONBOARDING LOGIC ---
+        # --- MODIFIED: NEW ONBOARDING LOGIC
         # ---
         
         # 1. Set game state to playing
@@ -295,7 +295,7 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
         player.send_message("\nYou awaken in a simple room at the inn. You feel a bit groggy... and in debt. A note on the table indicates you should **SPEAK** to the **Innkeeper** about your bill. You should head **OUT**.")
         # ---
-        # --- END NEW ONBOARDING LOGIC ---
+        # --- END MODIFIED
         # ---
         
 # ---

@@ -294,5 +294,76 @@
         "skill": "staves",
         "keywords": ["staff", "wooden staff"],
         "base_value": 60
+    },
+    
+    "lodging_tax_payment": {
+        "name": "a lodging tax payment",
+        "description": "A sealed envelope addressed to the Town Clerk. It feels like it contains a few coins.",
+        "item_type": "quest",
+        "keywords": ["payment", "tax", "envelope", "lodging tax payment"],
+        "base_value": 0
+    },
+    "ore_requisition": {
+        "name": "an ore requisition",
+        "description": "A requisition form for iron ore, signed by the Town Clerk. It's addressed to the Armory.",
+        "item_type": "quest",
+        "keywords": ["requisition", "ore", "form", "ore requisition"],
+        "base_value": 0
+    },
+    "leather_order": {
+        "name": "a leather order",
+        "description": "An order for cured leather strapping, meant for the Furrier.",
+        "item_type": "quest",
+        "keywords": ["order", "leather", "leather order"],
+        "base_value": 0
+    },
+    "cured_sinew_bundle": {
+        "name": "a bundle of cured sinew",
+        "description": "A bundle of dried and cured sinew, bundled neatly.",
+        "item_type": "quest",
+        "keywords": ["sinew", "bundle", "cured sinew bundle"],
+        "base_value": 0
+    },
+    "salve_box": {
+        "name": "a box of salves",
+        "description": "A small box of healing salves, marked with the Apothecary's seal. It's addressed to the Temple.",
+        "item_type": "quest",
+        "keywords": ["salves", "box", "salve box"],
+        "base_value": 0
+    },
+    "letter_of_welcome": {
+        "name": "a letter of welcome",
+        "description": "A formal, stiff-looking letter addressed to the Elementalist's Study.",
+        "item_type": "quest",
+        "keywords": ["letter", "welcome", "letter of welcome"],
+        "base_value": 0
+    },
+    "patrol_notice": {
+        "name": "a patrol notice",
+        "description": "A list of patrol routes and times, to be delivered to the Guard Captain.",
+        "item_type": "quest",
+        "keywords": ["notice", "patrol", "patrol notice"],
+        "base_value": 0
+    },
+    "recruitment_poster": {
+        "name": "a recruitment poster",
+        "description": "A poster calling for new members of the City Watch. It's meant for the Library.",
+        "item_type": "quest",
+        "keywords": ["poster", "recruitment", "recruitment poster"],
+        "base_value": 0
+    },
+    "overdue_books": {
+        "name": "a stack of overdue books",
+        "description": "A heavy stack of books on 'Illusory Set Design'. They belong to the Library.",
+        "item_type": "quest",
+        "keywords": ["books", "stack", "overdue books"],
+        "base_value": 0
+    },
+    "final_receipt": {
+        "name": "a final receipt",
+        "description": "A receipt stamped 'PAID' by the Theatre Master. This should be returned to the Town Clerk.",
+        "item_type": "quest",
+        "keywords": ["receipt", "final receipt"],
+        "base_value": 0
     }
 }

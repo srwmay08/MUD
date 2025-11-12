@@ -7,6 +7,29 @@ import random
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
 
+# ---
+# --- NEW: GOTO Target Map
+# ---
+# This maps a "goto" keyword to a room_id
+GOTO_MAP = {
+    "townhall": "town_hall",
+    "hall": "town_hall",
+    "blacksmith": "armory_shop",
+    "armory": "armory_shop",
+    "furrier": "furrier_shop",
+    "apothecary": "apothecary_shop",
+    "temple": "temple_of_light",
+    "priest": "temple_of_light",
+    "elementalist": "elementalist_study",
+    "study": "elementalist_study",
+    "barracks": "barracks",
+    "captain": "barracks",
+    "library": "library_archives",
+    "archives": "library_archives",
+    "librarian": "library_archives",
+    "theatre": "theatre",
+    "inn": "ts_south"
+}
 
 # ---
 # --- THIS IS THE FIX ---
@@ -53,8 +76,13 @@ class Enter(BaseVerb):
                                  if obj['name'].lower() == target_name and "ENTER" in obj.get("verbs", [])), None)
 
         if not enterable_object:
-            self.player.send_message(f"You cannot enter the **{target_name}**.")
-            return
+            # --- NEW: Check keywords as a fallback ---
+            enterable_object = next((obj for obj in self.room.objects 
+                                     if target_name in obj.get("keywords", []) and "ENTER" in obj.get("verbs", [])), None)
+            if not enterable_object:
+                self.player.send_message(f"You cannot enter the **{target_name}**.")
+                return
+            # --- END NEW ---
 
         target_room_id = enterable_object.get("target_room")
 
@@ -75,12 +103,12 @@ class Enter(BaseVerb):
         is_door_or_gate = "door" in obj_keywords or "gate" in obj_keywords
         
         if current_posture == "standing":
-            move_msg = f"You enter the {target_name}..."
+            move_msg = f"You enter the {enterable_object.get('name', target_name)}..."
             # Only apply RT if it's NOT a door or gate
             if not is_door_or_gate:
                 rt = 3.0
         elif current_posture == "prone":
-            move_msg = f"You crawl through the {target_name}..."
+            move_msg = f"You crawl through the {enterable_object.get('name', target_name)}..."
             if not is_door_or_gate:
                 rt = 8.0
         else: # sitting or kneeling
@@ -299,3 +327,54 @@ class Exit(BaseVerb):
             enter_verb = Enter(self.world, self.player, self.room, self.args)
             enter_verb.execute() 
             return
+
+# ---
+# --- NEW GOTO VERB
+# ---
+class GOTO(BaseVerb):
+    """
+    Handles the 'goto' command for fast-travel to known locations.
+    """
+    def execute(self):
+        if _check_action_roundtime(self.player, action_type="move"):
+            return
+            
+        if self.player.posture != "standing":
+            self.player.send_message("You must be standing to do that.")
+            return
+            
+        if not self.args:
+            self.player.send_message("Where do you want to go? (e.g., GOTO TOWNHALL)")
+            return
+            
+        target_name = " ".join(self.args).lower()
+        
+        target_room_id = GOTO_MAP.get(target_name)
+        
+        if not target_room_id:
+            self.player.send_message(f"You don't know how to go to '{target_name}'.")
+            return
+            
+        if self.player.current_room_id == target_room_id:
+            self.player.send_message("You are already there!")
+            return
+            
+        # --- Check for toll gates before moving ---
+        if _check_toll_gate(self.player, target_room_id):
+            return # Movement is blocked
+            
+        # Get the friendly name from the target room
+        target_room_data = self.world.get_room(target_room_id)
+        if not target_room_data:
+            self.player.send_message("You can't go there. (Room does not exist)")
+            return
+            
+        target_room_name = target_room_data.get("name", "your destination")
+        
+        move_msg = f"You walk purposefully to {target_room_name}..."
+        
+        # Move the player
+        self.player.move_to_room(target_room_id, move_msg)
+        
+        # Set a 3s RT for fast travel
+        _set_action_roundtime(self.player, 3.0)

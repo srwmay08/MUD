@@ -57,8 +57,8 @@ def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     for obj in room.objects:
         # ---
         # --- THIS IS THE FIX ---
-        # Changed obj.get("quest_giver_id") to obj.get("quest_giver_ids")
-        if obj.get("quest_giver_ids") and not obj.get("is_monster"):
+        # We now find any object that has quest IDs OR is flagged as an NPC
+        if obj.get("quest_giver_ids") or obj.get("is_npc"):
         # --- END FIX ---
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
@@ -178,19 +178,47 @@ class Give(BaseVerb):
                                 print(f"[QUEST ERROR] Player {self.player.name} item count mismatch for {item_id_to_give}!")
                                 break
                     
-                    # --- Grant Reward ---
+                    # ---
+                    # --- NEW: Grant Reward
+                    # ---
                     quest_id = active_quest.get("name", "unknown_quest") # Note: quest.json doesn't have quest_id, using name
-                    reward_spell = active_quest.get("reward_spell")
                     
+                    # 1. Send reward message
+                    reward_message = active_quest.get("reward_message", "You have completed the task!")
+                    self.player.send_message(reward_message)
+                    
+                    # 2. Grant XP (immediate, not field)
+                    reward_xp = active_quest.get("reward_xp", 0)
+                    if reward_xp > 0:
+                        self.player.experience += reward_xp
+                        self.player.send_message(f"You have gained {reward_xp} experience!")
+                        # Check for level up immediately
+                        self.player._check_for_level_up()
+                        
+                    # 3. Grant Silver
+                    reward_silver = active_quest.get("reward_silver", 0)
+                    if reward_silver > 0:
+                        self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + reward_silver
+                        self.player.send_message(f"You have been given {reward_silver} silver!")
+
+                    # 4. Grant follow-up item
+                    reward_item = active_quest.get("reward_item")
+                    if reward_item:
+                        self.player.inventory.append(reward_item)
+                        item_data = self.world.game_items.get(reward_item, {})
+                        self.player.send_message(f"You are given {item_data.get('name', 'an item')}.")
+                    
+                    # 5. Grant Spell
+                    reward_spell = active_quest.get("reward_spell")
                     if reward_spell:
-                        if reward_spell in self.player.known_spells:
-                            self.player.send_message(active_quest.get("already_learned_message", "You have already completed this task."))
-                        else:
+                        if reward_spell not in self.player.known_spells:
                             self.player.known_spells.append(reward_spell)
-                            self.player.send_message(active_quest.get("reward_message", "You have learned something new!"))
-                    else:
-                        # Handle non-spell rewards later
-                        self.player.send_message(active_quest.get("reward_message", "You have completed the task!"))
+                            # The reward_message already contains the "you learned" text
+                        else:
+                            self.player.send_message(active_quest.get("already_learned_message", "You have already completed this task."))
+                    # ---
+                    # --- END NEW REWARD LOGIC
+                    # ---
                     
                     # Mark quest as complete
                     self.player.completed_quests.append(quest_id)
