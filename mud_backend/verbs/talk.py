@@ -54,6 +54,30 @@ class Talk(BaseVerb):
                 self.player.send_message(f"You talk to the {npc_name}.")
                 self.player.send_message(f"The {npc_name} says, \"{talk_prompt}\"")
                 
+                # ---
+                # --- THIS IS THE FIX: Grant item on talk
+                # ---
+                grant_item_id = active_quest.get("grant_item_on_talk")
+                if grant_item_id:
+                    # Check if player already has it (in inventory or hands)
+                    has_item = False
+                    if grant_item_id in self.player.inventory:
+                        has_item = True
+                    else:
+                        for slot in ["mainhand", "offhand"]:
+                            if self.player.worn_items.get(slot) == grant_item_id:
+                                has_item = True
+                                break
+                    
+                    if not has_item:
+                        self.player.inventory.append(grant_item_id)
+                        item_data = self.world.game_items.get(grant_item_id, {})
+                        item_name = item_data.get("name", "an item")
+                        self.player.send_message(f"The {npc_name} hands you {item_name}.")
+                # ---
+                # --- END FIX
+                # ---
+                
                 # --- NEW: Grant "trip_training" maneuver ---
                 reward_maneuver = active_quest.get("reward_maneuver")
                 if reward_maneuver and reward_maneuver not in self.player.known_maneuvers:

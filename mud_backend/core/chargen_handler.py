@@ -275,8 +275,14 @@ def _handle_appearance_input(player: Player, text_input: str):
         # 1. Set game state to playing
         player.game_state = "playing"
         
+        # ---
+        # --- THIS IS THE FIX: Do NOT give the item here
+        # ---
         # 2. Give them the first quest item
-        player.inventory.append("lodging_tax_payment")
+        # player.inventory.append("lodging_tax_payment") # <-- REMOVED
+        # ---
+        # --- END FIX
+        # ---
         
         # 3. Grant starter gear
         player.worn_items["back"] = "starter_backpack"
@@ -295,9 +301,9 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
         
         # ---
-        # --- THIS IS THE FIX: Add explicit item message
+        # --- THIS IS THE FIX: Remove explicit item message
         # ---
-        player.send_message("You find a sealed envelope on the table, marked 'Lodging Tax Payment'. You pick it up.")
+        # player.send_message("You find a sealed envelope on the table, marked 'Lodging Tax Payment'. You pick it up.") # <-- REMOVED
         # ---
         # --- END FIX
         # ---
