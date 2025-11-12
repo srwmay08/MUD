@@ -408,6 +408,7 @@
         "description": {
             "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A note has been left on the table. A single door leads **OUT**."
         },
+                "is_outdoor": false,
         "objects": [
             {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"]},
             {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"]},
@@ -422,6 +423,7 @@
         "description": {
             "default": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter."
         },
+                        "is_outdoor": false,
         "objects": [
             {
                 "name": "a grizzled furrier",
@@ -446,6 +448,7 @@
         "description": {
             "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall."
         },
+                        "is_outdoor": false,
         "objects": [
             {
                 "name": "teller",
@@ -468,6 +471,7 @@
         "description": {
             "default": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow."
         },
+        "is_outdoor": false,
         "objects": [
             {
                 "name": "an armorer",
@@ -502,6 +506,7 @@
         "description": {
             "default": "A quiet, peaceful temple. Incense burns softly in the air, and sunlight streams through a high, stained-glass window, illuminating a stone altar in the center of the room. A robed priest tends to several hurt patrons on cots."
         },
+        "is_outdoor": false,
         "objects": [
             {
                 "name": "stone altar",
@@ -531,6 +536,7 @@
         "description": {
             "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
         },
+        "is_outdoor": false,
         "objects": [
             {
                 "name": "an elementalist",
@@ -613,6 +619,7 @@
         "description": {
             "default": "This is the central hub of the city's administration. Desks are piled high with papers, and stressed-looking officials bustle about. A man at the central desk, the Town Clerk, looks up as you enter."
         },
+        "is_outdoor": false,
         "objects": [
             {
                 "name": "a town clerk",
@@ -631,6 +638,7 @@
         "description": {
             "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
         },
+        "is_outdoor": false,
         "objects": [
             {
                 "name": "an apothecary",
@@ -649,6 +657,7 @@
         "description": {
             "default": "The barracks is a functional, spartan room filled with weapon racks and training dummies. Recruits are being shouted at in a yard visible through a western window. The Guard Captain stands at a table, reviewing a map."
         },
+        "is_outdoor": false,
         "objects": [
             {
                 "name": "a guard captain",
@@ -667,6 +676,7 @@
         "description": {
             "default": "The smell of old paper and leather fills this quiet, dusty room. Tall shelves stretch up into the shadows, filled with countless books and scrolls. A Librarian sits at a desk, meticulously cataloging new arrivals."
         },
+        "is_outdoor": false,        
         "objects": [
             {
                 "name": "a librarian",

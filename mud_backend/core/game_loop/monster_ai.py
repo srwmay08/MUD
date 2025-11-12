@@ -198,6 +198,6 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                         # --- END NEW ---
                         
                         if config.DEBUG_MODE:
-                            print(f"{log_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
+                            print(f"{log_time_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
                     elif config.DEBUG_MODE:
-                        print(f"{log_prefix} - MONSTER_AI: {monster.get('name')} move failed (room state changed).")
+                        print(f"{log_time_prefix} - MONSTER_AI: {monster.get('name')} move failed (room state changed).")
