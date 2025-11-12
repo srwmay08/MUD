@@ -235,6 +235,16 @@ def update_environment_state(world: 'World',
             # --- END FIX ---
 
             if player_obj and player_obj.current_room_id in exposed_room_ids:
+                
+                # ---
+                # --- THIS IS THE FIX: Check game state
+                # ---
+                if player_obj.game_state != "playing":
+                    continue # Don't send weather updates to chargen/training
+                # ---
+                # --- END FIX
+                # ---
+
                 if time_broadcast_msg:
                     # Use the world's socketio instance via the player
                     player_obj.world.send_message_to_player(player_name, time_broadcast_msg, "message")

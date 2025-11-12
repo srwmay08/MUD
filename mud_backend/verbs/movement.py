@@ -7,7 +7,13 @@ import time
 # --- NEW: Import deque for pathfinding ---
 from collections import deque
 from typing import Optional, List, Dict, Set
-# --- END NEW ---
+# ---
+# --- THIS IS THE FIX: Import the Room class
+# ---
+from mud_backend.core.game_objects import Room
+# ---
+# --- END FIX
+# ---
 
 # ---
 # --- NEW: GOTO Target Map
