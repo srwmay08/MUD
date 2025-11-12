@@ -11,9 +11,21 @@
         "hp": 10,
         "max_hp": 10,
 
+        "level": 1,
+        "family": "Beast",
+        "body_type": "quadruped",
+        "is_undead": false,
+        "is_non_corporeal": false,
+        "areas_found": ["well_bottom", "cave_east", "cave_west"],
+        "bcs": true,
+        "attack_attributes": ["physical (brawling)"],
+        "defense_attributes": ["low hp"],
+        "action_timer_seconds": 12,
+        "spawn_message_arrival": "A stirring monster crawls in from the darkness.",
+        "spawn_message_departure": "The stirring monster crawls off towards the {exit}.",
+
         "respawn_time_seconds": 60,
         "respawn_chance_per_tick": 0.5,
-
         "movement_rules": {
             "wander_chance": 0.75,
             "allowed_rooms": ["well_bottom", "cave_east", "cave_west"]
@@ -25,7 +37,6 @@
             "item_yield_success_key": "pelt_ruined",
             "item_yield_failed_key": "pelt_ruined"
         },
-
         "stats": {
             "STR": 30, "CON": 30, "DEX": 30, "AGI": 30,
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
@@ -58,6 +69,20 @@
         "is_monster": true,
         "hp": 12,
         "max_hp": 12,
+
+        "level": 2,
+        "family": "Orc",
+        "body_type": "biped",
+        "is_undead": false,
+        "is_non_corporeal": false,
+        "areas_found": ["forest_clearing_1", "forest_clearing_2", "north_gate"],
+        "bcs": true,
+        "attack_attributes": ["physical (small blunt)"],
+        "defense_attributes": ["low hp"],
+        "action_timer_seconds": 10,
+        "spawn_message_arrival": "An orc warrior stomps in.",
+        "spawn_message_departure": "The orc warrior stomps off towards the {exit}.",
+
         "respawn_time_seconds": 90,
         "respawn_chance_per_tick": 0.3,
         "movement_rules": {
@@ -94,6 +119,20 @@
         "is_monster": true,
         "hp": 30,
         "max_hp": 30,
+
+        "level": 5,
+        "family": "Human",
+        "body_type": "biped",
+        "is_undead": false,
+        "is_non_corporeal": false,
+        "areas_found": ["north_gate"],
+        "bcs": true,
+        "attack_attributes": ["physical (edged weapons)"],
+        "defense_attributes": ["leather armor"],
+        "action_timer_seconds": 8,
+        "spawn_message_arrival": "A town guardsman arrives.",
+        "spawn_message_departure": "The town guardsman heads {exit}.",
+
         "respawn_time_seconds": 60,
         "respawn_chance_per_tick": 0.8,
         "movement_rules": {
@@ -123,6 +162,20 @@
         "is_npc": true,
         "hp": 150,
         "max_hp": 150,
+
+        "level": 10,
+        "family": "Human",
+        "body_type": "biped",
+        "is_undead": false,
+        "is_non_corporeal": false,
+        "areas_found": ["town_square", "ts_north", "ts_south", "ts_east", "ts_west", "ts_northeast", "ts_northwest", "ts_southeast", "ts_southwest"],
+        "bcs": true,
+        "attack_attributes": ["physical (polearms)", "combat maneuvers (trip)"],
+        "defense_attributes": ["leather armor", "high defense"],
+        "action_timer_seconds": 7,
+        "spawn_message_arrival": "A grizzled warrior wanders in.",
+        "spawn_message_departure": "The grizzled warrior wanders off to the {exit}.",
+
         "respawn_time_seconds": 60,
         "respawn_chance_per_tick": 1.0,
         "movement_rules": {

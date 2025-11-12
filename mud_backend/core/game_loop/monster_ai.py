@@ -174,8 +174,22 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                         
                         monster_name = monster.get("name", "something")
                         
-                        broadcast_callback(current_room_id, f"The {monster_name} slinks off towards the {chosen_exit}.", "ambient_move")
-                        broadcast_callback(destination_room_id, f"A {monster_name} slinks in.", "ambient_move")
+                        # ---
+                        # --- THIS IS THE FIX ---
+                        #
+                        # 1. Read the custom departure message from the monster template
+                        departure_msg_template = monster.get("spawn_message_departure", "The {name} slinks off towards the {exit}.")
+                        # Format it, replacing {name} and {exit}
+                        departure_msg = departure_msg_template.format(name=monster_name, exit=chosen_exit)
+                        broadcast_callback(current_room_id, departure_msg, "ambient_move")
+                        
+                        # 2. Read the custom arrival message
+                        arrival_msg_template = monster.get("spawn_message_arrival", "A {name} slinks in.")
+                        # Format it, replacing {name}
+                        arrival_msg = arrival_msg_template.format(name=monster_name)
+                        broadcast_callback(destination_room_id, arrival_msg, "ambient_move")
+                        #
+                        # --- END FIX ---
                         
                         # ---
                         # --- NEW: Check for NPC-NPC combat on arrival
@@ -184,6 +198,6 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                         # --- END NEW ---
                         
                         if config.DEBUG_MODE:
-                            print(f"{log_time_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
+                            print(f"{log_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
                     elif config.DEBUG_MODE:
-                        print(f"{log_time_prefix} - MONSTER_AI: {monster.get('name')} move failed (room state changed).")
+                        print(f"{log_prefix} - MONSTER_AI: {monster.get('name')} move failed (room state changed).")

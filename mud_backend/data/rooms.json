@@ -3,7 +3,7 @@
         "room_id": "town_square", 
         "name": "The Great Town Square", 
     "description": {
-    "default": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty.",
+        "default": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty.",
     
     "DAWN": {
         "clear": "The first faint light of dawn paints the sky, catching the high tiers of the magnificent fountain in hues of orange and pink. The paving stones are cold and empty, save for a few early risers. The eastern well is a silent silhouette, its oaken bucket still.",
@@ -117,7 +117,7 @@
                 "verbs": ["look", "attack", "talk"],
                 "is_monster": true,
                 "is_npc": true,
-                "monster_id": "grizzled_warrior",
+                "monster_id": "grizzled_old_warrior",
                 "keywords": ["warrior", "grizzled warrior", "a grizzled warrior"],
                 "quest_giver_ids": ["trip_quest_1"]
             }

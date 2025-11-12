@@ -268,24 +268,35 @@ def _handle_appearance_input(player: Player, text_input: str):
         # Mark chargen as "finished"
         player.chargen_step = 99 
         
-        # Grant LEVEL 0 TRAINING POINTS
-        ptps, mtps, stps = player._calculate_tps_per_level()
-        player.ptps += ptps
-        player.mtps += mtps
-        player.stps += stps
-        player.send_message("\nYou have received your initial training points:")
-        player.send_message(f" {ptps} PTPs, {mtps} MTPs, {stps} STPs")
+        # ---
+        # --- NEW ONBOARDING LOGIC ---
+        # ---
         
-        # --- CHANGED: Set game state to 'training' ---
-        player.game_state = "training"
+        # 1. Set game state to playing
+        player.game_state = "playing"
         
-        player.send_message("\nCharacter creation complete! You must now train your initial skills.")
+        # 2. Give them the first quest item
+        player.inventory.append("lodging_tax_payment")
         
-        # --- NEW: Automatically list all skills ---
-        # --- FIX: Removed the "All Skills" title ---
-        show_skill_list(player, "all")
-        # --- FIX: Removed call to show_training_menu ---
-        # (It is now part of show_skill_list)
+        # 3. Grant starter gear
+        player.worn_items["back"] = "starter_backpack"
+        player.worn_items["torso"] = "starter_leather_armor"
+        player.worn_items["mainhand"] = "starter_dagger" # Default weapon
+        player.wealth["silvers"] = 0 # Start with 0 silver to trigger quest
+        
+        # 4. Set all vitals to max
+        player.hp = player.max_hp
+        player.mana = player.max_mana
+        player.stamina = player.max_stamina
+        player.spirit = player.max_spirit
+        
+        # 5. Send new intro message and move to room
+        # We move them first so the "look" shows the new room
+        player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
+        player.send_message("\nYou awaken in a simple room at the inn. You feel a bit groggy... and in debt. A note on the table indicates you should **SPEAK** to the **Innkeeper** about your bill. You should head **OUT**.")
+        # ---
+        # --- END NEW ONBOARDING LOGIC ---
+        # ---
         
 # ---
 # (Main Input Router is unchanged)
