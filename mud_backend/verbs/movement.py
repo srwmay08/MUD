@@ -101,29 +101,27 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
         exits = room.get("exits", {})
         
         # ---
-        # --- THIS IS THE FIX: Correctly find all object exits
+        # --- THIS IS THE FIX ---
         # ---
+        # Also check 'objects' for 'ENTER' verbs
+        # This allows pathing through doors, portals, etc.
         objects = room.get("objects", [])
-        temp_object_exits = {} # Use a temp dict to avoid modifying 'exits' while iterating
-
         for obj in objects:
             if "ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", []):
                 target_room = obj.get("target_room")
                 if target_room:
-                    # Use all keywords as potential directions
-                    for keyword in obj.get("keywords", []):
-                        # Only add if it's not a cardinal exit and not already mapped
-                        if keyword not in exits and keyword not in temp_object_exits:
-                            temp_object_exits[keyword] = target_room
+                    # --- NEW LOGIC ---
+                    # Add all keywords and the name as potential paths
+                    obj_keywords = obj.get("keywords", [])
+                    for keyword in obj_keywords:
+                        if keyword not in exits:
+                            exits[keyword] = target_room
                     
-                    # As a fallback, use the object's name if no keywords
-                    if not obj.get("keywords"):
-                        name_key = obj.get("name", "").lower()
-                        if name_key and name_key not in exits and name_key not in temp_object_exits:
-                             temp_object_exits[name_key] = target_room
-                             
-        # Add the valid object exits to the main exits dict for this BFS step
-        exits.update(temp_object_exits)
+                    # Add the object's name as well, just in case
+                    obj_name = obj.get("name", "").lower()
+                    if obj_name and obj_name not in exits:
+                         exits[obj_name] = target_room
+                    # --- END NEW LOGIC ---
         # ---
         # --- END FIX
         # ---
@@ -204,7 +202,8 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         if not target_room_id_step:
             current_room_obj.objects = current_room_data.get("objects", [])
             enter_obj = next((obj for obj in current_room_obj.objects 
-                              if (move_direction in obj.get("keywords", []) and 
+                              if ((move_direction in obj.get("keywords", []) or 
+                                   move_direction == obj.get("name", "").lower()) and # <-- Check name too
                                   ("ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", [])))
                              ), None)
                              
@@ -234,13 +233,13 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         if old_room_id and new_room_id != old_room_id:
             # ---
-            # --- THIS IS THE FIX: Use socketio.leave_room and socketio.enter_room
+            # --- THIS IS THE FIX: Use world.socketio.server methods
             # ---
-            world.socketio.leave_room(sid, old_room_id)
+            world.socketio.server.leave_room(sid, old_room_id)
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
             world.socketio.emit("message", leaves_message, to=old_room_id)
             
-            world.socketio.enter_room(sid, new_room_id)
+            world.socketio.server.enter_room(sid, new_room_id)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
             world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
             # ---
