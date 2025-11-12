@@ -19,7 +19,7 @@ from mud_backend.core.game_objects import Room
 # --- NEW: Add imports needed for background task ---
 from mud_backend.core.room_handler import show_room_to_player
 # ---
-# --- THIS IS THE FIX: REMOVE join_room and leave_room
+# --- THIS IS THE FIX: REMOVE join_room and leave_room (which were unused)
 # ---
 # from flask_socketio import join_room, leave_room # <-- REMOVED
 # ---
@@ -220,13 +220,13 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         if old_room_id and new_room_id != old_room_id:
             # ---
-            # --- THIS IS THE FIX: Use socketio.server methods
+            # --- THIS IS THE FIX: Use socketio.leave_room and socketio.enter_room
             # ---
-            world.socketio.server.leave_room(sid, old_room_id)
+            world.socketio.leave_room(sid, old_room_id)
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
             world.socketio.emit("message", leaves_message, to=old_room_id)
             
-            world.socketio.server.join_room(sid, new_room_id)
+            world.socketio.enter_room(sid, new_room_id)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
             world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
             # ---
