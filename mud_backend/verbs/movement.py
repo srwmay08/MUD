@@ -86,12 +86,14 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
         # This allows pathing through doors, portals, etc.
         objects = room.get("objects", [])
         for obj in objects:
-            if "ENTER" in obj.get("verbs", []):
+            if "ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", []):
                 target_room = obj.get("target_room")
                 # Use the first keyword as the "direction"
                 keyword = obj.get("keywords", [obj.get("name", "portal")])[0]
                 if target_room:
-                    exits[keyword] = target_room
+                    # Make sure not to overwrite an existing exit
+                    if keyword not in exits:
+                        exits[keyword] = target_room
         # --- END NEW ---
 
         for direction, next_room_id in exits.items():
@@ -382,7 +384,7 @@ class Exit(BaseVerb):
 class GOTO(BaseVerb):
     """
     Handles the 'goto' command for fast-travel to known locations.
-    Finds the shortest path and executes the first step.
+    Finds the shortest path and executes each step, showing the room.
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="move"):
@@ -408,11 +410,6 @@ class GOTO(BaseVerb):
             self.player.send_message("You are already there!")
             return
             
-        # --- Check for toll gates before moving (e.g. if GOTO points past one) ---
-        # This is a simple check; a real one would check the whole path.
-        if _check_toll_gate(self.player, target_room_id):
-            return # Movement is blocked
-            
         # Get the friendly name from the target room
         target_room_data = self.world.get_room(target_room_id)
         if not target_room_data:
@@ -428,33 +425,63 @@ class GOTO(BaseVerb):
             self.player.send_message(f"You can't seem to find a path to {target_room_name} from here.")
             return
             
-        # --- Get the first step ---
-        move_direction = path[0]
+        # --- NEW: Execute path step-by-step ---
+        self.player.send_message(f"You begin moving towards {target_room_name}...")
         
-        # --- Instantiate and execute the 'Move' or 'Enter' verb ---
-        # This is a bit of a hack, but it reuses the existing logic
-        if move_direction in DIRECTION_MAP:
-            # It's a cardinal direction, use Move
-            move_verb = Move(self.world, self.player, self.room, [move_direction], move_direction)
-            move_verb.execute()
-        else:
-            # It's an object/keyword, use Enter
-            enter_verb = Enter(self.world, self.player, self.room, [move_direction], "enter")
-            enter_verb.execute()
+        total_rt = 0.0
+        
+        for move_direction in path:
+            # Get the player's *current* room data for this step
+            current_room_data = self.world.get_room(self.player.current_room_id)
+            if not current_room_data:
+                self.player.send_message("Your path seems to have vanished. Stopping.")
+                break
+
+            current_room_obj = self.room # Use the verb's room object for object list
             
-        # Check if the move was successful (player's room actually changed)
-        # Note: move_verb.execute() already sent the "You move..." message
-        if self.player.current_room_id != self.room.room_id:
-            # Add a small RT for the 'goto' command itself
-            _set_action_roundtime(self.player, 1.0)
+            # Find the target_room_id for this step
+            target_room_id_step = current_room_data.get("exits", {}).get(move_direction)
+            move_msg = f"You move {move_direction}..."
             
-            # Send a follow-up message with the remaining path
-            if len(path) > 1:
-                self.player.send_message(f"(Path to {target_room_name}: {', '.join(path[1:])})")
-            else:
-                # This was the last step
-                pass # The move_to_room already showed the final room
-        else:
-            # Move failed (e.g., "You must stand up first")
-            # The 'Move' or 'Enter' verb already sent the error message.
-            pass
+            if not target_room_id_step:
+                # It must be an 'enter' or 'climb' object
+                # We need to refresh the room's objects
+                current_room_obj.objects = current_room_data.get("objects", [])
+                
+                enter_obj = next((obj for obj in current_room_obj.objects 
+                                  if (move_direction in obj.get("keywords", []) and 
+                                      ("ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", [])))
+                                 ), None)
+                                 
+                if enter_obj:
+                    target_room_id_step = enter_obj.get("target_room")
+                    move_msg = f"You enter the {enter_obj.get('name')}..."
+                else:
+                    self.player.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
+                    break
+            
+            # Check for toll gates
+            if _check_toll_gate(self.player, target_room_id_step):
+                # Message is sent by _check_toll_gate
+                self.player.send_message("Your movement is blocked. Stopping.")
+                break
+                
+            # --- Manually call move_to_room ---
+            # This is the core of the 'fast travel'
+            self.player.move_to_room(target_room_id_step, move_msg)
+            total_rt += 1.0 # 1 second per room
+            
+            # Update the verb's room object to the new room for the next loop iteration
+            new_room_data = self.world.get_room(target_room_id_step)
+            self.room = Room(
+                new_room_data.get("room_id", "void"),
+                new_room_data.get("name", "The Void"),
+                new_room_data.get("description", "..."),
+                db_data=new_room_data
+            )
+
+        # 10. Set final RT
+        _set_action_roundtime(self.player, total_rt)
+        
+        if self.player.current_room_id == target_room_id:
+            self.player.send_message("You have arrived.")

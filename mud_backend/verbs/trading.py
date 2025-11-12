@@ -115,7 +115,6 @@ class Give(BaseVerb):
             target_npc = _find_npc_in_room(self.room, target_name_input)
             if target_npc:
                 npc_name = target_npc.get("name", "the NPC")
-                npc_quest_ids = target_npc.get("quest_giver_ids", [])
                 
                 # Find the item on the player (hands or inventory)
                 item_id_to_give, item_source_location = _find_item_in_hands(self.player, target_item_name)
@@ -130,12 +129,41 @@ class Give(BaseVerb):
                 
                 item_name = self.world.game_items.get(item_id_to_give, {}).get("name", "that item")
 
-                # Find the active quest for this player
-                active_quest = get_active_quest_for_npc(self.player, npc_quest_ids)
+                # --- NEW LOGIC TO FIND THE QUEST ---
+                active_quest = None
+                quest_id_for_item = None
+                
+                # Iterate over *all* quests
+                for quest_id, quest_data in self.world.game_quests.items():
+                    # Is this an item quest?
+                    if quest_data.get("item_needed") == item_id_to_give:
+                        # Is this the right NPC to give it to?
+                        if quest_data.get("give_target_name") == npc_name.lower():
+                            # Is this quest active for the player? (not done, prereqs met)
+                            
+                            # Check if done
+                            is_done = False
+                            if quest_id in self.player.completed_quests:
+                                is_done = True
+                            # (add spell/maneuver checks if needed, but these are item quests)
+                            
+                            if is_done:
+                                continue
+                                
+                            # Check prereqs
+                            prereq_quest = quest_data.get("prereq_quest")
+                            if prereq_quest and prereq_quest not in self.player.completed_quests:
+                                continue
+                                
+                            # This is the one!
+                            active_quest = quest_data
+                            quest_id_for_item = quest_id
+                            break
                 
                 if not active_quest:
                     self.player.send_message(f"The {npc_name} does not seem interested in {item_name}.")
                     return
+                # --- END NEW QUEST LOGIC ---
 
                 # Check if this is the correct item for the active quest
                 item_needed = active_quest.get("item_needed")
@@ -181,7 +209,7 @@ class Give(BaseVerb):
                     # ---
                     # --- NEW: Grant Reward
                     # ---
-                    quest_id = active_quest.get("name", "unknown_quest") # Note: quest.json doesn't have quest_id, using name
+                    quest_id = quest_id_for_item
                     
                     # 1. Send reward message
                     reward_message = active_quest.get("reward_message", "You have completed the task!")

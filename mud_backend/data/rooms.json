@@ -619,7 +619,7 @@
                 "description": "A man buried in a mountain of paperwork. He looks stressed but efficient.",
                 "keywords": ["clerk", "town clerk", "a town clerk"],
                 "is_npc": true,
-                "quest_giver_ids": ["innkeeper_quest_1", "clerk_quest_1", "theatre_quest_1"],
+                "quest_giver_ids": ["clerk_quest_1", "theatre_quest_1"],
                 "all_quests_done_message": "The Town Clerk nods. 'Thank you again for your help.'"
             }
         ],
