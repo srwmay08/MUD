@@ -2,8 +2,10 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.command_executor import DIRECTION_MAP
 import random
+# --- MODIFIED: Import _check_action_roundtime, _set_action_roundtime, time ---
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
+# --- END MODIFIED ---
 # --- NEW: Import deque for pathfinding ---
 from collections import deque
 from typing import Optional, List, Dict, Set
@@ -14,6 +16,9 @@ from mud_backend.core.game_objects import Room
 # ---
 # --- END FIX
 # ---
+# --- NEW: Add imports needed for background task ---
+from mud_backend.core.room_handler import show_room_to_player
+# --- END NEW ---
 
 # ---
 # --- NEW: GOTO Target Map
@@ -111,6 +116,127 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
     return None  # No path found
 # ---
 # --- END NEW FUNCTION
+# ---
+
+# ---
+# --- NEW: GOTO Background Task
+# ---
+def _execute_goto_path(world, player_id: str, path: List[str], final_destination_room_id: str, sid: str):
+    """
+    A background task to move the player step-by-step.
+    This runs in a separate thread.
+    """
+    
+    player_obj = world.get_player_obj(player_id)
+    if not player_obj:
+        return # Player logged out
+
+    for move_direction in path:
+        # --- Wait for any existing RT to clear ---
+        while True:
+            rt_data = world.get_combat_state(player_id)
+            if rt_data:
+                next_action = rt_data.get("next_action_time", 0)
+                if time.time() < next_action:
+                    # We are in RT, sleep for a bit and check again
+                    world.socketio.sleep(0.5) 
+                else:
+                    # RT is clear, clear the state
+                    world.remove_combat_state(player_id)
+                    break
+            else:
+                # No RT data
+                break
+        
+        # --- Check if player is still connected ---
+        player_obj = world.get_player_obj(player_id)
+        if not player_obj:
+            return # Player logged out
+            
+        # --- Check for combat ---
+        player_state = world.get_combat_state(player_id)
+        if player_state and player_state.get("state_type") == "combat":
+            player_obj.send_message("You are attacked and your movement stops!")
+            world.socketio.emit('command_response', 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 to=sid)
+            return
+
+        current_room_data = world.get_room(player_obj.current_room_id)
+        if not current_room_data:
+            player_obj.send_message("Your path seems to have vanished. Stopping.")
+            world.socketio.emit('command_response', 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     to=sid)
+            return
+        
+        current_room_obj = Room(
+            current_room_data.get("room_id", "void"),
+            current_room_data.get("name", "The Void"),
+            current_room_data.get("description", "..."),
+            db_data=current_room_data
+        )
+
+        target_room_id_step = current_room_data.get("exits", {}).get(move_direction)
+        move_msg = f"You move {move_direction}..."
+        
+        if not target_room_id_step:
+            current_room_obj.objects = current_room_data.get("objects", [])
+            enter_obj = next((obj for obj in current_room_obj.objects 
+                              if (move_direction in obj.get("keywords", []) and 
+                                  ("ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", [])))
+                             ), None)
+                             
+            if enter_obj:
+                target_room_id_step = enter_obj.get("target_room")
+                move_msg = f"You enter the {enter_obj.get('name')}..."
+            else:
+                player_obj.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
+                world.socketio.emit('command_response', 
+                                         {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                         to=sid)
+                return
+        
+        if _check_toll_gate(player_obj, target_room_id_step):
+            player_obj.send_message("Your movement is blocked. Stopping.")
+            world.socketio.emit('command_response', 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     to=sid)
+            return
+            
+        player_obj.move_to_room(target_room_id_step, move_msg)
+        
+        _set_action_roundtime(player_obj, 3.0) 
+        
+        old_room_id = current_room_data.get("room_id")
+        new_room_id = target_room_id_step
+        
+        if old_room_id and new_room_id != old_room_id:
+            world.socketio.leave_room(old_room_id, sid=sid)
+            leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
+            world.socketio.emit("message", leaves_message, to=old_room_id)
+            
+            world.socketio.join_room(new_room_id, sid=sid)
+            arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
+            world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
+        
+        world.socketio.emit('command_response', 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 to=sid)
+        
+        world.socketio.sleep(3.0) 
+
+    # --- Loop is finished ---
+    player_obj = world.get_player_obj(player_id)
+    if player_obj and player_obj.current_room_id == final_destination_room_id:
+        # Clear final RT
+        world.remove_combat_state(player_id)
+        player_obj.send_message("You have arrived.")
+        world.socketio.emit('command_response', 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 to=sid)
+# ---
+# --- END NEW GOTO TASK
 # ---
 
 
@@ -416,7 +542,6 @@ class GOTO(BaseVerb):
             self.player.send_message("You are already there!")
             return
             
-        # Get the friendly name from the target room
         target_room_data = self.world.get_room(target_room_id)
         if not target_room_data:
             self.player.send_message("You can't go there. (Room does not exist)")
@@ -424,77 +549,37 @@ class GOTO(BaseVerb):
             
         target_room_name = target_room_data.get("name", "your destination")
         
-        # --- NEW: Find path ---
         path = _find_path(self.world, self.player.current_room_id, target_room_id)
         
         if not path:
             self.player.send_message(f"You can't seem to find a path to {target_room_name} from here.")
             return
             
-        # --- NEW: Execute path step-by-step ---
         self.player.send_message(f"You begin moving towards {target_room_name}...")
         
-        total_rt = 0.0
+        # ---
+        # --- THIS IS THE FIX ---
+        # ---
+        player_id = self.player.name.lower()
+        player_info = self.world.get_player_info(player_id)
+        if not player_info:
+            self.player.send_message("Error: Could not find your session.")
+            return
         
-        for move_direction in path:
-            # Get the player's *current* room data for this step
-            current_room_data = self.world.get_room(self.player.current_room_id)
-            if not current_room_data:
-                self.player.send_message("Your path seems to have vanished. Stopping.")
-                break
-
-            current_room_obj = self.room # Use the verb's room object for object list
+        sid = player_info.get("sid")
+        if not sid:
+            self.player.send_message("Error: Could not find your connection.")
+            return
             
-            # Find the target_room_id for this step
-            target_room_id_step = current_room_data.get("exits", {}).get(move_direction)
-            move_msg = f"You move {move_direction}..."
-            
-            if not target_room_id_step:
-                # It must be an 'enter' or 'climb' object
-                # We need to refresh the room's objects
-                current_room_obj.objects = current_room_data.get("objects", [])
-                
-                enter_obj = next((obj for obj in current_room_obj.objects 
-                                  if (move_direction in obj.get("keywords", []) and 
-                                      ("ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", [])))
-                                 ), None)
-                                 
-                if enter_obj:
-                    target_room_id_step = enter_obj.get("target_room")
-                    move_msg = f"You enter the {enter_obj.get('name')}..."
-                else:
-                    self.player.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
-                    break
-            
-            # Check for toll gates
-            if _check_toll_gate(self.player, target_room_id_step):
-                # Message is sent by _check_toll_gate
-                self.player.send_message("Your movement is blocked. Stopping.")
-                break
-                
-            # --- Manually call move_to_room ---
-            # This is the core of the 'fast travel'
-            self.player.move_to_room(target_room_id_step, move_msg)
-            
-            # ---
-            # --- THIS IS THE FIX: Apply 3s RT per room
-            # ---
-            total_rt += 3.0 # 3 seconds per room
-            # ---
-            # --- END FIX
-            # ---
-            
-            # Update the verb's room object to the new room for the next loop iteration
-            new_room_data = self.world.get_room(target_room_id_step)
-            self.room = Room(
-                new_room_data.get("room_id", "void"),
-                new_room_data.get("name", "The Void"),
-                new_room_data.get("description", "..."),
-                db_data=new_room_data
-            )
-
-        # 10. Set final RT
-        _set_action_roundtime(self.player, total_rt)
-        
-        if self.player.current_room_id == target_room_id:
-            self.player.send_message("You have arrived.")
+        # Start the background task
+        self.world.socketio.start_background_task(
+            _execute_goto_path, 
+            self.world,
+            player_id,
+            path, 
+            target_room_id,
+            sid
+        )
+        # ---
+        # --- END FIX
+        # ---
