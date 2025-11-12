@@ -20,6 +20,14 @@ class World:
     """
     def __init__(self):
         self.socketio = None
+        # ---
+        # --- THIS IS THE FIX ---
+        # ---
+        self.app = None # To hold the Flask app context
+        # ---
+        # --- END FIX
+        # ---
+        
         # --- State Dictionaries ---
         self.runtime_monster_hp: Dict[str, int] = {}
         self.defeated_monsters: Dict[str, Dict[str, Any]] = {}
@@ -278,7 +286,7 @@ class World:
     
     # --- NEW: Broadcast Helper ---
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
-        """EmExamplesits a message to all players in a room, optionally skipping one."""
+        """Emits a message to all players in a room, optionally skipping one."""
         if not self.socketio:
             if config.DEBUG_MODE:
                 print(f"[WORLD/BROADCAST-WARN] No socketio object. Cannot broadcast to {room_id}: {message}")

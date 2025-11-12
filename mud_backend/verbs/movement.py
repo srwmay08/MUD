@@ -164,17 +164,27 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         player_state = world.get_combat_state(player_id)
         if player_state and player_state.get("state_type") == "combat":
             player_obj.send_message("You are attacked and your movement stops!")
-            world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                                 to=sid)
+            # ---
+            # --- THIS IS THE FIX: Add app context
+            # ---
+            with world.app.app_context():
+                world.socketio.emit('command_response', 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     to=sid)
+            # --- END FIX ---
             return
 
         current_room_data = world.get_room(player_obj.current_room_id)
         if not current_room_data:
             player_obj.send_message("Your path seems to have vanished. Stopping.")
-            world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                                     to=sid)
+            # ---
+            # --- THIS IS THE FIX: Add app context
+            # ---
+            with world.app.app_context():
+                world.socketio.emit('command_response', 
+                                         {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                         to=sid)
+            # --- END FIX ---
             return
         
         current_room_obj = Room(
@@ -199,16 +209,26 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                 move_msg = f"You enter the {enter_obj.get('name')}..."
             else:
                 player_obj.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
-                world.socketio.emit('command_response', 
-                                         {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                                         to=sid)
+                # ---
+                # --- THIS IS THE FIX: Add app context
+                # ---
+                with world.app.app_context():
+                    world.socketio.emit('command_response', 
+                                             {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                             to=sid)
+                # --- END FIX ---
                 return
         
         if _check_toll_gate(player_obj, target_room_id_step):
             player_obj.send_message("Your movement is blocked. Stopping.")
-            world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                                     to=sid)
+            # ---
+            # --- THIS IS THE FIX: Add app context
+            # ---
+            with world.app.app_context():
+                world.socketio.emit('command_response', 
+                                         {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                         to=sid)
+            # --- END FIX ---
             return
             
         player_obj.move_to_room(target_room_id_step, move_msg)
@@ -218,24 +238,25 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         old_room_id = current_room_data.get("room_id")
         new_room_id = target_room_id_step
         
-        if old_room_id and new_room_id != old_room_id:
-            # ---
-            # --- THIS IS THE FIX: Call the imported functions directly
-            # ---
-            leave_room(old_room_id, sid=sid)
-            leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
-            world.socketio.emit("message", leaves_message, to=old_room_id)
+        # ---
+        # --- THIS IS THE FIX: All socketio calls need the app context
+        # ---
+        with world.app.app_context():
+            if old_room_id and new_room_id != old_room_id:
+                leave_room(old_room_id, sid=sid)
+                leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
+                world.socketio.emit("message", leaves_message, to=old_room_id)
+                
+                join_room(new_room_id, sid=sid)
+                arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
+                world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
             
-            join_room(new_room_id, sid=sid)
-            arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
-            world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
-            # ---
-            # --- END FIX
-            # ---
-        
-        world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                                 to=sid)
+            world.socketio.emit('command_response', 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     to=sid)
+        # ---
+        # --- END FIX
+        # ---
         
         world.socketio.sleep(3.0) 
 
@@ -245,9 +266,14 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         # Clear final RT
         world.remove_combat_state(player_id)
         player_obj.send_message("You have arrived.")
-        world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                                 to=sid)
+        # ---
+        # --- THIS IS THE FIX: Add app context
+        # ---
+        with world.app.app_context():
+            world.socketio.emit('command_response', 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     to=sid)
+        # --- END FIX ---
 # ---
 # --- END NEW GOTO TASK
 # ---

@@ -47,6 +47,13 @@ database = db.get_db()
 print("[SERVER START] Creating World instance...")
 world = World()
 world.socketio = socketio 
+# ---
+# --- THIS IS THE FIX ---
+# ---
+world.app = app # Give the world access to the Flask app context
+# ---
+# --- END FIX
+# ---
 if database is not None:
     world.load_all_data(database)
 else:
