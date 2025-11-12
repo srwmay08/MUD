@@ -95,6 +95,12 @@ class Player:
         self.skills: Dict[str, int] = self.db_data.get("skills", {})
         # --- END FIX ---
         
+        # ---
+        # --- NEW: Skill Learning (LBD) Progress
+        # ---
+        self.skill_learning_progress: Dict[str, int] = self.db_data.get("skill_learning_progress", {})
+        # --- END NEW ---
+        
         # --- HEALTH, MANA, STAMINA, SPIRIT ---
         # Get from DB first
         self.hp: int = self.db_data.get("hp", 100)
@@ -633,6 +639,11 @@ class Player:
             "spirit": self.spirit,
             # --- END MODIFIED ---
             "skills": self.skills,
+            # ---
+            # --- NEW: Save LBD progress
+            # ---
+            "skill_learning_progress": self.skill_learning_progress,
+            # --- END NEW ---
             "inventory": self.inventory,
             "worn_items": self.worn_items,
             "wealth": self.wealth, 

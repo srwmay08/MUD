@@ -301,21 +301,31 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
         
         # ---
-        # --- THIS IS THE FIX: Remove explicit item message
+        # --- THIS IS THE FIX: Clear the automatic 'look' from move_to_room
         # ---
-        # player.send_message("You find a sealed envelope on the table, marked 'Lodging Tax Payment'. You pick it up.") # <-- REMOVED
+        player.messages.clear()
         # ---
         # --- END FIX
         # ---
 
-        # --- MODIFICATION: Make keywords clickable ---
+        # ---
+        # --- THIS IS THE FIX: Send the tutorial text INSTEAD
+        # ---
         player.send_message(
-            "\nYou awaken in a simple room at the inn. You feel a bit groggy... and in debt. "
-            "A note on the table indicates you should <span class='keyword' data-command='talk to innkeeper'>SPEAK</span> "
-            "to the <span class='keyword' data-command='talk to innkeeper'>Innkeeper</span> about your bill. "
-            "You should head <span class='keyword' data-command='out'>OUT</span>."
+            "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
+            "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
         )
-        # --- END MODIFICATION ---
+        player.send_message(
+            "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic and important verb. "
+            "Type <span class='keyword' data-command='look'>LOOK</span> by itself to see your surroundings. "
+            "It shows you what's in a room, who is there, and what the obvious exits are."
+        )
+        player.send_message(
+            "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things you see."
+        )
+        # ---
+        # --- END FIX
+        # ---
         
 # ---
 # (Main Input Router is unchanged)

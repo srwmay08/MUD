@@ -399,12 +399,23 @@
         "room_id": "inn_room",
         "name": "A Room at the Inn",
         "description": {
-            "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A note has been left on the table. A single door leads **OUT**."
+            "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads **OUT**."
         },
         "objects": [
             {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"], "verbs": ["look", "examine"]},
             {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"], "verbs": ["look", "examine"]},
-            {"name": "note", "description": "The note reads: 'Welcome, traveler. Please see me at the front desk when you are ready to settle your bill. - The Innkeeper'", "perception_dc": 0, "keywords": ["note", "table"], "verbs": ["look", "examine"]}
+            {"name": "table", "description": "A small, plain wooden table.", "perception_dc": 0, "keywords": ["table"], "verbs": ["look", "examine"]}
+        ],
+        "hidden_objects": [
+            {
+                "name": "a note",
+                "item_id": "inn_note",
+                "description": "A folded piece of parchment rests on the table.",
+                "perception_dc": 10,
+                "keywords": ["note", "parchment", "a note"],
+                "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                "is_item": true
+            }
         ],
         "exits": { "out": "inn_front_desk" } 
     },
@@ -412,14 +423,14 @@
         "room_id": "inn_front_desk",
         "name": "Inn - Front Desk",
         "description": {
-            "default": "You are at the front desk of the inn. A portly innkeeper stands here, polishing a mug. A door leads back to your room, and the main exit leads **OUT** to the town square."
+            "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads **OUT** to the town square."
         },
         "objects": [
             {
                 "name": "an innkeeper",
                 "description": "A portly, cheerful-looking man who seems to be watching all the newcomers. He spots you and waves you over.",
-                "keywords": ["innkeeper", "man", "portly man"],
-                "verbs": ["look", "talk to", "examine"],
+                "keywords": ["innkeeper", "man", "portly man", "an innkeeper"],
+                "verbs": ["look", "talk to", "examine", "give"],
                 "is_npc": true,
                 "quest_giver_ids": ["innkeeper_quest_1"],
                 "all_quests_done_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"

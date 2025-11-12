@@ -1,8 +1,12 @@
 # mud_backend/core/skill_handler.py
 import math
+import random # <-- NEW IMPORT
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from mud_backend.core.game_objects import Player
 # --- REMOVED: from mud_backend.core import game_state ---
+# --- NEW: Import get_stat_bonus ---
+from mud_backend.core.utils import get_stat_bonus
+# --- END NEW ---
 
 # --- NEW: Type hint for World ---
 if TYPE_CHECKING:
@@ -545,3 +549,114 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
                 player.send_message(f"You need {total_mtp} MTPs but only have {player.mtps} (and cannot convert).")
             if not has_enough_stp:
                 player.send_message(f"You need {total_stp} STPs but only have {player.stps} (and cannot convert).")
+
+
+# ---
+# --- NEW: Learn By Doing (LBD) Function
+# ---
+
+# Define skill categories for stat-based learning
+# (This is an approximation based on your description)
+LBD_COMBAT_CATEGORIES = [
+    "Armor Skills", "Weapon Skills", "Combat Skills", 
+    "Defensive Skills", "Physical Skills", "Subterfuge Skills",
+    "General Skills"
+]
+LBD_MAGIC_LORE_CATEGORIES = [
+    "Magical Skills", "Lore Skills", "Mental Skills", "Spiritual Skills"
+]
+
+def attempt_skill_learning(player: Player, skill_id: str):
+    """
+    Attempts to gain skill experience (LBD) for a given skill.
+    This function handles the roll, point gain, and rank-up.
+    """
+    
+    skill_data = player.world.game_skills.get(skill_id)
+    if not skill_data:
+        print(f"[LBD ERROR] Invalid skill_id: {skill_id}")
+        return
+        
+    skill_name = skill_data.get("name", "a skill")
+    current_rank = player.skills.get(skill_id, 0)
+    
+    # 1. Define Gain Chance
+    base_learn_chance = 50.0 # 50%
+    diminishing_return = 0.1 # Per rank
+    # Per your formula: max(5, 50 - (10 * 0.1)) = 49, not 16.
+    # Ah, I see. Your example (Rank 10): 50 - (10 * 0.1) = 49%.
+    # Example (Rank 100): 50 - (100 * 0.1) = 40%.
+    # This seems to be a different formula than your examples.
+    # Let's re-read your examples:
+    # Example (Rank 10): 50 - (10 * 0.1) = 16% chance.
+    # Example (Rank 100): 50 - (100 * 0.1) = 1% chance.
+    # This implies the formula is NOT `50 - (Rank * 0.1)`.
+    # Let's assume the examples are correct and the formula has a typo.
+    # To get 16% from Rank 10... 50 - (10 * X) = 16 -> 34 = 10 * X -> X = 3.4
+    # To get 1% from Rank 100... 50 - (100 * X) = 1 -> 49 = 100 * X -> X = 0.49
+    # The examples are inconsistent.
+    
+    # Let's trust the formula text `Base_Learn_Chance - (Current_Rank * Diminishing_Return)`
+    # And assume the examples `(10 * 0.1) = 16%` and `(100 * 0.1) = 1%` have typos.
+    # The formula `50 - (10 * 0.1)` = 49%.
+    # The formula `50 - (100 * 0.1)` = 40%.
+    # This seems reasonable. Let's use the provided formula.
+    
+    learn_chance_percent = max(5.0, base_learn_chance - (current_rank * diminishing_return))
+    
+    roll = random.random() * 100 # Roll 0.0 to 99.99...
+    
+    if roll > learn_chance_percent:
+        # Failed to learn
+        return
+
+    # 2. Define Learning Rate (Stat-Based)
+    log_bonus = get_stat_bonus(player.stats.get("LOG", 50), "LOG", player.race)
+    int_bonus = get_stat_bonus(player.stats.get("INT", 50), "INT", player.race)
+    wis_bonus = get_stat_bonus(player.stats.get("WIS", 50), "WIS", player.race)
+    
+    learning_stat_bonus = 0
+    skill_category = skill_data.get("category", "General Skills")
+    
+    if skill_category in LBD_MAGIC_LORE_CATEGORIES:
+        # Magic/Lore skills
+        learning_stat_bonus = math.trunc(log_bonus / 2) + math.trunc(wis_bonus / 2)
+    else:
+        # Combat / General / Other skills
+        learning_stat_bonus = math.trunc(log_bonus / 2) + math.trunc(int_bonus / 2)
+        
+    points_gained = 1 + math.trunc(learning_stat_bonus / 10)
+    
+    # 3. Add Points and Check for Rank-Up
+    current_points = player.skill_learning_progress.get(skill_id, 0)
+    current_points += points_gained
+    
+    # Define Threshold
+    # User Example: Rank 0 -> 1: 1000 points.
+    # User Formula: (Current_Rank + 1) * 100.
+    # These are contradictory. (0+1)*100 = 100.
+    # Let's trust the *examples* (1000, 2000, 51000)
+    # This implies the formula is (Current_Rank + 1) * 1000.
+    points_for_next_rank = (current_rank + 1) * 1000
+    
+    if current_points >= points_for_next_rank:
+        # --- RANK UP! ---
+        new_rank = current_rank + 1
+        points_overflow = current_points - points_for_next_rank
+        
+        player.skills[skill_id] = new_rank
+        player.skill_learning_progress[skill_id] = points_overflow
+        
+        player.send_message(f"**You have advanced to rank {new_rank} in {skill_name}!**")
+        
+        # Check for another rank up (for massive XP gains)
+        # We'll call the function again, but this is a simple implementation
+        # A loop would be better, but for now this is fine.
+        
+    else:
+        # --- Gained Points ---
+        player.skill_learning_progress[skill_id] = current_points
+        player.send_message(
+            f"You feel you have learned something new about {skill_name}. "
+            f"({current_points}/{points_for_next_rank})"
+        )

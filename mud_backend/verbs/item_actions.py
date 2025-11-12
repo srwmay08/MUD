@@ -148,9 +148,20 @@ class Get(BaseVerb):
                 self.world.save_room(self.room)
                 
                 # ---
-                # --- MODIFIED: Removed RT for looting from ground ---
-                # _set_action_roundtime(self.player, 1.0) # <-- REMOVED
-                # --- END MODIFIED ---
+                # --- NEW: Tutorial Hook
+                # ---
+                if (item_id == "inn_note" and 
+                    "intro_stow" not in self.player.completed_quests):
+                    
+                    self.player.send_message(
+                        "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You are now holding the note. "
+                        "To put an item from your hands into your backpack, you can "
+                        "<span class='keyword' data-command='stow note'>STOW NOTE</span>. "
+                        "This is the same as `PUT NOTE IN BACKPACK`."
+                    )
+                    self.player.completed_quests.append("intro_stow")
+                # --- END NEW ---
+
                 return
 
             # If not on ground, try to find item in inventory (to hold it)
