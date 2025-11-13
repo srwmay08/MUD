@@ -279,7 +279,10 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command == "look":
             # This is a brand new character logging in for the first time.
-            show_room_to_player(player, room); do_initial_stat_roll(player); player.chargen_step = 1
+            # ---
+            # --- THIS IS THE FIX: Removed show_room_to_player(player, room);
+            # ---
+            do_initial_stat_roll(player); player.chargen_step = 1
         
         # --- THIS IS THE FIX ---
         elif player.chargen_step > 0 and command == "look":
