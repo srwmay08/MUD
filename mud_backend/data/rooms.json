@@ -5,89 +5,7 @@
         "x": 0,
         "y": 0,
         "z": 0,
-        "description": {
-            "default": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty.",
-            "DAWN": {
-                "clear": "The first faint light of dawn paints the sky, catching the high tiers of the magnificent fountain in hues of orange and pink. The paving stones are cold and empty, save for a few early risers. The eastern well is a silent silhouette, its oaken bucket still.",
-                "light clouds": "A pale, grey light filters through high clouds, illuminating a quiet square. The air is cool and still. The fountain is quiet, its basin reflecting the flat grey sky. The eastern well's rope is coiled, damp with morning dew.",
-                "overcast": "A heavy, grey ceiling of clouds robs the dawn of its color. The square is dim, the worn paving stones dark. The magnificent fountain is a lightless, still shape, and the well is a dark smudge near the eastern corner.",
-                "fog": "A thick, cold fog clings to the ground, obscuring the paving stones. The dawn light struggles to pierce the mist, making the multi-tiered fountain a looming, ghostly shape. The eastern well is completely lost in the white.",
-                "light rain": "A chilly, light rain patters on the worn paving stones as dawn breaks. The square is empty, its surfaces slick and reflective. The fountain's basin ripples with the drizzle, and the well's oaken bucket is dark with moisture.",
-                "rain": "Dawn arrives with a steady, drenching rain. The sound on the paving stones drowns out all else. The fountain's basin is already overflowing, its tiers disappearing into the downpour.",
-                "heavy rain": "A torrential downpour greets the dawn. The square is a shallow lake, the paving stones invisible. The multi-tiered fountain is a churning mass, and the well near the eastern corner is already overflowing.",
-                "storm": "Dawn is heralded by a flash of lightning. The wind howls across the empty stones. The fountain is a thrashing, windswept shape, and the oaken bucket on the well clatters violently against the stone."
-            },
-            "MORNING": {
-                "clear": "The bright morning sun warms the worn paving stones. The square is bustling: merchants setting up stalls, the first shouts of commerce, and the clear, distant ring of the blacksmith. The multi-tiered fountain sparkles, its mist catching small rainbows.",
-                "light clouds": "Wispy clouds drift across the morning sky, offering brief shade. The square is busy, filled with the sounds of commerce and conversation. The fountain's mist is a cool breeze, and the line at the eastern well is already two people deep.",
-                "overcast": "A flat, grey overcast sky dulls the morning. The square is busy, but the mood is subdued. The blacksmith's hammer sounds dull in the heavy air. The fountain's spray seems less vibrant, its water matching the grey sky.",
-                "fog": "The morning fog lingers, reducing visibility. The sounds of commerce are muffled and strangely close: a merchant's shout from an unseen stall, the blacksmith's hammer a dull thud. The multi-tiered fountain is a large, wet silhouette.",
-                "light rain": "A persistent light rain dampens the square. People huddle under awnings, and merchants shout from beneath tarps. The paving stones are slick. The fountain's spray is lost in the drizzle, and the well's bucket is full of rainwater.",
-                "rain": "A steady rain falls, clearing the square of all but the most determined. A few merchants grimly guard their covered stalls. The blacksmith's hammer is a lonely, ringing sound. The well is surrounded by puddles.",
-                "heavy rain": "Heavy rain hammers the square, sending everyone running for cover. Merchants' stalls are abandoned. The paving stones are a rushing river. The fountain is a churning mass, and the well's oaken bucket is completely submerged.",
-                "storm": "The morning storm rages. The square is deserted. Lightning flashes, illuminating the multi-tiered fountain in stark white. The blacksmith's forge is cold, and the well near the eastern corner looks dangerously full."
-            },
-            "NOON": {
-                "clear": "The sun hangs high, beating down on the worn paving stones. The square is at its peak; the din of merchants, the blacksmith's ringing, and the crowd's murmur are almost deafening. The multi-tiered fountain's mist is a welcome, cooling relief.",
-                "light clouds": "A few fluffy clouds offer little relief from the high sun. The square is active, though many seek the shade of buildings. The blacksmith can be heard, and the fountain's splash is a counterpoint to the loud haggling.",
-                "overcast": "A thick blanket of clouds makes noon feel like late afternoon. The light is flat and grey. The sounds of commerce seem muted. The multi-tiered fountain's water looks dark and heavy.",
-                "fog": "It is bizarre to have fog at noon. The thick, damp air is disorienting, and the sun is just a faint, white disc. The sounds of the square are muffled and eerie. The fountain is invisible, its splashing a disembodied sound.",
-                "light rain": "A warm, light rain falls. The square is less crowded, the air smelling of wet paving stone and ozone from the distant smithy. Merchants shout from under cover. The fountain's basin ripples steadily.",
-                "rain": "The steady rain at noon has driven most indoors. The paving stones are slick and deserted. The only sounds are the drumming rain and the splash of the magnificent fountain. The well's bucket is overflowing.",
-                "heavy rain": "A torrential downpour at midday. The square is flooded, the worn paving stones deep underwater. The fountain's basin is completely overwhelmed, its tiers vanishing into the deluge.",
-                "storm": "A violent thunderstorm rages. The sky is nearly as dark as night. The sounds of commerce are replaced by the roar of the storm. Lightning illuminates the eastern well and the thrashing, multi-tiered fountain."
-            },
-            "AFTERNOON": {
-                "clear": "The late afternoon sun casts long shadows across the worn paving stones. The magnificent fountain's shadow stretches eastward, nearly touching the stone well. The blacksmith's hammering has slowed, and merchants begin to pack their wares.",
-                "light clouds": "The afternoon sun breaks through scattered clouds, dappling the square in light and shadow. The fountain's shadow grows and shrinks, creeping toward the well. The crowd is thinning, the sounds of commerce fading.",
-                "overcast": "The overcast sky creates a dim, shadowless light. The blacksmith has already quit for the day. The square is emptying early, the fountain's grey water splashing into its basin with a melancholy sound.",
-                "fog": "A strange afternoon fog has rolled in, swallowing the square. The sounds of the square are muffled and dying. The long shadows of the day are lost in the mist. The fountain is a ghostly shape, and the well is invisible.",
-                "light rain": "A light rain continues into the afternoon. The paving stones are slick and treacherous. The sounds of commerce are long gone, save for a few hardy souls. The fountain's spray is just more water in a wet world.",
-                "rain": "Rain drums steadily on the cobblestones. The square is deserted. The fountain's long afternoon shadow is completely obscured by the downpour. The well's oaken bucket bobs in a deep puddle.",
-                "heavy rain": "Heavy rain lashes the empty square. The multi-tiered fountain is a churning mess. The well near the eastern corner is threatening to flood the entire path.",
-                "storm": "A fierce afternoon storm darkens the sky. The blacksmith's forge is dark. The fountain's shadow is non-existent as lightning illuminates the square, the fountain, and the eastern well in stark relief."
-            },
-            "DUSK": {
-                "clear": "The sun dips below the horizon, painting the sky in fiery colors. The first lamps are being lit, casting a warm glow on the worn paving stones. The multi-tiered fountain's water glows in the twilight. The well is a dark shape in the growing shadows.",
-                "light clouds": "The clouds on the horizon are tinged with the red and purple of sunset. The square grows quiet, the last merchants gone. The fountain murmurs peacefully as the first lamps flicker to life near the paths.",
-                "overcast": "The overcast sky turns a bruised purple as dusk settles. The square becomes dark quickly. Lamps struggle to pierce the gloom, casting small, weak pools of light on the paving stones. The fountain is a gloomy silhouette.",
-                "fog": "The fog thickens as dusk falls, mixing with the growing shadows. The square is eerie and silent. Lamps are hazy, isolated glows. The fountain's splashing is muffled and close, and the well is a lump in the mist.",
-                "light rain": "A cool, light rain falls in the twilight. The few lamps that are lit cast shimmering, fragmented reflections on the wet paving stones. The fountain splashes quietly, and the well's rope is dark and soaked.",
-                "rain": "Rain continues to fall as darkness settles. The square is deserted. The fountain is a noisy, wet presence in the gloom. The well's oaken bucket is full to the brim.",
-                "heavy rain": "It is dark and storming. The heavy rain at dusk is relentless. The paving stones are underwater, and the fountain is a roaring noise in the dark.",
-                "storm": "Dusk is swallowed by the storm. It is pitch black, save for flashes of lightning that reveal the rain-swept, empty square, the thrashing fountain, and the flooded eastern well."
-            },
-            "EVENING": {
-                "clear": "The sky is clear and filled with stars. Lamps around the square cast pools of warm light on the paving stones. A few couples stroll by the multi-tiered fountain, which murmurs peacefully. The well is a quiet meeting spot in the cool night air.",
-                "light clouds": "Thin clouds scud across the moon, their shadows racing over the paving stones. The square is quiet, with only a few people moving through the lamplit shadows. The fountain provides a gentle, splashing soundtrack.",
-                "overcast": "A low, dark ceiling of clouds blocks all starlight, making the square feel claustrophobic. The lamps seem to struggle against the dark. The fountain's splash sounds loud. The well is hidden in deep shadows.",
-                "fog": "The night fog is thick and cold. The lamps cast hazy, isolated glows, barely illuminating the paths. The fountain is an invisible source of splashing. The eastern well is completely obscured.",
-                "light rain": "A light rain mists through the lamplit air. The square is empty, its paving stones glistening. The fountain's splash is accompanied by the patter of the drizzle.",
-                "rain": "A steady rain falls on the dark square. The sound is soothing, but the air is cold and damp. The fountain's basin is overflowing, and the well's oaken bucket is drenched.",
-                "heavy rain": "Heavy rain hammers the dark, empty square. The multi-tiered fountain is a roaring, churning mass in the center of the deluge. The well is a swirling pool of water.",
-                "storm": "A thunderstorm rages in the dead of night. The square is lit in stark, terrifying flashes of white, revealing the stone well and the thrashing, multi-tiered fountain."
-            },
-            "NIGHT": {
-                "clear": "The world is dark, lit only by a clear, starry sky and the moon. The square is silent, the worn paving stones pale under the moonlight. The fountain's water shimmers as it falls. The well casts a short, dark shadow.",
-                "light clouds": "Thin clouds drift past the moon, casting fleeting shadows over the dark, empty square. The fountain murmurs quietly in the gloom. The well is a dark shape against the eastern wall.",
-                "overcast": "The sky is a black, featureless void. The square is plunged into deep darkness, the paving stones invisible. The fountain is just a sound in the night. The well is impossible to see.",
-                "fog": "A thick, cold fog blankets the square. It's impossible to see more than a few feet. The paving stones are slick with moisture. The fountain is a muffled sound, and the stone well is completely hidden.",
-                "light rain": "A cold, light rain falls from the black sky. The square is silent, save for the patter on the paving stones and the splash of the fountain. The well's rope is soaked and heavy.",
-                "rain": "A steady, cold rain falls on the deserted square. Puddles are forming around the well, and the fountain sounds loud in the silence.",
-                "heavy rain": "A drenching, heavy rain pours down, flooding the square in the dead of night. The sound is a deafening roar, and the fountain is lost in the chaos.",
-                "storm": "A fierce storm rages in the darkness. The square is a chaotic place of wind and rain. A flash of lightning illuminates the fountain's tiers awash with water and the well nearly submerged."
-            },
-            "MIDNIGHT": {
-                "clear": "The hour of midnight passes. The moon is high, casting stark, pale shadows across the silent paving stones. The multi-tiered fountain's water glitters like silver. The well's oaken bucket is a dark shape, its rope stiff with cold.",
-                "light clouds": "The moon is hidden behind passing clouds, plunging the square into darkness before reappearing. The fountain is a quiet splash. The air is still and cold.",
-                "overcast": "It is pitch black at midnight. The overcast sky blocks all light. The square is an oppressive, silent void. Even the fountain seems quiet, its splashing absorbed by the heavy darkness. The well is a patch of deeper black.",
-                "fog": "A thick, icy fog blankets the square at midnight. The world is reduced to a few feet of paving stone. A sense of isolation is total. The fountain's drip is the only sound, and the well is somewhere in the cold mist.",
-                "light rain": "A cold, miserable drizzle falls at midnight. The square is empty and dark, the sound of the rain on the fountain's basin barely audible.",
-                "rain": "A steady rain drums on the cobblestones in the pitch dark. The fountain's splashing is a lonely sound. The well's bucket is a dark shape, full of black water.",
-                "heavy rain": "A torrential downpour rages at midnight. The square is flooded, and the sound is a deafening, chaotic roar. The fountain and well are lost in the deluge.",
-                "storm": "The storm reaches its peak at midnight. Lightning flashes reveal the square being torn apart by wind and rain. The fountain is a white, churning mass, and the well is completely underwater."
-            }
-        },
+        "description": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty.",
         "unabsorbed_social_exp": 100,
         "is_outdoor": true,
         "objects": [
@@ -599,6 +517,7 @@
         "x": 0,
         "y": -2,
         "z": 1,
+        "interior_id": "inn",
         "description": {
             "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads OUT."
         },
@@ -667,6 +586,7 @@
         "x": 0,
         "y": -2,
         "z": 0,
+        "interior_id": "inn",
         "description": {
             "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads OUT to the town square."
         },
@@ -719,6 +639,7 @@
         "x": -2,
         "y": -1,
         "z": 0,
+        "interior_id": "furrier",
         "description": {
             "default": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter."
         },
@@ -769,6 +690,7 @@
         "x": -2,
         "y": 0,
         "z": 0,
+        "interior_id": "bank",
         "description": {
             "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall."
         },
@@ -809,6 +731,7 @@
         "x": -2,
         "y": 1,
         "z": 0,
+        "interior_id": "armory",
         "description": {
             "default": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow."
         },
@@ -887,6 +810,7 @@
         "x": 2,
         "y": 0,
         "z": 0,
+        "interior_id": "temple",
         "description": {
             "default": "A quiet, peaceful temple. Incense burns softly in the air, and sunlight streams through a high, stained-glass window, illuminating a stone altar in the center of the room. A robed priest tends to several hurt patrons on cots."
         },
@@ -949,6 +873,7 @@
         "x": 1,
         "y": 1,
         "z": 1,
+        "interior_id": "study",
         "description": {
             "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
         },
@@ -1067,6 +992,7 @@
         "x": 1,
         "y": 0,
         "z": 1,
+        "interior_id": "townhall",
         "description": {
             "default": "This is the central hub of the city's administration. Desks are piled high with papers, and stressed-looking officials bustle about. A man at the central desk, the Town Clerk, looks up as you enter."
         },
@@ -1103,6 +1029,7 @@
         "x": 2,
         "y": -1,
         "z": 0,
+        "interior_id": "apothecary",
         "description": {
             "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
         },
@@ -1139,6 +1066,7 @@
         "x": 2,
         "y": 1,
         "z": 0,
+        "interior_id": "barracks",
         "description": {
             "default": "The barracks is a functional, spartan room filled with weapon racks and training dummies. Recruits are being shouted at in a yard visible through a western window. The Guard Captain stands at a table, reviewing a map."
         },
@@ -1174,6 +1102,7 @@
         "x": 0,
         "y": 1,
         "z": 1,
+        "interior_id": "library",
         "description": {
             "default": "The smell of old paper and leather fills this quiet, dusty room. Tall shelves stretch up into the shadows, filled with countless books and scrolls. A Librarian sits at a desk, meticulously cataloging new arrivals."
         },
@@ -1208,7 +1137,7 @@
         "x": -1,
         "y": 0,
         "z": 1,
-        "is_outdoor": true,
+        "interior_id": "theatre",
         "description": {
             "default": "You are in a small, open-air theatre. A raised wooden stage stands at one end, surrounded by simple wooden benches. A flamboyantly dressed man, the Theatre Master, is directing a pair of unenthusiastic actors."
         },

@@ -209,17 +209,15 @@ function drawMap(mapData, currentRoomId) {
     // Clear previous map
     mapSvg.innerHTML = '';
     
-    // ---
-    // --- THIS IS THE FIX: Use getBoundingClientRect() ---
     const svgRect = mapSvg.getBoundingClientRect();
     const svgWidth = svgRect.width;
     const svgHeight = svgRect.height;
-    // --- END FIX ---
 
     // Calculate center offset to put current room in the middle
     const cX = currentRoom.x || 0;
     const cY = currentRoom.y || 0;
     const cZ = currentRoom.z || 0;
+    const cInterior = currentRoom.interior_id || null; // <-- NEW: Get current Interior ID
     
     const offsetX = (svgWidth / 2) - (cX * TOTAL_CELL_SIZE) - ROOM_CENTER;
     const offsetY = (svgHeight / 2) - (-cY * TOTAL_CELL_SIZE) - ROOM_CENTER; // Y is inverted in SVG
@@ -229,9 +227,12 @@ function drawMap(mapData, currentRoomId) {
     // Draw rooms
     for (const roomId in mapData) {
         const room = mapData[roomId];
-        
-        // --- FOG OF WAR: Only draw rooms on the same Z-level ---
-        if (room.x === undefined || room.y === undefined || (room.z || 0) !== cZ) {
+        const roomZ = room.z || 0;
+        const roomInterior = room.interior_id || null; // <-- NEW: Get this room's Interior ID
+
+        // --- FOG OF WAR: Only draw rooms on the same Z-level AND same interior ---
+        // This is the modified line that adds the interior_id check.
+        if (room.x === undefined || room.y === undefined || roomZ !== cZ || roomInterior !== cInterior) {
             continue;
         }
 
@@ -279,15 +280,17 @@ function drawMap(mapData, currentRoomId) {
         specialExits.forEach(exit => {
             const targetRoom = mapData[exit.target_room];
             if (targetRoom && targetRoom.z !== undefined) {
-                if (targetRoom.z > cZ) hasUp = true;
-                if (targetRoom.z < cZ) hasDown = true;
-            } else {
-                // If target room is not visited, we don't know Z.
-                // We'll just check for IN/OUT verbs
-                if (exit.verb === 'ENTER' || exit.verb === 'EXIT' || exit.verb === 'CLIMB') {
-                    hasInOut = true;
-                }
+                // Check for Z-level change *within the same interior* (e.g., inn stairs)
+                // Or check for Z-level change to an exterior (e.g., well)
+                if (targetRoom.z > cZ && (targetRoom.interior_id === cInterior || cInterior === null)) hasUp = true;
+                if (targetRoom.z < cZ && (targetRoom.interior_id === cInterior || cInterior === null)) hasDown = true;
             }
+            
+            // Check for moves to a *different interior* on the *same Z-level*
+            if (targetRoom && (targetRoom.z || 0) === cZ && targetRoom.interior_id !== cInterior) {
+                hasInOut = true;
+            }
+            
             if (roomId === currentRoomId) allExits.add(exit.name.toUpperCase());
         });
 
