@@ -384,21 +384,21 @@ def _handle_appearance_input(player: Player, text_input: str):
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
         )
+        
         # ---
-        # --- THIS IS THE FIX (Point 3 from your prompt) ---
+        # --- THIS IS THE CHANGE ---
         #
-        # Updated the help text to be more accurate to the game's commands
+        # Removed "EXAMINE" from this initial prompt per your instruction.
         player.send_message(
             "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
             "Type <span class='keyword' data-command='look'>LOOK</span> to see your surroundings, objects, and exits."
         )
         player.send_message(
             "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things. "
-            "For more detail, try <span class='keyword' data-command='examine table'>EXAMINE TABLE</span> or "
-            "<span class='keyword' data-command='investigate'>INVESTIGATE</span> the room."
+            "If you look around, you might <span class='keyword' data-command='investigate'>INVESTIGATE</span> something interesting."
         )
         # ---
-        # --- END FIX
+        # --- END CHANGE
         # ---
 
 

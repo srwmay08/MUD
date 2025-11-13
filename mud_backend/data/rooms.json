@@ -532,7 +532,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "examine"
+                    "investigate"
                 ]
             },
             {
@@ -552,7 +552,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "examine"
+                    "investigate"
                 ]
             }
         ],
@@ -618,7 +618,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+J"examine"
                 ],
                 "target_room": "inn_room",
                 "perception_dc": 0,
