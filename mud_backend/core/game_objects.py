@@ -1,59 +1,145 @@
 # mud_backend/core/game_objects.py
-from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 import math
-import time # <-- IMPORT IS USED NOW
-# --- REFACTORED: Removed game_state import ---
-# from mud_backend.core import game_state
-# --- END REFACTOR ---
+import time
 from mud_backend import config
-# --- NEW IMPORT: Import from the neutral utils file ---
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
-# --- END NEW ---
+from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 
-# --- REFACTORED: Add TYPE_CHECKING for World ---
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
-# --- END REFACTOR ---
+
+# === NEW: STAT MODIFIERS ===
+# We should store stat modifiers here as well.
+# This replaces the old RACE_MODIFIERS in utils.py
+RACE_MODIFIERS = {
+    "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
+    "Ael'thas": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -10, "AUR": 5},
+    "Bar'ok": {"STR": 10, "CON": 15, "DEX": 0, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 5, "ESS": 0, "DIS": 15, "AUR": 0},
+    "Gnome": {"STR": -5, "CON": 5, "DEX": 5, "AGI": 5, "LOG": 10, "INT": 10, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 5, "AUR": -5},
+    "Halfling": {"STR": -10, "CON": 10, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -5, "AUR": 0},
+    "Nel'thas": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 5, "LOG": 0, "INT": 5, "WIS": 5, "INF": -5, "ZEA": -5, "ESS": 0, "DIS": -10, "AUR": 10},
+    "Dur'ok": {"STR": 5, "CON": 10, "DEX": 5, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 5, "INF": -5, "ZEA": 0, "ESS": 0, "DIS": 10, "AUR": 0},
+    "Troll": {"STR": 20, "CON": 20, "DEX": -10, "AGI": -10, "LOG": -10, "INT": -10, "WIS": 0, "INF": -5, "ZEA": 5, "ESS": 0, "DIS": 5, "AUR": -5},
+    "Goblin": {"STR": -5, "CON": 5, "DEX": 10, "AGI": 10, "LOG": 0, "INT": 5, "WIS": -5, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": 0, "AUR": -10}
+}
+DEFAULT_RACE_MODS = { stat: 0 for stat in RACE_MODIFIERS["Human"] }
 
 
 RACE_DATA = {
     "Human": {
-        "base_hp_max": 150,
-        "hp_gain_per_pf_rank": 6, # <-- Per user spec
-        "base_hp_regen": 2,
-        "spirit_regen_tier": "Moderate"
+        "faction": "Neutral",
+        "base_hp_max": 150, "hp_gain_per_pf_rank": 6, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
+        "stat_modifiers": RACE_MODIFIERS["Human"],
+        "appearance_options": {
+            "build": ["slender", "average", "athletic", "muscular", "burly", "stocky", "heavy-set"],
+            "complexion": ["alabaster", "porcelain", "fair", "pale", "olive", "tan", "ruddy", "brown", "dark brown", "black"],
+            "eye_color": ["blue", "green", "grey", "hazel", "amber", "brown", "dark brown"],
+            "hair_color": ["black", "dark brown", "chestnut", "auburn", "light brown", "golden blonde", "ash blonde", "platinum blonde", "fiery red", "strawberry blonde", "grey", "white"]
+        }
     },
-    "Elf": {
-        "base_hp_max": 130,
-        "hp_gain_per_pf_rank": 5, # <-- Per user spec
-        "base_hp_regen": 1,
-        "spirit_regen_tier": "Very Low"
-    },
-    "Dwarf": {
-        "base_hp_max": 140,
-        "hp_gain_per_pf_rank": 5, # <-- THIS IS THE FIX (was 6)
-        "base_hp_regen": 3,
-        "spirit_regen_tier": "High"
-    },
-    "Dark Elf": {
-        "base_hp_max": 120,
-        "hp_gain_per_pf_rank": 6, # <-- THIS IS THE FIX (was 5)
-        "base_hp_regen": 1,
-        "spirit_regen_tier": "Very Low"
-    },
-    # --- NEW: Added other races for spirit regen ---
-    "Sylvan": {"spirit_regen_tier": "Low"},
-    "Half-Elf": {"spirit_regen_tier": "Low"},
-    "Aelotoi": {"spirit_regen_tier": "Low"},
-    "Burghal Gnome": {"spirit_regen_tier": "Moderate"},
-    "Halfling": {"spirit_regen_tier": "High"},
-    "Erithian": {"spirit_regen_tier": "Low"},
-    "Forest Gnome": {"spirit_regen_tier": "High"},
-    "Giantman": {"spirit_regen_tier": "Moderate"},
-    "Half-Krolvin": {"spirit_regen_tier": "Low"},
-}
 
-# --- REMOVED: Old Spirit Regen Rates ---
+    # === THE CONCORDAT FACTION ===
+    "Ael'thas": {
+        "faction": "Concordat",
+        "base_hp_max": 130, "hp_gain_per_pf_rank": 5, "base_hp_regen": 1, "spirit_regen_tier": "Very Low",
+        "stat_modifiers": RACE_MODIFIERS["Ael'thas"],
+        "appearance_options": {
+            "build": ["slender", "lithe", "graceful", "willowy", "average"],
+            "complexion": ["alabaster", "porcelain", "fair", "golden", "sun-kissed", "pale"],
+            "eye_color": ["sapphire blue", "emerald green", "violet", "amethyst", "silver", "golden"],
+            "hair_color": ["golden", "silver", "stark white", "jet black", "chestnut brown", "burnished bronze"]
+        }
+    },
+    "Bar'ok": {
+        "faction": "Concordat",
+        "base_hp_max": 140, "hp_gain_per_pf_rank": 5, "base_hp_regen": 3, "spirit_regen_tier": "High",
+        "stat_modifiers": RACE_MODIFIERS["Bar'ok"],
+        "appearance_options": {
+            "height": ["shorter than average", "stocky"],
+            "build": ["stocky", "burly", "muscular", "broad-shouldered", "average"],
+            "complexion": ["ruddy", "earthy tan", "pale", "stony grey", "deep brown"],
+            "eye_color": ["dark brown", "black", "steel grey", "hazel", "amber", "brown"],
+            "hair_color": ["black", "dark brown", "fiery red", "auburn", "grey", "white"]
+            # We could add a "beard_style" question here
+        }
+    },
+    "Gnome": {
+        "faction": "Concordat",
+        "base_hp_max": 120, "hp_gain_per_pf_rank": 4, "base_hp_regen": 2, "spirit_regen_tier": "High",
+        "stat_modifiers": RACE_MODIFIERS["Gnome"],
+        "appearance_options": {
+            "height": ["very short", "short"],
+            "build": ["slender", "wiry", "plump", "average"],
+            "complexion": ["ruddy", "fair", "earthy tan", "pale", "brown"],
+            "eye_color": ["bright blue", "emerald green", "warm brown", "violet", "sparkling grey", "amber"],
+            "hair_color": ["brown", "blonde", "white", "grey", "red", "black", "pink", "green", "blue"],
+            "nose": ["button", "broad", "long"],
+        }
+    },
+    "Halfling": {
+        "faction": "Concordat",
+        "base_hp_max": 120, "hp_gain_per_pf_rank": 4, "base_hp_regen": 2, "spirit_regen_tier": "High",
+        "stat_modifiers": RACE_MODIFIERS["Halfling"],
+        "appearance_options": {
+            "height": ["short", "shorter than average"],
+            "build": ["slender", "average", "plump", "stocky", "wiry"],
+            "complexion": ["ruddy", "fair", "pale", "tan", "olive"],
+            "eye_color": ["brown", "hazel", "blue", "green", "grey"],
+            "hair_color": ["dark brown", "chestnut", "black", "sandy blonde", "red", "auburn", "grey"]
+        }
+    },
+
+    # === THE DOMINION FACTION ===
+    "Nel'thas": {
+        "faction": "Dominion",
+        "base_hp_max": 120, "hp_gain_per_pf_rank": 6, "base_hp_regen": 1, "spirit_regen_tier": "Very Low",
+        "stat_modifiers": RACE_MODIFIERS["Nel'thas"],
+        "appearance_options": {
+            "build": ["slender", "lithe", "sinewy", "graceful", "gaunt"],
+            "complexion": ["obsidian black", "ashen grey", "deep purple", "dusky grey", "pale lavender"],
+            "eye_color": ["fiery red", "violet", "amethyst", "pale silver", "solid black", "glowing pink"],
+            "hair_color": ["stark white", "silver", "jet black"]
+        }
+    },
+    "Dur'ok": {
+        "faction": "Dominion",
+        "base_hp_max": 135, "hp_gain_per_pf_rank": 5, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
+        "stat_modifiers": RACE_MODIFIERS["Dur'ok"],
+        "appearance_options": {
+            "height": ["shorter than average", "stocky"],
+            "build": ["stocky", "burly", "muscular", "broad", "gaunt"],
+            "complexion": ["ashen grey", "stony grey", "dark grey", "deathly pale", "dull brown"],
+            "eye_color": ["pale grey", "dull white", "solid black", "dull red", "dark brown"],
+            "hair_color": ["black", "steel grey", "white", "bald"]
+        }
+    },
+    "Troll": {
+        "faction": "Dominion",
+        "base_hp_max": 180, "hp_gain_per_pf_rank": 7, "base_hp_regen": 5, "spirit_regen_tier": "Very Low",
+        "stat_modifiers": RACE_MODIFIERS["Troll"],
+        "appearance_options": {
+            "height": ["taller than average", "towering", "massive"],
+            "build": ["burly", "massive", "gaunt", "lanky", "broad-shouldered"],
+            "complexion": ["mossy green", "sickly grey-green", "dark brown", "warty green", "rocky grey", "damp blue"],
+            "eye_color": ["dull yellow", "bloodshot red", "solid black", "murky brown", "orange"],
+            "hair_color": ["coarse black", "patchy grey", "none", "mangy brown", "mossy green"],
+            "nose": ["broad", "snout-like", "broken"]
+        }
+    },
+    "Goblin": {
+        "faction": "Dominion",
+        "base_hp_max": 110, "hp_gain_per_pf_rank": 5, "base_hp_regen": 3, "spirit_regen_tier": "Moderate",
+        "stat_modifiers": RACE_MODIFIERS["Goblin"],
+        "appearance_options": {
+            "height": ["very short", "short"],
+            "build": ["slender", "gaunt", "wiry", "scrawny", "hunched"],
+            "complexion": ["jaundiced yellow", "sickly green", "dull grey", "muddy brown", "pale green"],
+            "eye_color": ["beady yellow", "bloodshot red", "solid black", "glowing orange"],
+            "hair_color": ["greasy black", "mangy brown", "patchy grey", "none"],
+            "nose": ["long", "hooked", "snout-like"]
+        }
+    }
+}
 
 
 class Player:
@@ -187,9 +273,10 @@ class Player:
         
     @property
     def race_data(self) -> dict:
-        # --- MODIFIED: Handle incomplete RACE_DATA ---
+        # --- THIS IS THE FIX ---
+        # Update this property to use the new RACE_DATA dict
         return RACE_DATA.get(self.race, RACE_DATA["Human"])
-        # --- END MODIFIED ---
+        # --- END FIX ---
 
     @property
     def base_hp(self) -> int:

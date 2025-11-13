@@ -1,14 +1,10 @@
 # mud_backend/core/chargen_handler.py
-from mud_backend.core.game_objects import Player
+from mud_backend.core.game_objects import Player, RACE_DATA
 from mud_backend.core.db import fetch_room_data
 from mud_backend import config 
 
-# --- NEW IMPORTS ---
 from mud_backend.core.room_handler import show_room_to_player
-# --- FIX: Removed show_training_menu ---
 from mud_backend.core.skill_handler import show_skill_list
-# ---
-
 from mud_backend.core.stat_roller import (
     roll_stat_pool,
     assign_stats_physical,
@@ -24,69 +20,86 @@ def get_article(word: str) -> str:
         return "a"
     return "an" if word.lower().strip()[0] in 'aeiou' else "a"
 
-# --- (CHARGEN_QUESTIONS list is unchanged) ---
-CHARGEN_QUESTIONS = [
-    {
+# === NEW: CHARGEN_STEP_KEYS ===
+# This list defines the order of questions AFTER stat assignment (which is steps 1 & 2)
+# Step 3 will be "race", Step 4 "alignment", Step 5 "height", etc.
+CHARGEN_STEP_KEYS = [
+    "race", "alignment", "height", "build", "age", "eye_char", "eye_color",
+    "complexion", "hair_style", "hair_texture", "hair_color", "hair_quirk",
+    "face", "nose", "mark", "unique"
+]
+
+# === NEW: DEFAULT_CHARGEN_QUESTIONS ===
+# This replaces the old CHARGEN_QUESTIONS list.
+# It's now a dictionary of *fallback* questions.
+# (Populated from the original file)
+DEFAULT_CHARGEN_QUESTIONS = {
+    "race": {
         "key": "race",
-        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Dark Elf</span>)"
+        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Ael'thas</span>, <span class='keyword'>Bar'ok</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Nel'thas</span>, <span class='keyword'>Dur'ok</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
     },
-    {
+    "alignment": {
+        "key": "alignment",
+        "prompt": "What is your guiding **Alignment**?\n(This will affect your starting reputation.)\n(Options: <span class='keyword'>Good</span>, <span class='keyword'>Neutral</span>, <span class='keyword'>Evil</span>)"
+    },
+    "height": {
         "key": "height",
         "prompt": "What is your **Height**?\n(Options: <span class='keyword'>shorter than average</span>, <span class='keyword'>average</span>, <span class='keyword'>taller than average</span>)"
     },
-    {
+    "build": {
         "key": "build",
         "prompt": "What is your **Body Build**?\n(Options: <span class='keyword'>slender</span>, <span class='keyword'>average</span>, <span class='keyword'>athletic</span>, <span class='keyword'>stocky</span>, <span class='keyword'>burly</span>)"
     },
-    {
+    "age": {
         "key": "age",
         "prompt": "How **Old** do you appear?\n(Options: <span class='keyword'>youthful</span>, <span class='keyword'>in your prime</span>, <span class='keyword'>middle-aged</span>, <span class='keyword'>wizened with age</span>)"
     },
-    {
+    "eye_char": {
         "key": "eye_char",
         "prompt": "What is your **Eye Characteristic**?\n(Options: <span class='keyword'>piercing</span>, <span class='keyword'>clear</span>, <span class='keyword'>hooded</span>, <span class='keyword'>bright</span>, <span class='keyword'>deep-set</span>)"
     },
-    {
+    "eye_color": {
         "key": "eye_color",
         "prompt": "What is your **Eye Color**?\n(Options: <span class='keyword'>blue</span>, <span class='keyword'>brown</span>, <span class='keyword'>green</span>, <span class='keyword'>hazel</span>, <span class='keyword'>violet</span>, <span class='keyword'>silver</span>)"
     },
-    {
+    "complexion": {
         "key": "complexion",
         "prompt": "What is your **Complexion**?\n(Options: <span class='keyword'>pale</span>, <span class='keyword'>fair</span>, <span class='keyword'>tan</span>, <span class='keyword'>dark</span>, <span class='keyword'>ashen</span>, <span class='keyword'>ruddy</span>)"
     },
-    {
+    "hair_style": {
         "key": "hair_style",
         "prompt": "What is your **Hair Style**?\n(Options: <span class='keyword'>short</span>, <span class='keyword'>long</span>, <span class='keyword'>shoulder-length</span>, <span class='keyword'>shaved</span>, <span class='keyword'>cropped</span>)"
     },
-    {
+    "hair_texture": {
         "key": "hair_texture",
         "prompt": "What is your **Hair Texture**?\n(Options: <span class='keyword'>straight</span>, <span class='keyword'>wavy</span>, <span class='keyword'>curly</span>, <span class='keyword'>braided</span>)"
     },
-    {
+    "hair_color": {
         "key": "hair_color",
         "prompt": "What is your **Hair Color**?\n(Options: <span class='keyword'>black</span>, <span class='keyword'>brown</span>, <span class='keyword'>blonde</span>, <span class='keyword'>red</span>, <span class='keyword'>silver</span>, <span class='keyword'>white</span>)"
     },
-    {
+    "hair_quirk": {
         "key": "hair_quirk",
         "prompt": "What is your **Hair Quirk**?\n(e.g., <span class='keyword'>swept back</span>, <span class='keyword'>messy</span>, <span class='keyword'>in a ponytail</span>, <span class='keyword'>none</span>)"
     },
-    {
+    "face": {
         "key": "face",
         "prompt": "What is your **Face Shape**?\n(Options: <span class='keyword'>angular</span>, <span class='keyword'>round</span>, <span class='keyword'>square</span>, <span class='keyword'>oval</span>)"
     },
-    {
+    "nose": {
         "key": "nose",
         "prompt": "What is your **Nose Shape**?\n(Options: <span class='keyword'>straight</span>, <span class='keyword'>aquiline</span>, <span class='keyword'>broad</span>, <span class='keyword'>button</span>)"
     },
-    {
+    "mark": {
         "key": "mark",
         "prompt": "Any **Distinguishing Mark**?\n(e.g., <span class='keyword'>a scar over one eye</span>, <span class='keyword'>none</span>)"
     },
-    {
+    "unique": {
         "key": "unique",
         "prompt": "Finally, what **Unique Feature** do you have?\n(e.g., <span class='keyword'>a silver locket</span>, <span class='keyword'>a faint aura</span>, <span class='keyword'>none</span>)"
     }
-]
+}
+
 
 # ---
 # (Step 1: Stat Rolling Logic is unchanged)
@@ -216,101 +229,153 @@ def _handle_assignment_input(player: Player, command: str):
     get_chargen_prompt(player) # Ask the first appearance question
 
 # ---
-# Step 3: Appearance Logic
+# Step 3+: Dynamic Appearance Logic
 # ---
 
+# === MODIFIED: get_chargen_prompt ===
 def get_chargen_prompt(player: Player):
     """
-    Gets the correct *appearance* question prompt based on the player's step.
-    Note: Appearance questions now start at step 3.
+    Gets the correct dynamic question prompt based on the player's step and race.
     """
-    question_index = player.chargen_step - 3 # Adjust index
+    # Steps 1 & 2 are stats. Step 3+ is appearance.
+    question_index = player.chargen_step - 3
     
-    if 0 <= question_index < len(CHARGEN_QUESTIONS):
-        question = CHARGEN_QUESTIONS[question_index]
-        player.send_message("\n" + question["prompt"])
-    else:
+    if not (0 <= question_index < len(CHARGEN_STEP_KEYS)):
         player.send_message("An error occurred in character creation.")
-        player.game_state = "playing"
-
-def _handle_appearance_input(player: Player, text_input: str):
-    """Handles answers to appearance questions (step 3+)."""
-    
-    question_index = player.chargen_step - 3 # Adjust index
-    
-    if not (0 <= question_index < len(CHARGEN_QUESTIONS)):
-        # This case should ideally not be hit if logic is correct
         player.game_state = "playing"
         return
 
-    # 1. Get the current question and save the answer
-    question = CHARGEN_QUESTIONS[question_index]
+    # 1. Get the key for the current question (e.g., "race", "alignment", "complexion")
+    question_key = CHARGEN_STEP_KEYS[question_index]
+
+    # 2. Get the player's race (it will be "" if not yet chosen)
+    player_race = player.appearance.get("race", "")
+    race_data = RACE_DATA.get(player_race)
+    
+    final_prompt = ""
+    
+    # 3. Check for race-specific options *first*
+    if race_data:
+        race_options = race_data.get("appearance_options", {}).get(question_key)
+        if race_options:
+            # Found race-specific options! Build the prompt.
+            # Get the default prompt text (e.g., "What is your [Complexion]?")
+            default_prompt_text = DEFAULT_CHARGEN_QUESTIONS.get(question_key, {}).get("prompt", "")
+            # Split it to get just the question part
+            prompt_line = default_prompt_text.split("\n")[0]
+            
+            # Build the new options string
+            options_line = "(Options: " + ", ".join(
+                [f"<span class='keyword'>{opt.capitalize()}</span>" for opt in race_options]
+            ) + ")"
+            
+            final_prompt = f"\n{prompt_line}\n{options_line}"
+
+    # 4. If no race-specific prompt was built, use the default
+    if not final_prompt:
+        question_data = DEFAULT_CHARGEN_QUESTIONS.get(question_key)
+        if question_data:
+            final_prompt = "\n" + question_data["prompt"]
+        else:
+            final_prompt = f"\nUnknown question: {question_key}" # Error
+            
+    player.send_message(final_prompt)
+
+
+# === MODIFIED: _handle_appearance_input ===
+def _handle_appearance_input(player: Player, text_input: str):
+    """Handles answers to appearance questions (step 3+)."""
+    
+    question_index = player.chargen_step - 3
+    
+    if not (0 <= question_index < len(CHARGEN_STEP_KEYS)):
+        player.game_state = "playing"
+        return
+
+    # 1. Get the current question key and save the answer
+    question_key = CHARGEN_STEP_KEYS[question_index]
     answer = text_input.strip()
     
     if answer.lower() == "none":
-        answer = "" # Store 'none' as an empty string
+        answer = "" 
         
-    player.appearance[question["key"]] = answer
-    player.send_message(f"> {answer}") # Echo the choice
+    # --- SPECIAL HANDLING FOR RACE/ALIGNMENT ---
+    if question_key == "race":
+        # Capitalize the race name to match RACE_DATA keys
+        # We also need to handle 'Elf' and 'Dwarf' as aliases
+        answer_lower = answer.lower()
+        if answer_lower == "elf":
+            answer = "Ael'thas"
+        elif answer_lower == "dark elf":
+            answer = "Nel'thas"
+        elif answer_lower == "dwarf":
+            answer = "Bar'ok"
+        else:
+            answer = answer.capitalize() # Handle Human, Gnome, Troll, etc.
+        
+        if answer not in RACE_DATA:
+            player.send_message(f"'{answer}' is not a valid race. Please choose from the list.")
+            return # Don't advance the step
+            
+        # Set the player's default faction
+        player.factions[RACE_DATA[answer]["faction"]] = 50 # Start at Amiable
+        
+    elif question_key == "alignment":
+        # This is where you apply faction modifiers
+        alignment = answer.lower()
+        if alignment not in ["good", "neutral", "evil"]:
+            player.send_message("Please choose Good, Neutral, or Evil.")
+            return # Don't advance
+            
+        # Get the race they just chose
+        player_race = player.appearance.get("race")
+        base_faction = RACE_DATA[player_race]["faction"]
+        
+        # Example modification:
+        if alignment == "good":
+            if base_faction == "Concordat":
+                player.factions[base_faction] += 50 # Boost to 100 (Amiable+)
+            elif base_faction == "Dominion":
+                player.factions[base_faction] -= 25 # Lower to 25 (Still Amiable, but less)
+        elif alignment == "evil":
+            if base_faction == "Concordat":
+                player.factions[base_faction] -= 25 # Lower to 25
+            elif base_faction == "Dominion":
+                player.factions[base_faction] += 50 # Boost to 100
+        # Neutral does nothing to the default 50
+    # --- END SPECIAL HANDLING ---
+        
+    player.appearance[question_key] = answer
+    player.send_message(f"> {answer}")
 
     # 2. Increment step and check if chargen is done
     player.chargen_step += 1
     next_question_index = player.chargen_step - 3
 
-    if next_question_index < len(CHARGEN_QUESTIONS):
+    if next_question_index < len(CHARGEN_STEP_KEYS):
         # 3. Ask the next question
         get_chargen_prompt(player)
     else:
-        # ---
         # 4. Chargen is complete!
-        # ---
-        
-        # Mark chargen as "finished"
         player.chargen_step = 99 
-        
-        # ---
-        # --- MODIFIED: NEW ONBOARDING LOGIC
-        # ---
-        
-        # 1. Set game state to playing
         player.game_state = "playing"
         
-        # ---
-        # --- THIS IS THE FIX: Do NOT give the item here
-        # ---
-        # 2. Give them the first quest item
-        # player.inventory.append("lodging_tax_payment") # <-- REMOVED
-        # ---
-        # --- END FIX
-        # ---
-        
-        # 3. Grant starter gear
-        player.worn_items["back"] = "starter_backpack"
-        player.worn_items["torso"] = "starter_leather_armor"
-        player.worn_items["mainhand"] = "starter_dagger" # Default weapon
-        player.wealth["silvers"] = 0 # Start with 0 silver to trigger quest
-        
-        # 4. Set all vitals to max
+        # Set all vitals to max
         player.hp = player.max_hp
         player.mana = player.max_mana
         player.stamina = player.max_stamina
         player.spirit = player.max_spirit
         
-        # 5. Send new intro message and move to room
-        # We move them first so the "look" shows the new room
-        player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
+        # Grant starter gear
+        player.worn_items["back"] = "starter_backpack"
+        player.worn_items["torso"] = "starter_leather_armor"
+        player.worn_items["mainhand"] = "starter_dagger" # Default weapon
+        player.wealth["silvers"] = 0 # Start with 0 silver to trigger quest
         
-        # ---
-        # --- THIS IS THE FIX: Clear the automatic 'look' from move_to_room
-        # ---
-        player.messages.clear()
-        # ---
-        # --- END FIX
-        # ---
+        # Move to start room and send tutorial text
+        player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
+        player.messages.clear() # Clear the "look" from move_to_room
 
-        # ---
-        # --- THIS IS THE FIX: Send the tutorial text INSTEAD
-        # ---
         player.send_message(
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
@@ -323,10 +388,8 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.send_message(
             "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things you see."
         )
-        # ---
-        # --- END FIX
-        # ---
-        
+
+
 # ---
 # (Main Input Router is unchanged)
 # ---
@@ -343,8 +406,8 @@ def handle_chargen_input(player: Player, text_input: str):
         _handle_stat_roll_input(player, command)
     elif step == 2:
         _handle_assignment_input(player, command)
-    elif step > 2 and step < 99: # Only process if not yet finished
-        _handle_appearance_input(player, text_input)
+    elif step > 2 and step < 99: # All appearance questions
+        _handle_appearance_input(player, text_input) # Use the raw text, not lowercase
     else:
         # This catches input if something went wrong
         player.send_message("An error occurred. Please refresh.")
@@ -364,10 +427,12 @@ def format_player_description(player_data: dict) -> str:
         "she": {"subj": "She", "obj": "her", "poss": "her"},
         "they": {"subj": "They", "obj": "them", "poss": "their"},
     }
+    # --- FIX: Default to 'they' if gender isn't set ---
     pr = pronoun_map.get(player_data.get("gender", "they"), pronoun_map["they"])
 
     desc = []
 
+    # Use .get() with fallbacks for every field
     desc.append(f"{pr['subj']} appears to be {get_article(app.get('race', 'Human'))} **{app.get('race', 'Human')}**.")
     
     line2 = f"{pr['subj']} is {app.get('height', 'average')}"
