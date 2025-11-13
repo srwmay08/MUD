@@ -10,7 +10,8 @@ from mud_backend.core.stat_roller import (
     assign_stats_physical,
     assign_stats_intellectual,
     assign_stats_spiritual,
-    format_stats
+    format_stats,
+    STAT_LIST # --- NEW: Import the master list of stats ---
 )
 # ---
 # --- NEW: Import Help verb ---
@@ -120,6 +121,10 @@ def do_initial_stat_roll(player: Player):
     player.current_stat_pool = new_pool
     player.best_stat_pool = new_pool # The first roll is always the best
     
+    # --- NEW: Ensure stats dict is empty ---
+    player.stats = {}
+    # --- END NEW ---
+    
     # Send the first prompt
     send_stat_roll_prompt(player)
 
@@ -175,62 +180,180 @@ def _handle_stat_roll_input(player: Player, command: str):
         
     elif command == "use this roll":
         player.send_message("> USE THIS ROLL")
-        player.stats_to_assign = player.current_stat_pool
-        player.chargen_step = 2 # Advance to assignment step
-        send_assignment_prompt(player, "CURRENT")
+        # --- MODIFICATION ---
+        pool_copy = list(player.current_stat_pool)
+        player.stats_to_assign = pool_copy  # This is the list that will be mutated
+        player.db_data['_chargen_selected_pool'] = pool_copy # This is the persistent backup
+        player.stats = {} 
+        # --- END MODIFICATION ---
+        player.chargen_step = 2
+        send_assignment_prompt(player)
 
     elif command == "use best roll":
         player.send_message("> USE BEST ROLL")
-        player.stats_to_assign = player.best_stat_pool
-        player.chargen_step = 2 # Advance to assignment step
-        send_assignment_prompt(player, "BEST")
+        # --- MODIFICATION ---
+        pool_copy = list(player.best_stat_pool)
+        player.stats_to_assign = pool_copy # Mutatable list
+        player.db_data['_chargen_selected_pool'] = pool_copy # Persistent backup
+        player.stats = {}
+        # --- END MODIFICATION ---
+        player.chargen_step = 2
+        send_assignment_prompt(player)
         
     else:
         player.send_message("That is not a valid command.")
         send_stat_roll_prompt(player)
 
 # ---
-# (Step 2: Stat Assignment Logic is unchanged)
+# --- MODIFIED: Step 2: Stat Assignment Logic
 # ---
 
-def send_assignment_prompt(player: Player, pool_name: str):
+def _complete_stat_assignment(player: Player):
+    """Helper function to finalize stat assignment and move to step 3."""
+    player.send_message("\nAll stats have been assigned!")
+    player.send_message(format_stats(player.stats))
+    
+    player.chargen_step = 3 # Advance to appearance questions
+    get_chargen_prompt(player) # Ask the first appearance question
+    
+    # Clean up temporary data
+    player.stats_to_assign = [] 
+    player.db_data.pop('_chargen_selected_pool', None)
+
+def send_assignment_prompt(player: Player):
     """
     Shows the player the pool they selected and asks how to assign it.
     """
+    # Get the list of stat values not yet assigned
     sorted_pool = sorted(player.stats_to_assign, reverse=True)
     pool_str = ", ".join(map(str, sorted_pool))
     
-    player.send_message(f"\n--- Assigning your **{pool_name}** Roll ---")
-    player.send_message(f"Pool: {pool_str}")
-    player.send_message("How would you like to assign these stats?")
+    # Get the list of stat names not yet assigned
+    unassigned_stats = [s for s in STAT_LIST if s not in player.stats]
+    unassigned_str = ", ".join(unassigned_stats)
+    
+    player.send_message(f"\n--- Assign Your Stats ---")
+    
+    # --- NEW: Show current assignments ---
+    if player.stats:
+        player.send_message(format_stats(player.stats))
+        player.send_message("---")
+    # --- END NEW ---
+        
+    player.send_message(f"**Available Pool:** {pool_str}")
+    player.send_message(f"**Stats to Assign:** {unassigned_str}")
+    
+    # --- NEW: Add back all options ---
+    player.send_message("\n--- Manual Assignment ---")
+    player.send_message("Usage: <stat> <value> (e.g., <span class='keyword'>STR 90</span> or <span class='keyword'>90 LOG</span>)")
+    
+    player.send_message("\n--- Preset Assignment ---")
     player.send_message("- <span class='keyword'>ASSIGN PHYSICAL</span> (Prioritizes STR, DEX, CON, AGI)")
     player.send_message("- <span class='keyword'>ASSIGN INTELLECTUAL</span> (Prioritizes LOG, INT, WIS, INF)")
     player.send_message("- <span class='keyword'>ASSIGN SPIRITUAL</span> (Prioritizes ZEA, ESS, WIS, DIS)")
+    
+    player.send_message("\n---")
+    player.send_message("- <span class='keyword'>RESET</span> (Clears all assigned stats and starts this step over)")
+    # --- END NEW ---
 
 def _handle_assignment_input(player: Player, command: str):
     """Handles commands during the stat assignment step (step 2)."""
 
-    if command == "assign physical":
-        player.send_message("> ASSIGN PHYSICAL")
-        player.stats = assign_stats_physical(player.stats_to_assign)
-    
-    elif command == "assign intellectual":
-        player.send_message("> ASSIGN INTELLECTUAL")
-        player.stats = assign_stats_intellectual(player.stats_to_assign)
-        
-    elif command == "assign spiritual":
-        player.send_message("> ASSIGN SPIRITUAL")
-        player.stats = assign_stats_spiritual(player.stats_to_assign)
-        
-    else:
-        player.send_message("That is not a valid assignment command.")
-        send_assignment_prompt(player, "SELECTED") # Re-show the prompt
-        return # Don't advance to the next step
+    full_command_lower = command.strip().lower()
 
-    # If successful, show stats and move to appearance questions
-    player.send_message(format_stats(player.stats))
-    player.chargen_step = 3 # Advance to appearance questions
-    get_chargen_prompt(player) # Ask the first appearance question
+    # --- NEW: Check for presets and reset ---
+    if full_command_lower == "assign physical":
+        player.send_message("> ASSIGN PHYSICAL")
+        # Use the original selected pool, not the (potentially) mutated one
+        selected_pool = player.db_data.get('_chargen_selected_pool', player.stats_to_assign)
+        player.stats = assign_stats_physical(selected_pool)
+        _complete_stat_assignment(player)
+        return
+    
+    elif full_command_lower == "assign intellectual":
+        player.send_message("> ASSIGN INTELLECTUAL")
+        selected_pool = player.db_data.get('_chargen_selected_pool', player.stats_to_assign)
+        player.stats = assign_stats_intellectual(selected_pool)
+        _complete_stat_assignment(player)
+        return
+        
+    elif full_command_lower == "assign spiritual":
+        player.send_message("> ASSIGN SPIRITUAL")
+        selected_pool = player.db_data.get('_chargen_selected_pool', player.stats_to_assign)
+        player.stats = assign_stats_spiritual(selected_pool)
+        _complete_stat_assignment(player)
+        return
+    
+    elif full_command_lower == "reset":
+        player.send_message("> RESET")
+        player.send_message("All stat assignments have been cleared.")
+        player.stats = {} # Clear assignments
+        # Restore the pool from the persistent backup
+        selected_pool_copy = player.db_data.get('_chargen_selected_pool', [])
+        player.stats_to_assign = list(selected_pool_copy)
+        send_assignment_prompt(player)
+        return
+    # --- END NEW ---
+
+    # --- Manual assignment logic (from previous version) ---
+    parts = command.upper().split()
+    
+    # 1. Validation: Correct format?
+    if len(parts) != 2:
+        player.send_message("Invalid syntax. Use <stat> <value> (e.g., STR 90) or a preset (e.g., ASSIGN PHYSICAL).")
+        send_assignment_prompt(player)
+        return
+
+    # 2. Parse components (stat_name and stat_value)
+    stat_name = None
+    stat_value = None
+
+    try:
+        # Check for <STAT> <VALUE> format (e.g., "LOG 90")
+        if parts[0] in STAT_LIST:
+            stat_name = parts[0]
+            stat_value = int(parts[1])
+        # Check for <VALUE> <STAT> format (e.g., "90 LOG")
+        elif parts[1] in STAT_LIST:
+            stat_name = parts[1]
+            stat_value = int(parts[0])
+    except ValueError:
+        # This catches if int() fails (e.g., "LOG STR")
+        player.send_message("Invalid syntax. One argument must be a stat name and the other a number.")
+        send_assignment_prompt(player)
+        return
+
+    if not stat_name or stat_value is None:
+        player.send_message(f"Invalid input. '{command}' is not recognized.")
+        send_assignment_prompt(player)
+        return
+
+    # 3. Validation: Stat already assigned?
+    if stat_name in player.stats:
+        player.send_message(f"You have already assigned {stat_name}. (Current value: {player.stats[stat_name]})")
+        player.send_message("Type <span class='keyword'>RESET</span> to start over.")
+        # No need to resend prompt, message is sufficient
+        return
+        
+    # 4. Validation: Value is in the pool?
+    if stat_value not in player.stats_to_assign:
+        player.send_message(f"The value {stat_value} is not in your available pool.")
+        send_assignment_prompt(player)
+        return
+        
+    # 5. Success! Assign the stat.
+    player.stats[stat_name] = stat_value
+    player.stats_to_assign.remove(stat_value) # Remove the value from the pool
+    
+    # Don't send a message here, just re-send the prompt
+    # player.send_message(f"**Assigned: {stat_name} = {stat_value}**")
+
+    # 6. Check for Completion
+    if len(player.stats_to_assign) == 0:
+        _complete_stat_assignment(player)
+    else:
+        # More stats to assign, re-prompt
+        send_assignment_prompt(player)
 
 # ---
 # Step 3+: Dynamic Appearance Logic
@@ -309,13 +432,16 @@ def _handle_appearance_input(player: Player, text_input: str):
         # We also need to handle 'Elf' and 'Dwarf' as aliases
         answer_lower = answer.lower()
         if answer_lower == "elf":
-            answer = "Ael'thas"
+            answer = "High Elf" # --- MODIFIED: Match RACE_DATA key ---
         elif answer_lower == "dark elf":
-            answer = "Nel'thas"
+            answer = "Dark Elf" # --- MODIFIED: Match RACE_DATA key ---
         elif answer_lower == "dwarf":
-            answer = "Bar'ok"
+            answer = "Dwarf" # --- MODIFIED: Match RACE_DATA key ---
+        elif answer_lower == "dark dwarf":
+            answer = "Dark Dwarf" # --- MODIFIED: Match RACE_DATA key ---
         else:
-            answer = answer.capitalize() # Handle Human, Gnome, Troll, etc.
+            # Capitalize first letter of each word
+            answer = ' '.join([word.capitalize() for word in answer.split()])
         
         if answer not in RACE_DATA:
             player.send_message(f"'{answer}' is not a valid race. Please choose from the list.")
@@ -415,7 +541,7 @@ def handle_chargen_input(player: Player, text_input: str):
     
     # ---
     # --- THIS IS THE FIX ---
-    # We get the full, lowercased command string for steps 1 & 2
+    # We get the full, lowercased command string for step 1
     full_command_lower = text_input.strip().lower()
     # --- END FIX ---
     
@@ -446,7 +572,8 @@ def handle_chargen_input(player: Player, text_input: str):
         if step == 1:
             send_stat_roll_prompt(player)
         elif step == 2:
-            send_assignment_prompt(player, "SELECTED")
+            # --- MODIFIED: Use new prompt function ---
+            send_assignment_prompt(player)
         elif step > 2:
             get_chargen_prompt(player)
         return
@@ -458,8 +585,8 @@ def handle_chargen_input(player: Player, text_input: str):
         # --- FIX: Pass the full command string ---
         _handle_stat_roll_input(player, full_command_lower)
     elif step == 2:
-        # --- FIX: Pass the full command string ---
-        _handle_assignment_input(player, full_command_lower)
+        # --- MODIFIED: Pass the raw text input ---
+        _handle_assignment_input(player, text_input) # Use raw text for parsing
     elif step > 2 and step < 99: # All appearance questions
         _handle_appearance_input(player, text_input) # Use the raw text, not lowercase
     else:
