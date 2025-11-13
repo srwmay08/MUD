@@ -35,8 +35,7 @@ class CheckIn(BaseVerb):
     Allows a player to enter the training state.
     """
     def execute(self):
-        # We'll assume the inn is in 'ts_south' for now
-        if self.room.room_id not in ["ts_south", "inn_room"]:
+        if self.room.room_id not in ["inn_front_desk"]:
             self.player.send_message("You must be at the inn to check in for training.")
             return
 

@@ -20,6 +20,15 @@ const gaugeTexts = {
 };
 // --- END NEW ---
 
+// --- NEW: Map Elements ---
+const mapPanel = document.getElementById('map-panel');
+const mapToggleButton = document.getElementById('map-toggle-button');
+const mapSvg = document.getElementById('map-svg');
+const mapRoomName = document.getElementById('map-room-name');
+const mapRoomExits = document.getElementById('map-room-exits');
+const svgNS = "http://www.w3.org/2000/svg"; // SVG Namespace
+// --- END NEW ---
+
 // --- NEW: Initialize Socket.IO connection ---
 const socket = io();
 
@@ -180,6 +189,136 @@ function updateVitals(vitals) {
 }
 
 // ---
+// --- NEW: MAP DRAWING FUNCTION
+// ---
+const ROOM_SIZE = 24;
+const ROOM_GAP = 12; // Total space between room centers = ROOM_SIZE + ROOM_GAP
+const ROOM_CENTER = ROOM_SIZE / 2;
+const TOTAL_CELL_SIZE = ROOM_SIZE + ROOM_GAP;
+const ARROW_LEN = 6; // Length of exit arrows
+
+function drawMap(mapData, currentRoomId) {
+    const currentRoom = mapData[currentRoomId];
+    if (!currentRoom || currentRoom.x === undefined || currentRoom.y === undefined) {
+        mapSvg.innerHTML = ''; // Clear map if data is bad
+        mapRoomName.innerText = 'Unknown';
+        mapRoomExits.innerText = '...';
+        return;
+    }
+
+    // Clear previous map
+    mapSvg.innerHTML = '';
+    
+    // ---
+    // --- THIS IS THE FIX: Use getBoundingClientRect() ---
+    const svgRect = mapSvg.getBoundingClientRect();
+    const svgWidth = svgRect.width;
+    const svgHeight = svgRect.height;
+    // --- END FIX ---
+
+    // Calculate center offset to put current room in the middle
+    const cX = currentRoom.x || 0;
+    const cY = currentRoom.y || 0;
+    const cZ = currentRoom.z || 0;
+    
+    const offsetX = (svgWidth / 2) - (cX * TOTAL_CELL_SIZE) - ROOM_CENTER;
+    const offsetY = (svgHeight / 2) - (-cY * TOTAL_CELL_SIZE) - ROOM_CENTER; // Y is inverted in SVG
+
+    const allExits = new Set();
+    
+    // Draw rooms
+    for (const roomId in mapData) {
+        const room = mapData[roomId];
+        
+        // --- FOG OF WAR: Only draw rooms on the same Z-level ---
+        if (room.x === undefined || room.y === undefined || (room.z || 0) !== cZ) {
+            continue;
+        }
+
+        const rX = offsetX + (room.x * TOTAL_CELL_SIZE);
+        const rY = offsetY + (-room.y * TOTAL_CELL_SIZE); // Y is inverted
+
+        const g = document.createElementNS(svgNS, 'g');
+        g.classList.add('map-room');
+        if (roomId === currentRoomId) {
+            g.classList.add('current');
+        }
+
+        // --- 1. Draw Room Square ---
+        const rect = document.createElementNS(svgNS, 'rect');
+        rect.setAttribute('x', rX);
+        rect.setAttribute('y', rY);
+        rect.setAttribute('width', ROOM_SIZE);
+        rect.setAttribute('height', ROOM_SIZE);
+        rect.setAttribute('rx', 3); // Rounded corners
+        g.appendChild(rect);
+
+        // --- 2. Draw Exits (Lines and Arrows) ---
+        const exits = room.exits || {};
+        const drawExit = (dir, x1, y1, x2, y2) => {
+            const path = document.createElementNS(svgNS, 'path');
+            path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+            path.classList.add('map-exit');
+            g.appendChild(path);
+            if (roomId === currentRoomId) allExits.add(dir);
+        };
+
+        if (exits.north)    drawExit('N',  rX + ROOM_CENTER, rY, rX + ROOM_CENTER, rY - ARROW_LEN);
+        if (exits.south)    drawExit('S',  rX + ROOM_CENTER, rY + ROOM_SIZE, rX + ROOM_CENTER, rY + ROOM_SIZE + ARROW_LEN);
+        if (exits.east)     drawExit('E',  rX + ROOM_SIZE, rY + ROOM_CENTER, rX + ROOM_SIZE + ARROW_LEN, rY + ROOM_CENTER);
+        if (exits.west)     drawExit('W',  rX, rY + ROOM_CENTER, rX - ARROW_LEN, rY + ROOM_CENTER);
+        if (exits.northeast) drawExit('NE', rX + ROOM_SIZE, rY, rX + ROOM_SIZE + ARROW_LEN, rY - ARROW_LEN);
+        if (exits.northwest) drawExit('NW', rX, rY, rX - ARROW_LEN, rY - ARROW_LEN);
+        if (exits.southeast) drawExit('SE', rX + ROOM_SIZE, rY + ROOM_SIZE, rX + ROOM_SIZE + ARROW_LEN, rY + ROOM_SIZE + ARROW_LEN);
+        if (exits.southwest) drawExit('SW', rX, rY + ROOM_SIZE, rX - ARROW_LEN, rY + ROOM_SIZE + ARROW_LEN);
+
+        // --- 3. Draw Special Exits (Up/Down/In/Out) ---
+        const specialExits = room.special_exits || [];
+        let hasUp = false, hasDown = false, hasInOut = false;
+        
+        specialExits.forEach(exit => {
+            const targetRoom = mapData[exit.target_room];
+            if (targetRoom && targetRoom.z !== undefined) {
+                if (targetRoom.z > cZ) hasUp = true;
+                if (targetRoom.z < cZ) hasDown = true;
+            } else {
+                // If target room is not visited, we don't know Z.
+                // We'll just check for IN/OUT verbs
+                if (exit.verb === 'ENTER' || exit.verb === 'EXIT' || exit.verb === 'CLIMB') {
+                    hasInOut = true;
+                }
+            }
+            if (roomId === currentRoomId) allExits.add(exit.name.toUpperCase());
+        });
+
+        // Add text symbol for special exits
+        const text = document.createElementNS(svgNS, 'text');
+        let symbol = '';
+        if (hasUp) symbol = '▲';
+        if (hasDown) symbol = '▼';
+        if (hasInOut && !hasUp && !hasDown) symbol = '○'; // Circle for IN/OUT
+        
+        if (symbol) {
+            text.setAttribute('x', rX + ROOM_CENTER);
+            text.setAttribute('y', rY + ROOM_CENTER + 4); // Adjust for font baseline
+            text.classList.add('map-special-exit');
+            if (hasUp) text.classList.add('up');
+            if (hasDown) text.classList.add('down');
+            if (hasInOut) text.classList.add('inout');
+            text.textContent = symbol;
+            g.appendChild(text);
+        }
+
+        mapSvg.appendChild(g);
+    }
+    
+    // Update Map Header/Footer
+    mapRoomName.innerText = currentRoom.name || "Unknown";
+    mapRoomExits.innerText = Array.from(allExits).join(', ') || 'None';
+}
+
+
+// ---
 // --- WEBSOCKET EVENT LISTENERS
 // ---
 
@@ -199,6 +338,13 @@ socket.on('command_response', (data) => {
     // --- NEW: Update GUI ---
     if (data.vitals) {
         updateVitals(data.vitals);
+    }
+    // --- END NEW ---
+
+    // ---
+    // --- NEW: Update Map ---
+    if (data.map_data && data.vitals && data.vitals.current_room_id) {
+        drawMap(data.map_data, data.vitals.current_room_id);
     }
     // --- END NEW ---
 });
@@ -431,6 +577,16 @@ contextMenu.addEventListener('click', function(event) {
         input.value = ''; 
         addMessage(`> ${command}`, 'command-echo');
         sendCommand(command); 
+    }
+});
+
+// --- NEW: Map Toggle Button ---
+mapToggleButton.addEventListener('click', () => {
+    mapPanel.classList.toggle('collapsed');
+    if (mapPanel.classList.contains('collapsed')) {
+        mapToggleButton.innerText = '»';
+    } else {
+        mapToggleButton.innerText = '«';
     }
 });
 

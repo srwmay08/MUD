@@ -7,9 +7,25 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div id="output">Please enter your character name to create or load a character.</div>
     
-    <div id="input-line">
+    <div id="main-content">
+        
+        <div id="map-panel">
+            <div id="map-header">
+                <span id="map-room-name">Loading...</span>
+                <div id="map-toggle-button">«</div>
+            </div>
+            
+            <svg id="map-svg" width="280" height="400"></svg>
+            
+            <div id="map-footer">
+                Exits: <span id="map-room-exits">...</span>
+            </div>
+        </div>
+        
+        <div id="output">Please enter your character name to create or load a character.</div>
+    
+    </div> <div id="input-line">
         <div id="rt-container">
             </div>
         <span>&gt;</span>

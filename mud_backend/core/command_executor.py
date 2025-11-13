@@ -112,8 +112,52 @@ DIRECTION_MAP = {
 }
 
 # ---
-# --- HELPER FUNCTION REMOVED ---
-# --- (Moved to Player class in game_objects.py)
+# --- NEW: Helper function to build map data
+# ---
+def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
+    """
+    Builds a dictionary of map data for all rooms the player has visited.
+    """
+    map_data = {}
+    for room_id in player.visited_rooms:
+        # Use world.get_room to get the raw data from cache
+        room = world.game_rooms.get(room_id)
+        if room:
+            # Extract only what the client needs
+            special_exits = []
+            for obj in room.get("objects", []):
+                verb = None
+                target_room = obj.get("target_room")
+                
+                if not target_room:
+                    continue
+                    
+                if "ENTER" in obj.get("verbs", []):
+                    verb = "ENTER"
+                elif "CLIMB" in obj.get("verbs", []):
+                    verb = "CLIMB"
+                elif "EXIT" in obj.get("verbs", []):
+                    verb = "EXIT" # e.g., "out"
+                
+                if verb:
+                    special_exits.append({
+                        "name": obj.get("name", "door"),
+                        "target_room": target_room,
+                        "verb": verb
+                    })
+
+            map_data[room_id] = {
+                "room_id": room.get("room_id"),
+                "name": room.get("name"),
+                "x": room.get("x"), # Will be None if not set
+                "y": room.get("y"),
+                "z": room.get("z"),
+                "exits": room.get("exits", {}),
+                "special_exits": special_exits
+            }
+    return map_data
+# ---
+# --- END NEW HELPER
 # ---
 
 
@@ -151,6 +195,12 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             player.stamina = player.max_stamina
             player.spirit = player.max_spirit
             # --- END NEW ---
+
+            # ---
+            # --- NEW: Add start room to visited list ---
+            if start_room_id not in player.visited_rooms:
+                player.visited_rooms.append(start_room_id)
+            # --- END NEW ---
             
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
         else:
@@ -158,6 +208,12 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             # --- REFACTORED: Inject world into existing Player ---
             player = Player(world, player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             # --- END REFACTOR ---
+            
+            # ---
+            # --- NEW: Add current room to visited list on load ---
+            if player.current_room_id not in player.visited_rooms:
+                player.visited_rooms.append(player.current_room_id)
+            # --- END NEW ---
             
     # --- REFACTORED: Get room from world ---
     room_db_data = world.get_room(player.current_room_id)
@@ -305,13 +361,18 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     save_game_state(player)
     
     # ---
-    # --- MODIFIED: Use new player method ---
+    # --- MODIFIED: Use new player method
     # ---
     vitals_data = player.get_vitals()
+    # ---
+    # --- NEW: Get map data
+    # ---
+    map_data = _get_map_data(player, world)
     return {
         "messages": player.messages, 
         "game_state": player.game_state,
-        "vitals": vitals_data
+        "vitals": vitals_data,
+        "map_data": map_data # <-- NEW
     }
 
 # --- REFACTORED: 'world' is the first argument ---

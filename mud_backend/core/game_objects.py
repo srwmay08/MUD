@@ -270,6 +270,11 @@ class Player:
         self.quest_trip_counter: int = self.db_data.get("quest_trip_counter", 0)
         # --- END NEW ---
 
+        # ---
+        # --- NEW: Map Tracking ---
+        self.visited_rooms: List[str] = self.db_data.get("visited_rooms", [])
+        # --- END NEW ---
+
 
     @property
     def con_bonus(self) -> int:
@@ -697,6 +702,13 @@ class Player:
 
         self._stop_combat()
         self.current_room_id = target_room_id
+
+        # ---
+        # --- NEW: Add to visited rooms list
+        if target_room_id not in self.visited_rooms:
+            self.visited_rooms.append(target_room_id)
+        # --- END NEW ---
+
         self.send_message(move_message)
         show_room_to_player(self, new_room) # show_room_to_player also needs refactoring
 
@@ -786,7 +798,12 @@ class Player:
             # --- END NEW ---
             
             # --- NEW: Save Quest Trackers ---
-            "quest_trip_counter": self.quest_trip_counter
+            "quest_trip_counter": self.quest_trip_counter,
+            # --- END NEW ---
+
+            # ---
+            # --- NEW: Save Map Tracking ---
+            "visited_rooms": self.visited_rooms
             # --- END NEW ---
         }
         
@@ -814,6 +831,7 @@ class Player:
             "max_stamina": self.max_stamina,
             "spirit": self.spirit,
             "max_spirit": self.max_spirit,
+            "current_room_id": self.current_room_id # <-- NEW: Added for map
         }
 
         # 2. Get Posture and Status Effects

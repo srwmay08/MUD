@@ -1,100 +1,107 @@
 [
     {
-        "room_id": "town_square", 
-        "name": "The Great Town Square", 
-    "description": {
-        "default": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty.",
-    
-    "DAWN": {
-        "clear": "The first faint light of dawn paints the sky, catching the high tiers of the magnificent fountain in hues of orange and pink. The paving stones are cold and empty, save for a few early risers. The eastern well is a silent silhouette, its oaken bucket still.",
-        "light clouds": "A pale, grey light filters through high clouds, illuminating a quiet square. The air is cool and still. The fountain is quiet, its basin reflecting the flat grey sky. The eastern well's rope is coiled, damp with morning dew.",
-        "overcast": "A heavy, grey ceiling of clouds robs the dawn of its color. The square is dim, the worn paving stones dark. The magnificent fountain is a lightless, still shape, and the well is a dark smudge near the eastern corner.",
-        "fog": "A thick, cold fog clings to the ground, obscuring the paving stones. The dawn light struggles to pierce the mist, making the multi-tiered fountain a looming, ghostly shape. The eastern well is completely lost in the white.",
-        "light rain": "A chilly, light rain patters on the worn paving stones as dawn breaks. The square is empty, its surfaces slick and reflective. The fountain's basin ripples with the drizzle, and the well's oaken bucket is dark with moisture.",
-        "rain": "Dawn arrives with a steady, drenching rain. The sound on the paving stones drowns out all else. The fountain's basin is already overflowing, its tiers disappearing into the downpour.",
-        "heavy rain": "A torrential downpour greets the dawn. The square is a shallow lake, the paving stones invisible. The multi-tiered fountain is a churning mass, and the well near the eastern corner is already overflowing.",
-        "storm": "Dawn is heralded by a flash of lightning. The wind howls across the empty stones. The fountain is a thrashing, windswept shape, and the oaken bucket on the well clatters violently against the stone."
-    },
-    "MORNING": {
-        "clear": "The bright morning sun warms the worn paving stones. The square is bustling: merchants setting up stalls, the first shouts of commerce, and the clear, distant ring of the blacksmith. The multi-tiered fountain sparkles, its mist catching small rainbows.",
-        "light clouds": "Wispy clouds drift across the morning sky, offering brief shade. The square is busy, filled with the sounds of commerce and conversation. The fountain's mist is a cool breeze, and the line at the eastern well is already two people deep.",
-        "overcast": "A flat, grey overcast sky dulls the morning. The square is busy, but the mood is subdued. The blacksmith's hammer sounds dull in the heavy air. The fountain's spray seems less vibrant, its water matching the grey sky.",
-        "fog": "The morning fog lingers, reducing visibility. The sounds of commerce are muffled and strangely close: a merchant's shout from an unseen stall, the blacksmith's hammer a dull thud. The multi-tiered fountain is a large, wet silhouette.",
-        "light rain": "A persistent light rain dampens the square. People huddle under awnings, and merchants shout from beneath tarps. The paving stones are slick. The fountain's spray is lost in the drizzle, and the well's bucket is full of rainwater.",
-        "rain": "A steady rain falls, clearing the square of all but the most determined. A few merchants grimly guard their covered stalls. The blacksmith's hammer is a lonely, ringing sound. The well is surrounded by puddles.",
-        "heavy rain": "Heavy rain hammers the square, sending everyone running for cover. Merchants' stalls are abandoned. The paving stones are a rushing river. The fountain is a churning mass, and the well's oaken bucket is completely submerged.",
-        "storm": "The morning storm rages. The square is deserted. Lightning flashes, illuminating the multi-tiered fountain in stark white. The blacksmith's forge is cold, and the well near the eastern corner looks dangerously full."
-    },
-    "NOON": {
-        "clear": "The sun hangs high, beating down on the worn paving stones. The square is at its peak; the din of merchants, the blacksmith's ringing, and the crowd's murmur are almost deafening. The multi-tiered fountain's mist is a welcome, cooling relief.",
-        "light clouds": "A few fluffy clouds offer little relief from the high sun. The square is active, though many seek the shade of buildings. The blacksmith can be heard, and the fountain's splash is a counterpoint to the loud haggling.",
-        "overcast": "A thick blanket of clouds makes noon feel like late afternoon. The light is flat and grey. The sounds of commerce seem muted. The multi-tiered fountain's water looks dark and heavy.",
-        "fog": "It is bizarre to have fog at noon. The thick, damp air is disorienting, and the sun is just a faint, white disc. The sounds of the square are muffled and eerie. The fountain is invisible, its splashing a disembodied sound.",
-        "light rain": "A warm, light rain falls. The square is less crowded, the air smelling of wet paving stone and ozone from the distant smithy. Merchants shout from under cover. The fountain's basin ripples steadily.",
-        "rain": "The steady rain at noon has driven most indoors. The paving stones are slick and deserted. The only sounds are the drumming rain and the splash of the magnificent fountain. The well's bucket is overflowing.",
-        "heavy rain": "A torrential downpour at midday. The square is flooded, the worn paving stones deep underwater. The fountain's basin is completely overwhelmed, its tiers vanishing into the deluge.",
-        "storm": "A violent thunderstorm rages. The sky is nearly as dark as night. The sounds of commerce are replaced by the roar of the storm. Lightning illuminates the eastern well and the thrashing, multi-tiered fountain."
-    },
-    "AFTERNOON": {
-        "clear": "The late afternoon sun casts long shadows across the worn paving stones. The magnificent fountain's shadow stretches eastward, nearly touching the stone well. The blacksmith's hammering has slowed, and merchants begin to pack their wares.",
-        "light clouds": "The afternoon sun breaks through scattered clouds, dappling the square in light and shadow. The fountain's shadow grows and shrinks, creeping toward the well. The crowd is thinning, the sounds of commerce fading.",
-        "overcast": "The overcast sky creates a dim, shadowless light. The blacksmith has already quit for the day. The square is emptying early, the fountain's grey water splashing into its basin with a melancholy sound.",
-        "fog": "A strange afternoon fog has rolled in, swallowing the square. The sounds of the square are muffled and dying. The long shadows of the day are lost in the mist. The fountain is a ghostly shape, and the well is invisible.",
-        "light rain": "A light rain continues into the afternoon. The paving stones are slick and treacherous. The sounds of commerce are long gone, save for a few hardy souls. The fountain's spray is just more water in a wet world.",
-        "rain": "Rain drums steadily on the cobblestones. The square is deserted. The fountain's long afternoon shadow is completely obscured by the downpour. The well's oaken bucket bobs in a deep puddle.",
-        "heavy rain": "Heavy rain lashes the empty square. The multi-tiered fountain is a churning mess. The well near the eastern corner is threatening to flood the entire path.",
-        "storm": "A fierce afternoon storm darkens the sky. The blacksmith's forge is dark. The fountain's shadow is non-existent as lightning illuminates the square, the fountain, and the eastern well in stark relief."
-    },
-    "DUSK": {
-        "clear": "The sun dips below the horizon, painting the sky in fiery colors. The first lamps are being lit, casting a warm glow on the worn paving stones. The multi-tiered fountain's water glows in the twilight. The well is a dark shape in the growing shadows.",
-        "light clouds": "The clouds on the horizon are tinged with the red and purple of sunset. The square grows quiet, the last merchants gone. The fountain murmurs peacefully as the first lamps flicker to life near the paths.",
-        "overcast": "The overcast sky turns a bruised purple as dusk settles. The square becomes dark quickly. Lamps struggle to pierce the gloom, casting small, weak pools of light on the paving stones. The fountain is a gloomy silhouette.",
-        "fog": "The fog thickens as dusk falls, mixing with the growing shadows. The square is eerie and silent. Lamps are hazy, isolated glows. The fountain's splashing is muffled and close, and the well is a lump in the mist.",
-        "light rain": "A cool, light rain falls in the twilight. The few lamps that are lit cast shimmering, fragmented reflections on the wet paving stones. The fountain splashes quietly, and the well's rope is dark and soaked.",
-        "rain": "Rain continues to fall as darkness settles. The square is deserted. The fountain is a noisy, wet presence in the gloom. The well's oaken bucket is full to the brim.",
-        "heavy rain": "It is dark and storming. The heavy rain at dusk is relentless. The paving stones are underwater, and the fountain is a roaring noise in the dark.",
-        "storm": "Dusk is swallowed by the storm. It is pitch black, save for flashes of lightning that reveal the rain-swept, empty square, the thrashing fountain, and the flooded eastern well."
-    },
-    "EVENING": {
-        "clear": "The sky is clear and filled with stars. Lamps around the square cast pools of warm light on the paving stones. A few couples stroll by the multi-tiered fountain, which murmurs peacefully. The well is a quiet meeting spot in the cool night air.",
-        "light clouds": "Thin clouds scud across the moon, their shadows racing over the paving stones. The square is quiet, with only a few people moving through the lamplit shadows. The fountain provides a gentle, splashing soundtrack.",
-        "overcast": "A low, dark ceiling of clouds blocks all starlight, making the square feel claustrophobic. The lamps seem to struggle against the dark. The fountain's splash sounds loud. The well is hidden in deep shadows.",
-        "fog": "The night fog is thick and cold. The lamps cast hazy, isolated glows, barely illuminating the paths. The fountain is an invisible source of splashing. The eastern well is completely obscured.",
-        "light rain": "A light rain mists through the lamplit air. The square is empty, its paving stones glistening. The fountain's splash is accompanied by the patter of the drizzle.",
-        "rain": "A steady rain falls on the dark square. The sound is soothing, but the air is cold and damp. The fountain's basin is overflowing, and the well's oaken bucket is drenched.",
-        "heavy rain": "Heavy rain hammers the dark, empty square. The multi-tiered fountain is a roaring, churning mass in the center of the deluge. The well is a swirling pool of water.",
-        "storm": "A thunderstorm rages in the dead of night. The square is lit in stark, terrifying flashes of white, revealing the stone well and the thrashing, multi-tiered fountain."
-    },
-    "NIGHT": {
-        "clear": "The world is dark, lit only by a clear, starry sky and the moon. The square is silent, the worn paving stones pale under the moonlight. The fountain's water shimmers as it falls. The well casts a short, dark shadow.",
-        "light clouds": "Thin clouds drift past the moon, casting fleeting shadows over the dark, empty square. The fountain murmurs quietly in the gloom. The well is a dark shape against the eastern wall.",
-        "overcast": "The sky is a black, featureless void. The square is plunged into deep darkness, the paving stones invisible. The fountain is just a sound in the night. The well is impossible to see.",
-        "fog": "A thick, cold fog blankets the square. It's impossible to see more than a few feet. The paving stones are slick with moisture. The fountain is a muffled sound, and the stone well is completely hidden.",
-        "light rain": "A cold, light rain falls from the black sky. The square is silent, save for the patter on the paving stones and the splash of the fountain. The well's rope is soaked and heavy.",
-        "rain": "A steady, cold rain falls on the deserted square. Puddles are forming around the well, and the fountain sounds loud in the silence.",
-        "heavy rain": "A drenching, heavy rain pours down, flooding the square in the dead of night. The sound is a deafening roar, and the fountain is lost in the chaos.",
-        "storm": "A fierce storm rages in the darkness. The square is a chaotic place of wind and rain. A flash of lightning illuminates the fountain's tiers awash with water and the well nearly submerged."
-    },
-    "MIDNIGHT": {
-        "clear": "The hour of midnight passes. The moon is high, casting stark, pale shadows across the silent paving stones. The multi-tiered fountain's water glitters like silver. The well's oaken bucket is a dark shape, its rope stiff with cold.",
-        "light clouds": "The moon is hidden behind passing clouds, plunging the square into darkness before reappearing. The fountain is a quiet splash. The air is still and cold.",
-        "overcast": "It is pitch black at midnight. The overcast sky blocks all light. The square is an oppressive, silent void. Even the fountain seems quiet, its splashing absorbed by the heavy darkness. The well is a patch of deeper black.",
-        "fog": "A thick, icy fog blankets the square at midnight. The world is reduced to a few feet of paving stone. A sense of isolation is total. The fountain's drip is the only sound, and the well is somewhere in the cold mist.",
-        "light rain": "A cold, miserable drizzle falls at midnight. The square is empty and dark, the sound of the rain on the fountain's basin barely audible.",
-        "rain": "A steady rain drums on the cobblestones in the pitch dark. The fountain's splashing is a lonely sound. The well's bucket is a dark shape, full of black water.",
-        "heavy rain": "A torrential downpour rages at midnight. The square is flooded, and the sound is a deafening, chaotic roar. The fountain and well are lost in the deluge.",
-        "storm": "The storm reaches its peak at midnight. Lightning flashes reveal the square being torn apart by wind and rain. The fountain is a white, churning mass, and the well is completely underwater."
-    }
-},
+        "room_id": "town_square",
+        "name": "The Great Town Square",
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "description": {
+            "default": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty.",
+            "DAWN": {
+                "clear": "The first faint light of dawn paints the sky, catching the high tiers of the magnificent fountain in hues of orange and pink. The paving stones are cold and empty, save for a few early risers. The eastern well is a silent silhouette, its oaken bucket still.",
+                "light clouds": "A pale, grey light filters through high clouds, illuminating a quiet square. The air is cool and still. The fountain is quiet, its basin reflecting the flat grey sky. The eastern well's rope is coiled, damp with morning dew.",
+                "overcast": "A heavy, grey ceiling of clouds robs the dawn of its color. The square is dim, the worn paving stones dark. The magnificent fountain is a lightless, still shape, and the well is a dark smudge near the eastern corner.",
+                "fog": "A thick, cold fog clings to the ground, obscuring the paving stones. The dawn light struggles to pierce the mist, making the multi-tiered fountain a looming, ghostly shape. The eastern well is completely lost in the white.",
+                "light rain": "A chilly, light rain patters on the worn paving stones as dawn breaks. The square is empty, its surfaces slick and reflective. The fountain's basin ripples with the drizzle, and the well's oaken bucket is dark with moisture.",
+                "rain": "Dawn arrives with a steady, drenching rain. The sound on the paving stones drowns out all else. The fountain's basin is already overflowing, its tiers disappearing into the downpour.",
+                "heavy rain": "A torrential downpour greets the dawn. The square is a shallow lake, the paving stones invisible. The multi-tiered fountain is a churning mass, and the well near the eastern corner is already overflowing.",
+                "storm": "Dawn is heralded by a flash of lightning. The wind howls across the empty stones. The fountain is a thrashing, windswept shape, and the oaken bucket on the well clatters violently against the stone."
+            },
+            "MORNING": {
+                "clear": "The bright morning sun warms the worn paving stones. The square is bustling: merchants setting up stalls, the first shouts of commerce, and the clear, distant ring of the blacksmith. The multi-tiered fountain sparkles, its mist catching small rainbows.",
+                "light clouds": "Wispy clouds drift across the morning sky, offering brief shade. The square is busy, filled with the sounds of commerce and conversation. The fountain's mist is a cool breeze, and the line at the eastern well is already two people deep.",
+                "overcast": "A flat, grey overcast sky dulls the morning. The square is busy, but the mood is subdued. The blacksmith's hammer sounds dull in the heavy air. The fountain's spray seems less vibrant, its water matching the grey sky.",
+                "fog": "The morning fog lingers, reducing visibility. The sounds of commerce are muffled and strangely close: a merchant's shout from an unseen stall, the blacksmith's hammer a dull thud. The multi-tiered fountain is a large, wet silhouette.",
+                "light rain": "A persistent light rain dampens the square. People huddle under awnings, and merchants shout from beneath tarps. The paving stones are slick. The fountain's spray is lost in the drizzle, and the well's bucket is full of rainwater.",
+                "rain": "A steady rain falls, clearing the square of all but the most determined. A few merchants grimly guard their covered stalls. The blacksmith's hammer is a lonely, ringing sound. The well is surrounded by puddles.",
+                "heavy rain": "Heavy rain hammers the square, sending everyone running for cover. Merchants' stalls are abandoned. The paving stones are a rushing river. The fountain is a churning mass, and the well's oaken bucket is completely submerged.",
+                "storm": "The morning storm rages. The square is deserted. Lightning flashes, illuminating the multi-tiered fountain in stark white. The blacksmith's forge is cold, and the well near the eastern corner looks dangerously full."
+            },
+            "NOON": {
+                "clear": "The sun hangs high, beating down on the worn paving stones. The square is at its peak; the din of merchants, the blacksmith's ringing, and the crowd's murmur are almost deafening. The multi-tiered fountain's mist is a welcome, cooling relief.",
+                "light clouds": "A few fluffy clouds offer little relief from the high sun. The square is active, though many seek the shade of buildings. The blacksmith can be heard, and the fountain's splash is a counterpoint to the loud haggling.",
+                "overcast": "A thick blanket of clouds makes noon feel like late afternoon. The light is flat and grey. The sounds of commerce seem muted. The multi-tiered fountain's water looks dark and heavy.",
+                "fog": "It is bizarre to have fog at noon. The thick, damp air is disorienting, and the sun is just a faint, white disc. The sounds of the square are muffled and eerie. The fountain is invisible, its splashing a disembodied sound.",
+                "light rain": "A warm, light rain falls. The square is less crowded, the air smelling of wet paving stone and ozone from the distant smithy. Merchants shout from under cover. The fountain's basin ripples steadily.",
+                "rain": "The steady rain at noon has driven most indoors. The paving stones are slick and deserted. The only sounds are the drumming rain and the splash of the magnificent fountain. The well's bucket is overflowing.",
+                "heavy rain": "A torrential downpour at midday. The square is flooded, the worn paving stones deep underwater. The fountain's basin is completely overwhelmed, its tiers vanishing into the deluge.",
+                "storm": "A violent thunderstorm rages. The sky is nearly as dark as night. The sounds of commerce are replaced by the roar of the storm. Lightning illuminates the eastern well and the thrashing, multi-tiered fountain."
+            },
+            "AFTERNOON": {
+                "clear": "The late afternoon sun casts long shadows across the worn paving stones. The magnificent fountain's shadow stretches eastward, nearly touching the stone well. The blacksmith's hammering has slowed, and merchants begin to pack their wares.",
+                "light clouds": "The afternoon sun breaks through scattered clouds, dappling the square in light and shadow. The fountain's shadow grows and shrinks, creeping toward the well. The crowd is thinning, the sounds of commerce fading.",
+                "overcast": "The overcast sky creates a dim, shadowless light. The blacksmith has already quit for the day. The square is emptying early, the fountain's grey water splashing into its basin with a melancholy sound.",
+                "fog": "A strange afternoon fog has rolled in, swallowing the square. The sounds of the square are muffled and dying. The long shadows of the day are lost in the mist. The fountain is a ghostly shape, and the well is invisible.",
+                "light rain": "A light rain continues into the afternoon. The paving stones are slick and treacherous. The sounds of commerce are long gone, save for a few hardy souls. The fountain's spray is just more water in a wet world.",
+                "rain": "Rain drums steadily on the cobblestones. The square is deserted. The fountain's long afternoon shadow is completely obscured by the downpour. The well's oaken bucket bobs in a deep puddle.",
+                "heavy rain": "Heavy rain lashes the empty square. The multi-tiered fountain is a churning mess. The well near the eastern corner is threatening to flood the entire path.",
+                "storm": "A fierce afternoon storm darkens the sky. The blacksmith's forge is dark. The fountain's shadow is non-existent as lightning illuminates the square, the fountain, and the eastern well in stark relief."
+            },
+            "DUSK": {
+                "clear": "The sun dips below the horizon, painting the sky in fiery colors. The first lamps are being lit, casting a warm glow on the worn paving stones. The multi-tiered fountain's water glows in the twilight. The well is a dark shape in the growing shadows.",
+                "light clouds": "The clouds on the horizon are tinged with the red and purple of sunset. The square grows quiet, the last merchants gone. The fountain murmurs peacefully as the first lamps flicker to life near the paths.",
+                "overcast": "The overcast sky turns a bruised purple as dusk settles. The square becomes dark quickly. Lamps struggle to pierce the gloom, casting small, weak pools of light on the paving stones. The fountain is a gloomy silhouette.",
+                "fog": "The fog thickens as dusk falls, mixing with the growing shadows. The square is eerie and silent. Lamps are hazy, isolated glows. The fountain's splashing is muffled and close, and the well is a lump in the mist.",
+                "light rain": "A cool, light rain falls in the twilight. The few lamps that are lit cast shimmering, fragmented reflections on the wet paving stones. The fountain splashes quietly, and the well's rope is dark and soaked.",
+                "rain": "Rain continues to fall as darkness settles. The square is deserted. The fountain is a noisy, wet presence in the gloom. The well's oaken bucket is full to the brim.",
+                "heavy rain": "It is dark and storming. The heavy rain at dusk is relentless. The paving stones are underwater, and the fountain is a roaring noise in the dark.",
+                "storm": "Dusk is swallowed by the storm. It is pitch black, save for flashes of lightning that reveal the rain-swept, empty square, the thrashing fountain, and the flooded eastern well."
+            },
+            "EVENING": {
+                "clear": "The sky is clear and filled with stars. Lamps around the square cast pools of warm light on the paving stones. A few couples stroll by the multi-tiered fountain, which murmurs peacefully. The well is a quiet meeting spot in the cool night air.",
+                "light clouds": "Thin clouds scud across the moon, their shadows racing over the paving stones. The square is quiet, with only a few people moving through the lamplit shadows. The fountain provides a gentle, splashing soundtrack.",
+                "overcast": "A low, dark ceiling of clouds blocks all starlight, making the square feel claustrophobic. The lamps seem to struggle against the dark. The fountain's splash sounds loud. The well is hidden in deep shadows.",
+                "fog": "The night fog is thick and cold. The lamps cast hazy, isolated glows, barely illuminating the paths. The fountain is an invisible source of splashing. The eastern well is completely obscured.",
+                "light rain": "A light rain mists through the lamplit air. The square is empty, its paving stones glistening. The fountain's splash is accompanied by the patter of the drizzle.",
+                "rain": "A steady rain falls on the dark square. The sound is soothing, but the air is cold and damp. The fountain's basin is overflowing, and the well's oaken bucket is drenched.",
+                "heavy rain": "Heavy rain hammers the dark, empty square. The multi-tiered fountain is a roaring, churning mass in the center of the deluge. The well is a swirling pool of water.",
+                "storm": "A thunderstorm rages in the dead of night. The square is lit in stark, terrifying flashes of white, revealing the stone well and the thrashing, multi-tiered fountain."
+            },
+            "NIGHT": {
+                "clear": "The world is dark, lit only by a clear, starry sky and the moon. The square is silent, the worn paving stones pale under the moonlight. The fountain's water shimmers as it falls. The well casts a short, dark shadow.",
+                "light clouds": "Thin clouds drift past the moon, casting fleeting shadows over the dark, empty square. The fountain murmurs quietly in the gloom. The well is a dark shape against the eastern wall.",
+                "overcast": "The sky is a black, featureless void. The square is plunged into deep darkness, the paving stones invisible. The fountain is just a sound in the night. The well is impossible to see.",
+                "fog": "A thick, cold fog blankets the square. It's impossible to see more than a few feet. The paving stones are slick with moisture. The fountain is a muffled sound, and the stone well is completely hidden.",
+                "light rain": "A cold, light rain falls from the black sky. The square is silent, save for the patter on the paving stones and the splash of the fountain. The well's rope is soaked and heavy.",
+                "rain": "A steady, cold rain falls on the deserted square. Puddles are forming around the well, and the fountain sounds loud in the silence.",
+                "heavy rain": "A drenching, heavy rain pours down, flooding the square in the dead of night. The sound is a deafening roar, and the fountain is lost in the chaos.",
+                "storm": "A fierce storm rages in the darkness. The square is a chaotic place of wind and rain. A flash of lightning illuminates the fountain's tiers awash with water and the well nearly submerged."
+            },
+            "MIDNIGHT": {
+                "clear": "The hour of midnight passes. The moon is high, casting stark, pale shadows across the silent paving stones. The multi-tiered fountain's water glitters like silver. The well's oaken bucket is a dark shape, its rope stiff with cold.",
+                "light clouds": "The moon is hidden behind passing clouds, plunging the square into darkness before reappearing. The fountain is a quiet splash. The air is still and cold.",
+                "overcast": "It is pitch black at midnight. The overcast sky blocks all light. The square is an oppressive, silent void. Even the fountain seems quiet, its splashing absorbed by the heavy darkness. The well is a patch of deeper black.",
+                "fog": "A thick, icy fog blankets the square at midnight. The world is reduced to a few feet of paving stone. A sense of isolation is total. The fountain's drip is the only sound, and the well is somewhere in the cold mist.",
+                "light rain": "A cold, miserable drizzle falls at midnight. The square is empty and dark, the sound of the rain on the fountain's basin barely audible.",
+                "rain": "A steady rain drums on the cobblestones in the pitch dark. The fountain's splashing is a lonely sound. The well's bucket is a dark shape, full of black water.",
+                "heavy rain": "A torrential downpour rages at midnight. The square is flooded, and the sound is a deafening, chaotic roar. The fountain and well are lost in the deluge.",
+                "storm": "The storm reaches its peak at midnight. Lightning flashes reveal the square being torn apart by wind and rain. The fountain is a white, churning mass, and the well is completely underwater."
+            }
+        },
         "unabsorbed_social_exp": 100,
         "is_outdoor": true,
-        "objects": [ 
+        "objects": [
             {
-                "name": "fountain", 
+                "name": "fountain",
                 "description": "The fountain depicts the Goddess of Wealth pouring endless gold into the city. Its water is cool and clear.",
                 "perception_dc": 0,
-                "keywords": ["fountain"],
-                "verbs": ["look", "examine"],
+                "keywords": [
+                    "fountain"
+                ],
+                "verbs": [
+                    "look",
+                    "examine"
+                ],
                 "details": [
                     {
                         "name": "water",
@@ -105,63 +112,108 @@
                 ]
             },
             {
-                "name": "well", 
-                "description": "A weathered stone well. You can see a dark, winding rope tied to the lip, leading down. You could probably **CLIMB** the rope.", 
-                "verbs": ["CLIMB", "look", "examine"], 
+                "name": "well",
+                "description": "A weathered stone well. You can see a dark, winding rope tied to the lip, leading down. You could probably **CLIMB** the rope.",
+                "verbs": [
+                    "CLIMB",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "well_bottom",
                 "perception_dc": 0,
-                "keywords": ["well", "stone well"]
+                "keywords": [
+                    "well",
+                    "stone well"
+                ]
             },
             {
                 "name": "a grizzled warrior",
                 "description": "A grizzled old warrior paces the square, his eyes scanning for... something. He carries a long spear.",
-                "verbs": ["look", "attack", "talk to"],
+                "verbs": [
+                    "look",
+                    "attack",
+                    "talk to"
+                ],
                 "is_monster": true,
                 "is_npc": true,
                 "monster_id": "grizzled_warrior",
-                "keywords": ["warrior", "grizzled warrior", "a grizzled warrior"],
-                "quest_giver_ids": ["trip_quest_1"],
+                "keywords": [
+                    "warrior",
+                    "grizzled warrior",
+                    "a grizzled warrior"
+                ],
+                "quest_giver_ids": [
+                    "trip_quest_1"
+                ],
                 "all_quests_done_message": "The warrior nods at you. 'You've got the hang of it. Now go practice on something... uglier.'"
             }
         ],
         "exits": {
-            "north": "ts_north", "south": "ts_south", "east": "ts_east", "west": "ts_west",
-            "northeast": "ts_northeast", "northwest": "ts_northwest", "southeast": "ts_southeast", "southwest": "ts_southwest"
+            "north": "ts_north",
+            "south": "ts_south",
+            "east": "ts_east",
+            "west": "ts_west",
+            "northeast": "ts_northeast",
+            "northwest": "ts_northwest",
+            "southeast": "ts_southeast",
+            "southwest": "ts_southwest"
         }
     },
     {
-        "room_id": "ts_south", 
-        "name": "South Square", 
+        "room_id": "ts_south",
+        "name": "South Square",
+        "x": 0,
+        "y": -1,
+        "z": 0,
         "is_outdoor": true,
         "description": {
             "default": "You are in the southern part of the town square. The main square is to the north. The sturdy wooden door to the inn is here."
         },
-        "exits": {"north": "town_square", "east": "ts_southeast", "west": "ts_southwest"}, 
+        "exits": {
+            "north": "town_square",
+            "east": "ts_southeast",
+            "west": "ts_southwest"
+        },
         "objects": [
             {
-                "name": "door", 
-                "description": "The sturdy wooden door to the inn. You could probably **ENTER** it.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "door",
+                "description": "The sturdy wooden door to the inn. You could probably **ENTER** it.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "inn_front_desk",
                 "perception_dc": 0,
-                "keywords": ["door", "wooden door", "inn"]
+                "keywords": [
+                    "door",
+                    "wooden door",
+                    "inn"
+                ]
             }
         ]
     },
     {
-        "room_id": "well_bottom", 
-        "name": "The Bottom of the Well", 
+        "room_id": "well_bottom",
+        "name": "The Bottom of the Well",
+        "x": 0,
+        "y": 0,
+        "z": -1,
         "description": {
             "default": "It is dark and cramped down here. The air is damp and smells of mildew and wet fur. You notice some strange plants growing in the muck near the wall. Dark passages lead east and west."
         },
         "objects": [
             {
-                "name": "rope", 
-                "description": "A thick, wet rope leads back up to the town square.", 
-                "verbs": ["CLIMB"], 
+                "name": "rope",
+                "description": "A thick, wet rope leads back up to the town square.",
+                "verbs": [
+                    "CLIMB"
+                ],
                 "target_room": "town_square",
                 "perception_dc": 0,
-                "keywords": ["rope"],
+                "keywords": [
+                    "rope"
+                ],
                 "details": [
                     {
                         "name": "rope-fray",
@@ -174,7 +226,10 @@
             {
                 "name": "stirring monster",
                 "description": "A mass of shadows and wet fur, it huffs angrily.",
-                "verbs": ["look", "attack"],
+                "verbs": [
+                    "look",
+                    "attack"
+                ],
                 "perception_dc": 15,
                 "is_monster": true,
                 "monster_id": "well_bottom_stirring_monster"
@@ -185,13 +240,24 @@
             "west": "cave_west"
         },
         "forageable_items": [
-            { "item_id": "viridian_leaf", "item_name": "viridian leaf", "dc": 50 },
-            { "item_id": "althion_stem", "item_name": "althion stem", "dc": 85 }
+            {
+                "item_id": "viridian_leaf",
+                "item_name": "viridian leaf",
+                "dc": 50
+            },
+            {
+                "item_id": "althion_stem",
+                "item_name": "althion stem",
+                "dc": 85
+            }
         ]
     },
     {
         "room_id": "cave_east",
         "name": "A Dark Cave",
+        "x": 1,
+        "y": 0,
+        "z": -1,
         "description": {
             "default": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
         },
@@ -199,17 +265,25 @@
             {
                 "name": "stirring monster",
                 "description": "A mass of shadows and wet fur, it huffs angrily.",
-                "verbs": ["look", "attack"],
+                "verbs": [
+                    "look",
+                    "attack"
+                ],
                 "perception_dc": 15,
                 "is_monster": true,
                 "monster_id": "well_bottom_stirring_monster"
             }
         ],
-        "exits": { "west": "well_bottom" }
+        "exits": {
+            "west": "well_bottom"
+        }
     },
     {
         "room_id": "cave_west",
         "name": "A Dark Cave",
+        "x": -1,
+        "y": 0,
+        "z": -1,
         "description": {
             "default": "The damp, mildewy smell from the well intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
         },
@@ -217,199 +291,351 @@
             {
                 "name": "stirring monster",
                 "description": "A mass of shadows and wet fur, it huffs angrily.",
-                "verbs": ["look", "attack"],
+                "verbs": [
+                    "look",
+                    "attack"
+                ],
                 "perception_dc": 15,
                 "is_monster": true,
                 "monster_id": "well_bottom_stirring_monster"
             }
         ],
-        "exits": { "east": "well_bottom" }
+        "exits": {
+            "east": "well_bottom"
+        }
     },
-    
     {
-        "room_id": "ts_north", 
-        "name": "North Square", 
-        "is_outdoor": true, 
+        "room_id": "ts_north",
+        "name": "North Square",
+        "x": 0,
+        "y": 1,
+        "z": 0,
+        "is_outdoor": true,
         "description": {
             "default": "You are in the northern part of the town square. The main square is to the south. A well-worn path continues to the north, leading to the city's edge. A stately building with tall, narrow windows stands to the east, its entrance marked 'Library & Archives'."
-        }, 
+        },
         "exits": {
-            "south": "town_square", 
-            "east": "ts_northeast", 
+            "south": "town_square",
+            "east": "ts_northeast",
             "west": "ts_northwest",
             "north": "north_gate"
         },
         "objects": [
             {
-                "name": "library entrance", 
-                "description": "The entrance to the Library & Archives. You could probably **ENTER** it.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "library entrance",
+                "description": "The entrance to the Library & Archives. You could probably **ENTER** it.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "library_archives",
                 "perception_dc": 0,
-                "keywords": ["door", "entrance", "library", "archives"]
+                "keywords": [
+                    "door",
+                    "entrance",
+                    "library",
+                    "archives"
+                ]
             }
         ]
     },
-    
     {
-        "room_id": "ts_east", 
-        "name": "East Square", 
-        "is_outdoor": true, 
+        "room_id": "ts_east",
+        "name": "East Square",
+        "x": 1,
+        "y": 0,
+        "z": 0,
+        "is_outdoor": true,
         "description": {
             "default": "You are in the eastern part of the town square. The main square is to the west. A set of tall, oaken doors stand here, open to the public. To the north, a grand archway leads into the Town Hall."
         },
-        "exits": {"west": "town_square", "north": "ts_northeast", "south": "ts_southeast"}, 
+        "exits": {
+            "west": "town_square",
+            "north": "ts_northeast",
+            "south": "ts_southeast"
+        },
         "objects": [
             {
-                "name": "oaken doors", 
-                "description": "Tall, oaken doors carved with symbols of light and healing. This is the entrance to the temple.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "oaken doors",
+                "description": "Tall, oaken doors carved with symbols of light and healing. This is the entrance to the temple.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "temple_of_light",
                 "perception_dc": 0,
-                "keywords": ["doors", "oaken doors", "temple"]
+                "keywords": [
+                    "doors",
+                    "oaken doors",
+                    "temple"
+                ]
             },
             {
-                "name": "grand archway", 
-                "description": "A grand archway leading into the Town Hall. You can **ENTER** it.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "grand archway",
+                "description": "A grand archway leading into the Town Hall. You can **ENTER** it.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "town_hall",
                 "perception_dc": 0,
-                "keywords": ["archway", "grand archway", "hall", "town hall"]
+                "keywords": [
+                    "archway",
+                    "grand archway",
+                    "hall",
+                    "town hall"
+                ]
             }
         ]
     },
-    
     {
-        "room_id": "ts_west", 
-        "name": "West Square", 
-        "is_outdoor": true, 
+        "room_id": "ts_west",
+        "name": "West Square",
+        "x": -1,
+        "y": 0,
+        "z": 0,
+        "is_outdoor": true,
         "description": {
             "default": "You are in the western part of the town square. The main square is to the east. A wide marble arch leads into the bank here. To the south, you can hear the sounds of a crowd from the open-air theatre."
         },
-        "exits": {"east": "town_square", "north": "ts_northwest", "south": "ts_southwest"},
+        "exits": {
+            "east": "town_square",
+            "north": "ts_northwest",
+            "south": "ts_southwest"
+        },
         "objects": [
             {
-                "name": "arch", 
-                "description": "A grand marble arch, polished and imposing, serving as the entrance to the bank.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "arch",
+                "description": "A grand marble arch, polished and imposing, serving as the entrance to the bank.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "bank_lobby",
                 "perception_dc": 0,
-                "keywords": ["arch", "marble arch", "bank"]
+                "keywords": [
+                    "arch",
+                    "marble arch",
+                    "bank"
+                ]
             },
             {
-                "name": "theatre arch", 
-                "description": "An open archway leading to the theatre.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "theatre arch",
+                "description": "An open archway leading to the theatre.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "theatre",
                 "perception_dc": 0,
-                "keywords": ["theatre", "theatre arch"]
+                "keywords": [
+                    "theatre",
+                    "theatre arch"
+                ]
             }
         ]
     },
-    
     {
-        "room_id": "ts_northeast", 
-        "name": "Northeast Square", 
-        "is_outdoor": true, 
+        "room_id": "ts_northeast",
+        "name": "Northeast Square",
+        "x": 1,
+        "y": 1,
+        "z": 0,
+        "is_outdoor": true,
         "description": {
             "default": "You are in the northeast corner of the town square. A small, rune-etched door is set into an alley here. You also see the heavy, reinforced door of the Town Barracks."
         },
-        "exits": {"southwest": "town_square", "south": "ts_east", "west": "ts_north"},
+        "exits": {
+            "southwest": "town_square",
+            "south": "ts_east",
+            "west": "ts_north"
+        },
         "objects": [
             {
-                "name": "rune-etched door", 
-                "description": "This door is barred by a faint, shimmering field of energy. A small plaque reads: 'Elementalist's Study. Apprentices only.'", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "rune-etched door",
+                "description": "This door is barred by a faint, shimmering field of energy. A small plaque reads: 'Elementalist's Study. Apprentices only.'",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "elementalist_study",
                 "perception_dc": 0,
-                "keywords": ["door", "rune-etched door", "study"]
+                "keywords": [
+                    "door",
+                    "rune-etched door",
+                    "study"
+                ]
             },
             {
-                "name": "barracks door", 
-                "description": "A heavy, reinforced door. You can **ENTER** the barracks.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "barracks door",
+                "description": "A heavy, reinforced door. You can **ENTER** the barracks.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "barracks",
                 "perception_dc": 0,
-                "keywords": ["door", "barracks", "barracks door"]
+                "keywords": [
+                    "door",
+                    "barracks",
+                    "barracks door"
+                ]
             }
         ]
     },
-    
     {
-        "room_id": "ts_northwest", 
-        "name": "Northwest Square", 
-        "is_outdoor": true, 
+        "room_id": "ts_northwest",
+        "name": "Northwest Square",
+        "x": -1,
+        "y": 1,
+        "z": 0,
+        "is_outdoor": true,
         "description": {
             "default": "You are in the northwest corner of the town square. A solid oak door with an iron anvil sigil marks the armory."
         },
-        "exits": {"southeast": "town_square", "south": "ts_west", "east": "ts_north"},
+        "exits": {
+            "southeast": "town_square",
+            "south": "ts_west",
+            "east": "ts_north"
+        },
         "objects": [
             {
-                "name": "door", 
-                "description": "A heavy oak door with a sigil of an anvil and hammer. This is the town armory.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "door",
+                "description": "A heavy oak door with a sigil of an anvil and hammer. This is the town armory.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "armory_shop",
                 "perception_dc": 0,
-                "keywords": ["door", "oak door", "armory"]
+                "keywords": [
+                    "door",
+                    "oak door",
+                    "armory"
+                ]
             }
         ]
     },
-    
     {
-        "room_id": "ts_southeast", 
-        "name": "Southeast Square", 
-        "is_outdoor": true, 
+        "room_id": "ts_southeast",
+        "name": "Southeast Square",
+        "x": 1,
+        "y": -1,
+        "z": 0,
+        "is_outdoor": true,
         "description": {
             "default": "You are in the southeast corner of the town square. A small shop with a sign of a mortar and pestle is tucked away here, emanating strange, herbal scents."
-        }, 
-        "exits": {"northwest": "town_square", "north": "ts_east", "west": "ts_south"},
+        },
+        "exits": {
+            "northwest": "town_square",
+            "north": "ts_east",
+            "west": "ts_south"
+        },
         "objects": [
             {
-                "name": "shop door", 
-                "description": "A small shop door with a sign of a mortar and pestle. This is the Apothecary. You can **ENTER**.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "shop door",
+                "description": "A small shop door with a sign of a mortar and pestle. This is the Apothecary. You can **ENTER**.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "apothecary_shop",
                 "perception_dc": 0,
-                "keywords": ["door", "shop door", "apothecary"]
+                "keywords": [
+                    "door",
+                    "shop door",
+                    "apothecary"
+                ]
             }
         ]
     },
-    
     {
-        "room_id": "ts_southwest", 
-        "name": "Southwest Square", 
-        "is_outdoor": true, 
+        "room_id": "ts_southwest",
+        "name": "Southwest Square",
+        "x": -1,
+        "y": -1,
+        "z": 0,
+        "is_outdoor": true,
         "description": {
             "default": "You are in the southwest corner of the town square. The door to a small furrier's shop is here, a crude sign of a stretched pelt hanging above it."
         },
-        "exits": {"northeast": "town_square", "north": "ts_west", "east": "ts_south"},
+        "exits": {
+            "northeast": "town_square",
+            "north": "ts_west",
+            "east": "ts_south"
+        },
         "objects": [
             {
-                "name": "door", 
-                "description": "A simple wooden door under a sign of a stretched pelt. This appears to be the furrier.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "door",
+                "description": "A simple wooden door under a sign of a stretched pelt. This appears to be the furrier.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "furrier_shop",
                 "perception_dc": 0,
-                "keywords": ["door", "wooden door", "furrier", "shop"]
+                "keywords": [
+                    "door",
+                    "wooden door",
+                    "furrier",
+                    "shop"
+                ]
             }
         ]
     },
-    
     {
         "room_id": "inn_room",
         "name": "A Room at the Inn",
+        "x": 0,
+        "y": -2,
+        "z": 1,
         "description": {
             "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads OUT."
         },
         "objects": [
-            {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"], "verbs": ["look", "examine"]},
             {
-                "name": "window", 
-                "description": "Looking out the window, you can see the bustling town square.", 
-                "perception_dc": 0, 
-                "keywords": ["window"]
+                "name": "bed",
+                "description": "A simple straw mattress...",
+                "perception_dc": 0,
+                "keywords": [
+                    "bed",
+                    "mattress"
+                ],
+                "verbs": [
+                    "look",
+                    "examine"
+                ]
             },
-            {"name": "table", "description": "A small, plain wooden table.", "perception_dc": 0, "keywords": ["table"], "verbs": ["look", "examine"]}
+            {
+                "name": "window",
+                "description": "Looking out the window, you can see the bustling town square.",
+                "perception_dc": 0,
+                "keywords": [
+                    "window"
+                ]
+            },
+            {
+                "name": "table",
+                "description": "A small, plain wooden table.",
+                "perception_dc": 0,
+                "keywords": [
+                    "table"
+                ],
+                "verbs": [
+                    "look",
+                    "examine"
+                ]
+            }
         ],
         "hidden_objects": [
             {
@@ -417,16 +643,30 @@
                 "item_id": "inn_note",
                 "description": "A folded piece of parchment rests on the table.",
                 "perception_dc": 10,
-                "keywords": ["note", "parchment", "a note"],
-                "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                "keywords": [
+                    "note",
+                    "parchment",
+                    "a note"
+                ],
+                "verbs": [
+                    "GET",
+                    "LOOK",
+                    "EXAMINE",
+                    "TAKE"
+                ],
                 "is_item": true
             }
         ],
-        "exits": { "out": "inn_front_desk" } 
+        "exits": {
+            "out": "inn_front_desk"
+        }
     },
     {
         "room_id": "inn_front_desk",
         "name": "Inn - Front Desk",
+        "x": 0,
+        "y": -2,
+        "z": 0,
         "description": {
             "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads OUT to the town square."
         },
@@ -434,27 +674,51 @@
             {
                 "name": "an innkeeper",
                 "description": "A portly, cheerful-looking man who seems to be watching all the newcomers. He spots you and waves you over.",
-                "keywords": ["innkeeper", "man", "portly man", "an innkeeper"],
-                "verbs": ["look", "talk to", "examine", "give"],
+                "keywords": [
+                    "innkeeper",
+                    "man",
+                    "portly man",
+                    "an innkeeper"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "examine",
+                    "give"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["innkeeper_quest_1"],
+                "quest_giver_ids": [
+                    "innkeeper_quest_1"
+                ],
                 "all_quests_done_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
             },
             {
-                "name": "door", 
-                "description": "A simple wooden door leading back to your rented room.", 
-                "verbs": ["ENTER", "look", "examine"], 
+                "name": "door",
+                "description": "A simple wooden door leading back to your rented room.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
                 "target_room": "inn_room",
                 "perception_dc": 0,
-                "keywords": ["door", "room", "inn room"]
+                "keywords": [
+                    "door",
+                    "room",
+                    "inn room"
+                ]
             }
         ],
-        "exits": { "out": "ts_south" } 
+        "exits": {
+            "out": "ts_south"
+        }
     },
-
     {
         "room_id": "furrier_shop",
         "name": "The Furrier's Shop",
+        "x": -2,
+        "y": -1,
+        "z": 0,
         "description": {
             "default": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter."
         },
@@ -462,24 +726,49 @@
             {
                 "name": "a grizzled furrier",
                 "description": "A grizzled man skinning a small animal. He looks like he's seen better days.",
-                "keywords": ["furrier", "man", "shopkeep", "grizzled furrier"],
-                "verbs": ["look", "talk to", "list", "buy", "sell", "appraise"],
+                "keywords": [
+                    "furrier",
+                    "man",
+                    "shopkeep",
+                    "grizzled furrier"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "list",
+                    "buy",
+                    "sell",
+                    "appraise"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["furrier_quest_1"],
+                "quest_giver_ids": [
+                    "furrier_quest_1"
+                ],
                 "all_quests_done_message": "The Furrier is busy skinning a pelt.",
                 "shop_data": {
                     "type": "furrier",
                     "inventory": [],
-                    "will_buy": ["pelt_ruined", "monster_claw", "viridian_leaf", "althion_stem", "orc_ear", "orc_tusk"]
+                    "will_buy": [
+                        "pelt_ruined",
+                        "monster_claw",
+                        "viridian_leaf",
+                        "althion_stem",
+                        "orc_ear",
+                        "orc_tusk"
+                    ]
                 }
             }
         ],
-        "exits": { "out": "ts_southwest" }
+        "exits": {
+            "out": "ts_southwest"
+        }
     },
-    
     {
         "room_id": "bank_lobby",
         "name": "The Bank of MUD",
+        "x": -2,
+        "y": 0,
+        "z": 0,
         "description": {
             "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall."
         },
@@ -487,22 +776,39 @@
             {
                 "name": "teller",
                 "description": "A sharply-dressed teller stands behind the counter, ready to assist you.",
-                "keywords": ["teller", "banker"],
-                "verbs": ["deposit", "withdraw", "balance", "look"]
+                "keywords": [
+                    "teller",
+                    "banker"
+                ],
+                "verbs": [
+                    "deposit",
+                    "withdraw",
+                    "balance",
+                    "look"
+                ]
             },
             {
                 "name": "counter",
                 "description": "A long, polished counter of dark wood.",
-                "keywords": ["counter"],
-                "verbs": ["look", "examine"]
+                "keywords": [
+                    "counter"
+                ],
+                "verbs": [
+                    "look",
+                    "examine"
+                ]
             }
         ],
-        "exits": { "out": "ts_west" }
+        "exits": {
+            "out": "ts_west"
+        }
     },
-    
     {
         "room_id": "armory_shop",
         "name": "The Town Armory",
+        "x": -2,
+        "y": 1,
+        "z": 0,
         "description": {
             "default": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow."
         },
@@ -510,34 +816,77 @@
             {
                 "name": "an armorer",
                 "description": "A large, muscular man with soot on his face. He nods at you.",
-                "keywords": ["armorer", "man", "shopkeep", "blacksmith", "an armorer"],
-                "verbs": ["look", "talk to", "list", "buy", "sell", "appraise"],
+                "keywords": [
+                    "armorer",
+                    "man",
+                    "shopkeep",
+                    "blacksmith",
+                    "an armorer"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "list",
+                    "buy",
+                    "sell",
+                    "appraise"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["blacksmith_quest_1"],
+                "quest_giver_ids": [
+                    "blacksmith_quest_1"
+                ],
                 "all_quests_done_message": "The Blacksmith is busy at his forge.",
                 "shop_data": {
                     "type": "armory",
                     "inventory": [
-                        "knuckle_dusters", "starter_dagger", "starter_short_sword", "starter_bastard_sword",
-                        "starter_club", "starter_mace", "starter_greatclub", "starter_spear",
-                        "starter_bow", "starter_crossbow", "starter_throwing_knife", "starter_javelin",
-                        "starter_sling", "starter_staff", "starter_leather_armor", "starter_small_shield"
+                        "knuckle_dusters",
+                        "starter_dagger",
+                        "starter_short_sword",
+                        "starter_bastard_sword",
+                        "starter_club",
+                        "starter_mace",
+                        "starter_greatclub",
+                        "starter_spear",
+                        "starter_bow",
+                        "starter_crossbow",
+                        "starter_throwing_knife",
+                        "starter_javelin",
+                        "starter_sling",
+                        "starter_staff",
+                        "starter_leather_armor",
+                        "starter_small_shield"
                     ],
                     "will_buy": [
-                        "knuckle_dusters", "starter_dagger", "starter_short_sword", "starter_bastard_sword",
-                        "starter_club", "starter_mace", "starter_greatclub", "starter_spear",
-                        "starter_bow", "starter_crossbow", "starter_throwing_knife", "starter_javelin",
-                        "starter_sling", "starter_staff", "starter_leather_armor", "starter_small_shield"
+                        "knuckle_dusters",
+                        "starter_dagger",
+                        "starter_short_sword",
+                        "starter_bastard_sword",
+                        "starter_club",
+                        "starter_mace",
+                        "starter_greatclub",
+                        "starter_spear",
+                        "starter_bow",
+                        "starter_crossbow",
+                        "starter_throwing_knife",
+                        "starter_javelin",
+                        "starter_sling",
+                        "starter_staff",
+                        "starter_leather_armor",
+                        "starter_small_shield"
                     ]
                 }
             }
         ],
-        "exits": { "out": "ts_northwest" }
+        "exits": {
+            "out": "ts_northwest"
+        }
     },
-    
     {
         "room_id": "temple_of_light",
         "name": "Temple of Light",
+        "x": 2,
+        "y": 0,
+        "z": 0,
         "description": {
             "default": "A quiet, peaceful temple. Incense burns softly in the air, and sunlight streams through a high, stained-glass window, illuminating a stone altar in the center of the room. A robed priest tends to several hurt patrons on cots."
         },
@@ -545,31 +894,61 @@
             {
                 "name": "stone altar",
                 "description": "A simple, flat altar of white stone. It feels cold to the touch. This is where you awaken if you are slain.",
-                "keywords": ["altar", "stone altar"],
-                "verbs": ["look", "examine"]
+                "keywords": [
+                    "altar",
+                    "stone altar"
+                ],
+                "verbs": [
+                    "look",
+                    "examine"
+                ]
             },
             {
                 "name": "a robed priest",
                 "description": "A kindly priest moves between cots, offering water and bandages. He looks tired and his supplies seem low. You could try to 'GIVE' him items or 'TALK TO' him.",
-                "keywords": ["priest", "robed priest", "a robed priest"],
-                "verbs": ["look", "talk to", "give", "examine"],
+                "keywords": [
+                    "priest",
+                    "robed priest",
+                    "a robed priest"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give",
+                    "examine"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["heal_quest_1", "priest_quest_2", "apothecary_quest_1"],
+                "quest_giver_ids": [
+                    "heal_quest_1",
+                    "priest_quest_2",
+                    "apothecary_quest_1"
+                ],
                 "all_quests_done_message": "The priest smiles warmly. 'You have learned all I can teach. Go with light, traveler.'"
             },
             {
                 "name": "hurt patron",
                 "description": "A citizen lying on a cot, groaning softly.",
-                "keywords": ["patron", "hurt patron", "citizen"],
-                "verbs": ["look", "examine"]
+                "keywords": [
+                    "patron",
+                    "hurt patron",
+                    "citizen"
+                ],
+                "verbs": [
+                    "look",
+                    "examine"
+                ]
             }
         ],
-        "exits": { "out": "ts_east" }
+        "exits": {
+            "out": "ts_east"
+        }
     },
-    
     {
         "room_id": "elementalist_study",
         "name": "Elementalist's Study",
+        "x": 1,
+        "y": 1,
+        "z": 1,
         "description": {
             "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
         },
@@ -577,19 +956,36 @@
             {
                 "name": "an elementalist",
                 "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research. You could try to 'GIVE' them items or 'TALK TO' them.",
-                "keywords": ["elementalist", "trainer", "an elementalist"],
-                "verbs": ["look", "talk to", "give", "examine"],
+                "keywords": [
+                    "elementalist",
+                    "trainer",
+                    "an elementalist"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give",
+                    "examine"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["shock_quest_1", "elementalist_quest_2", "priest_quest_errand_1"],
+                "quest_giver_ids": [
+                    "shock_quest_1",
+                    "elementalist_quest_2",
+                    "priest_quest_errand_1"
+                ],
                 "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'"
             }
         ],
-        "exits": { "out": "ts_northeast" }
+        "exits": {
+            "out": "ts_northeast"
+        }
     },
-
     {
         "room_id": "north_gate",
         "name": "North Gate",
+        "x": 0,
+        "y": 2,
+        "z": 0,
         "is_outdoor": true,
         "description": {
             "default": "A sturdy stone gatehouse marks the northern exit of the city. A path leads south back to the town square, and the gate opens to a forest path to the north. A town guardsman stands watch here."
@@ -598,7 +994,11 @@
             {
                 "name": "a town guardsman",
                 "description": "A guardsman in leather armor, holding a spear. He watches the northern path warily.",
-                "verbs": ["look", "attack", "talk to"],
+                "verbs": [
+                    "look",
+                    "attack",
+                    "talk to"
+                ],
                 "is_monster": true,
                 "monster_id": "town_guardsman"
             }
@@ -611,6 +1011,9 @@
     {
         "room_id": "forest_clearing_1",
         "name": "Forest Clearing",
+        "x": 0,
+        "y": 3,
+        "z": 0,
         "is_outdoor": true,
         "description": {
             "default": "You are in a small clearing in the forest. The trees are dense and cast deep shadows. The path back to the city gate is to the south. A smaller path continues east."
@@ -619,7 +1022,10 @@
             {
                 "name": "an orc warrior",
                 "description": "A brutish, green-skinned humanoid. It carries a crude club and snarls at your approach.",
-                "verbs": ["look", "attack"],
+                "verbs": [
+                    "look",
+                    "attack"
+                ],
                 "is_monster": true,
                 "monster_id": "orc_warrior"
             }
@@ -632,8 +1038,10 @@
     {
         "room_id": "forest_clearing_2",
         "name": "Deep Forest Clearing",
+        "x": 1,
+        "y": 3,
+        "z": 0,
         "is_outdoor": true,
-
         "description": {
             "default": "You are deeper in the forest now. The clearing is overgrown, and you see signs of a crude camp. A path leads west."
         },
@@ -641,7 +1049,10 @@
             {
                 "name": "an orc warrior",
                 "description": "A brutish, green-skinned humanoid. It carries a crude club and snarls at your approach.",
-                "verbs": ["look", "attack"],
+                "verbs": [
+                    "look",
+                    "attack"
+                ],
                 "is_monster": true,
                 "monster_id": "orc_warrior"
             }
@@ -653,6 +1064,9 @@
     {
         "room_id": "town_hall",
         "name": "Town Hall",
+        "x": 1,
+        "y": 0,
+        "z": 1,
         "description": {
             "default": "This is the central hub of the city's administration. Desks are piled high with papers, and stressed-looking officials bustle about. A man at the central desk, the Town Clerk, looks up as you enter."
         },
@@ -660,18 +1074,35 @@
             {
                 "name": "a town clerk",
                 "description": "A man buried in a mountain of paperwork. He looks stressed but efficient.",
-                "keywords": ["clerk", "town clerk", "a town clerk"],
-                "verbs": ["look", "talk to", "give", "examine"],
+                "keywords": [
+                    "clerk",
+                    "town clerk",
+                    "a town clerk"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give",
+                    "examine"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["clerk_quest_1", "theatre_quest_1"],
+                "quest_giver_ids": [
+                    "clerk_quest_1",
+                    "theatre_quest_1"
+                ],
                 "all_quests_done_message": "The Town Clerk nods. 'Thank you again for your help.'"
             }
         ],
-        "exits": { "out": "ts_east" }
+        "exits": {
+            "out": "ts_east"
+        }
     },
     {
         "room_id": "apothecary_shop",
         "name": "The Apothecary",
+        "x": 2,
+        "y": -1,
+        "z": 0,
         "description": {
             "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
         },
@@ -679,18 +1110,35 @@
             {
                 "name": "an apothecary",
                 "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile.",
-                "keywords": ["apothecary", "woman", "shopkeep", "an apothecary"],
-                "verbs": ["look", "talk to", "give", "examine"],
+                "keywords": [
+                    "apothecary",
+                    "woman",
+                    "shopkeep",
+                    "an apothecary"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give",
+                    "examine"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["furrier_quest_1"],
+                "quest_giver_ids": [
+                    "furrier_quest_1"
+                ],
                 "all_quests_done_message": "The Apothecary is busy at her workbench."
             }
         ],
-        "exits": { "out": "ts_southeast" }
+        "exits": {
+            "out": "ts_southeast"
+        }
     },
     {
         "room_id": "barracks",
         "name": "Town Barracks",
+        "x": 2,
+        "y": 1,
+        "z": 0,
         "description": {
             "default": "The barracks is a functional, spartan room filled with weapon racks and training dummies. Recruits are being shouted at in a yard visible through a western window. The Guard Captain stands at a table, reviewing a map."
         },
@@ -698,18 +1146,34 @@
             {
                 "name": "a guard captain",
                 "description": "A tall, no-nonsense woman in polished chainmail. She looks up from her map with a stern expression.",
-                "keywords": ["captain", "guard captain", "a guard captain"],
-                "verbs": ["look", "talk to", "give", "examine"],
+                "keywords": [
+                    "captain",
+                    "guard captain",
+                    "a guard captain"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give",
+                    "examine"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["elementalist_quest_errand_1"],
+                "quest_giver_ids": [
+                    "elementalist_quest_errand_1"
+                ],
                 "all_quests_done_message": "The Guard Captain is busy shouting at recruits."
             }
         ],
-        "exits": { "out": "ts_northeast" }
+        "exits": {
+            "out": "ts_northeast"
+        }
     },
     {
         "room_id": "library_archives",
         "name": "Library & Archives",
+        "x": 0,
+        "y": 1,
+        "z": 1,
         "description": {
             "default": "The smell of old paper and leather fills this quiet, dusty room. Tall shelves stretch up into the shadows, filled with countless books and scrolls. A Librarian sits at a desk, meticulously cataloging new arrivals."
         },
@@ -717,18 +1181,33 @@
             {
                 "name": "a librarian",
                 "description": "A person of indeterminate age, peering at you over a pair of spectacles. They seem to value silence.",
-                "keywords": ["librarian", "a librarian"],
-                "verbs": ["look", "talk to", "give", "examine"],
+                "keywords": [
+                    "librarian",
+                    "a librarian"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give",
+                    "examine"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["captain_quest_1"],
+                "quest_giver_ids": [
+                    "captain_quest_1"
+                ],
                 "all_quests_done_message": "The Librarian is busy cataloging scrolls."
             }
         ],
-        "exits": { "out": "ts_north" }
+        "exits": {
+            "out": "ts_north"
+        }
     },
     {
         "room_id": "theatre",
         "name": "The Open-Air Theatre",
+        "x": -1,
+        "y": 0,
+        "z": 1,
         "is_outdoor": true,
         "description": {
             "default": "You are in a small, open-air theatre. A raised wooden stage stands at one end, surrounded by simple wooden benches. A flamboyantly dressed man, the Theatre Master, is directing a pair of unenthusiastic actors."
@@ -737,13 +1216,26 @@
             {
                 "name": "a theatre master",
                 "description": "A man in a velvet coat and a feathered cap, waving his arms about dramatically.",
-                "keywords": ["master", "theatre master", "a theatre master"],
-                "verbs": ["look", "talk to", "give", "examine"],
+                "keywords": [
+                    "master",
+                    "theatre master",
+                    "a theatre master"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give",
+                    "examine"
+                ],
                 "is_npc": true,
-                "quest_giver_ids": ["librarian_quest_1"],
+                "quest_giver_ids": [
+                    "librarian_quest_1"
+                ],
                 "all_quests_done_message": "The Theatre Master is busy rehearsing."
             }
         ],
-        "exits": { "out": "ts_west" }
+        "exits": {
+            "out": "ts_west"
+        }
     }
 ]
