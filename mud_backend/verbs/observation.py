@@ -10,6 +10,10 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus
 # --- END NEW ---
+# ---
+# --- NEW: Import environment module ---
+from mud_backend.core.game_loop import environment
+# --- END NEW ---
 
 
 class Examine(BaseVerb):
@@ -19,10 +23,14 @@ class Examine(BaseVerb):
     """
     
     def execute(self):
-        # --- NEW: Add LBD hook ---
-        # We grant a chance to learn even on a simple EXAMINE
-        attempt_skill_learning(self.player, "investigation")
-        # --- END NEW ---
+        # ---
+        # --- THIS IS THE FIX (Point 4) ---
+        # We are removing the LBD call from EXAMINE.
+        #
+        # attempt_skill_learning(self.player, "investigation")
+        # ---
+        # --- END FIX ---
+        # ---
 
         if not self.args:
             self.player.send_message("Examine what?")
@@ -94,6 +102,35 @@ def _find_item_on_player(player, target_name):
     return None, None
 
 # ---
+# --- NEW: Helper for window weather
+# ---
+def _get_weather_message_for_window() -> str:
+    """Gets a simple description of the current weather for an indoor window."""
+    weather = environment.current_weather
+    
+    if weather == "clear":
+        return "Through the glass, you see the sky is clear."
+    if weather == "light clouds":
+        return "Through the glass, you see a few wispy clouds drifting by."
+    if weather == "overcast":
+        return "Through the glass, you see a grey, overcast sky."
+    if weather == "fog":
+        return "Through the glass, you see a thick fog obscuring the view."
+    if weather == "light rain":
+        return "Through the glass, you see a light rain pattering against the pane."
+    if weather == "rain":
+        return "Through the glass, you see a steady rain falling."
+    if weather == "heavy rain":
+        return "Through the glass, you see a heavy downpour lashing against the window."
+    if weather == "storm":
+        return "Through the glass, you see a fierce storm raging. A flash of lightning brightens the sky!"
+        
+    return "You glance out the window." # Fallback
+# ---
+# --- END NEW HELPER
+# ---
+
+# ---
 # --- MODIFIED: Look verb
 # ---
 class Look(BaseVerb):
@@ -162,9 +199,26 @@ class Look(BaseVerb):
             # --- END FIX ---
                 self.player.send_message(f"You examine the **{obj['name']}**.")
                 self.player.send_message(obj.get('description', 'It is a nondescript object.'))
+                
+                # ---
+                # --- THIS IS THE FIX (Point 1 & 5) ---
+                #
+                # 1. Special check for "window" in "inn_room"
+                if (self.player.current_room_id == "inn_room" and 
+                    "window" in obj.get("keywords", [])):
+                    
+                    # Add the dynamic weather message
+                    self.player.send_message(_get_weather_message_for_window())
+                
+                # 2. Check for verbs *after* the special window logic
+                #    This way, if we remove the verbs from rooms.json, this
+                #    code simply won't run for the window.
                 if 'verbs' in obj:
                     verb_list = ", ".join([f'<span class="keyword">{v}</span>' for v in obj['verbs']])
                     self.player.send_message(f"You could try: {verb_list}")
+                # ---
+                # --- END FIX
+                # ---
                 
                 # --- NEW: Tutorial Hook ---
                 if (self.player.current_room_id == "inn_room" and
@@ -229,8 +283,18 @@ class Investigate(BaseVerb):
 
         # 4. If args (e.g., INVESTIGATE TABLE), just run Examine
         if self.args:
+            # ---
+            # --- THIS IS THE FIX (Point 4) ---
+            #
+            # Send our own flavor message *before* calling Examine
+            self.player.send_message(f"You investigate the {' '.join(self.args)} closely...")
+            #
+            # Now call Examine to show the description
             examine_verb = Examine(self.world, self.player, self.room, self.args)
             examine_verb.execute()
+            # ---
+            # --- END FIX ---
+            # ---
             return
 
         # 5. If no args, search the room for hidden objects

@@ -37,8 +37,16 @@ def is_room_exposed(room_data):
     is_outdoor = room_data.get("is_outdoor", False)
     is_underground = room_data.get("is_underground", False)
     
-    if room_data.get("room_id") in getattr(config, 'TOWN_ROOM_IDS', []):
-        return True
+    # ---
+    # --- THIS IS THE FIX ---
+    # We no longer check TOWN_ROOM_IDS. A room must be explicitly
+    # flagged as "is_outdoor" to get weather broadcasts.
+    # ---
+    # if room_data.get("room_id") in getattr(config, 'TOWN_ROOM_IDS', []):
+    #     return True
+    # ---
+    # --- END FIX
+    # ---
         
     return is_outdoor and not is_underground
 

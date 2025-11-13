@@ -12,6 +12,10 @@ from mud_backend.core.stat_roller import (
     assign_stats_spiritual,
     format_stats
 )
+# ---
+# --- NEW: Import Help verb ---
+from mud_backend.verbs.help import Help
+# --- END NEW ---
 
 # --- Helper function for "a" vs "an" ---
 def get_article(word: str) -> str:
@@ -36,7 +40,7 @@ CHARGEN_STEP_KEYS = [
 DEFAULT_CHARGEN_QUESTIONS = {
     "race": {
         "key": "race",
-        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Wildborn</span>, <span class='keyword'>High Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Dark Elf</span>, <span class='keyword'>Dark Dwarf</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
+        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Ael'thas</span>, <span class='keyword'>Bar'ok</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Nel'thas</span>, <span class='keyword'>Dur'ok</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
     },
     "alignment": {
         "key": "alignment",
@@ -380,18 +384,26 @@ def _handle_appearance_input(player: Player, text_input: str):
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
         )
+        # ---
+        # --- THIS IS THE FIX (Point 3) ---
+        #
         player.send_message(
             "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic and important verb. "
             "Type <span class='keyword' data-command='look'>LOOK</span> by itself to see your surroundings. "
             "It shows you what's in a room, who is there, and what the obvious exits are."
         )
         player.send_message(
-            "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things you see."
+            "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things you see, "
+            "try <span class='keyword' data-command='look at bed'>LOOK AT BED</span> or "
+            "<span class='keyword' data-command='look on table'>LOOK ON TABLE</span>."
         )
+        # ---
+        # --- END FIX
+        # ---
 
 
 # ---
-# (Main Input Router is unchanged)
+# --- MODIFIED: Main Input Router ---
 # ---
 
 def handle_chargen_input(player: Player, text_input: str):
@@ -400,7 +412,39 @@ def handle_chargen_input(player: Player, text_input: str):
     Routes to the correct handler based on chargen_step.
     """
     step = player.chargen_step
-    command = text_input.strip().lower()
+    command_parts = text_input.strip().split()
+    command = command_parts[0].lower() if command_parts else ""
+    args = command_parts[1:] if len(command_parts) > 1 else []
+
+    # ---
+    # --- THIS IS THE FIX (Point 2) ---
+    #
+    # Add a check for the 'help' command at any step
+    if command == "help":
+        # We need to find the room the player is in, even in chargen
+        # (It's 'inn_room', but we'll fetch it properly)
+        room_db_data = fetch_room_data(player.current_room_id)
+        # We pass a "dummy" room object to the verb
+        dummy_room = player.world.get_room(player.current_room_id)
+        if not dummy_room:
+             # Fallback if room not found (should not happen)
+             dummy_room = {"room_id": "inn_room", "name": "A Room", "description": "...", "objects": [], "exits": {}}
+        
+        # Create and execute the Help verb instance
+        help_verb = Help(player.world, player, dummy_room, args, command)
+        help_verb.execute()
+        
+        # Re-send the prompt for the *current* step so the user isn't stuck
+        if step == 1:
+            send_stat_roll_prompt(player)
+        elif step == 2:
+            send_assignment_prompt(player, "SELECTED")
+        elif step > 2:
+            get_chargen_prompt(player)
+        return
+    # ---
+    # --- END FIX
+    # ---
 
     if step == 1:
         _handle_stat_roll_input(player, command)

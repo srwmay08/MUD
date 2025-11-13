@@ -34,7 +34,7 @@ from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
 # ---
-# --- MODIFIED: VERB ALIASES (Added 'goto')
+# --- MODIFIED: VERB ALIASES (Added 'goto' and 'help')
 # ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -49,7 +49,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "sw": ("movement", "Move"), "southwest": ("movement", "Move"),
     "enter": ("movement", "Enter"), "climb": ("movement", "Climb"),
     "exit": ("movement", "Exit"), "out": ("movement", "Exit"),
-    "goto": ("movement", "GOTO"), # <-- NEW
+    "goto": ("movement", "GOTO"), 
     
     # Interaction & Items
     "get": ("item_actions", "Get"), "take": ("item_actions", "Take"),
@@ -96,6 +96,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "exchange": ("trading", "Exchange"),
     "list": ("shop", "List"), "buy": ("shop", "Buy"),
     "sell": ("shop", "Sell"), "appraise": ("shop", "Appraise"),
+    "help": ("help", "Help"), # <-- NEW
 
     # Training
     "check": ("training", "CheckIn"), "checkin": ("training", "CheckIn"),
@@ -240,7 +241,7 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         # --- END FIX ---
             #
             # REMOVED: show_room_to_player(player, room); 
-            do_initial_stat_roll(player); player.chargen_step = 1
+            # do_initial_stat_roll(player); player.chargen_step = 1
             # ---
             # --- END FIX
             # ---

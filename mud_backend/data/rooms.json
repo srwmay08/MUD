@@ -380,7 +380,7 @@
         "name": "Southwest Square", 
         "is_outdoor": true, 
         "description": {
-            "default": "You are in the southwest corner of the town square. The door to a small furrier's shop is here, a crude sign of a pelt hanging above it."
+            "default": "You are in the southwest corner of the town square. The door to a small furrier's shop is here, a crude sign of a stretched pelt hanging above it."
         },
         "exits": {"northeast": "town_square", "north": "ts_west", "east": "ts_south"},
         "objects": [
@@ -403,7 +403,12 @@
         },
         "objects": [
             {"name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"], "verbs": ["look", "examine"]},
-            {"name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"], "verbs": ["look", "examine"]},
+            {
+                "name": "window", 
+                "description": "Looking out the window, you can see the bustling town square.", 
+                "perception_dc": 0, 
+                "keywords": ["window"]
+            },
             {"name": "table", "description": "A small, plain wooden table.", "perception_dc": 0, "keywords": ["table"], "verbs": ["look", "examine"]}
         ],
         "hidden_objects": [
