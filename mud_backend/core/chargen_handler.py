@@ -385,17 +385,17 @@ def _handle_appearance_input(player: Player, text_input: str):
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
         )
         # ---
-        # --- THIS IS THE FIX (Point 3) ---
+        # --- THIS IS THE FIX (Point 3 from your prompt) ---
         #
+        # Updated the help text to be more accurate to the game's commands
         player.send_message(
-            "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic and important verb. "
-            "Type <span class='keyword' data-command='look'>LOOK</span> by itself to see your surroundings. "
-            "It shows you what's in a room, who is there, and what the obvious exits are."
+            "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
+            "Type <span class='keyword' data-command='look'>LOOK</span> to see your surroundings, objects, and exits."
         )
         player.send_message(
-            "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things you see, "
-            "try <span class='keyword' data-command='look at bed'>LOOK AT BED</span> or "
-            "<span class='keyword' data-command='look on table'>LOOK ON TABLE</span>."
+            "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things. "
+            "For more detail, try <span class='keyword' data-command='examine table'>EXAMINE TABLE</span> or "
+            "<span class='keyword' data-command='investigate'>INVESTIGATE</span> the room."
         )
         # ---
         # --- END FIX
