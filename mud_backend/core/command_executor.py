@@ -219,7 +219,18 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command == "look":
-            show_room_to_player(player, room); do_initial_stat_roll(player); player.chargen_step = 1 
+            # ---
+            # --- THIS IS THE FIX
+            # ---
+            # We remove the room description, as requested.
+            # The "Welcome" message was already sent when the Player object was created.
+            # We will just show the stat roll prompt.
+            #
+            # REMOVED: show_room_to_player(player, room); 
+            do_initial_stat_roll(player); player.chargen_step = 1
+            # ---
+            # --- END FIX
+            # ---
         else: handle_chargen_input(player, command_line)
     elif player.game_state == "training":
         verb_info = None
