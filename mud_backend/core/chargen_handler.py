@@ -36,7 +36,7 @@ CHARGEN_STEP_KEYS = [
 DEFAULT_CHARGEN_QUESTIONS = {
     "race": {
         "key": "race",
-        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Ael'thas</span>, <span class='keyword'>Bar'ok</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Nel'thas</span>, <span class='keyword'>Dur'ok</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
+        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Wildborn</span>, <span class='keyword'>High Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Dark Elf</span>, <span class='keyword'>Dark Dwarf</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
     },
     "alignment": {
         "key": "alignment",
