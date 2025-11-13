@@ -274,16 +274,15 @@ def handle_command_event(data):
                 chars = db.fetch_characters_for_account(username)
                 if not chars:
                     session['state'] = 'char_create_name'
+                    # --- THIS IS THE FIX ---
+                    # Send the message from the server only in this specific case
+                    emit("message", "No characters found on this account.", to=sid)
+                    # --- END FIX ---
                     emit("prompt_create_character", to=sid)
                 else:
                     session['characters'] = [c['name'] for c in chars]
                     session['state'] = 'char_select'
                     emit("show_char_list", {"chars": session['characters']}, to=sid)
-            else:
-                print(f"[AUTH] Failed login: {username}")
-                session['state'] = 'auth_user'
-                emit("login_failed", "Invalid username or password.\n", to=sid)
-                emit("prompt_username", to=sid)
         
         elif state == 'char_create_name':
             new_char_name = command.capitalize()

@@ -428,7 +428,6 @@ socket.on('show_char_list', (data) => {
 });
 
 socket.on('prompt_create_character', () => {
-    addMessage("No characters found on this account.");
     addMessage("Please enter a name for your new character:");
     currentClientState = "char_create_name";
     input.type = 'text';

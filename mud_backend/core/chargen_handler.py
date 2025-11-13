@@ -40,7 +40,7 @@ CHARGEN_STEP_KEYS = [
 DEFAULT_CHARGEN_QUESTIONS = {
     "race": {
         "key": "race",
-        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Ael'thas</span>, <span class='keyword'>Bar'ok</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Nel'thas</span>, <span class='keyword'>Dur'ok</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
+        "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Wildborn</span>, <span class='keyword'>High Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Dark Elf</span>, <span class='keyword'>Dark Dwarf</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
     },
     "alignment": {
         "key": "alignment",
@@ -412,6 +412,14 @@ def handle_chargen_input(player: Player, text_input: str):
     Routes to the correct handler based on chargen_step.
     """
     step = player.chargen_step
+    
+    # ---
+    # --- THIS IS THE FIX ---
+    # We get the full, lowercased command string for steps 1 & 2
+    full_command_lower = text_input.strip().lower()
+    # --- END FIX ---
+    
+    # We still need the split parts for the 'help' command check
     command_parts = text_input.strip().split()
     command = command_parts[0].lower() if command_parts else ""
     args = command_parts[1:] if len(command_parts) > 1 else []
@@ -447,9 +455,11 @@ def handle_chargen_input(player: Player, text_input: str):
     # ---
 
     if step == 1:
-        _handle_stat_roll_input(player, command)
+        # --- FIX: Pass the full command string ---
+        _handle_stat_roll_input(player, full_command_lower)
     elif step == 2:
-        _handle_assignment_input(player, command)
+        # --- FIX: Pass the full command string ---
+        _handle_assignment_input(player, full_command_lower)
     elif step > 2 and step < 99: # All appearance questions
         _handle_appearance_input(player, text_input) # Use the raw text, not lowercase
     else:

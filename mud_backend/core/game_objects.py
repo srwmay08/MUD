@@ -40,7 +40,7 @@ RACE_DATA = {
         }
     },
 
-        "Wildborn": {
+    "Wildborn": {
         "faction": "Neutral",
         "base_hp_max": 160, "hp_gain_per_pf_rank": 7, "base_hp_regen": 3, "spirit_regen_tier": "Moderate",
         "stat_modifiers": RACE_MODIFIERS["Wildborn"],
