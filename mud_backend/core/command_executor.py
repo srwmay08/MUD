@@ -18,9 +18,9 @@ from mud_backend.core.db import fetch_player_data, fetch_room_data, save_game_st
 from mud_backend.core.chargen_handler import (
     handle_chargen_input, 
     get_chargen_prompt, 
-    do_initial_stat_roll
-    send_stat_roll_prompt,      # <-- ADD THIS
-    send_assignment_prompt     # <-- ADD THIS
+    do_initial_stat_roll,
+    send_stat_roll_prompt,
+    send_assignment_prompt 
 )
 from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core.skill_handler import show_skill_list 

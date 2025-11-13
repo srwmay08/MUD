@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 # This replaces the old RACE_MODIFIERS in utils.py
 RACE_MODIFIERS = {
     "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
+    "Wildborn": {"STR": 5, "CON": 5, "DEX": 5, "AGI": 0, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 0, "ESS": 5, "DIS": 0, "AUR": 0},
     "High Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -10, "AUR": 5},
     "Dwarf": {"STR": 10, "CON": 15, "DEX": 0, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 5, "ESS": 0, "DIS": 15, "AUR": 0},
     "Gnome": {"STR": -5, "CON": 5, "DEX": 5, "AGI": 5, "LOG": 10, "INT": 10, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 5, "AUR": -5},
@@ -29,8 +30,20 @@ RACE_DATA = {
     # === NEUTRALS ===
     "Human": {
         "faction": "Neutral",
-        "base_hp_max": 140, "hp_gain_per_pf_rank": 6, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
+        "base_hp_max": 140, "hp_gain_per_pf_rank": 5, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
         "stat_modifiers": RACE_MODIFIERS["Human"],
+        "appearance_options": {
+            "build": ["slender", "lithe", "lean", "lanky", "average", "athletic", "muscular", "broad", "burly", "stocky", "portly", "heavy-set"],
+            "complexion": ["alabaster", "ivory", "porcelain", "pale", "fair", "olive", "tan", "sun-kissed", "ruddy", "bronze", "brown", "dark brown", "black"],
+            "eye_color": ["blue", "steel blue", "sea green", "green", "grey", "hazel", "amber", "light brown", "brown", "dark brown", "violet", "black"],
+            "hair_color": ["black", "dark brown", "chestnut", "auburn", "light brown", "golden blonde", "ash blonde", "platinum blonde", "fiery red", "strawberry blonde", "grey", "white"]
+        }
+    },
+
+        "Wildborn": {
+        "faction": "Neutral",
+        "base_hp_max": 160, "hp_gain_per_pf_rank": 7, "base_hp_regen": 3, "spirit_regen_tier": "Moderate",
+        "stat_modifiers": RACE_MODIFIERS["Wildborn"],
         "appearance_options": {
             "build": ["slender", "lithe", "lean", "lanky", "average", "athletic", "muscular", "broad", "burly", "stocky", "portly", "heavy-set"],
             "complexion": ["alabaster", "ivory", "porcelain", "pale", "fair", "olive", "tan", "sun-kissed", "ruddy", "bronze", "brown", "dark brown", "black"],
@@ -42,8 +55,8 @@ RACE_DATA = {
     # === THE CONCORDAT FACTION ===
     "High Elf": {
         "faction": "Concordat",
-        "base_hp_max": 130, "hp_gain_per_pf_rank": 5, "base_hp_regen": 1, "spirit_regen_tier": "Very Low",
-        "stat_modifiers": RACE_MODIFIERS["Ael'thas"],
+        "base_hp_max": 130, "hp_gain_per_pf_rank": 5, "base_hp_regen": 2, "spirit_regen_tier": "Very Low",
+        "stat_modifiers": RACE_MODIFIERS["High Elf"],
         "appearance_options": {
             "build": ["slender", "lithe", "lean", "thin", "graceful", "willowy", "ethereal", "delicate", "statuesque", "lanky", "wiry", "average"],
             "complexion": ["alabaster", "ivory", "porcelain", "pale", "pearly", "fair", "sun-kissed", "faintly golden", "golden", "light bronze", "moonlit silver", "glowing"],
@@ -54,7 +67,7 @@ RACE_DATA = {
     "Dwarf": {
         "faction": "Concordat",
         "base_hp_max": 170, "hp_gain_per_pf_rank": 5, "base_hp_regen": 3, "spirit_regen_tier": "High",
-        "stat_modifiers": RACE_MODIFIERS["Bar'ok"],
+        "stat_modifiers": RACE_MODIFIERS["Dwarf"],
         "appearance_options": {
             "height": ["shorter than average", "stocky"],
             "build": ["stocky", "burly", "muscular", "broad-shouldered", "broad", "stout", "thick-set", "powerful", "barrel-chested", "compact", "rugged", "average"],
@@ -91,19 +104,19 @@ RACE_DATA = {
     # === THE DOMINION FACTION ===
     "Dark Elf": {
         "faction": "Dominion",
-        "base_hp_max": 120, "hp_gain_per_pf_rank": 6, "base_hp_regen": 1, "spirit_regen_tier": "Very Low",
-        "stat_modifiers": RACE_MODIFIERS["Nel'thas"],
+        "base_hp_max": 120, "hp_gain_per_pf_rank": 6, "base_hp_regen": 2, "spirit_regen_tier": "Very Low",
+        "stat_modifiers": RACE_MODIFIERS["Dark Elf"],
         "appearance_options": {
             "build": ["slender", "lithe", "lean", "wiry", "sinewy", "graceful", "athletic", "lanky", "thin", "spindly", "sharp", "gaunt"],
             "complexion": ["chalky white", "pale lavender", "ashen grey", "moon grey", "dusky grey", "storm grey", "violet", "deep purple", "indigo", "midnight blue", "ebony", "obsidian black"],
             "eye_color": ["fiery red", "blood red", "crimson", "glowing pink", "violet", "amethyst", "deep purple", "pale lilac", "pale silver", "glowing white", "solid black", "shadowy black"],
-            "hair_color": ["stark white", "moonlight silver", "pale grey", "silver", "ash grey", "steel grey", "jet black", "obsidian black", "shadowy black",Name", "midnight blue", "blood red"]
+            "hair_color": ["stark white", "moonlight silver", "pale grey", "silver", "ash grey", "steel grey", "jet black", "obsidian black", "shadowy black", "midnight blue", "blood red"]
         }
     },
     "Dark Dwarf": {
         "faction": "Dominion",
         "base_hp_max": 165, "hp_gain_per_pf_rank": 5, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
-        "stat_modifiers": RACE_MODIFIERS["Dur'ok"],
+        "stat_modifiers": RACE_MODIFIERS["Dark Dwarf"],
         "appearance_options": {
             "height": ["shorter than average", "stocky"],
             "build": ["stocky", "burly", "muscular", "broad", "dense", "stout", "thick-set", "rugged", "sinewy", "compact", "gaunt", "hollow"],
@@ -119,7 +132,7 @@ RACE_DATA = {
         "appearance_options": {
             "height": ["taller than average", "towering", "massive"],
             "build": ["burly", "massive", "towering", "hulking", "muscle-bound", "broad-shouldered", "pot-bellied", "knotted", "gaunt", "lanky", "spindly", "wiry"],
-            "complexion": ["pale grey", "rocky grey", "sickly grey-green", "blotchy blue-grey", "damp blue", "dull green", "mossy green", "warty green", "swampy green", "forest green", "dark olive",t", "dark brown"],
+            "complexion": ["pale grey", "rocky grey", "sickly grey-green", "blotchy blue-grey", "damp blue", "dull green", "mossy green", "warty green", "swampy green", "forest green", "dark olive", "dark brown"],
             "eye_color": ["dull yellow", "pale yellow", "milky white", "bloodshot red", "dull orange", "orange", "fiery orange", "glowing green", "solid black", "beady black", "murky brown", "muddy brown"],
             "hair_color": ["none", "coarse black", "greasy black", "patchy black", "mangy brown", "dull brown", "clumpy brown", "patchy grey", "stringy grey", "mossy green", "swampy green", "tufts of moss"]
         }
