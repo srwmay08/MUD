@@ -651,7 +651,11 @@ class Player:
         
         # --- REFACTORED: Use world methods ---
         combat_data = self.world.get_combat_state(player_id)
-        if combat_data:
+        
+        # --- THIS IS THE FIX ---
+        # Only proceed if combat_data exists AND is of type "combat"
+        if combat_data and combat_data.get("state_type") == "combat":
+        # --- END FIX ---
             target_id = combat_data.get("target_id")
             # ---
             # --- THIS IS THE FIX ---
