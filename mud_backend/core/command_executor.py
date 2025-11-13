@@ -19,6 +19,8 @@ from mud_backend.core.chargen_handler import (
     handle_chargen_input, 
     get_chargen_prompt, 
     do_initial_stat_roll
+    send_stat_roll_prompt,      # <-- ADD THIS
+    send_assignment_prompt     # <-- ADD THIS
 )
 from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core.skill_handler import show_skill_list 
@@ -219,12 +221,23 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command == "look":
-            # ---
-            # --- THIS IS THE FIX
-            # ---
-            # We remove the room description, as requested.
-            # The "Welcome" message was already sent when the Player object was created.
-            # We will just show the stat roll prompt.
+            # This is a brand new character logging in for the first time.
+            show_room_to_player(player, room); do_initial_stat_roll(player); player.chargen_step = 1
+        
+        # --- THIS IS THE FIX ---
+        elif player.chargen_step > 0 and command == "look":
+            # This is a player RECONNECTING during chargen.
+            # The "look" is the login command, not an answer.
+            # We re-send the correct prompt for their current step.
+            player.send_message(f"**Resuming character creation for {player.name}...**")
+            if player.chargen_step == 1:
+                send_stat_roll_prompt(player) # Re-prompt for stat rolling
+            elif player.chargen_step == 2:
+                send_assignment_prompt(player, "SELECTED") # Re-prompt for stat assignment
+            else:
+                # This covers all appearance questions (step 3+)
+                get_chargen_prompt(player) # Re-prompt for the correct appearance question
+        # --- END FIX ---
             #
             # REMOVED: show_room_to_player(player, room); 
             do_initial_stat_roll(player); player.chargen_step = 1

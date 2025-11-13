@@ -13,12 +13,12 @@ if TYPE_CHECKING:
 # This replaces the old RACE_MODIFIERS in utils.py
 RACE_MODIFIERS = {
     "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
-    "Ael'thas": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -10, "AUR": 5},
-    "Bar'ok": {"STR": 10, "CON": 15, "DEX": 0, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 5, "ESS": 0, "DIS": 15, "AUR": 0},
+    "High Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -10, "AUR": 5},
+    "Dwarf": {"STR": 10, "CON": 15, "DEX": 0, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 5, "ESS": 0, "DIS": 15, "AUR": 0},
     "Gnome": {"STR": -5, "CON": 5, "DEX": 5, "AGI": 5, "LOG": 10, "INT": 10, "WIS": 0, "INF": 0, "ZEA": 0, "ESS": 0, "DIS": 5, "AUR": -5},
     "Halfling": {"STR": -10, "CON": 10, "DEX": 10, "AGI": 15, "LOG": 0, "INT": 0, "WIS": 0, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": -5, "AUR": 0},
-    "Nel'thas": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 5, "LOG": 0, "INT": 5, "WIS": 5, "INF": -5, "ZEA": -5, "ESS": 0, "DIS": -10, "AUR": 10},
-    "Dur'ok": {"STR": 5, "CON": 10, "DEX": 5, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 5, "INF": -5, "ZEA": 0, "ESS": 0, "DIS": 10, "AUR": 0},
+    "Dark Elf": {"STR": 0, "CON": -5, "DEX": 10, "AGI": 5, "LOG": 0, "INT": 5, "WIS": 5, "INF": -5, "ZEA": -5, "ESS": 0, "DIS": -10, "AUR": 10},
+    "Dark Dwarf": {"STR": 5, "CON": 10, "DEX": 5, "AGI": -5, "LOG": 5, "INT": 0, "WIS": 5, "INF": -5, "ZEA": 0, "ESS": 0, "DIS": 10, "AUR": 0},
     "Troll": {"STR": 20, "CON": 20, "DEX": -10, "AGI": -10, "LOG": -10, "INT": -10, "WIS": 0, "INF": -5, "ZEA": 5, "ESS": 0, "DIS": 5, "AUR": -5},
     "Goblin": {"STR": -5, "CON": 5, "DEX": 10, "AGI": 10, "LOG": 0, "INT": 5, "WIS": -5, "INF": 5, "ZEA": 0, "ESS": 0, "DIS": 0, "AUR": -10}
 }
@@ -26,41 +26,41 @@ DEFAULT_RACE_MODS = { stat: 0 for stat in RACE_MODIFIERS["Human"] }
 
 
 RACE_DATA = {
+    # === NEUTRALS ===
     "Human": {
         "faction": "Neutral",
-        "base_hp_max": 150, "hp_gain_per_pf_rank": 6, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
+        "base_hp_max": 140, "hp_gain_per_pf_rank": 6, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
         "stat_modifiers": RACE_MODIFIERS["Human"],
         "appearance_options": {
-            "build": ["slender", "average", "athletic", "muscular", "burly", "stocky", "heavy-set"],
-            "complexion": ["alabaster", "porcelain", "fair", "pale", "olive", "tan", "ruddy", "brown", "dark brown", "black"],
-            "eye_color": ["blue", "green", "grey", "hazel", "amber", "brown", "dark brown"],
+            "build": ["slender", "lithe", "lean", "lanky", "average", "athletic", "muscular", "broad", "burly", "stocky", "portly", "heavy-set"],
+            "complexion": ["alabaster", "ivory", "porcelain", "pale", "fair", "olive", "tan", "sun-kissed", "ruddy", "bronze", "brown", "dark brown", "black"],
+            "eye_color": ["blue", "steel blue", "sea green", "green", "grey", "hazel", "amber", "light brown", "brown", "dark brown", "violet", "black"],
             "hair_color": ["black", "dark brown", "chestnut", "auburn", "light brown", "golden blonde", "ash blonde", "platinum blonde", "fiery red", "strawberry blonde", "grey", "white"]
         }
     },
 
     # === THE CONCORDAT FACTION ===
-    "Ael'thas": {
+    "High Elf": {
         "faction": "Concordat",
         "base_hp_max": 130, "hp_gain_per_pf_rank": 5, "base_hp_regen": 1, "spirit_regen_tier": "Very Low",
         "stat_modifiers": RACE_MODIFIERS["Ael'thas"],
         "appearance_options": {
-            "build": ["slender", "lithe", "graceful", "willowy", "average"],
-            "complexion": ["alabaster", "porcelain", "fair", "golden", "sun-kissed", "pale"],
-            "eye_color": ["sapphire blue", "emerald green", "violet", "amethyst", "silver", "golden"],
-            "hair_color": ["golden", "silver", "stark white", "jet black", "chestnut brown", "burnished bronze"]
+            "build": ["slender", "lithe", "lean", "thin", "graceful", "willowy", "ethereal", "delicate", "statuesque", "lanky", "wiry", "average"],
+            "complexion": ["alabaster", "ivory", "porcelain", "pale", "pearly", "fair", "sun-kissed", "faintly golden", "golden", "light bronze", "moonlit silver", "glowing"],
+            "eye_color": ["sapphire blue", "bright blue", "emerald green", "deep green", "violet", "amethyst", "lilac", "silver", "moon grey", "golden", "pearly white", "starry black"],
+            "hair_color": ["golden", "silver", "stark white", "moonlight white", "platinum blonde", "ash grey", "jet black", "deep blue", "chestnut brown", "dark brown", "auburn", "burnished bronze"]
         }
     },
-    "Bar'ok": {
+    "Dwarf": {
         "faction": "Concordat",
-        "base_hp_max": 140, "hp_gain_per_pf_rank": 5, "base_hp_regen": 3, "spirit_regen_tier": "High",
+        "base_hp_max": 170, "hp_gain_per_pf_rank": 5, "base_hp_regen": 3, "spirit_regen_tier": "High",
         "stat_modifiers": RACE_MODIFIERS["Bar'ok"],
         "appearance_options": {
             "height": ["shorter than average", "stocky"],
-            "build": ["stocky", "burly", "muscular", "broad-shouldered", "average"],
-            "complexion": ["ruddy", "earthy tan", "pale", "stony grey", "deep brown"],
-            "eye_color": ["dark brown", "black", "steel grey", "hazel", "amber", "brown"],
-            "hair_color": ["black", "dark brown", "fiery red", "auburn", "grey", "white"]
-            # We could add a "beard_style" question here
+            "build": ["stocky", "burly", "muscular", "broad-shouldered", "broad", "stout", "thick-set", "powerful", "barrel-chested", "compact", "rugged", "average"],
+            "complexion": ["pale", "fair", "stony grey", "iron grey", "ruddy", "earthy tan", "weathered tan", "reddish-brown", "bronze", "deep brown", "mahogany", "coal-dark"],
+            "eye_color": ["dark brown", "earthy brown", "brown", "light brown", "black", "obsidian", "steel grey", "iron grey", "hazel", "warm hazel", "amber", "deep blue"],
+            "hair_color": ["black", "dark brown", "chestnut brown", "fiery red", "copper", "auburn", "brown", "grey", "ash grey", "steel grey", "silver", "white"]
         }
     },
     "Gnome": {
@@ -69,11 +69,10 @@ RACE_DATA = {
         "stat_modifiers": RACE_MODIFIERS["Gnome"],
         "appearance_options": {
             "height": ["very short", "short"],
-            "build": ["slender", "wiry", "plump", "average"],
-            "complexion": ["ruddy", "fair", "earthy tan", "pale", "brown"],
-            "eye_color": ["bright blue", "emerald green", "warm brown", "violet", "sparkling grey", "amber"],
-            "hair_color": ["brown", "blonde", "white", "grey", "red", "black", "pink", "green", "blue"],
-            "nose": ["button", "broad", "long"],
+            "build": ["slender", "slight", "small", "nimble", "lean", "wiry", "lanky", "average", "plump", "rounded", "stocky", "compact"],
+            "complexion": ["porcelain", "pale", "fair", "rosy", "ruddy", "warm beige", "sun-kissed", "earthy tan", "coppery", "light brown", "brown", "deep brown"],
+            "eye_color": ["bright blue", "deep blue", "emerald green", "leaf green", "warm brown", "hazel", "black", "violet", "amethyst", "sparkling grey", "steel grey", "amber"],
+            "hair_color": ["brown", "black", "blonde", "white", "grey", "silver", "red", "auburn", "pink", "green", "blue", "purple"]
         }
     },
     "Halfling": {
@@ -82,48 +81,47 @@ RACE_DATA = {
         "stat_modifiers": RACE_MODIFIERS["Halfling"],
         "appearance_options": {
             "height": ["short", "shorter than average"],
-            "build": ["slender", "average", "plump", "stocky", "wiry"],
-            "complexion": ["ruddy", "fair", "pale", "tan", "olive"],
-            "eye_color": ["brown", "hazel", "blue", "green", "grey"],
-            "hair_color": ["dark brown", "chestnut", "black", "sandy blonde", "red", "auburn", "grey"]
+            "build": ["slender", "slight", "lean", "nimble", "wiry", "average", "compact", "hearty", "plump", "rounded", "stocky", "stout"],
+            "complexion": ["pale", "ivory", "fair", "rosy", "ruddy", "olive", "sun-kissed", "tan", "bronze", "brown", "dark brown", "mahogany"],
+            "eye_color": ["brown", "warm brown", "light brown", "dark brown", "hazel", "amber", "blue", "bright blue", "green", "sea green", "grey", "steel grey"],
+            "hair_color": ["black", "dark brown", "brown", "chestnut", "light brown", "auburn", "red", "strawberry blonde", "sandy blonde", "golden blonde", "grey", "white"]
         }
     },
 
     # === THE DOMINION FACTION ===
-    "Nel'thas": {
+    "Dark Elf": {
         "faction": "Dominion",
         "base_hp_max": 120, "hp_gain_per_pf_rank": 6, "base_hp_regen": 1, "spirit_regen_tier": "Very Low",
         "stat_modifiers": RACE_MODIFIERS["Nel'thas"],
         "appearance_options": {
-            "build": ["slender", "lithe", "sinewy", "graceful", "gaunt"],
-            "complexion": ["obsidian black", "ashen grey", "deep purple", "dusky grey", "pale lavender"],
-            "eye_color": ["fiery red", "violet", "amethyst", "pale silver", "solid black", "glowing pink"],
-            "hair_color": ["stark white", "silver", "jet black"]
+            "build": ["slender", "lithe", "lean", "wiry", "sinewy", "graceful", "athletic", "lanky", "thin", "spindly", "sharp", "gaunt"],
+            "complexion": ["chalky white", "pale lavender", "ashen grey", "moon grey", "dusky grey", "storm grey", "violet", "deep purple", "indigo", "midnight blue", "ebony", "obsidian black"],
+            "eye_color": ["fiery red", "blood red", "crimson", "glowing pink", "violet", "amethyst", "deep purple", "pale lilac", "pale silver", "glowing white", "solid black", "shadowy black"],
+            "hair_color": ["stark white", "moonlight silver", "pale grey", "silver", "ash grey", "steel grey", "jet black", "obsidian black", "shadowy black",Name", "midnight blue", "blood red"]
         }
     },
-    "Dur'ok": {
+    "Dark Dwarf": {
         "faction": "Dominion",
-        "base_hp_max": 135, "hp_gain_per_pf_rank": 5, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
+        "base_hp_max": 165, "hp_gain_per_pf_rank": 5, "base_hp_regen": 2, "spirit_regen_tier": "Moderate",
         "stat_modifiers": RACE_MODIFIERS["Dur'ok"],
         "appearance_options": {
             "height": ["shorter than average", "stocky"],
-            "build": ["stocky", "burly", "muscular", "broad", "gaunt"],
-            "complexion": ["ashen grey", "stony grey", "dark grey", "deathly pale", "dull brown"],
-            "eye_color": ["pale grey", "dull white", "solid black", "dull red", "dark brown"],
-            "hair_color": ["black", "steel grey", "white", "bald"]
+            "build": ["stocky", "burly", "muscular", "broad", "dense", "stout", "thick-set", "rugged", "sinewy", "compact", "gaunt", "hollow"],
+            "complexion": ["deathly pale", "chalk white", "ashen grey", "stony grey", "lead grey", "iron grey", "slate grey", "dull brown", "murky brown", "charcoal", "dark grey", "obsidian"],
+            "eye_color": ["pale grey", "charcoal grey", "dull white", "milky white", "sightless white", "empty", "solid black", "obsidian", "dull red", "dark brown", "murky brown", "faded blue"],
+            "hair_color": ["black", "jet black", "charcoal", "dull brown", "patchy brown", "steel grey", "ash grey", "patchy grey", "salt-and-pepper", "silver", "white", "stark white"]
         }
     },
     "Troll": {
         "faction": "Dominion",
-        "base_hp_max": 180, "hp_gain_per_pf_rank": 7, "base_hp_regen": 5, "spirit_regen_tier": "Very Low",
+        "base_hp_max": 190, "hp_gain_per_pf_rank": 7, "base_hp_regen": 6, "spirit_regen_tier": "Very Low",
         "stat_modifiers": RACE_MODIFIERS["Troll"],
         "appearance_options": {
             "height": ["taller than average", "towering", "massive"],
-            "build": ["burly", "massive", "gaunt", "lanky", "broad-shouldered"],
-            "complexion": ["mossy green", "sickly grey-green", "dark brown", "warty green", "rocky grey", "damp blue"],
-            "eye_color": ["dull yellow", "bloodshot red", "solid black", "murky brown", "orange"],
-            "hair_color": ["coarse black", "patchy grey", "none", "mangy brown", "mossy green"],
-            "nose": ["broad", "snout-like", "broken"]
+            "build": ["burly", "massive", "towering", "hulking", "muscle-bound", "broad-shouldered", "pot-bellied", "knotted", "gaunt", "lanky", "spindly", "wiry"],
+            "complexion": ["pale grey", "rocky grey", "sickly grey-green", "blotchy blue-grey", "damp blue", "dull green", "mossy green", "warty green", "swampy green", "forest green", "dark olive",t", "dark brown"],
+            "eye_color": ["dull yellow", "pale yellow", "milky white", "bloodshot red", "dull orange", "orange", "fiery orange", "glowing green", "solid black", "beady black", "murky brown", "muddy brown"],
+            "hair_color": ["none", "coarse black", "greasy black", "patchy black", "mangy brown", "dull brown", "clumpy brown", "patchy grey", "stringy grey", "mossy green", "swampy green", "tufts of moss"]
         }
     },
     "Goblin": {
@@ -132,15 +130,13 @@ RACE_DATA = {
         "stat_modifiers": RACE_MODIFIERS["Goblin"],
         "appearance_options": {
             "height": ["very short", "short"],
-            "build": ["slender", "gaunt", "wiry", "scrawny", "hunched"],
-            "complexion": ["jaundiced yellow", "sickly green", "dull grey", "muddy brown", "pale green"],
-            "eye_color": ["beady yellow", "bloodshot red", "solid black", "glowing orange"],
-            "hair_color": ["greasy black", "mangy brown", "patchy grey", "none"],
-            "nose": ["long", "hooked", "snout-like"]
+            "build": ["slender", "gaunt", "wiry", "scrawny", "spindly", "lanky", "small", "nimble", "twitchy", "bow-legged", "pot-bellied", "hunched"],
+            "complexion": ["pale green", "sickly green", "yellowish-green", "jaundiced yellow", "dull yellow", "olive green", "grey-green", "blotchy green", "dark green", "dull grey", "muddy brown", "murky brown"],
+            "eye_color": ["beady yellow", "pale yellow", "sickly yellow", "bloodshot red", "glowing red", "solid black", "beady black", "glowing orange", "dull orange", "bright green", "murky brown"],
+            "hair_color": ["none", "greasy black", "coarse black", "dull black", "patchy black", "mangy brown", "muddy brown", "patchy grey", "stringy grey", "tufts of grey", "dull red", "scabby"]
         }
     }
 }
-
 
 class Player:
     # --- REFACTORED: Add 'world' to __init__ ---
