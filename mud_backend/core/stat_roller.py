@@ -37,56 +37,71 @@ def roll_stat_pool() -> List[int]:
         pool.append(random.randint(min_val, max_val))
     return pool
 
-def _assign_stats_by_priority(pool: List[int], priority_list: List[str]) -> Dict[str, int]:
-    """Helper function to assign stats based on a priority list."""
+def _assign_stats_by_priority(pool: List[int], priority_list: List[str], stats_to_fill: List[str]) -> Dict[str, int]:
+    """
+    Helper function to assign stats based on a priority list.
+    THIS IS THE MODIFIED FUNCTION.
+    It now only assigns stats that are in the 'stats_to_fill' list,
+    using the values from the provided 'pool' list.
+    """
     
     # Sort the rolled pool, highest to lowest
     sorted_pool = sorted(pool, reverse=True)
     
-    stats = {}
+    new_assignments = {}
     
-    # 1. Assign the 4 priority stats
-    for i, stat_name in enumerate(priority_list):
-        stats[stat_name] = sorted_pool[i]
-        
-    # 2. Get the remaining stats and remaining pool values
-    remaining_stats = [s for s in STAT_LIST if s not in stats]
-    remaining_pool = sorted_pool[4:] # Get all values from the 5th onwards
-    
-    # 3. Assign the remaining 8 stats
-    # We'll assign them alphabetically for predictability
-    remaining_stats.sort()
-    for i, stat_name in enumerate(remaining_stats):
-        stats[stat_name] = remaining_pool[i]
-        
-    return stats
+    # 1. Create a mutable copy of the stats to fill
+    remaining_stats_to_fill = list(stats_to_fill)
 
-def assign_stats_physical(pool: List[int]) -> Dict[str, int]:
+    # 2. Priority Pass: Assign stats that are in both the
+    #    priority list AND the list of stats we need to fill.
+    for stat_name in priority_list:
+        if stat_name in remaining_stats_to_fill:
+            if not sorted_pool: break # Stop if we run out of pool values
+            new_assignments[stat_name] = sorted_pool.pop(0)
+            remaining_stats_to_fill.remove(stat_name)
+            
+    # 3. Remaining Pass: Assign the rest of the pool to the
+    #    rest of the stats (alphabetically).
+    remaining_stats_to_fill.sort()
+    for stat_name in remaining_stats_to_fill:
+        if not sorted_pool: break # Stop if we run out of pool values
+        new_assignments[stat_name] = sorted_pool.pop(0)
+        
+    return new_assignments
+
+def assign_stats_physical(pool: List[int], stats_to_fill: List[str]) -> Dict[str, int]:
     """Assigns the pool with priority given to Physical stats."""
-    return _assign_stats_by_priority(pool, PHYSICAL_PRIORITY)
+    return _assign_stats_by_priority(pool, PHYSICAL_PRIORITY, stats_to_fill)
 
-def assign_stats_intellectual(pool: List[int]) -> Dict[str, int]:
+def assign_stats_intellectual(pool: List[int], stats_to_fill: List[str]) -> Dict[str, int]:
     """Assigns the pool with priority given to Intellectual stats."""
-    return _assign_stats_by_priority(pool, INTELLECTUAL_PRIORITY)
+    return _assign_stats_by_priority(pool, INTELLECTUAL_PRIORITY, stats_to_fill)
 
-def assign_stats_spiritual(pool: List[int]) -> Dict[str, int]:
+def assign_stats_spiritual(pool: List[int], stats_to_fill: List[str]) -> Dict[str, int]:
     """Assigns the pool with priority given to Spiritual stats."""
-    return _assign_stats_by_priority(pool, SPIRITUAL_PRIORITY)
+    return _assign_stats_by_priority(pool, SPIRITUAL_PRIORITY, stats_to_fill)
 
 def format_stats(stats_dict: Dict[str, int]) -> str:
     """Creates a formatted string to display all 12 stats."""
     if not stats_dict:
         return "Stats have not been assigned yet."
     
+    # --- MODIFIED: Show '---' if not assigned ---
+    def get_stat(s):
+        val = stats_dict.get(s)
+        return f"{val:<3}" if val is not None else "---"
+
     lines = [
         "**Your Assigned Stats:**",
         "--- Physical ---",
-        f"STR: {stats_dict.get('STR', 0):<3} CON: {stats_dict.get('CON', 0):<3} DEX: {stats_dict.get('DEX', 0):<3} AGI: {stats_dict.get('AGI', 0):<3}",
+        f"STR: {get_stat('STR')} CON: {get_stat('CON')} DEX: {get_stat('DEX')} AGI: {get_stat('AGI')}",
         "--- Mental ---",
-        f"LOG: {stats_dict.get('LOG', 0):<3} INT: {stats_dict.get('INT', 0):<3} WIS: {stats_dict.get('WIS', 0):<3} INF: {stats_dict.get('INF', 0):<3}",
+        f"LOG: {get_stat('LOG')} INT: {get_stat('INT')} WIS: {get_stat('WIS')} INF: {get_stat('INF')}",
         "--- Spiritual ---",
-        f"ZEA: {stats_dict.get('ZEA', 0):<3} ESS: {stats_dict.get('ESS', 0):<3}",
+        f"ZEA: {get_stat('ZEA')} ESS: {get_stat('ESS')}",
         "--- Hybrid ---",
-        f"DIS: {stats_dict.get('DIS', 0):<3} AUR: {stats_dict.get('AUR', 0):<3}"
+        f"DIS: {get_stat('DIS')} AUR: {get_stat('AUR')}"
     ]
+    # --- END MODIFIED ---
     return "\n".join(lines)

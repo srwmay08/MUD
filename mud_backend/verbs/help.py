@@ -59,7 +59,7 @@ GET (or TAKE) is used to pick up items from the ground or from containers and pl
 """,
 
     "stow": """
-<span class='room-title'>--- Help: STOW / PUT ---</span>
+<span class'room-title'>--- Help: STOW / PUT ---</span>
 STOW (or PUT) is used to move items from your hands into a container.
 
 **Usage:**
@@ -68,12 +68,38 @@ STOW (or PUT) is used to move items from your hands into a container.
 """,
 
     "inventory": """
-<span class='room-title'>--- Help: INVENTORY (INV) ---</span>
+<span class'room-title'>--- Help: INVENTORY (INV) ---</span>
 Displays what you are currently holding, wearing, and carrying in your containers.
 
 **Usage:**
 * **INVENTORY** or **INV**: Shows a list of your items.
 * **INVENTORY FULL**: (Not yet implemented) Shows a detailed list.
+""",
+
+    # --- THIS IS THE NEW ENTRY ---
+    "stats": """
+<span class='room-title'>--- Help: Character Attributes ---</span>
+Your character is defined by 12 core attributes, grouped into four categories.
+
+<span class='room-title'>--- Physical Attributes (4) ---</span>
+* **Strength (STR):** Measures physical prowess, affecting melee Attack Strength and encumbrance.
+* **Constitution (CON):** Measures physical durability, affecting maximum Health Points, disease resistance, and critical hits.
+* **Dexterity (DEX):** Measures hand-eye coordination and fine motor skills, aiding precision tasks like picking locks, skinning, and ranged/targeted attacks.
+* **Agility (AGI):** Measures grace in motion and nimbleness, affecting balance, maneuverability, and Defensive Strength (DS).
+
+<span class='room-title'>--- Mental Attributes (4) ---</span>
+* **Logic (LOG):** Measures capacity for critical and rational thought, affecting learn by doing experience, experience absorption, and activating magical items/scrolls.
+* **Intuition (INT):** Measures innate "sixth sense," perception, and luck; the ability to "know" without conscious deduction. Tied to the use of Elemental/Sorcerous magic.
+* **Wisdom (WIS):** Measures common sense, pragmatism, and a conscious connection with spirituality. Tied to the use of Spiritual magic.
+* **Influence (INF):** Measures the ability to affect others through leadership, persuasion, intimidation, or charm. Tied to mind-affecting abilities.
+
+<span class='room-title'>--- Spiritual Attributes (2) ---</span>
+* **Zeal (ZEA):** Measures the power of a character's active conviction and divine connection. While Wisdom understands the spiritual, Zeal channels it. This stat could govern the power of divine abilities (like turning undead), the potency of healing magic, and resistance to corrupting or unholy influences.
+* **Essence (ESS):** Measures the substance and health of the character's soul. While the Constitution is physical health, Essence is spiritual health. It could determine a character's resistance to life-draining effects, possession, and "soul-damage," and might also serve as a secondary energy pool for certain non-magical abilities.
+
+<span class='room-title'>--- Hybrid Attributes (2) ---</span>
+* **Discipline (DIS):** Measures force of will, determination, and focus. A classic hybrid stat bridging Mental and Spiritual, it affects experience-gain limits and resistance to mental/emotional attacks.
+* **Aura (AUR):** Measures the innate connection to spiritual, mental, and elemental magic. A hybrid stat bridging Mental and Spiritual, it determines the total pool of Spirit Points (SP).
 """
 }
 # --- END HELP TEXT ---
@@ -86,7 +112,7 @@ class Help(BaseVerb):
     
     def execute(self):
         if not self.args:
-            self.player.send_message("What do you need help with? (e.g., HELP LOOK, HELP GET)")
+            self.player.send_message("What do you need help with? (e.g., HELP LOOK, HELP GET, HELP STATS)")
             # TODO: List all available help topics
             return
 
@@ -101,6 +127,14 @@ class Help(BaseVerb):
             target_topic = "stow"
         if target_topic == "inv":
             target_topic = "inventory"
+            
+        # --- NEW: Aliases for all 12 stats ---
+        if target_topic in [
+            "str", "con", "dex", "agi", "log", "int", "wis", "inf",
+            "zea", "ess", "dis", "aur", "attributes", "statistics"
+        ]:
+            target_topic = "stats"
+        # --- END NEW ---
 
         help_content = HELP_TEXT.get(target_topic)
         

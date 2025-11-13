@@ -180,23 +180,26 @@ def _handle_stat_roll_input(player: Player, command: str):
         
     elif command == "use this roll":
         player.send_message("> USE THIS ROLL")
-        # --- MODIFICATION ---
+        # --- THIS IS THE FIX ---
+        # Make a copy for the mutable list (stats_to_assign)
         pool_copy = list(player.current_stat_pool)
-        player.stats_to_assign = pool_copy  # This is the list that will be mutated
-        player.db_data['_chargen_selected_pool'] = pool_copy # This is the persistent backup
-        player.stats = {} 
-        # --- END MODIFICATION ---
+        player.stats_to_assign = pool_copy
+        # Make a persistent copy for the backup
+        player.db_data['_chargen_selected_pool'] = list(player.current_stat_pool)
+        player.stats = {} # Ensure stats dict is empty
+        # --- END FIX ---
         player.chargen_step = 2
         send_assignment_prompt(player)
 
     elif command == "use best roll":
         player.send_message("> USE BEST ROLL")
-        # --- MODIFICATION ---
+        # --- THIS IS THE FIX ---
         pool_copy = list(player.best_stat_pool)
-        player.stats_to_assign = pool_copy # Mutatable list
-        player.db_data['_chargen_selected_pool'] = pool_copy # Persistent backup
+        player.stats_to_assign = pool_copy # This list will be mutated
+        # Store a pristine copy in db_data for presets/reset
+        player.db_data['_chargen_selected_pool'] = list(player.best_stat_pool)
         player.stats = {}
-        # --- END MODIFICATION ---
+        # --- END FIX ---
         player.chargen_step = 2
         send_assignment_prompt(player)
         
@@ -236,6 +239,7 @@ def send_assignment_prompt(player: Player):
     
     # --- NEW: Show current assignments ---
     if player.stats:
+        # Show stats that *have* been assigned
         player.send_message(format_stats(player.stats))
         player.send_message("---")
     # --- END NEW ---
@@ -247,7 +251,7 @@ def send_assignment_prompt(player: Player):
     player.send_message("\n--- Manual Assignment ---")
     player.send_message("Usage: <stat> <value> (e.g., <span class='keyword'>STR 90</span> or <span class='keyword'>90 LOG</span>)")
     
-    player.send_message("\n--- Preset Assignment ---")
+    player.send_message("\n--- Preset Assignment (Fills remaining stats) ---")
     player.send_message("- <span class='keyword'>ASSIGN PHYSICAL</span> (Prioritizes STR, DEX, CON, AGI)")
     player.send_message("- <span class='keyword'>ASSIGN INTELLECTUAL</span> (Prioritizes LOG, INT, WIS, INF)")
     player.send_message("- <span class='keyword'>ASSIGN SPIRITUAL</span> (Prioritizes ZEA, ESS, WIS, DIS)")
@@ -260,27 +264,38 @@ def _handle_assignment_input(player: Player, command: str):
     """Handles commands during the stat assignment step (step 2)."""
 
     full_command_lower = command.strip().lower()
+    
+    # --- THIS IS THE FIX: Get remaining stats/pool for presets ---
+    remaining_pool = list(player.stats_to_assign)
+    remaining_stats = [s for s in STAT_LIST if s not in player.stats]
+    # --- END FIX ---
 
     # --- NEW: Check for presets and reset ---
     if full_command_lower == "assign physical":
         player.send_message("> ASSIGN PHYSICAL")
-        # Use the original selected pool, not the (potentially) mutated one
-        selected_pool = player.db_data.get('_chargen_selected_pool', player.stats_to_assign)
-        player.stats = assign_stats_physical(selected_pool)
+        # --- THIS IS THE FIX ---
+        # Call the preset with the *remaining* pool and *remaining* stats
+        new_assignments = assign_stats_physical(remaining_pool, remaining_stats)
+        player.stats.update(new_assignments) # Add the new assignments
+        # --- END FIX ---
         _complete_stat_assignment(player)
         return
     
     elif full_command_lower == "assign intellectual":
         player.send_message("> ASSIGN INTELLECTUAL")
-        selected_pool = player.db_data.get('_chargen_selected_pool', player.stats_to_assign)
-        player.stats = assign_stats_intellectual(selected_pool)
+        # --- THIS IS THE FIX ---
+        new_assignments = assign_stats_intellectual(remaining_pool, remaining_stats)
+        player.stats.update(new_assignments)
+        # --- END FIX ---
         _complete_stat_assignment(player)
         return
         
     elif full_command_lower == "assign spiritual":
         player.send_message("> ASSIGN SPIRITUAL")
-        selected_pool = player.db_data.get('_chargen_selected_pool', player.stats_to_assign)
-        player.stats = assign_stats_spiritual(selected_pool)
+        # --- THIS IS THE FIX ---
+        new_assignments = assign_stats_spiritual(remaining_pool, remaining_stats)
+        player.stats.update(new_assignments)
+        # --- END FIX ---
         _complete_stat_assignment(player)
         return
     
@@ -290,18 +305,18 @@ def _handle_assignment_input(player: Player, command: str):
         player.stats = {} # Clear assignments
         # Restore the pool from the persistent backup
         selected_pool_copy = player.db_data.get('_chargen_selected_pool', [])
-        player.stats_to_assign = list(selected_pool_copy)
+        player.stats_to_assign = list(selected_pool_copy) # Reset the mutable list
         send_assignment_prompt(player)
         return
     # --- END NEW ---
 
-    # --- Manual assignment logic (from previous version) ---
+    # --- Manual assignment logic ---
     parts = command.upper().split()
     
     # 1. Validation: Correct format?
     if len(parts) != 2:
         player.send_message("Invalid syntax. Use <stat> <value> (e.g., STR 90) or a preset (e.g., ASSIGN PHYSICAL).")
-        send_assignment_prompt(player)
+        # Don't resend prompt, let them try again
         return
 
     # 2. Parse components (stat_name and stat_value)
@@ -320,33 +335,29 @@ def _handle_assignment_input(player: Player, command: str):
     except ValueError:
         # This catches if int() fails (e.g., "LOG STR")
         player.send_message("Invalid syntax. One argument must be a stat name and the other a number.")
-        send_assignment_prompt(player)
         return
 
     if not stat_name or stat_value is None:
         player.send_message(f"Invalid input. '{command}' is not recognized.")
-        send_assignment_prompt(player)
         return
 
     # 3. Validation: Stat already assigned?
     if stat_name in player.stats:
         player.send_message(f"You have already assigned {stat_name}. (Current value: {player.stats[stat_name]})")
         player.send_message("Type <span class='keyword'>RESET</span> to start over.")
-        # No need to resend prompt, message is sufficient
         return
         
     # 4. Validation: Value is in the pool?
     if stat_value not in player.stats_to_assign:
         player.send_message(f"The value {stat_value} is not in your available pool.")
-        send_assignment_prompt(player)
+        send_assignment_prompt(player) # Resend prompt to show available pool
         return
         
     # 5. Success! Assign the stat.
     player.stats[stat_name] = stat_value
-    player.stats_to_assign.remove(stat_value) # Remove the value from the pool
+    player.stats_to_assign.remove(stat_value) # Remove the value from the *mutable* pool
     
-    # Don't send a message here, just re-send the prompt
-    # player.send_message(f"**Assigned: {stat_name} = {stat_value}**")
+    # player.send_message(f"**Assigned: {stat_name} = {stat_value}**") # Optional: a bit spammy
 
     # 6. Check for Completion
     if len(player.stats_to_assign) == 0:
