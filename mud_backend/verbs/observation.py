@@ -4,16 +4,11 @@ from mud_backend.core.db import fetch_player_data
 from mud_backend.core.chargen_handler import format_player_description
 from mud_backend.core.room_handler import show_room_to_player
 import math
-import random # <-- NEW
-# --- NEW: Import LBD and RT helpers ---
+import random 
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus
-# --- END NEW ---
-# ---
-# --- NEW: Import environment module ---
 from mud_backend.core.game_loop import environment
-# --- END NEW ---
 
 
 class Examine(BaseVerb):
@@ -23,15 +18,6 @@ class Examine(BaseVerb):
     """
     
     def execute(self):
-        # ---
-        # --- THIS IS THE FIX (Point 4) ---
-        # We are removing the LBD call from EXAMINE.
-        #
-        # attempt_skill_learning(self.player, "investigation")
-        # ---
-        # --- END FIX ---
-        # ---
-
         if not self.args:
             self.player.send_message("Examine what?")
             return
@@ -51,11 +37,9 @@ class Examine(BaseVerb):
             self.player.send_message(f"You do not see a **{target_name}** here.")
             return
 
-        # 2. Show the base description
         self.player.send_message(f"You examine the **{found_object['name']}**.")
         self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
 
-        # 3. Check for hidden details (LOG stat check, per your original file)
         player_log_stat = self.player.stats.get("LOG", 0)
         hidden_details = found_object.get("details", [])
         
@@ -65,35 +49,25 @@ class Examine(BaseVerb):
             
         found_something = False
         for detail in hidden_details:
-            dc = detail.get("dc", 100) # Default to a high DC
+            dc = detail.get("dc", 100) 
             
-            # 4. Compare player LOG stat to the detail's Difficulty Class (DC)
             if player_log_stat >= dc:
                 self.player.send_message(detail.get("description", "You notice a hidden detail."))
                 found_something = True
         
         if not found_something:
-            # Player failed all checks
             self.player.send_message("You don't notice anything else unusual about it.")
 
-# ---
-# --- NEW: Helper function to find items on player
-# ---
 def _find_item_on_player(player, target_name):
     """Checks worn items and inventory for a match."""
-    # Check worn items
     for slot, item_id in player.worn_items.items():
         if item_id:
-            # --- FIX: Use player.world ---
             item_data = player.world.game_items.get(item_id)
             if item_data:
-                # Check keywords first, then the item's name
                 if target_name in item_data.get("keywords", []) or target_name == item_data['name'].lower():
                     return item_data, "worn"
                     
-    # Check inventory (pack)
     for item_id in player.inventory:
-        # --- FIX: Use self.world ---
         item_data = player.world.game_items.get(item_id)
         if item_data:
             if target_name in item_data.get("keywords", []) or target_name == item_data['name'].lower():
@@ -101,9 +75,6 @@ def _find_item_on_player(player, target_name):
                 
     return None, None
 
-# ---
-# --- NEW: Helper for window weather
-# ---
 def _get_weather_message_for_window() -> str:
     """Gets a simple description of the current weather for an indoor window."""
     weather = environment.current_weather
@@ -125,14 +96,8 @@ def _get_weather_message_for_window() -> str:
     if weather == "storm":
         return "Through the glass, you see a fierce storm raging. A flash of lightning brightens the sky!"
         
-    return "You glance out the window." # Fallback
-# ---
-# --- END NEW HELPER
-# ---
+    return "You glance out the window." 
 
-# ---
-# --- MODIFIED: Look verb
-# ---
 class Look(BaseVerb):
     """Handles the 'look' command."""
     
@@ -142,10 +107,7 @@ class Look(BaseVerb):
         if not self.args:
             show_room_to_player(self.player, self.room)
             
-            # ---
-            # --- THIS IS THE CHANGE (Goal 1) ---
-            # Replaced the 'intro_examine' hook with the 'intro_investigate' hook
-            #
+            # --- MODIFIED: Show Investigate Help AFTER Room Description ---
             if (self.player.current_room_id == "inn_room" and
                 "intro_investigate" not in self.player.completed_quests):
                 self.player.send_message(
@@ -154,9 +116,7 @@ class Look(BaseVerb):
                     "<span class='keyword' data-command='investigate'>INVESTIGATE</span> if you think there is more to be found."
                 )
                 self.player.completed_quests.append("intro_investigate")
-            # ---
-            # --- END CHANGE ---
-            # ---
+            # --- END MODIFIED ---
             return
 
         full_command = " ".join(self.args).lower()
@@ -165,17 +125,12 @@ class Look(BaseVerb):
         if full_command.startswith("in "):
             container_name = full_command[3:].strip()
             
-            # Find the container (on player or in room)
             container_data, location = _find_item_on_player(self.player, container_name)
-            
-            # TODO: Add logic to find container in room
             
             if not container_data or not container_data.get("is_container"):
                 self.player.send_message(f"You don't see a container called '{container_name}' here.")
                 return
 
-            # Special case: 'backpack' is the player's main inventory
-            # We treat the "back" slot as the main inventory container
             if container_data.get("wearable_slot") == "back":
                 if not self.player.inventory:
                     self.player.send_message(f"Your {container_data['name']} is empty.")
@@ -183,14 +138,11 @@ class Look(BaseVerb):
                 
                 self.player.send_message(f"You look in your {container_data['name']}:")
                 for item_id in self.player.inventory:
-                    # --- FIX: Use self.world ---
                     item_data = self.world.game_items.get(item_id)
                     self.player.send_message(f"- {item_data.get('name', 'an item')}")
                 return
             else:
-                # Logic for other containers (e.g., a pouch)
                 self.player.send_message(f"You look in {container_data['name']}.")
-                # (We would add logic here to list items *inside* that item)
                 self.player.send_message("It is empty.")
                 return
                 
@@ -203,45 +155,18 @@ class Look(BaseVerb):
         for obj in self.room.objects:
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
-            # --- END FIX ---
             
-                # ---
-                # --- THIS IS THE CHANGE (Goal 2) ---
-                #
                 self.player.send_message(f"You investigate the **{obj['name']}**.")
-                # ---
-                # --- END CHANGE ---
-                # ---
-                
                 self.player.send_message(obj.get('description', 'It is a nondescript object.'))
                 
-                # ---
-                # --- THIS IS THE FIX (Point 1 & 5) ---
-                #
-                # 1. Special check for "window" in "inn_room"
                 if (self.player.current_room_id == "inn_room" and 
                     "window" in obj.get("keywords", [])):
-                    
-                    # Add the dynamic weather message
                     self.player.send_message(_get_weather_message_for_window())
                 
-                # 2. Check for verbs *after* the special window logic
-                #    This way, if we remove the verbs from rooms.json, this
-                #    code simply won't run for the window.
                 if 'verbs' in obj:
                     verb_list = ", ".join([f'<span class="keyword">{v}</span>' for v in obj['verbs']])
                     self.player.send_message(f"You could try: {verb_list}")
-                # ---
-                # --- END FIX
-                # ---
                 
-                # ---
-                # --- THIS IS THE CHANGE (Goal 1) ---
-                # Removed the 'intro_investigate' hook from here, as it
-                # was moved to the 'look' (no args) block.
-                # ---
-                # --- END CHANGE ---
-                # ---
                 return 
 
         # B. Check player's own items (worn or inventory)
@@ -270,9 +195,7 @@ class Look(BaseVerb):
         # --- E. Not found ---
         self.player.send_message(f"You do not see a **{target_name}** here.")
 
-# ---
-# --- MODIFIED: Investigate class
-# ---
+
 class Investigate(BaseVerb):
     """
     Handles the 'investigate' command.
@@ -282,21 +205,13 @@ class Investigate(BaseVerb):
     """
     
     def execute(self):
-        # 1. Always attempt to learn by doing
         attempt_skill_learning(self.player, "investigation")
         
-        # 2. Check for roundtime
         if _check_action_roundtime(self.player, action_type="other"):
             return
             
-        # 3. Set roundtime for this action
-        _set_action_roundtime(self.player, 3.0) # 3 second RT
+        _set_action_roundtime(self.player, 3.0) 
 
-        # ---
-        # --- THIS IS THE CHANGE ---
-        # Logic from Examine.execute() is now inlined here
-        #
-        # 4. If args (e.g., INVESTIGATE TABLE), show details
         if self.args:
             
             target_name = " ".join(self.args).lower()
@@ -314,11 +229,9 @@ class Investigate(BaseVerb):
                 self.player.send_message(f"You do not see a **{target_name}** here.")
                 return
 
-            # Show the base description (using "investigate" verb)
             self.player.send_message(f"You investigate the **{found_object['name']}**.")
             self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
 
-            # Check for hidden details
             player_log_stat = self.player.stats.get("LOG", 0)
             hidden_details = found_object.get("details", [])
             
@@ -338,11 +251,7 @@ class Investigate(BaseVerb):
                 self.player.send_message("You don't notice anything else unusual about it.")
             
             return
-        # ---
-        # --- END CHANGE ---
-        # ---
 
-        # 5. If no args, search the room for hidden objects
         self.player.send_message("You investigate the room...")
         
         hidden_objects = self.room.db_data.get("hidden_objects", [])
@@ -351,25 +260,21 @@ class Investigate(BaseVerb):
             return
             
         found_something = False
-        # Iterate backwards so we can .pop() items safely
         for i in range(len(hidden_objects) - 1, -1, -1):
             obj = hidden_objects[i]
             dc = obj.get("perception_dc", 100)
             
-            # Roll = d100 + Investigation Skill Bonus
             skill_rank = self.player.skills.get("investigation", 0)
             skill_bonus = calculate_skill_bonus(skill_rank)
             roll = random.randint(1, 100) + skill_bonus
             
             if roll >= dc:
-                # Found it!
                 found_obj = self.room.db_data["hidden_objects"].pop(i)
                 self.room.objects.append(found_obj)
                 found_something = True
                 
                 self.player.send_message(f"Your investigation reveals: **{found_obj.get('name', 'an item')}**!")
                 
-                # --- Special Tutorial Hook ---
                 if (found_obj.get("item_id") == "inn_note" and
                     "intro_get" not in self.player.completed_quests):
                     self.player.send_message(
@@ -379,7 +284,6 @@ class Investigate(BaseVerb):
                     self.player.completed_quests.append("intro_get")
         
         if found_something:
-            # We modified the room, so save it
             self.world.save_room(self.room)
         else:
             self.player.send_message("...but you don't find anything new.")

@@ -11,12 +11,9 @@ from mud_backend.core.stat_roller import (
     assign_stats_intellectual,
     assign_stats_spiritual,
     format_stats,
-    STAT_LIST # --- NEW: Import the master list of stats ---
+    STAT_LIST 
 )
-# ---
-# --- NEW: Import Help verb ---
 from mud_backend.verbs.help import Help
-# --- END NEW ---
 
 # --- Helper function for "a" vs "an" ---
 def get_article(word: str) -> str:
@@ -25,19 +22,14 @@ def get_article(word: str) -> str:
         return "a"
     return "an" if word.lower().strip()[0] in 'aeiou' else "a"
 
-# === NEW: CHARGEN_STEP_KEYS ===
-# This list defines the order of questions AFTER stat assignment (which is steps 1 & 2)
-# Step 3 will be "race", Step 4 "alignment", Step 5 "height", etc.
+# === CHARGEN_STEP_KEYS ===
 CHARGEN_STEP_KEYS = [
     "race", "alignment", "height", "build", "age", "eye_char", "eye_color",
     "complexion", "hair_style", "hair_texture", "hair_color", "hair_quirk",
     "face", "nose", "mark", "unique"
 ]
 
-# === NEW: DEFAULT_CHARGEN_QUESTIONS ===
-# This replaces the old CHARGEN_QUESTIONS list.
-# It's now a dictionary of *fallback* questions.
-# (Populated from the original file)
+# === DEFAULT_CHARGEN_QUESTIONS ===
 DEFAULT_CHARGEN_QUESTIONS = {
     "race": {
         "key": "race",
@@ -107,7 +99,7 @@ DEFAULT_CHARGEN_QUESTIONS = {
 
 
 # ---
-# (Step 1: Stat Rolling Logic is unchanged)
+# Step 1: Stat Rolling Logic
 # ---
 
 def do_initial_stat_roll(player: Player):
@@ -121,9 +113,7 @@ def do_initial_stat_roll(player: Player):
     player.current_stat_pool = new_pool
     player.best_stat_pool = new_pool # The first roll is always the best
     
-    # --- NEW: Ensure stats dict is empty ---
     player.stats = {}
-    # --- END NEW ---
     
     # Send the first prompt
     send_stat_roll_prompt(player)
@@ -180,26 +170,19 @@ def _handle_stat_roll_input(player: Player, command: str):
         
     elif command == "use this roll":
         player.send_message("> USE THIS ROLL")
-        # --- THIS IS THE FIX ---
-        # Make a copy for the mutable list (stats_to_assign)
         pool_copy = list(player.current_stat_pool)
         player.stats_to_assign = pool_copy
-        # Make a persistent copy for the backup
         player.db_data['_chargen_selected_pool'] = list(player.current_stat_pool)
-        player.stats = {} # Ensure stats dict is empty
-        # --- END FIX ---
+        player.stats = {} 
         player.chargen_step = 2
         send_assignment_prompt(player)
 
     elif command == "use best roll":
         player.send_message("> USE BEST ROLL")
-        # --- THIS IS THE FIX ---
         pool_copy = list(player.best_stat_pool)
-        player.stats_to_assign = pool_copy # This list will be mutated
-        # Store a pristine copy in db_data for presets/reset
+        player.stats_to_assign = pool_copy 
         player.db_data['_chargen_selected_pool'] = list(player.best_stat_pool)
         player.stats = {}
-        # --- END FIX ---
         player.chargen_step = 2
         send_assignment_prompt(player)
         
@@ -208,7 +191,7 @@ def _handle_stat_roll_input(player: Player, command: str):
         send_stat_roll_prompt(player)
 
 # ---
-# --- MODIFIED: Step 2: Stat Assignment Logic
+# Step 2: Stat Assignment Logic
 # ---
 
 def _complete_stat_assignment(player: Player):
@@ -216,10 +199,9 @@ def _complete_stat_assignment(player: Player):
     player.send_message("\nAll stats have been assigned!")
     player.send_message(format_stats(player.stats))
     
-    player.chargen_step = 3 # Advance to appearance questions
-    get_chargen_prompt(player) # Ask the first appearance question
+    player.chargen_step = 3 
+    get_chargen_prompt(player) 
     
-    # Clean up temporary data
     player.stats_to_assign = [] 
     player.db_data.pop('_chargen_selected_pool', None)
 
@@ -227,27 +209,21 @@ def send_assignment_prompt(player: Player):
     """
     Shows the player the pool they selected and asks how to assign it.
     """
-    # Get the list of stat values not yet assigned
     sorted_pool = sorted(player.stats_to_assign, reverse=True)
     pool_str = ", ".join(map(str, sorted_pool))
     
-    # Get the list of stat names not yet assigned
     unassigned_stats = [s for s in STAT_LIST if s not in player.stats]
     unassigned_str = ", ".join(unassigned_stats)
     
     player.send_message(f"\n--- Assign Your Stats ---")
     
-    # --- NEW: Show current assignments ---
     if player.stats:
-        # Show stats that *have* been assigned
         player.send_message(format_stats(player.stats))
         player.send_message("---")
-    # --- END NEW ---
         
     player.send_message(f"**Available Pool:** {pool_str}")
     player.send_message(f"**Stats to Assign:** {unassigned_str}")
     
-    # --- NEW: Add back all options ---
     player.send_message("\n--- Manual Assignment ---")
     player.send_message("Usage: <stat> <value> (e.g., <span class='keyword'>STR 90</span> or <span class='keyword'>90 LOG</span>)")
     
@@ -258,82 +234,62 @@ def send_assignment_prompt(player: Player):
     
     player.send_message("\n---")
     player.send_message("- <span class='keyword'>RESET</span> (Clears all assigned stats and starts this step over)")
-    # --- END NEW ---
 
 def _handle_assignment_input(player: Player, command: str):
     """Handles commands during the stat assignment step (step 2)."""
 
     full_command_lower = command.strip().lower()
     
-    # --- THIS IS THE FIX: Get remaining stats/pool for presets ---
     remaining_pool = list(player.stats_to_assign)
     remaining_stats = [s for s in STAT_LIST if s not in player.stats]
-    # --- END FIX ---
 
-    # --- NEW: Check for presets and reset ---
     if full_command_lower == "assign physical":
         player.send_message("> ASSIGN PHYSICAL")
-        # --- THIS IS THE FIX ---
-        # Call the preset with the *remaining* pool and *remaining* stats
         new_assignments = assign_stats_physical(remaining_pool, remaining_stats)
-        player.stats.update(new_assignments) # Add the new assignments
-        # --- END FIX ---
+        player.stats.update(new_assignments) 
         _complete_stat_assignment(player)
         return
     
     elif full_command_lower == "assign intellectual":
         player.send_message("> ASSIGN INTELLECTUAL")
-        # --- THIS IS THE FIX ---
         new_assignments = assign_stats_intellectual(remaining_pool, remaining_stats)
         player.stats.update(new_assignments)
-        # --- END FIX ---
         _complete_stat_assignment(player)
         return
         
     elif full_command_lower == "assign spiritual":
         player.send_message("> ASSIGN SPIRITUAL")
-        # --- THIS IS THE FIX ---
         new_assignments = assign_stats_spiritual(remaining_pool, remaining_stats)
         player.stats.update(new_assignments)
-        # --- END FIX ---
         _complete_stat_assignment(player)
         return
     
     elif full_command_lower == "reset":
         player.send_message("> RESET")
         player.send_message("All stat assignments have been cleared.")
-        player.stats = {} # Clear assignments
-        # Restore the pool from the persistent backup
+        player.stats = {} 
         selected_pool_copy = player.db_data.get('_chargen_selected_pool', [])
-        player.stats_to_assign = list(selected_pool_copy) # Reset the mutable list
+        player.stats_to_assign = list(selected_pool_copy) 
         send_assignment_prompt(player)
         return
-    # --- END NEW ---
 
-    # --- Manual assignment logic ---
     parts = command.upper().split()
     
-    # 1. Validation: Correct format?
     if len(parts) != 2:
         player.send_message("Invalid syntax. Use <stat> <value> (e.g., STR 90) or a preset (e.g., ASSIGN PHYSICAL).")
-        # Don't resend prompt, let them try again
         return
 
-    # 2. Parse components (stat_name and stat_value)
     stat_name = None
     stat_value = None
 
     try:
-        # Check for <STAT> <VALUE> format (e.g., "LOG 90")
         if parts[0] in STAT_LIST:
             stat_name = parts[0]
             stat_value = int(parts[1])
-        # Check for <VALUE> <STAT> format (e.g., "90 LOG")
         elif parts[1] in STAT_LIST:
             stat_name = parts[1]
             stat_value = int(parts[0])
     except ValueError:
-        # This catches if int() fails (e.g., "LOG STR")
         player.send_message("Invalid syntax. One argument must be a stat name and the other a number.")
         return
 
@@ -341,41 +297,32 @@ def _handle_assignment_input(player: Player, command: str):
         player.send_message(f"Invalid input. '{command}' is not recognized.")
         return
 
-    # 3. Validation: Stat already assigned?
     if stat_name in player.stats:
         player.send_message(f"You have already assigned {stat_name}. (Current value: {player.stats[stat_name]})")
         player.send_message("Type <span class='keyword'>RESET</span> to start over.")
         return
         
-    # 4. Validation: Value is in the pool?
     if stat_value not in player.stats_to_assign:
         player.send_message(f"The value {stat_value} is not in your available pool.")
-        send_assignment_prompt(player) # Resend prompt to show available pool
+        send_assignment_prompt(player) 
         return
         
-    # 5. Success! Assign the stat.
     player.stats[stat_name] = stat_value
-    player.stats_to_assign.remove(stat_value) # Remove the value from the *mutable* pool
+    player.stats_to_assign.remove(stat_value) 
     
-    # player.send_message(f"**Assigned: {stat_name} = {stat_value}**") # Optional: a bit spammy
-
-    # 6. Check for Completion
     if len(player.stats_to_assign) == 0:
         _complete_stat_assignment(player)
     else:
-        # More stats to assign, re-prompt
         send_assignment_prompt(player)
 
 # ---
 # Step 3+: Dynamic Appearance Logic
 # ---
 
-# === MODIFIED: get_chargen_prompt ===
 def get_chargen_prompt(player: Player):
     """
     Gets the correct dynamic question prompt based on the player's step and race.
     """
-    # Steps 1 & 2 are stats. Step 3+ is appearance.
     question_index = player.chargen_step - 3
     
     if not (0 <= question_index < len(CHARGEN_STEP_KEYS)):
@@ -383,44 +330,34 @@ def get_chargen_prompt(player: Player):
         player.game_state = "playing"
         return
 
-    # 1. Get the key for the current question (e.g., "race", "alignment", "complexion")
     question_key = CHARGEN_STEP_KEYS[question_index]
-
-    # 2. Get the player's race (it will be "" if not yet chosen)
     player_race = player.appearance.get("race", "")
     race_data = RACE_DATA.get(player_race)
     
     final_prompt = ""
     
-    # 3. Check for race-specific options *first*
     if race_data:
         race_options = race_data.get("appearance_options", {}).get(question_key)
         if race_options:
-            # Found race-specific options! Build the prompt.
-            # Get the default prompt text (e.g., "What is your [Complexion]?")
             default_prompt_text = DEFAULT_CHARGEN_QUESTIONS.get(question_key, {}).get("prompt", "")
-            # Split it to get just the question part
             prompt_line = default_prompt_text.split("\n")[0]
             
-            # Build the new options string
             options_line = "(Options: " + ", ".join(
                 [f"<span class='keyword'>{opt.capitalize()}</span>" for opt in race_options]
             ) + ")"
             
             final_prompt = f"\n{prompt_line}\n{options_line}"
 
-    # 4. If no race-specific prompt was built, use the default
     if not final_prompt:
         question_data = DEFAULT_CHARGEN_QUESTIONS.get(question_key)
         if question_data:
             final_prompt = "\n" + question_data["prompt"]
         else:
-            final_prompt = f"\nUnknown question: {question_key}" # Error
+            final_prompt = f"\nUnknown question: {question_key}" 
             
     player.send_message(final_prompt)
 
 
-# === MODIFIED: _handle_appearance_input ===
 def _handle_appearance_input(player: Player, text_input: str):
     """Handles answers to appearance questions (step 3+)."""
     
@@ -430,118 +367,91 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.game_state = "playing"
         return
 
-    # 1. Get the current question key and save the answer
     question_key = CHARGEN_STEP_KEYS[question_index]
     answer = text_input.strip()
     
     if answer.lower() == "none":
         answer = "" 
         
-    # --- SPECIAL HANDLING FOR RACE/ALIGNMENT ---
     if question_key == "race":
-        # Capitalize the race name to match RACE_DATA keys
-        # We also need to handle 'Elf' and 'Dwarf' as aliases
         answer_lower = answer.lower()
         if answer_lower == "elf":
-            answer = "High Elf" # --- MODIFIED: Match RACE_DATA key ---
+            answer = "High Elf" 
         elif answer_lower == "dark elf":
-            answer = "Dark Elf" # --- MODIFIED: Match RACE_DATA key ---
+            answer = "Dark Elf" 
         elif answer_lower == "dwarf":
-            answer = "Dwarf" # --- MODIFIED: Match RACE_DATA key ---
+            answer = "Dwarf" 
         elif answer_lower == "dark dwarf":
-            answer = "Dark Dwarf" # --- MODIFIED: Match RACE_DATA key ---
+            answer = "Dark Dwarf" 
         else:
-            # Capitalize first letter of each word
             answer = ' '.join([word.capitalize() for word in answer.split()])
         
         if answer not in RACE_DATA:
             player.send_message(f"'{answer}' is not a valid race. Please choose from the list.")
-            return # Don't advance the step
+            return 
             
-        # Set the player's default faction
-        player.factions[RACE_DATA[answer]["faction"]] = 50 # Start at Amiable
+        player.factions[RACE_DATA[answer]["faction"]] = 50 
         
     elif question_key == "alignment":
-        # This is where you apply faction modifiers
         alignment = answer.lower()
         if alignment not in ["good", "neutral", "evil"]:
             player.send_message("Please choose Good, Neutral, or Evil.")
-            return # Don't advance
+            return 
             
-        # Get the race they just chose
         player_race = player.appearance.get("race")
         base_faction = RACE_DATA[player_race]["faction"]
         
-        # Example modification:
         if alignment == "good":
             if base_faction == "Concordat":
-                player.factions[base_faction] += 50 # Boost to 100 (Amiable+)
+                player.factions[base_faction] += 50 
             elif base_faction == "Dominion":
-                player.factions[base_faction] -= 25 # Lower to 25 (Still Amiable, but less)
+                player.factions[base_faction] -= 25 
         elif alignment == "evil":
             if base_faction == "Concordat":
-                player.factions[base_faction] -= 25 # Lower to 25
+                player.factions[base_faction] -= 25 
             elif base_faction == "Dominion":
-                player.factions[base_faction] += 50 # Boost to 100
-        # Neutral does nothing to the default 50
-    # --- END SPECIAL HANDLING ---
+                player.factions[base_faction] += 50 
         
     player.appearance[question_key] = answer
     player.send_message(f"> {answer}")
 
-    # 2. Increment step and check if chargen is done
     player.chargen_step += 1
     next_question_index = player.chargen_step - 3
 
     if next_question_index < len(CHARGEN_STEP_KEYS):
-        # 3. Ask the next question
         get_chargen_prompt(player)
     else:
         # 4. Chargen is complete!
         player.chargen_step = 99 
         player.game_state = "playing"
         
-        # Set all vitals to max
         player.hp = player.max_hp
         player.mana = player.max_mana
         player.stamina = player.max_stamina
         player.spirit = player.max_spirit
         
-        # Grant starter gear
         player.worn_items["back"] = "starter_backpack"
         player.worn_items["torso"] = "starter_leather_armor"
-        player.worn_items["mainhand"] = "starter_dagger" # Default weapon
-        player.wealth["silvers"] = 0 # Start with 0 silver to trigger quest
+        player.worn_items["mainhand"] = "starter_dagger" 
+        player.wealth["silvers"] = 0 
         
-        # Move to start room and send tutorial text
         player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
-        player.messages.clear() # Clear the "look" from move_to_room
+        player.messages.clear() 
 
+        # --- MODIFIED SECTION ---
+        # Removed the premature "investigate" hint. 
+        # Only prompts for LOOK now.
         player.send_message(
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
         )
         
-        # ---
-        # --- THIS IS THE CHANGE ---
-        #
-        # Removed "EXAMINE" from this initial prompt per your instruction.
         player.send_message(
             "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
             "Type <span class='keyword' data-command='look'>LOOK</span> to see your surroundings, objects, and exits."
         )
-        player.send_message(
-            "You can also <span class='keyword' data-command='look at bed'>LOOK AT</span> specific things. "
-            "If you look around, you might <span class='keyword' data-command='investigate'>INVESTIGATE</span> something interesting."
-        )
-        # ---
-        # --- END CHANGE
-        # ---
+        # --- END MODIFIED SECTION ---
 
-
-# ---
-# --- MODIFIED: Main Input Router ---
-# ---
 
 def handle_chargen_input(player: Player, text_input: str):
     """
@@ -550,63 +460,40 @@ def handle_chargen_input(player: Player, text_input: str):
     """
     step = player.chargen_step
     
-    # ---
-    # --- THIS IS THE FIX ---
-    # We get the full, lowercased command string for step 1
     full_command_lower = text_input.strip().lower()
-    # --- END FIX ---
     
-    # We still need the split parts for the 'help' command check
     command_parts = text_input.strip().split()
     command = command_parts[0].lower() if command_parts else ""
     args = command_parts[1:] if len(command_parts) > 1 else []
 
-    # ---
-    # --- THIS IS THE FIX (Point 2) ---
-    #
-    # Add a check for the 'help' command at any step
     if command == "help":
-        # We need to find the room the player is in, even in chargen
-        # (It's 'inn_room', but we'll fetch it properly)
         room_db_data = fetch_room_data(player.current_room_id)
-        # We pass a "dummy" room object to the verb
         dummy_room = player.world.get_room(player.current_room_id)
         if not dummy_room:
-             # Fallback if room not found (should not happen)
              dummy_room = {"room_id": "inn_room", "name": "A Room", "description": "...", "objects": [], "exits": {}}
         
-        # Create and execute the Help verb instance
         help_verb = Help(player.world, player, dummy_room, args, command)
         help_verb.execute()
         
-        # Re-send the prompt for the *current* step so the user isn't stuck
         if step == 1:
             send_stat_roll_prompt(player)
         elif step == 2:
-            # --- MODIFIED: Use new prompt function ---
             send_assignment_prompt(player)
         elif step > 2:
             get_chargen_prompt(player)
         return
-    # ---
-    # --- END FIX
-    # ---
 
     if step == 1:
-        # --- FIX: Pass the full command string ---
         _handle_stat_roll_input(player, full_command_lower)
     elif step == 2:
-        # --- MODIFIED: Pass the raw text input ---
-        _handle_assignment_input(player, text_input) # Use raw text for parsing
-    elif step > 2 and step < 99: # All appearance questions
-        _handle_appearance_input(player, text_input) # Use the raw text, not lowercase
+        _handle_assignment_input(player, text_input) 
+    elif step > 2 and step < 99: 
+        _handle_appearance_input(player, text_input) 
     else:
-        # This catches input if something went wrong
         player.send_message("An error occurred. Please refresh.")
         player.game_state = "playing"
 
 
-# --- (format_player_description helper function is unchanged) ---
 def format_player_description(player_data: dict) -> str:
     """
     Builds the formatted description string for a player
@@ -619,12 +506,10 @@ def format_player_description(player_data: dict) -> str:
         "she": {"subj": "She", "obj": "her", "poss": "her"},
         "they": {"subj": "They", "obj": "them", "poss": "their"},
     }
-    # --- FIX: Default to 'they' if gender isn't set ---
     pr = pronoun_map.get(player_data.get("gender", "they"), pronoun_map["they"])
 
     desc = []
 
-    # Use .get() with fallbacks for every field
     desc.append(f"{pr['subj']} appears to be {get_article(app.get('race', 'Human'))} **{app.get('race', 'Human')}**.")
     
     line2 = f"{pr['subj']} is {app.get('height', 'average')}"
