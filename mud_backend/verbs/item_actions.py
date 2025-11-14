@@ -64,9 +64,7 @@ class Get(BaseVerb):
     """
     
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
-        # --- END FIX ---
             return
 
         if not self.args:
@@ -148,19 +146,18 @@ class Get(BaseVerb):
                 self.world.save_room(self.room)
                 
                 # ---
-                # --- NEW: Tutorial Hook
+                # --- MODIFIED: Tutorial Hook
                 # ---
                 if (item_id == "inn_note" and 
-                    "intro_stow" not in self.player.completed_quests):
+                    "intro_inventory" not in self.player.completed_quests):
                     
                     self.player.send_message(
-                        "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You are now holding the note. "
-                        "To put an item from your hands into your backpack, you can "
-                        "<span class='keyword' data-command='stow note'>STOW NOTE</span>. "
-                        "This is the same as `PUT NOTE IN BACKPACK`."
+                        "\n<span class='keyword' data-command='help inventory'>[Help: INVENTORY]</span> - You are now holding the note. "
+                        "To see what you are holding and wearing, type "
+                        "<span class='keyword' data-command='inventory'>INVENTORY</span> (or <span class='keyword' data-command='inv'>INV</span>)."
                     )
-                    self.player.completed_quests.append("intro_stow")
-                # --- END NEW ---
+                    self.player.completed_quests.append("intro_inventory")
+                # --- END MODIFIED ---
 
                 return
 
@@ -190,9 +187,7 @@ class Drop(BaseVerb):
     """
     
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
-        # --- END FIX ---
             return
 
         if not self.args:
@@ -240,12 +235,8 @@ class Drop(BaseVerb):
             item_id = self.player.worn_items.get(slot)
             if item_id:
                 item_data = game_items.get(item_id, {})
-                # ---
-                # --- THIS IS THE FIX ---
-                # The variable `target_name` was not defined here. It should be `target_item_name`.
                 if (target_item_name == item_data.get("name", "").lower() or 
                     target_item_name in item_data.get("keywords", [])):
-                # --- END FIX ---
                     item_id_to_drop = item_id
                     item_location = slot
                     break
@@ -321,9 +312,7 @@ class Pour(BaseVerb):
     POUR <item> IN <target>
     """
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
-        # --- END FIX ---
             return
         
         args_str = " ".join(self.args).lower()

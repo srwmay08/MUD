@@ -121,16 +121,22 @@ class Look(BaseVerb):
 
         full_command = " ".join(self.args).lower()
 
-        # --- 2. LOOK IN <CONTAINER> ---
+        # ---
+        # --- MODIFICATION: Handle LOOK IN PACK
+        # ---
         if full_command.startswith("in "):
             container_name = full_command[3:].strip()
+            if container_name.startswith("my "):
+                container_name = container_name[3:].strip()
             
+            # Find the container on the player
             container_data, location = _find_item_on_player(self.player, container_name)
             
             if not container_data or not container_data.get("is_container"):
                 self.player.send_message(f"You don't see a container called '{container_name}' here.")
                 return
 
+            # This logic is specifically for the backpack
             if container_data.get("wearable_slot") == "back":
                 if not self.player.inventory:
                     self.player.send_message(f"Your {container_data['name']} is empty.")
@@ -140,11 +146,26 @@ class Look(BaseVerb):
                 for item_id in self.player.inventory:
                     item_data = self.world.game_items.get(item_id)
                     self.player.send_message(f"- {item_data.get('name', 'an item')}")
+                
+                # --- NEW: Tutorial Hook for STOW ---
+                if ("intro_lookinpack" in self.player.completed_quests and
+                    "intro_stow" not in self.player.completed_quests):
+                    
+                    self.player.send_message(
+                        "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You can see the note (and a dagger!) in your pack. "
+                        "To put an item *from your hand* into your pack, you must first be holding it. "
+                        "Try <span class='keyword' data-command='get note'>GET NOTE</span>, then <span class='keyword' data-command='stow note'>STOW NOTE</span>."
+                    )
+                    self.player.completed_quests.append("intro_stow")
+                # --- END NEW ---
                 return
             else:
                 self.player.send_message(f"You look in {container_data['name']}.")
                 self.player.send_message("It is empty.")
                 return
+        # ---
+        # --- END MODIFICATION
+        # ---
                 
         # --- 3. LOOK <TARGET> ---
         target_name = full_command
