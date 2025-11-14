@@ -817,7 +817,7 @@ class Player:
         return data
 
     # ---
-    # --- NEW: get_vitals method (moved from command_executor.py)
+    # --- MODIFIED: get_vitals method
     # ---
     def get_vitals(self) -> Dict[str, Any]:
         """
@@ -825,7 +825,49 @@ class Player:
         Includes HP, Mana, Stamina, Spirit, Posture, Status, and Roundtime.
         """
         
-        # 1. Get HP, Mana, Stamina, Spirit
+        # --- 1. Get Experience Data ---
+        exp_label = ""
+        exp_to_next = 0
+        exp_percent = 0.0
+        
+        if self.level < 100:
+            exp_label = "until next level"
+            exp_to_next = self.level_xp_target - self.experience
+            
+            # Calculate total exp for this level
+            last_level_target = self._get_xp_target_for_level(self.level - 1)
+            total_exp_for_level = self.level_xp_target - last_level_target
+            exp_gained_this_level = self.experience - last_level_target
+            
+            if total_exp_for_level > 0:
+                exp_percent = (exp_gained_this_level / total_exp_for_level) * 100
+            
+        else: # Level 100+
+            exp_label = "to next TP"
+            exp_to_next = self.level_xp_target - self.experience
+            
+            # For post-cap, show progress towards the 2500 chunk
+            total_exp_for_level = 2500 # This is the chunk size
+            exp_gained_this_level = 2500 - exp_to_next
+            
+            if total_exp_for_level > 0:
+                exp_percent = (exp_gained_this_level / total_exp_for_level) * 100
+        
+        
+        # --- 2. Get Worn Items Data ---
+        worn_data = {}
+        for slot_id, slot_name in config.EQUIPMENT_SLOTS.items():
+            item_id = self.worn_items.get(slot_id)
+            if item_id:
+                item_data = self.world.game_items.get(item_id)
+                if item_data:
+                    # Send the data the client needs
+                    worn_data[slot_id] = {
+                        "name": item_data.get("name", "an item"),
+                        "slot_display": slot_name
+                    }
+        
+        # --- 3. Get Vitals ---
         vitals = {
             "health": self.hp,
             "max_health": self.max_hp,
@@ -835,14 +877,24 @@ class Player:
             "max_stamina": self.max_stamina,
             "spirit": self.spirit,
             "max_spirit": self.max_spirit,
-            "current_room_id": self.current_room_id # <-- NEW: Added for map
+            "current_room_id": self.current_room_id, # <-- NEW: Added for map
+            # --- NEW: Add Stance ---
+            "stance": self.stance,
+            # --- NEW: Add Wounds ---
+            "wounds": self.wounds,
+            # --- NEW: Add Experience ---
+            "exp_to_next": exp_to_next,
+            "exp_label": exp_label,
+            "exp_percent": exp_percent,
+            # --- NEW: Add Worn Items ---
+            "worn_items": worn_data
         }
 
-        # 2. Get Posture and Status Effects
+        # 4. Get Posture and Status Effects
         vitals["posture"] = self.posture.capitalize()
         vitals["status_effects"] = self.status_effects # This is a list
 
-        # 3. Get Roundtime
+        # 5. Get Roundtime
         rt_data = self.world.get_combat_state(self.name.lower()) # Use self.world
         rt_end_time_ms = 0
         rt_duration_ms = 0

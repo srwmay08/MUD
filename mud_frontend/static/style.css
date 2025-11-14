@@ -1,69 +1,248 @@
 @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
 
 body {
-    /* --- MODIFIED: Prioritize Courier New --- */
     font-family: 'Inconsolata', 'Courier New', monospace;    
     background: #000;
-    color: #CCC; /* Default text color */
-    
-    /* --- MODIFIED: Flexbox layout --- */
+    color: #CCC;
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Fill the entire viewport height */
+    height: 100vh;
     margin: 0;
-    padding: 10px; /* Reduced padding */
-    box-sizing: border-box; /* Include padding in height calculation */
+    padding: 10px;
+    box-sizing: border-box;
 }
 
-/* --- NEW: Main Content Wrapper --- */
 #main-content {
     display: flex;
     flex-direction: row;
-    flex-grow: 1; /* Takes up all space between header/footer */
+    flex-grow: 1;
     width: 100%;
-    overflow: hidden; /* Prevents scrollbars on main body */
-    margin-bottom: 5px; /* Space above input bar */
+    overflow: hidden;
+    margin-bottom: 5px;
 }
 
-/* --- NEW: Map Panel --- */
-#map-panel {
+/* --- MODIFIED: Map Panel is now Left Panel --- */
+#left-panel {
     width: 300px;
-    flex-shrink: 0; /* Don't shrink */
-    background: #0a0a0a;
+    flex-shrink: 0;
+    /* --- NEW: Use flex for widgets --- */
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Allow widgets to scroll */
+    overflow-x: hidden;
+    /* --- END NEW --- */
+    transition: width 0.2s ease-out, padding 0.2s ease-out, min-width 0.2s ease-out;
+    position: relative;
     border: 1px solid #333;
+    background: #000; /* Background for the panel itself */
+}
+
+/* --- NEW: Left Panel Widgets --- */
+.widget {
+    background: #0a0a0a;
+    border-bottom: 1px solid #333;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Hide map overflow */
-    transition: width 0.2s ease-out, padding 0.2s ease-out;
-    position: relative; /* For the toggle button */
+    overflow: hidden; /* Hide content when minimized */
+    /* --- NEW: Don't let widgets shrink --- */
+    flex-shrink: 0;
 }
 
-#map-header {
+.widget-header {
     padding: 5px 8px;
     background: #1a1a1a;
-    border-bottom: 1px solid #333;
     color: #f0c674; /* Yellow */
     font-weight: bold;
     flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: grab; /* For drag/drop */
 }
-#map-room-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.widget-header:active {
+    cursor: grabbing;
 }
 
-#map-toggle-button {
+/* Add a minimize button */
+.widget-header::after {
+    content: '−'; /* Minus sign */
     font-size: 1.2em;
     font-weight: bold;
     color: #888;
     cursor: pointer;
     padding: 0 5px;
 }
-#map-toggle-button:hover {
+.widget-header:hover::after {
+    color: #FFF;
+}
+
+.widget-content {
+    /* --- MODIFIED: Use flex --- */
+    padding: 8px;
+    flex-grow: 1;
+    display: flex; 
+    flex-direction: column;
+    overflow-y: auto; /* Allow content to scroll if needed */
+    /* --- NEW: Limit max height for most widgets --- */
+    max-height: 250px; 
+}
+
+/* Minimized state */
+.widget.minimized .widget-content {
+    display: none;
+}
+.widget.minimized .widget-header {
+    border-bottom: none; /* No border when minimized */
+}
+.widget.minimized .widget-header::after {
+    content: '+'; /* Plus sign */
+}
+
+/* --- NEW: Drag-in-progress style --- */
+.widget.dragging {
+    opacity: 0.4;
+    background: #333;
+}
+.drag-over {
+    /* This class is a placeholder, you can add a border */
+    /* border-top: 2px dashed #f0c674 !important; */
+}
+
+/* --- Specific Widget Styles --- */
+
+/* Experience */
+#exp-widget .widget-content {
+    max-height: 50px; /* This one is short */
+}
+#exp-bar {
+    width: 100%;
+    height: 10px;
+    background: #333;
+    border: 1px solid #555;
+    box-sizing: border-box;
+}
+#exp-fill {
+    width: 0%; /* 0% = 0 exp, 100% = next level */
+    height: 100%;
+    background: #182fa3; /* Blue */
+    transition: width 0.2s ease-out;
+}
+#exp-text {
+    font-size: 0.9em;
+    color: #ccc;
+    text-align: center;
+    margin-top: 4px;
+}
+#exp-value { color: #FFF; font-weight: bold; }
+#exp-label { color: #aaa; }
+
+/* Injuries */
+#injuries-widget .widget-content {
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+}
+#injury-svg {
+    width: 80%;
+    height: auto;
+}
+#body-outline {
+    fill: #3a3a3a;
+    stroke: #777;
+    stroke-width: 1;
+}
+.wound-marker {
+    fill: #a00000; /* Red */
+    stroke: #F00;
+    stroke-width: 1;
+    opacity: 0.8;
+}
+
+/* Combat */
+#combat-widget .widget-content {
+    max-height: 120px;
+}
+.combat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.combat-row span { color: #aaa; }
+.combat-action {
+    color: #f0c674;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-left: 5px;
+}
+.combat-action:hover {
+    color: #FFF;
+}
+#stance-select {
+    background: #111;
+    color: #ccc;
+    border: 1px solid #555;
+    flex-grow: 1;
+    margin-left: 10px;
+}
+
+/* Inventory */
+#inventory-widget .widget-content {
+    max-height: 200px;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+.worn-item-slot {
+    color: #aaa;
+    width: 100px; /* Align names */
+    flex-shrink: 0;
+    display: inline-block;
+}
+.worn-item-name {
+    color: #f0c674; /* Yellow */
+}
+
+/* Map Widget */
+#map-widget {
+    flex-grow: 1; /* This widget will expand */
+    min-height: 150px; /* Don't let it get too small */
+}
+#map-widget .widget-content {
+    padding: 0;
+    max-height: none; /* Map content can be as tall as it needs */
+}
+/* END Specific Widget Styles */
+
+
+/* --- MODIFIED: Renamed map-header/footer --- */
+#map-room-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* MODIFIED: Renamed toggle button */
+#panel-toggle-button {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #888;
+    cursor: pointer;
+    padding: 0 5px;
+    
+    /* NEW: Position it outside the panel */
+    position: absolute;
+    top: 0px;
+    right: -24px; /* Move it outside the panel */
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-left: none;
+    padding: 5px;
+    z-index: 50;
+    border-radius: 0 5px 5px 0;
+}
+#panel-toggle-button:hover {
     color: #FFF;
 }
 
@@ -83,37 +262,28 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* --- END MODIFIED --- */
 
-/* --- NEW: Collapsed State --- */
-#map-panel.collapsed {
+
+/* --- MODIFIED: Collapsed State --- */
+#left-panel.collapsed {
+    /* --- NEW: Use min-width for transition --- */
     width: 0px;
-    padding-left: 0;
-    padding-right: 0;
+    min-width: 0px; 
     border-left: none;
     border-right: none;
 }
-#map-panel.collapsed #map-header,
-#map-panel.collapsed #map-svg,
-#map-panel.collapsed #map-footer {
-    display: none;
+#left-panel.collapsed .widget {
+    display: none; /* Hide all widgets */
 }
 
-/* Special state for toggle button when collapsed */
-#map-panel.collapsed #map-toggle-button {
-    display: block;
-    position: absolute;
-    top: 0px;
-    right: -24px; /* Move it outside the collapsed panel */
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-left: none;
-    padding: 5px;
-    z-index: 50;
-    border-radius: 0 5px 5px 0;
+#left-panel.collapsed #panel-toggle-button {
+    right: -24px; /* Position remains the same */
 }
+/* --- END MODIFIED --- */
 
 
-/* --- NEW: Map SVG Styles --- */
+/* --- NEW: Map SVG Styles (Unchanged) --- */
 .map-room rect {
     fill: #2a2a2a;
     stroke: #555;
@@ -151,153 +321,108 @@ body {
 
 
 #output {
-    /* --- THIS WAS THE BUG --- */
-    /* width: 100%; */ /* <-- REMOVED THIS LINE */
-    
-    /* --- MODIFIED: Use flex-grow instead of fixed height --- */
-    flex-grow: 1; /* This makes the output window take all available space */
-    
+    flex-grow: 1;
     border: 1px solid #333;
-    border-left: none; /* Handled by map panel */
+    border-left: none; 
     overflow-y: scroll;
     padding: 10px;
     box-sizing: border-box;
-    
-    /* --- THIS IS THE FIX --- */
-    /* 'pre-wrap' preserves newlines but *also* renders HTML */
     white-space: pre-wrap; 
-    /* --- END FIX --- */
-    
     font-family: 'Courier New', 'Lucida Console', monospace;
     line-height: 1.5;
     background: #0a0a0a;
 }
 
-/* Style for room titles, like [Icemule Trace] */
+/* --- (All other styles for output, input, gauges, and context-menu are unchanged) --- */
 .room-title {
     color: #61bfff; /* Bright Blue */
     font-weight: bold;
 }
-
-/* Style for keywords (objects, players, monsters) */
 .keyword {
     color: #f0c674; /* Yellow/Gold */
     text-decoration: underline;
     cursor: pointer;
 }
-
-/* Style for your own typed commands */
 .command-echo {
     color: #888;
 }
-
-/* --- DELETED: #vitals-container styles removed --- */
-
-
 #input-line {
     display: flex;
-    margin-top: 5px; /* MODIFIED: was 10px */
-    
-    /* --- NEW: Ensure it doesn't grow or shrink --- */
+    margin-top: 5px; 
     flex-grow: 0;
     flex-shrink: 0;
-    
-    /* --- NEW: Relative positioning for RT bar --- */
     position: relative;
-    border: 1px solid #333; /* Add a border to frame the input/rt */
-    background: #000; /* Background for the whole line */
+    border: 1px solid #333;
+    background: #000;
 }
-
-/* --- NEW: RT Container (behind input) --- */
 #rt-container {
     position: absolute;
     top: 0;
-    left: 20px; /* Offset for the ">" span */
+    left: 20px; 
     height: 100%;
-    z-index: 1; /* Behind the input */
-    
+    z-index: 1;
     display: flex;
     flex-direction: row;
-    align-items: center; /* Vertically center boxes */
-    padding-left: 5px; /* Small padding from the ">" */
+    align-items: center;
+    padding-left: 5px;
 }
-
 .rt-box {
-    width: 10px; /* Smaller boxes */
-    height: 16px; /* Taller boxes */
+    width: 10px;
+    height: 16px;
     background-color: #222;
     border: 1px solid #444;
     margin-right: 2px;
     box-sizing: border-box;
     transition: background-color 0.1s ease;
 }
-
-/* ---
---- THIS IS THE FIX: Split .active into .hard and .soft
---- */
 .rt-box.active.hard {
     background-color: #800000; /* Dark Red */
     border-color: #F00;
 }
-
 .rt-box.active.soft {
     background-color: #000080; /* Dark Blue */
     border-color: #00F;
 }
-/* --- END FIX --- */
-
-
 #input-line > span {
-    padding-right: 5px; /* Reduced padding */
+    padding-right: 5px;
     padding-left: 5px;
     color: #CCC;
-    
-    /* --- NEW: Sit on top of RT bar --- */
     position: relative;
     z-index: 2;
 }
-
 #command-input {
     flex-grow: 1;
-    /* --- MODIFIED: Transparent background --- */
     background: transparent;
     color: #0F0;
     border: none;
     font-family: 'Courier New', 'Lucida Console', monospace;
-    
-    /* --- NEW: Sit on top of RT bar --- */
     position: relative;
     z-index: 2;
 }
 #command-input:focus {
     outline: none;
 }
-
-/* --- NEW: Gauges Container --- */
 #gauges-container {
     display: flex;
     flex-direction: row;
     width: 100%;
     margin-top: 10px;
-    flex-shrink: 0; /* Don't shrink */
-    gap: 5px; /* Space between bars */
+    flex-shrink: 0;
+    gap: 5px;
 }
-
 .gauge-bar {
-    flex: 1; /* Each bar takes equal space */
+    flex: 1;
     height: 22px;
     background-color: #111;
     border: 1px solid #555;
-    position: relative; /* For centering text */
+    position: relative;
     box-sizing: border-box;
 }
-
 .gauge-fill {
     height: 100%;
-    width: 0%; /* Default width */
-    transition: width 0.2s ease-out; /* Smooth transition */
+    width: 0%;
+    transition: width 0.2s ease-out;
 }
-
 .gauge-text {
     position: absolute;
     top: 50%;
@@ -311,37 +436,26 @@ body {
     text-shadow: 1px 1px 2px #000;
     white-space: nowrap;
 }
-
-/* Bar Colors */
-.gauge-fill.health { background-color: #a00000; } /* Red */
-.gauge-fill.mana { background-color: #182fa3; } /* Blue */
-.gauge-fill.stamina { background-color: #00a000; } /* Green */
-.gauge-fill.spirit { background-color: #a0a000; } /* Yellow */
-
-/* --- NEW: Posture Container (inside gauges) --- */
+.gauge-fill.health { background-color: #a00000; }
+.gauge-fill.mana { background-color: #182fa3; }
+.gauge-fill.stamina { background-color: #00a000; }
+.gauge-fill.spirit { background-color: #a0a000; }
 #posture-container {
-    flex: 0 0 auto; /* Don't grow or shrink, size to content */
+    flex: 0 0 auto;
     height: 22px;
     background-color: #111;
     border: 1px solid #555;
     box-sizing: border-box;
     padding: 0 15px;
-    
-    /* Flex to center text */
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    color: #f0c674; /* Yellow/Gold */
+    color: #f0c674;
     font-weight: bold;
     white-space: nowrap;
 }
-/* --- END NEW --- */
-
-
-/* --- The new Left-Click Verb Menu --- */
 #context-menu {
-    display: none; /* Hidden by default */
+    display: none;
     position: absolute;
     background-color: #2c2c2c;
     border: 1px solid #888;
@@ -349,7 +463,6 @@ body {
     min-width: 150px;
     z-index: 1000;
 }
-
 #context-menu div {
     padding: 8px 12px;
     color: #DDD;
@@ -358,11 +471,9 @@ body {
     font-weight: bold;
     text-transform: uppercase;
 }
-
 #context-menu div:last-child {
     border-bottom: none;
 }
-
 #context-menu div:hover {
     background-color: #4a4a4a;
     color: #FFF;

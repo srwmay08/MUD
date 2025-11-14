@@ -4,7 +4,7 @@ const input = document.getElementById('command-input');
 const contextMenu = document.getElementById('context-menu');
 
 // --- NEW: Get GUI elements ---
-const rtContainer = document.getElementById('rt-container'); // Get the container
+const rtContainer = document.getElementById('rt-container');
 const postureStatusEl = document.getElementById('posture-container');
 const gaugeFills = {
     health: document.getElementById('health-fill'),
@@ -20,13 +20,23 @@ const gaugeTexts = {
 };
 // --- END NEW ---
 
-// --- NEW: Map Elements ---
-const mapPanel = document.getElementById('map-panel');
-const mapToggleButton = document.getElementById('map-toggle-button');
+// --- MODIFIED: Renamed mapPanel to leftPanel ---
+const leftPanel = document.getElementById('left-panel');
+const panelToggleButton = document.getElementById('panel-toggle-button'); // MODIFIED
 const mapSvg = document.getElementById('map-svg');
 const mapRoomName = document.getElementById('map-room-name');
 const mapRoomExits = document.getElementById('map-room-exits');
-const svgNS = "http://www.w3.org/2000/svg"; // SVG Namespace
+const svgNS = "http://www.w3.org/2000/svg"; 
+
+// --- NEW: Get new Widget elements ---
+const stanceSelect = document.getElementById('stance-select');
+const stowMainhandBtn = document.getElementById('stow-mainhand-btn');
+const stowOffhandBtn = document.getElementById('stow-offhand-btn');
+const expValue = document.getElementById('exp-value');
+const expLabel = document.getElementById('exp-label');
+const expFill = document.getElementById('exp-fill');
+const injurySvg = document.getElementById('injury-svg');
+const wornItemsList = document.getElementById('worn-items-list');
 // --- END NEW ---
 
 // --- NEW: Initialize Socket.IO connection ---
@@ -34,25 +44,20 @@ const socket = io();
 
 // --- Client-side state ---
 let activeKeyword = null;
-// --- MODIFIED: These are now set by the server ---
 let playerName = null; 
-let currentGameState = "login"; // This is the MUD game state (e.g., chargen, playing)
-// --- NEW: Client-side state for login flow ---
-let currentClientState = "login_user"; // Tracks the *client's* state (login_user, login_pass, char_select, in_game)
+let currentGameState = "login"; 
+let currentClientState = "login_user"; 
+// --- NEW: Client-side vitals cache ---
+let currentVitals = null;
 // ---
 let commandHistory = [];
 let historyIndex = -1;
-
-// --- NEW: Roundtime Timer State ---
 let rtEndTime = 0;
 let rtTimer = null;
-// --- END NEW ---
 
 
-// --- Helper: Send Command to Backend (NOW USES WEBSOCKETS) ---
+// --- Helper: Send Command to Backend (Unchanged) ---
 function sendCommand(command) {
-    // --- MODIFIED: We no longer send player_name. ---
-    // The server knows who we are based on our socket session.
     socket.emit('command', {
         command: command
     });
@@ -61,48 +66,42 @@ function sendCommand(command) {
 // --- Helper: Add Message to Output (Unchanged) ---
 function addMessage(message, messageClass = null) {
     let formattedMessage = message;
-    // Format room titles
     formattedMessage = formattedMessage.replace(
         /\*\*(.*?)\*\*/g, 
         '<span class="room-title">[$1]</span>'
     );
-    // Add CSS class if one was provided
     if (messageClass) {
         formattedMessage = `<span class="${messageClass}">${formattedMessage}</span>`;
     }
-    // We use innerHTML to render the <table> tags
     output.innerHTML += `\n${formattedMessage}`;
     output.scrollTop = output.scrollHeight;
 }
 
 // ---
-// --- NEW: GUI Update Functions
+// --- GUI Update Functions
 // ---
 
 function updateRtDisplay() {
+    // (This function is unchanged)
     const now = Date.now();
     const timeLeft = rtEndTime - now;
 
     if (timeLeft <= 0) {
-        // --- Roundtime is over ---
         if (rtTimer) {
             clearInterval(rtTimer);
             rtTimer = null;
         }
         rtEndTime = 0;
-        rtContainer.innerHTML = ''; // Clear all boxes
+        rtContainer.innerHTML = ''; 
         
-        // Add prompt only if we are in the game
         if (currentClientState === "in_game" && currentGameState === "playing") {
             addMessage(">", "command-echo");
-            input.focus(); // Focus input when RT clears
+            input.focus();
         }
     } else {
-        // --- Roundtime is active ---
-        const secondsLeft = Math.ceil(timeLeft / 1000); // How many seconds are left
+        const secondsLeft = Math.ceil(timeLeft / 1000);
         const currentBoxes = rtContainer.querySelectorAll('.rt-box');
         
-        // Count down by removing 'active' class
         currentBoxes.forEach((box, index) => {
             if (index < secondsLeft) {
                 box.classList.add('active');
@@ -113,22 +112,17 @@ function updateRtDisplay() {
     }
 }
 
-// ---
-// --- MODIFIED: Add rt_type parameter
-// ---
 function startRtTimer(duration_ms, end_time_ms, rt_type = "hard") {
+    // (This function is unchanged)
     rtEndTime = end_time_ms;
 
-    // Clear any existing timer just in case
     if (rtTimer) {
         clearInterval(rtTimer);
     }
     
-    // --- NEW: Dynamically create boxes ---
-    rtContainer.innerHTML = ''; // Clear old boxes
+    rtContainer.innerHTML = '';
     const totalSeconds = Math.ceil(duration_ms / 1000);
     
-    // Don't create boxes for tiny RTs
     if (totalSeconds < 1) {
         updateRtDisplay();
         return;
@@ -136,28 +130,25 @@ function startRtTimer(duration_ms, end_time_ms, rt_type = "hard") {
 
     let boxesHtml = '';
     for (let i = 0; i < totalSeconds; i++) {
-        // --- THIS IS THE FIX: Add rt_type (e.g., "hard" or "soft") as a class
         boxesHtml += `<div class="rt-box active ${rt_type}"></div>`;
     }
     rtContainer.innerHTML = boxesHtml;
-    // --- END NEW ---
     
-    // Start a new timer
-    rtTimer = setInterval(updateRtDisplay, 100); // Check 10x per second
-    updateRtDisplay(); // Run once immediately
+    rtTimer = setInterval(updateRtDisplay, 100);
+    updateRtDisplay();
 }
-// --- END MODIFIED ---
 
 function updateVitals(vitals) {
     if (!vitals) return;
+    
+    // --- NEW: Store vitals globally ---
+    currentVitals = vitals;
 
     // 1. Update Gauges
     const gauges = ['health', 'mana', 'stamina', 'spirit'];
     gauges.forEach(type => {
         const current = vitals[type] || 0;
-        // --- THIS IS THE FIX: Default to 0, not 100 ---
         const max = vitals[`max_${type}`] || 0;
-        // --- END FIX ---
         let percent = 0;
         if (max > 0) {
             percent = (current / max) * 100;
@@ -179,82 +170,147 @@ function updateVitals(vitals) {
     postureStatusEl.innerText = statusText;
 
     // 3. Update Roundtime
-    // ---
-    // --- MODIFIED: Pass rt_type to startRtTimer
-    // ---
     if (vitals.rt_end_time_ms > Date.now()) {
         startRtTimer(vitals.rt_duration_ms, vitals.rt_end_time_ms, vitals.rt_type || 'hard');
     }
-    // --- END MODIFIED ---
+    
+    // --- NEW: 4. Update GUI Panels ---
+    updateGuiPanels(vitals);
 }
 
 // ---
-// --- NEW: MAP DRAWING FUNCTION
+// --- NEW: Wound Marker Creation
 // ---
+const WOUND_COORDS = {
+    "head": { x: 50, y: 30, r: 10 },
+    "neck": { x: 50, y: 52, r: 3 },
+    "chest": { x: 50, y: 70, r: 12 },
+    "abdomen": { x: 50, y: 95, r: 10 },
+    "back": { x: 50, y: 80, r: 12 }, // (Same as chest for this simple model)
+    "right_eye": { x: 45, y: 28, r: 2 },
+    "left_eye": { x: 55, y: 28, r: 2 },
+    "right_arm": { x: 30, y: 80, r: 6 },
+    "left_arm": { x: 70, y: 80, r: 6 },
+    "right_hand": { x: 20, y: 88, r: 4 },
+    "left_hand": { x: 80, y: 88, r: 4 },
+    "right_leg": { x: 40, y: 155, r: 8 },
+    "left_leg": { x: 60, y: 155, r: 8 }
+};
+
+function createWoundMarker(x, y, rank) {
+    const circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', WOUND_COORDS["head"].r); // Use a standard size for now
+    circle.classList.add('wound-marker');
+    
+    // You could vary size/color based on rank
+    // circle.setAttribute('r', 3 + (rank * 2)); 
+    
+    injurySvg.appendChild(circle);
+}
+
+// ---
+// --- NEW: Main GUI Panel Update Function
+// ---
+function updateGuiPanels(vitals) {
+    if (!vitals) return;
+    
+    // 1. Update Experience Widget
+    if (vitals.exp_to_next !== undefined) {
+        expValue.innerText = vitals.exp_to_next.toLocaleString();
+        expLabel.innerText = vitals.exp_label || "until next level";
+        expFill.style.width = `${vitals.exp_percent || 0}%`;
+    }
+
+    // 2. Update Injuries Widget
+    // Clear old wounds
+    injurySvg.querySelectorAll('.wound-marker').forEach(m => m.remove());
+    if (vitals.wounds) {
+        for (const [location, rank] of Object.entries(vitals.wounds)) {
+            const coords = WOUND_COORDS[location];
+            if (coords) {
+                createWoundMarker(coords.x, coords.y, rank);
+            }
+        }
+    }
+
+    // 3. Update Combat Widget
+    if (vitals.stance) {
+        stanceSelect.value = vitals.stance;
+    }
+
+    // 4. Update Inventory Widget
+    if (vitals.worn_items) {
+        wornItemsList.innerHTML = ''; // Clear list
+        const items = Object.values(vitals.worn_items);
+        
+        if (items.length === 0) {
+            wornItemsList.innerHTML = 'You are not wearing anything.';
+        } else {
+            items.forEach(item => {
+                wornItemsList.innerHTML += `
+                    <div>
+                        <span class="worn-item-slot">${item.slot_display}:</span>
+                        <span class="worn-item-name">${item.name}</span>
+                    </div>
+                `;
+            });
+        }
+    }
+}
+
+
+// ---
+// --- MAP DRAWING FUNCTION (Unchanged)
+// ---
+// (This section is identical to the previous response)
 const ROOM_SIZE = 24;
-const ROOM_GAP = 12; // Total space between room centers = ROOM_SIZE + ROOM_GAP
+const ROOM_GAP = 12; 
 const ROOM_CENTER = ROOM_SIZE / 2;
 const TOTAL_CELL_SIZE = ROOM_SIZE + ROOM_GAP;
-const ARROW_LEN = 6; // Length of exit arrows
+const ARROW_LEN = 6; 
 
 function drawMap(mapData, currentRoomId) {
     const currentRoom = mapData[currentRoomId];
     if (!currentRoom || currentRoom.x === undefined || currentRoom.y === undefined) {
-        mapSvg.innerHTML = ''; // Clear map if data is bad
+        mapSvg.innerHTML = ''; 
         mapRoomName.innerText = 'Unknown';
         mapRoomExits.innerText = '...';
         return;
     }
-
-    // Clear previous map
     mapSvg.innerHTML = '';
-    
     const svgRect = mapSvg.getBoundingClientRect();
     const svgWidth = svgRect.width;
     const svgHeight = svgRect.height;
-
-    // Calculate center offset to put current room in the middle
     const cX = currentRoom.x || 0;
     const cY = currentRoom.y || 0;
     const cZ = currentRoom.z || 0;
-    const cInterior = currentRoom.interior_id || null; // <-- NEW: Get current Interior ID
-    
+    const cInterior = currentRoom.interior_id || null; 
     const offsetX = (svgWidth / 2) - (cX * TOTAL_CELL_SIZE) - ROOM_CENTER;
-    const offsetY = (svgHeight / 2) - (-cY * TOTAL_CELL_SIZE) - ROOM_CENTER; // Y is inverted in SVG
-
+    const offsetY = (svgHeight / 2) - (-cY * TOTAL_CELL_SIZE) - ROOM_CENTER;
     const allExits = new Set();
-    
-    // Draw rooms
     for (const roomId in mapData) {
         const room = mapData[roomId];
         const roomZ = room.z || 0;
-        const roomInterior = room.interior_id || null; // <-- NEW: Get this room's Interior ID
-
-        // --- FOG OF WAR: Only draw rooms on the same Z-level AND same interior ---
-        // This is the modified line that adds the interior_id check.
+        const roomInterior = room.interior_id || null;
         if (room.x === undefined || room.y === undefined || roomZ !== cZ || roomInterior !== cInterior) {
             continue;
         }
-
         const rX = offsetX + (room.x * TOTAL_CELL_SIZE);
-        const rY = offsetY + (-room.y * TOTAL_CELL_SIZE); // Y is inverted
-
+        const rY = offsetY + (-room.y * TOTAL_CELL_SIZE); 
         const g = document.createElementNS(svgNS, 'g');
         g.classList.add('map-room');
         if (roomId === currentRoomId) {
             g.classList.add('current');
         }
-
-        // --- 1. Draw Room Square ---
         const rect = document.createElementNS(svgNS, 'rect');
         rect.setAttribute('x', rX);
         rect.setAttribute('y', rY);
         rect.setAttribute('width', ROOM_SIZE);
         rect.setAttribute('height', ROOM_SIZE);
-        rect.setAttribute('rx', 3); // Rounded corners
+        rect.setAttribute('rx', 3);
         g.appendChild(rect);
-
-        // --- 2. Draw Exits (Lines and Arrows) ---
         const exits = room.exits || {};
         const drawExit = (dir, x1, y1, x2, y2) => {
             const path = document.createElementNS(svgNS, 'path');
@@ -263,7 +319,6 @@ function drawMap(mapData, currentRoomId) {
             g.appendChild(path);
             if (roomId === currentRoomId) allExits.add(dir);
         };
-
         if (exits.north)    drawExit('N',  rX + ROOM_CENTER, rY, rX + ROOM_CENTER, rY - ARROW_LEN);
         if (exits.south)    drawExit('S',  rX + ROOM_CENTER, rY + ROOM_SIZE, rX + ROOM_CENTER, rY + ROOM_SIZE + ARROW_LEN);
         if (exits.east)     drawExit('E',  rX + ROOM_SIZE, rY + ROOM_CENTER, rX + ROOM_SIZE + ARROW_LEN, rY + ROOM_CENTER);
@@ -272,38 +327,27 @@ function drawMap(mapData, currentRoomId) {
         if (exits.northwest) drawExit('NW', rX, rY, rX - ARROW_LEN, rY - ARROW_LEN);
         if (exits.southeast) drawExit('SE', rX + ROOM_SIZE, rY + ROOM_SIZE, rX + ROOM_SIZE + ARROW_LEN, rY + ROOM_SIZE + ARROW_LEN);
         if (exits.southwest) drawExit('SW', rX, rY + ROOM_SIZE, rX - ARROW_LEN, rY + ROOM_SIZE + ARROW_LEN);
-
-        // --- 3. Draw Special Exits (Up/Down/In/Out) ---
         const specialExits = room.special_exits || [];
         let hasUp = false, hasDown = false, hasInOut = false;
-        
         specialExits.forEach(exit => {
             const targetRoom = mapData[exit.target_room];
             if (targetRoom && targetRoom.z !== undefined) {
-                // Check for Z-level change *within the same interior* (e.g., inn stairs)
-                // Or check for Z-level change to an exterior (e.g., well)
                 if (targetRoom.z > cZ && (targetRoom.interior_id === cInterior || cInterior === null)) hasUp = true;
                 if (targetRoom.z < cZ && (targetRoom.interior_id === cInterior || cInterior === null)) hasDown = true;
             }
-            
-            // Check for moves to a *different interior* on the *same Z-level*
             if (targetRoom && (targetRoom.z || 0) === cZ && targetRoom.interior_id !== cInterior) {
                 hasInOut = true;
             }
-            
             if (roomId === currentRoomId) allExits.add(exit.name.toUpperCase());
         });
-
-        // Add text symbol for special exits
         const text = document.createElementNS(svgNS, 'text');
         let symbol = '';
         if (hasUp) symbol = '▲';
         if (hasDown) symbol = '▼';
-        if (hasInOut && !hasUp && !hasDown) symbol = '○'; // Circle for IN/OUT
-        
+        if (hasInOut && !hasUp && !hasDown) symbol = '○'; 
         if (symbol) {
             text.setAttribute('x', rX + ROOM_CENTER);
-            text.setAttribute('y', rY + ROOM_CENTER + 4); // Adjust for font baseline
+            text.setAttribute('y', rY + ROOM_CENTER + 4);
             text.classList.add('map-special-exit');
             if (hasUp) text.classList.add('up');
             if (hasDown) text.classList.add('down');
@@ -311,23 +355,18 @@ function drawMap(mapData, currentRoomId) {
             text.textContent = symbol;
             g.appendChild(text);
         }
-
         mapSvg.appendChild(g);
     }
-    
-    // Update Map Header/Footer
     mapRoomName.innerText = currentRoom.name || "Unknown";
     mapRoomExits.innerText = Array.from(allExits).join(', ') || 'None';
 }
 
 
 // ---
-// --- WEBSOCKET EVENT LISTENERS
+// --- WEBSOCKET EVENT LISTENERS (Unchanged logic, just calls new func)
 // ---
 
-// 1. This handles the direct response to *your* command
 socket.on('command_response', (data) => {
-    // We are now officially in the game
     currentClientState = "in_game"; 
     
     if (data.game_state) {
@@ -338,62 +377,43 @@ socket.on('command_response', (data) => {
         data.messages.forEach(msg => addMessage(msg));
     }
     
-    // --- NEW: Update GUI ---
     if (data.vitals) {
-        updateVitals(data.vitals);
+        updateVitals(data.vitals); // This will now call updateGuiPanels
     }
-    // --- END NEW ---
-
-    // ---
-    // --- NEW: Update Map ---
+    
     if (data.map_data && data.vitals && data.vitals.current_room_id) {
         drawMap(data.map_data, data.vitals.current_room_id);
     }
-    // --- END NEW ---
 });
 
-// 2. This handles *broadcasts* from the server (e.g., "Sean arrives.")
 socket.on('message', (message) => {
     addMessage(message);
 });
 
-// 3. This handles the global tick event
 socket.on('tick', () => {
-    // --- THIS IS THE FIX: 'in_g' -> 'in_game' ---
     if (currentClientState === "in_game" && currentGameState === "playing" && !rtTimer) {
         addMessage(">", "command-echo");
     }
-    // --- END FIX ---
 });
 
-// ---
-// --- THIS IS THE FIX: Listen for the new 'update_vitals' event
-// ---
 socket.on('update_vitals', (data) => {
     if (data) {
-        updateVitals(data);
+        updateVitals(data); // This will now call updateGuiPanels
     }
 });
-// --- END FIX ---
 
-// 4. Handle connection/disconnection events
+// (All login/auth flow listeners are unchanged)
+// ...
 socket.on('connect', () => {
     console.log("Connected to server with ID:", socket.id);
-    // Server will send 'prompt_username' automatically
 });
-
 socket.on('disconnect', () => {
     console.log("Disconnected from server.");
     addMessage("...Connection lost. Please refresh the page.", "command-echo");
     currentClientState = "login_user";
     input.type = 'text';
-    input.disabled = true; // Disable input on disconnect
+    input.disabled = true;
 });
-
-// ---
-// --- NEW: LOGIN FLOW EVENT LISTENERS
-// ---
-
 socket.on('prompt_username', () => {
     output.innerHTML = "Welcome. Please enter your Username.\n(This will create a new account if one does not exist)";
     currentClientState = "login_user";
@@ -401,7 +421,6 @@ socket.on('prompt_username', () => {
     input.disabled = false;
     input.focus();
 });
-
 socket.on('prompt_password', () => {
     addMessage("Password:");
     currentClientState = "login_pass";
@@ -409,16 +428,12 @@ socket.on('prompt_password', () => {
     input.disabled = false;
     input.focus();
 });
-
 socket.on('login_failed', (message) => {
-    addMessage(message, "command-echo"); // Show error
-    // Server will re-send 'prompt_username'
+    addMessage(message, "command-echo");
 });
-
 socket.on('show_char_list', (data) => {
     addMessage("--- Your Characters ---");
     data.chars.forEach(charName => {
-        // Make character names clickable
         addMessage(`- <span class="keyword" data-command="${charName}">${charName}</span>`);
     });
     addMessage("\nType a character name to login, or type '<span class='keyword' data-command='create'>create</span>' to make a new one.");
@@ -426,70 +441,53 @@ socket.on('show_char_list', (data) => {
     input.type = 'text';
     input.disabled = false;
 });
-
 socket.on('prompt_create_character', () => {
     addMessage("Please enter a name for your new character:");
     currentClientState = "char_create_name";
     input.type = 'text';
     input.disabled = false;
 });
-
 socket.on('name_taken', () => {
     addMessage("That name is already taken. Please choose another:");
-    currentClientState = "char_create_name"; // Stay in this state
+    currentClientState = "char_create_name";
 });
-
 socket.on('name_invalid', (message) => {
     addMessage(message);
     addMessage("Please enter a name for your new character:");
-    currentClientState = "char_create_name"; // Stay in this state
+    currentClientState = "char_create_name";
 });
-
 socket.on('char_invalid', (message) => {
     addMessage(message);
-    // Server will either re-send list or re-prompt for username
 });
 
+// ---
+// --- INPUT LISTENERS
+// ---
 
-// ---
-// UPDATED: Input: Listen for "Enter" key
-// ---
+// (Input 'keydown' listener for Enter/ArrowUp/ArrowDown is unchanged)
+// ...
 input.addEventListener('keydown', async function(event) {
-    // --- THIS IS THE FIX ---
-    // REMOVED: if (event.key === 'Enter' && rtTimer)
-    // We now allow sending commands even if the client *thinks* we have RT
-    // --- END FIX ---
-
     if (event.key === 'Enter') {
         const commandText = input.value;
-        if (!commandText && currentClientState !== 'login_pass') return; // Allow empty password
-
-        // Add to history *only if* in game
+        if (!commandText && currentClientState !== 'login_pass') return;
         if (currentClientState === "in_game" && commandText && commandText !== commandHistory[0]) {
             commandHistory.unshift(commandText);
-            if (commandHistory.length > 50) { // Limit history
+            if (commandHistory.length > 50) {
                 commandHistory.pop();
             }
         }
         historyIndex = -1;
         input.value = '';
-
-        // --- MODIFIED: Handle command echo based on state ---
         if (currentClientState === 'login_pass') {
             addMessage('> ********', 'command-echo');
         } else {
             addMessage(`> ${commandText}`, 'command-echo');
         }
-        
-        // --- MODIFIED: Always send command, server handles state ---
         sendCommand(commandText);
-        
-        // After sending, if it was a password, reset input type
         if (currentClientState === 'login_pass') {
             input.type = 'text';
         }
     }
-    // --- MODIFIED: Arrow keys work even if "rtTimer" is active ---
     else if (event.key === 'ArrowUp') {
         event.preventDefault();
         if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
@@ -509,91 +507,159 @@ input.addEventListener('keydown', async function(event) {
     }
 });
 
-// --- UPDATED: Left-Click Menu Logic ---
-output.addEventListener('click', function(event) {
-    // --- NEW: Block clicks if RT is active ---
-    // if (rtTimer) return; // <-- We remove this block to allow clicks
-    // --- END NEW ---
 
+// (All click listeners for context menu and output are unchanged)
+// ...
+output.addEventListener('click', function(event) {
     const target = event.target;
-    
-    // Check if the clicked element is a 'keyword'
     if (target.classList.contains('keyword')) {
         event.preventDefault();
         event.stopPropagation();
-        
         const command = target.dataset.command;
-        
         if (command) {
-            // This handles clickable skills, char list, 'create', etc.
             input.value = ''; 
             addMessage(`> ${command}`, 'command-echo');
             sendCommand(command);
-            return; // We are done
+            return; 
         }
-        // --- END FIX ---
-
-        // If no data-command, proceed with old logic
         const keyword = target.dataset.name || target.innerText;
-
         if (currentGameState === "chargen") {
-            // This handles clicking chargen options
             input.value = '';
-            addMessage(`> ${target.innerText}`, 'command-echo'); // Echo the click
+            addMessage(`> ${target.innerText}`, 'command-echo');
             sendCommand(target.innerText); 
-            
-        } else if (currentClientState === "in_game") { // Check client state
-            // This opens the right-click context menu
+        } else if (currentClientState === "in_game") {
             activeKeyword = keyword;
             const verbs = (target.dataset.verbs || "look").split(',');
-            
             contextMenu.innerHTML = '';
-            
             verbs.forEach(verb => {
                 const item = document.createElement('div');
                 item.innerText = `${verb} ${activeKeyword}`;
                 item.dataset.command = `${verb} ${activeKeyword}`;
                 contextMenu.appendChild(item);
             });
-
             contextMenu.style.left = `${event.pageX}px`;
             contextMenu.style.top = `${event.pageY}px`;
             contextMenu.style.display = 'block';
         }
     }
 });
-
 document.addEventListener('click', function(event) {
     if (contextMenu.style.display === 'block') {
         contextMenu.style.display = 'none';
     }
 });
-
 contextMenu.addEventListener('click', function(event) {
-    // --- NEW: Block clicks if RT is active ---
-    // if (rtTimer) return; // <-- We remove this block
-    // --- END NEW ---
-
     const command = event.target.dataset.command;
-    if (command && currentClientState === "in_game") { // Check client state
+    if (command && currentClientState === "in_game") {
         input.value = ''; 
         addMessage(`> ${command}`, 'command-echo');
         sendCommand(command); 
     }
 });
 
-// --- NEW: Map Toggle Button ---
-mapToggleButton.addEventListener('click', () => {
-    mapPanel.classList.toggle('collapsed');
-    if (mapPanel.classList.contains('collapsed')) {
-        mapToggleButton.innerText = '»';
+// ---
+// --- NEW: WIDGET AND PANEL EVENT LISTENERS
+// ---
+
+// --- Panel Toggle Button ---
+panelToggleButton.addEventListener('click', () => {
+    leftPanel.classList.toggle('collapsed');
+    if (leftPanel.classList.contains('collapsed')) {
+        panelToggleButton.innerText = '»';
     } else {
-        mapToggleButton.innerText = '«';
+        panelToggleButton.innerText = '«';
     }
 });
 
-// --- NEW: Initialize GUI on load ---
-// Set default values so it doesn't look broken before login
+// --- Widget Minimize ---
+leftPanel.addEventListener('click', (e) => {
+    // Check if the click was on the header's pseudo-element (::after)
+    // We do this by checking click position relative to the header's right edge
+    const header = e.target.closest('.widget-header');
+    if (header) {
+        const rect = header.getBoundingClientRect();
+        const clickX = e.clientX;
+        // If click is on the "button" area (last 30px)
+        if (clickX > rect.right - 30) {
+            e.preventDefault();
+            e.stopPropagation();
+            header.closest('.widget').classList.toggle('minimized');
+        }
+    }
+});
+
+// --- Widget Drag and Drop ---
+let draggedWidget = null;
+
+leftPanel.addEventListener('dragstart', (e) => {
+    if (e.target.classList.contains('widget-header')) {
+        draggedWidget = e.target.closest('.widget');
+        // Check if the widget is minimized, if so, don't allow drag
+        if (draggedWidget.classList.contains('minimized')) {
+            draggedWidget = null;
+            e.preventDefault();
+            return;
+        }
+        draggedWidget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+});
+
+leftPanel.addEventListener('dragend', (e) => {
+    if (draggedWidget) {
+        draggedWidget.classList.remove('dragging');
+        draggedWidget = null;
+    }
+});
+
+leftPanel.addEventListener('dragover', (e) => {
+    e.preventDefault(); // Necessary to allow drop
+    
+    const targetWidget = e.target.closest('.widget');
+    if (targetWidget && draggedWidget && targetWidget !== draggedWidget) {
+        const rect = targetWidget.getBoundingClientRect();
+        // Get mouse position relative to the target widget
+        const offsetY = e.clientY - rect.top;
+        
+        // If dragging over the top half, insert before, else insert after
+        if (offsetY < rect.height / 2) {
+            leftPanel.insertBefore(draggedWidget, targetWidget);
+        } else {
+            // insertAfter
+            leftPanel.insertBefore(draggedWidget, targetWidget.nextSibling);
+        }
+    }
+});
+
+// --- Combat Widget Actions ---
+stanceSelect.addEventListener('change', (e) => {
+    sendCommand(`stance ${e.target.value}`);
+});
+
+stowMainhandBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentVitals && currentVitals.worn_items.mainhand) {
+        const itemName = currentVitals.worn_items.mainhand.name;
+        // --- FIX: Use REMOVE command to stow ---
+        sendCommand(`remove ${itemName.toLowerCase()}`);
+    } else {
+        addMessage("You are not holding anything in your main hand.");
+    }
+});
+
+stowOffhandBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentVitals && currentVitals.worn_items.offhand) {
+        const itemName = currentVitals.worn_items.offhand.name;
+        // --- FIX: Use REMOVE command to stow ---
+        sendCommand(`remove ${itemName.toLowerCase()}`);
+    } else {
+        addMessage("You are not holding anything in your off hand.");
+    }
+});
+
+
+// --- Initialize GUI on load (Unchanged) ---
 updateVitals({
     hp: 0, max_hp: 0,
     mana: 0, max_mana: 0,
@@ -602,6 +668,12 @@ updateVitals({
     posture: "...",
     status_effects: [],
     rt_end_time_ms: 0,
-    rt_type: "hard" // <-- NEW
+    rt_type: "hard",
+    // --- NEW: Add defaults for new GUI ---
+    stance: "neutral",
+    wounds: {},
+    exp_to_next: 0,
+    exp_label: "...",
+    exp_percent: 0,
+    worn_items: {}
 });
-// --- END NEW ---

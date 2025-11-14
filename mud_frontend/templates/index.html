@@ -10,20 +10,77 @@
     
     <div id="main-content">
         
-        <div id="map-panel">
-            <div id="map-header">
-                <span id="map-room-name">Loading...</span>
-                <div id="map-toggle-button">«</div>
+        <div id="left-panel">
+            
+            <div id="panel-toggle-button">«</div>
+
+            <div class="widget" id="exp-widget">
+                <div class="widget-header" draggable="true">Experience</div>
+                <div class="widget-content">
+                    <div id="exp-bar">
+                        <div id="exp-fill"></div>
+                    </div>
+                    <div id="exp-text">
+                        <span id="exp-value">-10000</span>
+                        <span id="exp-label">until next level</span>
+                    </div>
+                </div>
             </div>
             
-            <svg id="map-svg" width="280" height="400"></svg>
-            
-            <div id="map-footer">
-                Exits: <span id="map-room-exits">...</span>
+            <div class="widget" id="injuries-widget">
+                <div class="widget-header" draggable="true">Injuries</div>
+                <div class="widget-content">
+                    <svg id="injury-svg" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">
+                        <path id="body-outline" d="M 50 10 C 40 10, 30 20, 30 30 C 30 40, 40 50, 50 50 C 60 50, 70 40, 70 30 C 70 20, 60 10, 50 10 Z M 50 55 L 50 110 L 40 110 L 20 90 L 10 180 L 30 200 L 45 130 L 55 130 L 70 200 L 90 180 L 80 90 L 60 110 L 50 110 Z" />
+                        </svg>
+                </div>
             </div>
-        </div>
-        
-        <div id="output">Please enter your character name to create or load a character.</div>
+
+            <div class="widget" id="combat-widget">
+                <div class="widget-header" draggable="true">Combat</div>
+                <div class="widget-content">
+                    <div class="combat-row">
+                        <span>Mainhand:</span>
+                        <a href="#" id="stow-mainhand-btn" class="combat-action">Stow</a>
+                    </div>
+                    <div class="combat-row">
+                        <span>Offhand:</span>
+                        <a href="#" id="stow-offhand-btn" class="combat-action">Stow</a>
+                    </div>
+                    <div class="combat-row">
+                        <span>Stance:</span>
+                        <select id="stance-select">
+                            <option value="offensive">Offensive</option>
+                            <option value="advance">Advance</option>
+                            <option value="forward">Forward</option>
+                            <option value="neutral" selected>Neutral</option>
+                            <option value="guarded">Guarded</option>
+                            <option value="defensive">Defensive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget" id="inventory-widget">
+                <div class="widget-header" draggable="true">Worn Items</div>
+                <div class="widget-content" id="worn-items-list">
+                    You are not wearing anything.
+                </div>
+            </div>
+
+            <div class="widget" id="map-widget">
+                <div class="widget-header" draggable="true">
+                    <span id="map-room-name">Loading...</span>
+                </div>
+                <div class="widget-content">
+                    <svg id="map-svg" width="280" height="400"></svg>
+                    <div id="map-footer">
+                        Exits: <span id="map-room-exits">...</span>
+                    </div>
+                </div>
+            </div>
+
+        </div> <div id="output">Please enter your character name to create or load a character.</div>
     
     </div> <div id="input-line">
         <div id="rt-container">
