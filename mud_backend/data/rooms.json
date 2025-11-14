@@ -18,7 +18,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "details": [
                     {
@@ -35,7 +35,7 @@
                 "verbs": [
                     "CLIMB",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "well_bottom",
                 "perception_dc": 0,
@@ -99,7 +99,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "inn_front_desk",
                 "perception_dc": 0,
@@ -245,7 +245,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "library_archives",
                 "perception_dc": 0,
@@ -280,7 +280,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "temple_of_light",
                 "perception_dc": 0,
@@ -296,7 +296,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "town_hall",
                 "perception_dc": 0,
@@ -331,7 +331,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "bank_lobby",
                 "perception_dc": 0,
@@ -347,7 +347,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "theatre",
                 "perception_dc": 0,
@@ -380,7 +380,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "elementalist_study",
                 "perception_dc": 0,
@@ -396,7 +396,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "barracks",
                 "perception_dc": 0,
@@ -430,7 +430,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "armory_shop",
                 "perception_dc": 0,
@@ -464,7 +464,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "apothecary_shop",
                 "perception_dc": 0,
@@ -498,7 +498,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    "investigate"
                 ],
                 "target_room": "furrier_shop",
                 "perception_dc": 0,
@@ -570,7 +570,7 @@
                 "verbs": [
                     "GET",
                     "LOOK",
-                    "EXAMINE",
+                    "investigate",
                     "TAKE"
                 ],
                 "is_item": true
@@ -588,7 +588,7 @@
         "z": 0,
         "interior_id": "inn",
         "description": {
-            "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads OUT to the town square."
+            "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,investigate,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads OUT to the town square."
         },
         "objects": [
             {
@@ -603,7 +603,7 @@
                 "verbs": [
                     "look",
                     "talk to",
-                    "examine",
+                    "investigate",
                     "give"
                 ],
                 "is_npc": true,
@@ -618,7 +618,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-J"examine"
+                    "investigate"
                 ],
                 "target_room": "inn_room",
                 "perception_dc": 0,
@@ -717,7 +717,7 @@ J"examine"
                 ],
                 "verbs": [
                     "look",
-                    "examine"
+                    "investigate"
                 ]
             }
         ],
@@ -824,7 +824,7 @@ J"examine"
                 ],
                 "verbs": [
                     "look",
-                    "examine"
+                    "investigate"
                 ]
             },
             {
@@ -839,7 +839,7 @@ J"examine"
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    "investigate"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -859,7 +859,7 @@ J"examine"
                 ],
                 "verbs": [
                     "look",
-                    "examine"
+                    "investigate"
                 ]
             }
         ],
@@ -890,7 +890,7 @@ J"examine"
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    "investigate"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -1009,7 +1009,7 @@ J"examine"
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    "investigate"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -1047,7 +1047,7 @@ J"examine"
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    "investigate"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -1083,7 +1083,7 @@ J"examine"
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    "investigate"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -1118,7 +1118,7 @@ J"examine"
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    "investigate"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -1154,7 +1154,7 @@ J"examine"
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    "investigate"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [

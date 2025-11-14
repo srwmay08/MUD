@@ -170,9 +170,47 @@ def fetch_player_data(player_name: str) -> dict:
 def fetch_room_data(room_id: str) -> dict:
     database = get_db()
     if database is None:
+        # --- MOCK DB FALLBACK ---
         if room_id == "town_square":
             return { "room_id": "town_square", "name": "The Great Town Square", "description": "A mock square." }
-        return {}
+        
+        # --- THIS IS THE FIX ---
+        if room_id == "inn_room":
+            # Need to return a minimal viable room to get past chargen
+            return {
+                "room_id": "inn_room",
+                "name": "A Room at the Inn",
+                "description": {
+                    "default": "You are in a simple, comfortable room. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads OUT."
+                },
+                "objects": [
+                    { "name": "bed", "description": "A simple straw mattress...", "perception_dc": 0, "keywords": ["bed", "mattress"], "verbs": ["look", "investigate"] },
+                    { "name": "window", "description": "Looking out the window, you can see the bustling town square.", "perception_dc": 0, "keywords": ["window"] },
+                    { "name": "table", "description": "A small, plain wooden table.", "perception_dc": 0, "keywords": ["table"], "verbs": ["look", "investigate"] }
+                ],
+                "hidden_objects": [
+                    {
+                        "name": "a note", "item_id": "inn_note", "description": "A folded piece of parchment rests on the table.",
+                        "perception_dc": 10, "keywords": ["note", "parchment", "a note"],
+                        "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"], "is_item": True
+                    }
+                ],
+                "exits": { "out": "inn_front_desk" }
+            }
+        if room_id == "inn_front_desk":
+            # Add this one too, since it's the exit from inn_room
+            return {
+                "room_id": "inn_front_desk", "name": "Inn - Front Desk", "description": {"default": "You are at the front desk of the inn. A portly innkeeper stands here. A door leads back to your room, and the main exit leads OUT."},
+                "objects": [
+                    { "name": "an innkeeper", "description": "A portly, cheerful-looking man.", "keywords": ["innkeeper", "man"], "verbs": ["look", "talk to", "give"], "is_npc": True, "quest_giver_ids": ["innkeeper_quest_1"] }
+                ],
+                "exits": { "out": "ts_south" },
+                "interior_id": "inn" # Added this to be safe
+            }
+        # --- END FIX ---
+            
+        return {} # Original fallback
+        
     room_data = database.rooms.find_one({"room_id": room_id})
     if room_data is None:
         return {"room_id": "void", "name": "The Void", "description": "Nothing but endless darkness here."}
