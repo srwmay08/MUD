@@ -147,17 +147,22 @@ class Look(BaseVerb):
                     item_data = self.world.game_items.get(item_id)
                     self.player.send_message(f"- {item_data.get('name', 'an item')}")
                 
-                # --- NEW: Tutorial Hook for STOW ---
+                # ---
+                # --- THIS IS THE FIX ---
+                # ---
                 if ("intro_lookinpack" in self.player.completed_quests and
                     "intro_stow" not in self.player.completed_quests):
                     
                     self.player.send_message(
-                        "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You can see the note (and a dagger!) in your pack. "
-                        "To put an item *from your hand* into your pack, you must first be holding it. "
-                        "Try <span class='keyword' data-command='get note'>GET NOTE</span>, then <span class='keyword' data-command='stow note'>STOW NOTE</span>."
+                        "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You can see the dagger in your pack, and you are (presumably) holding the note. "
+                        "To put an item *from your hand* into your pack, you can "
+                        "<span class='keyword' data-command='stow note'>STOW NOTE</span>. "
+                        "Try it now, and then <span class='keyword' data-command='get note'>GET NOTE</span> to pick it back up."
                     )
                     self.player.completed_quests.append("intro_stow")
-                # --- END NEW ---
+                # ---
+                # --- END FIX
+                # ---
                 return
             else:
                 self.player.send_message(f"You look in {container_data['name']}.")
