@@ -49,6 +49,14 @@ MOVE (or GO) is a mechanical verb used for movement. It is used to traverse port
 * Often, just typing the exit name is enough: `OUT`.
 """,
 
+    "goto": """
+<span class='room-title'>--- Help: GOTO ---</span>
+GOTO is a fast-travel command that automatically moves you to well-known locations, provided you have a clear path.
+
+**Usage:**
+* **GOTO {location}**: Begins automatically walking to the target location (e.g., `GOTO TOWNHALL`, `GOTO INN`).
+""",
+
     "get": """
 <span class='room-title'>--- Help: GET / TAKE ---</span>
 GET (or TAKE) is used to pick up items from the ground or from containers and place them in your hands.
@@ -73,12 +81,17 @@ Displays what you are currently holding, wearing, and carrying in your container
 
 **Usage:**
 * **INVENTORY** or **INV**: Shows a list of your items.
-* **INVENTORY FULL**: (Not yet implemented) Shows a detailed list.
 """,
 
-    # ---
-    # --- NEW: Help for TALK
-    # ---
+    "wealth": """
+<span class'room-title'>--- Help: WEALTH ---</span>
+Displays how much silver you are currently carrying.
+
+**Usage:**
+* **WEALTH**: Shows your silver total.
+* **WEALTH LOUD**: Shouts your silver total to the room (not recommended!).
+""",
+
     "talk": """
 <span class='room-title'>--- Help: TALK ---</span>
 TALK is used to interact with non-player characters (NPCs) in the world. This is the primary way to receive quests and learn information.
@@ -90,9 +103,60 @@ TALK is used to interact with non-player characters (NPCs) in the world. This is
 **Example:**
 > TALK TO INNKEEPER
 """,
-    # ---
-    # --- END NEW
-    # ---
+
+    "list": """
+<span class'room-title'>--- Help: LIST ---</span>
+When at a shop, use LIST to see what the merchant is selling.
+
+**Usage:**
+* **LIST**: Shows all items for sale and their prices.
+""",
+
+    "buy": """
+<span class'room-title'>--- Help: BUY ---</span>
+When at a shop, use BUY to purchase an item. (You can also use ORDER).
+
+**Usage:**
+* **BUY {item name}**: Purchases the specified item from the shop.
+* **ORDER {item name}**: An alias for BUY.
+""",
+
+    "sell": """
+<span class'room-title'>--- Help: SELL ---</span>
+When at a shop, use SELL to sell an item *from your hands* to the merchant.
+
+**Usage:**
+* **SELL {item name}**: Sells the item you are holding.
+* **SELL BACKPACK**: Has the merchant appraise and buy *all* valid items from your backpack.
+""",
+
+    "forage": """
+<span class'room-title'>--- Help: FORAGE ---</span>
+FORAGE allows you to search the area for harvestable herbs and plants. This costs roundtime.
+
+**Usage:**
+* **FORAGE**: Searches the area for anything you can find.
+* **FORAGE {plant name}**: (Not yet implemented) Searches for a specific plant.
+* **FORAGE SENSE**: (Not yet implemented) Uses your skill to sense what plants are in the area.
+""",
+
+    "attack": """
+<span class'room-title'>--- Help: ATTACK ---</span>
+ATTACK initiates combat with a target. This command will continue to swing at your target automatically until you or the target is defeated, or you `FLEE`.
+
+**Usage:**
+* **ATTACK {target}**: Begins combat.
+* **FLEE**: (Not yet implemented) Stops combat and attempts to move to a random room.
+""",
+
+    "stance": """
+<span class'room-title'>--- Help: STANCE ---</span>
+STANCE allows you to change your combat footing to be more offensive or defensive.
+
+**Usage:**
+* **STANCE {type}**: Changes your stance (e.g., `STANCE OFFENSIVE`, `STANCE DEFENSIVE`, `STANCE NEUTRAL`).
+* **STANCE**: Shows your current stance.
+""",
 
     "stats": """
 <span class='room-title'>--- Help: Character Attributes ---</span>
@@ -144,6 +208,22 @@ class Help(BaseVerb):
             target_topic = "stow"
         if target_topic == "inv":
             target_topic = "inventory"
+        # --- NEW ALIASES ---
+        if target_topic == "goto":
+            target_topic = "goto"
+        if target_topic in ["buy", "order"]:
+            target_topic = "buy"
+        if target_topic == "sell":
+            target_topic = "sell"
+        if target_topic == "forage":
+            target_topic = "forage"
+        if target_topic == "attack":
+            target_topic = "attack"
+        if target_topic == "stance":
+            target_topic = "stance"
+        if target_topic == "wealth":
+            target_topic = "wealth"
+        # --- END NEW ---
             
         # --- NEW: Aliases for all 12 stats ---
         if target_topic in [

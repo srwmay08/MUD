@@ -59,9 +59,10 @@ class Inventory(BaseVerb):
         self.player.send_message(f"\n(Items: {total_items})")
 
         # ---
-        # --- MODIFIED: Tutorial Hook (Step 4: Look in Pack)
+        # --- THIS IS THE FIX ---
         # ---
-        if ("intro_inventory" in self.player.completed_quests and
+        # This hook triggers if 'look at note' (intro_leave_room_tasks) was done
+        if ("intro_leave_room_tasks" in self.player.completed_quests and
             "intro_lookinpack" not in self.player.completed_quests):
             
             self.player.send_message(
@@ -69,8 +70,12 @@ class Inventory(BaseVerb):
                 "<span class='keyword' data-command='look in pack'>LOOK IN PACK</span>."
             )
             self.player.completed_quests.append("intro_lookinpack")
+            
+            # Also set the 'wealth_checked' flag, since INVENTORY implies checking your belongings
+            if "intro_wealth_checked" not in self.player.completed_quests:
+                self.player.completed_quests.append("intro_wealth_checked")
         # ---
-        # --- END MODIFIED
+        # --- END FIX
         # ---
 
     def show_help(self):
@@ -100,3 +105,19 @@ class Wealth(BaseVerb):
         
         if "loud" in args:
             print(f"[Broadcast] {self.player.name} rummages around in their pockets.")
+
+        # ---
+        # --- THIS IS THE FIX ---
+        # ---
+        # This hook triggers if 'look at note' (intro_leave_room_tasks) was done
+        if ("intro_leave_room_tasks" in self.player.completed_quests and
+            "intro_wealth_checked" not in self.player.completed_quests):
+            
+            self.player.send_message(
+                "\n<span class='keyword' data-command='help inventory'>[Help: INVENTORY]</span> - Now check your "
+                "<span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying."
+            )
+            self.player.completed_quests.append("intro_wealth_checked")
+        # ---
+        # --- END FIX
+        # ---

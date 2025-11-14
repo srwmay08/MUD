@@ -34,8 +34,10 @@ from mud_backend.core.room_handler import show_room_to_player
 GOTO_MAP = {
     "townhall": "town_hall",
     "hall": "town_hall",
+    "clerk": "town_hall",
     "blacksmith": "armory_shop",
     "armory": "armory_shop",
+    "armorer": "armory_shop",
     "furrier": "furrier_shop",
     "apothecary": "apothecary_shop",
     "temple": "temple_of_light",
@@ -48,11 +50,14 @@ GOTO_MAP = {
     "archives": "library_archives",
     "librarian": "library_archives",
     "theatre": "theatre",
-    "inn": "inn_front_desk" # <-- MODIFIED
+    "bank": "bank_lobby",
+    "banker": "bank_lobby",
+    "inn": "inn_front_desk",
+    "innkeeper": "inn_front_desk"
 }
 
 # ---
-# --- THIS IS THE FIX ---
+# --- THIS IS THE FIX
 # ---
 def _check_toll_gate(player, target_room_id: str) -> bool:
     """
@@ -101,7 +106,7 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
         exits = room.get("exits", {})
         
         # ---
-        # --- THIS IS THE FIX ---
+        # --- THIS IS THE FIX
         # ---
         # Also check 'objects' for 'ENTER' verbs
         # This allows pathing through doors, portals, etc.
@@ -223,18 +228,46 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
                                      to=sid)
             return
-            
+        
+        # ---
+        # --- THIS IS THE FIX: Tutorial Hook for GOTO
+        # ---
+        current_room_id = player_obj.current_room_id
+        
         player_obj.move_to_room(target_room_id_step, move_msg)
         
         _set_action_roundtime(player_obj, 3.0) 
         
-        old_room_id = current_room_data.get("room_id")
+        old_room_id = current_room_id
         new_room_id = target_room_id_step
         
+        # ---
+        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
+        # ---
+        if (new_room_id == "town_hall" and
+            "innkeeper_quest_1" in player_obj.active_quests and # This check is flawed, should check *item*
+            "intro_give_clerk" not in player_obj.completed_quests):
+            
+             # Check if player has the payment
+            has_payment = False
+            if "lodging_tax_payment" in player_obj.inventory:
+                has_payment = True
+            for slot in ["mainhand", "offhand"]:
+                if player_obj.worn_items.get(slot) == "lodging_tax_payment":
+                    has_payment = True
+                    break
+            
+            if has_payment:
+                player_obj.send_message(
+                    "\nYou have arrived at the Town Hall. You should "
+                    "<span class='keyword' data-command='give clerk payment'>GIVE</span> the <span class='keyword' data-command='look at payment'>payment</span> to the <span class='keyword' data-command='look at clerk'>clerk</span>."
+                )
+                player_obj.completed_quests.append("intro_give_clerk")
+        # ---
+        # --- END FIX
+        # ---
+
         if old_room_id and new_room_id != old_room_id:
-            # ---
-            # --- THIS IS THE FIX: Use world.socketio.server methods
-            # ---
             world.socketio.server.leave_room(sid, old_room_id)
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
             world.socketio.emit("message", leaves_message, to=old_room_id)
@@ -242,9 +275,6 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             world.socketio.server.enter_room(sid, new_room_id)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
             world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
-            # ---
-            # --- END FIX
-            # ---
         
         world.socketio.emit('command_response', 
                                  {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
@@ -327,8 +357,34 @@ class Enter(BaseVerb):
         # --- Check for toll gates before moving ---
         if _check_toll_gate(self.player, target_room_id):
             return # Movement is blocked
-
+            
+        # ---
+        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
+        # ---
+        current_room_id = self.room.room_id
         self.player.move_to_room(target_room_id, move_msg)
+        
+        if (target_room_id == "town_hall" and
+            "intro_give_clerk" not in self.player.completed_quests):
+            
+             # Check if player has the payment
+            has_payment = False
+            if "lodging_tax_payment" in self.player.inventory:
+                has_payment = True
+            for slot in ["mainhand", "offhand"]:
+                if self.player.worn_items.get(slot) == "lodging_tax_payment":
+                    has_payment = True
+                    break
+            
+            if has_payment:
+                self.player.send_message(
+                    "\nYou have arrived at the Town Hall. You should "
+                    "<span class='keyword' data-command='give clerk payment'>GIVE</span> the <span class='keyword' data-command='look at payment'>payment</span> to the <span class='keyword' data-command='look at clerk'>clerk</span>."
+                )
+                self.player.completed_quests.append("intro_give_clerk")
+        # ---
+        # --- END FIX
+        # ---
         
         # --- MODIFIED: Only set RT if it's greater than 0 ---
         if rt > 0:
@@ -445,7 +501,32 @@ class Move(BaseVerb):
             if _check_toll_gate(self.player, target_room_id):
                 return # Movement is blocked
             
+            # ---
+            # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
+            # ---
             self.player.move_to_room(target_room_id, move_msg)
+            
+            if (target_room_id == "town_hall" and
+                "intro_give_clerk" not in self.player.completed_quests):
+                
+                 # Check if player has the payment
+                has_payment = False
+                if "lodging_tax_payment" in self.player.inventory:
+                    has_payment = True
+                for slot in ["mainhand", "offhand"]:
+                    if self.player.worn_items.get(slot) == "lodging_tax_payment":
+                        has_payment = True
+                        break
+                
+                if has_payment:
+                    self.player.send_message(
+                        "\nYou have arrived at the Town Hall. You should "
+                        "<span class='keyword' data-command='give clerk payment'>GIVE</span> the <span class='keyword' data-command='look at payment'>payment</span> to the <span class='keyword' data-command='look at clerk'>clerk</span>."
+                    )
+                    self.player.completed_quests.append("intro_give_clerk")
+            # ---
+            # --- END FIX
+            # ---
             
             # --- MODIFIED: Only set RT if it's greater than 0 ---
             if rt > 0:
@@ -506,7 +587,26 @@ class Exit(BaseVerb):
                 if _check_toll_gate(self.player, target_room_id):
                     return # Movement is blocked
 
+                # ---
+                # --- THIS IS THE FIX: Tutorial Hook for TALK
+                # ---
+                current_room_id = self.room.room_id
+                # Call move_to_room *first* so the player.messages list is cleared
                 self.player.move_to_room(target_room_id, move_msg)
+                
+                if (current_room_id == "inn_room" and
+                    target_room_id == "inn_front_desk" and
+                    "intro_leave_room_tasks" in self.player.completed_quests and
+                    "intro_talk_to_innkeeper" not in self.player.completed_quests):
+                    
+                    self.player.send_message(
+                        "\nYou are now in the inn's main lobby. You should <span class='keyword' data-command='talk to innkeeper'>TALK</span> "
+                        "to the innkeeper about your bill. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
+                    )
+                    self.player.completed_quests.append("intro_talk_to_innkeeper")
+                # ---
+                # --- END FIX
+                # ---
                 
                 # --- MODIFIED: Only set RT if it's greater than 0 ---
                 if rt > 0:
@@ -584,7 +684,7 @@ class GOTO(BaseVerb):
         self.player.send_message(f"You begin moving towards {target_room_name}...")
         
         # ---
-        # --- THIS IS THE FIX ---
+        # --- THIS IS THE FIX
         # ---
         player_id = self.player.name.lower()
         player_info = self.world.get_player_info(player_id)

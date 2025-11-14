@@ -5,7 +5,9 @@
         "x": 0,
         "y": 0,
         "z": 0,
-        "description": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty.",
+        "description": {
+            "default": "The air of the Great Town Square is thick with the sounds of commerce—merchants shouting their wares, the murmur of a hundred conversations, and the distant ringing of a blacksmith's hammer. In the center, a magnificent, multi-tiered fountain provides a constant, soothing splash, its mist cooling the air. The square's paving stones are worn smooth by countless feet, branching into wide paths in all directions. Tucked near the eastern corner, a simple stone well, its oaken bucket and rope coiled neatly, offers clear water to the thirsty."
+        },
         "unabsorbed_social_exp": 100,
         "is_outdoor": true,
         "objects": [
@@ -18,7 +20,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "details": [
                     {
@@ -35,7 +37,7 @@
                 "verbs": [
                     "CLIMB",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "well_bottom",
                 "perception_dc": 0,
@@ -99,7 +101,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "inn_front_desk",
                 "perception_dc": 0,
@@ -245,7 +247,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "library_archives",
                 "perception_dc": 0,
@@ -280,7 +282,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "temple_of_light",
                 "perception_dc": 0,
@@ -296,7 +298,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "town_hall",
                 "perception_dc": 0,
@@ -331,7 +333,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "bank_lobby",
                 "perception_dc": 0,
@@ -347,7 +349,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "theatre",
                 "perception_dc": 0,
@@ -380,7 +382,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "elementalist_study",
                 "perception_dc": 0,
@@ -396,7 +398,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "barracks",
                 "perception_dc": 0,
@@ -430,7 +432,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "armory_shop",
                 "perception_dc": 0,
@@ -464,7 +466,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "apothecary_shop",
                 "perception_dc": 0,
@@ -498,7 +500,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "furrier_shop",
                 "perception_dc": 0,
@@ -561,7 +563,7 @@
                 "name": "a note",
                 "item_id": "inn_note",
                 "description": "A folded piece of parchment rests on the table.",
-                "perception_dc": 1,
+                "perception_dc": 10,
                 "keywords": [
                     "note",
                     "parchment",
@@ -570,7 +572,7 @@
                 "verbs": [
                     "GET",
                     "LOOK",
-                    "investigate",
+                    "EXAMINE",
                     "TAKE"
                 ],
                 "is_item": true
@@ -588,7 +590,7 @@
         "z": 0,
         "interior_id": "inn",
         "description": {
-            "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,investigate,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads OUT to the town square."
+            "default": "You are at the front desk of the inn. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands here, polishing a mug. A door leads back to your room, and the main exit leads OUT to the town square."
         },
         "objects": [
             {
@@ -603,7 +605,7 @@
                 "verbs": [
                     "look",
                     "talk to",
-                    "investigate",
+                    "examine",
                     "give"
                 ],
                 "is_npc": true,
@@ -618,7 +620,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "investigate"
+                    "examine"
                 ],
                 "target_room": "inn_room",
                 "perception_dc": 0,
@@ -663,7 +665,7 @@
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
-                    "furrier_quest_1"
+                    "blacksmith_quest_1"
                 ],
                 "all_quests_done_message": "The Furrier is busy skinning a pelt.",
                 "shop_data": {
@@ -692,22 +694,30 @@
         "z": 0,
         "interior_id": "bank",
         "description": {
-            "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall."
+            "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall. A banker waits patiently."
         },
         "objects": [
             {
-                "name": "teller",
-                "description": "A sharply-dressed teller stands behind the counter, ready to assist you.",
+                "name": "a banker",
+                "description": "A sharply-dressed banker stands behind the counter, ready to assist you.",
                 "keywords": [
                     "teller",
-                    "banker"
+                    "banker",
+                    "a banker"
                 ],
                 "verbs": [
                     "deposit",
                     "withdraw",
                     "balance",
-                    "look"
-                ]
+                    "look",
+                    "talk to",
+                    "give"
+                ],
+                "is_npc": true,
+                "quest_giver_ids": [
+                    "theatre_quest_1"
+                ],
+                "all_quests_done_message": "The banker gives you a crisp, professional nod."
             },
             {
                 "name": "counter",
@@ -717,7 +727,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "investigate"
+                    "examine"
                 ]
             }
         ],
@@ -752,11 +762,12 @@
                     "list",
                     "buy",
                     "sell",
-                    "appraise"
+                    "appraise",
+                    "give"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
-                    "blacksmith_quest_1"
+                    "clerk_quest_1"
                 ],
                 "all_quests_done_message": "The Blacksmith is busy at his forge.",
                 "shop_data": {
@@ -824,7 +835,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "investigate"
+                    "examine"
                 ]
             },
             {
@@ -839,7 +850,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "investigate"
+                    "examine"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -859,7 +870,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "investigate"
+                    "examine"
                 ]
             }
         ],
@@ -890,13 +901,13 @@
                     "look",
                     "talk to",
                     "give",
-                    "investigate"
+                    "examine"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
                     "shock_quest_1",
                     "elementalist_quest_2",
-                    "priest_quest_errand_1"
+                    "captain_quest_1"
                 ],
                 "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'"
             }
@@ -1009,12 +1020,12 @@
                     "look",
                     "talk to",
                     "give",
-                    "investigate"
+                    "examine"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
-                    "clerk_quest_1",
-                    "theatre_quest_1"
+                    "innkeeper_quest_1",
+                    "bank_quest_1"
                 ],
                 "all_quests_done_message": "The Town Clerk nods. 'Thank you again for your help.'"
             }
@@ -1047,7 +1058,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "investigate"
+                    "examine"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -1083,11 +1094,11 @@
                     "look",
                     "talk to",
                     "give",
-                    "investigate"
+                    "examine"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
-                    "elementalist_quest_errand_1"
+                    "priest_quest_errand_1"
                 ],
                 "all_quests_done_message": "The Guard Captain is busy shouting at recruits."
             }
@@ -1118,11 +1129,11 @@
                     "look",
                     "talk to",
                     "give",
-                    "investigate"
+                    "examine"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
-                    "captain_quest_1"
+                    "elementalist_quest_errand_1"
                 ],
                 "all_quests_done_message": "The Librarian is busy cataloging scrolls."
             }
@@ -1154,7 +1165,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "investigate"
+                    "examine"
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [

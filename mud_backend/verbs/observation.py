@@ -194,23 +194,22 @@ class Look(BaseVerb):
                     self.player.send_message(f"You could try: {verb_list}")
                 
                 # ---
-                # --- MODIFIED: Tutorial Hook (Step 3: Wealth/Talk)
+                # --- THIS IS THE FIX ---
                 # ---
                 item_id = obj.get("item_id")
                 if (item_id == "inn_note" and
                     "intro_lookatnote" in self.player.completed_quests and
-                    "intro_wealth_and_talk" not in self.player.completed_quests):
+                    "intro_leave_room_tasks" not in self.player.completed_quests):
                     
                     self.player.send_message(
                         "\nAs you read the note, you think about paying the bill for your room. "
-                        "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have. "
-                        "You probably don't have any silvers. Maybe you can "
-                        "<span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper about your poor situation. "
-                        "<span class='keyword' data-command='help talk'>[Help: TALK]</span>"
+                        "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have, "
+                        "or check your <span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying. "
+                        "\nWhen you're ready, you should <span class='keyword' data-command='out'>OUT</span> to leave the room and <span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
                     )
-                    self.player.completed_quests.append("intro_wealth_and_talk")
+                    self.player.completed_quests.append("intro_leave_room_tasks")
                 # ---
-                # --- END MODIFIED
+                # --- END FIX
                 # ---
 
                 return 
@@ -222,7 +221,7 @@ class Look(BaseVerb):
             self.player.send_message(item_data.get('description', 'It is a nondescript object.'))
 
             # ---
-            # --- MODIFIED: Tutorial Hook (Step 3: Wealth/Talk) - Also triggers if they look at note in hand
+            # --- THIS IS THE FIX ---
             # ---
             real_item_id = None
             if location == "worn":
@@ -238,18 +237,17 @@ class Look(BaseVerb):
             
             if (real_item_id == "inn_note" and
                 "intro_lookatnote" in self.player.completed_quests and
-                "intro_wealth_and_talk" not in self.player.completed_quests):
+                "intro_leave_room_tasks" not in self.player.completed_quests):
                 
                 self.player.send_message(
                     "\nAs you read the note, you think about paying the bill for your room. "
-                    "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have. "
-                    "You probably don't have any silvers. Maybe you can "
-                    "<span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper about your poor situation. "
-                    "<span class='keyword' data-command='help talk'>[Help: TALK]</span>"
+                    "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have, "
+                    "or check your <span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying. "
+                    "\nWhen you're ready, you should <span class='keyword' data-command='out'>OUT</span> to leave the room and <span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
                 )
-                self.player.completed_quests.append("intro_wealth_and_talk")
+                self.player.completed_quests.append("intro_leave_room_tasks")
             # ---
-            # --- END MODIFIED
+            # --- END FIX
             # ---
             return
 

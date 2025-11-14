@@ -318,11 +318,11 @@
         "keywords": ["requisition", "ore", "form", "ore requisition"],
         "base_value": 0
     },
-    "leather_order": {
-        "name": "a leather order",
-        "description": "An order for cured leather strapping, meant for the Furrier.",
+    "leather_requisition": {
+        "name": "a leather requisition",
+        "description": "A requisition order for cured leather strapping, meant for the Furrier.",
         "item_type": "quest",
-        "keywords": ["order", "leather", "leather order"],
+        "keywords": ["order", "leather", "leather requisition"],
         "base_value": 0
     },
     "cured_sinew_bundle": {
@@ -339,13 +339,6 @@
         "keywords": ["salves", "box", "salve box"],
         "base_value": 0
     },
-    "letter_of_welcome": {
-        "name": "a letter of welcome",
-        "description": "A formal, stiff-looking letter addressed to the Elementalist's Study.",
-        "item_type": "quest",
-        "keywords": ["letter", "welcome", "letter of welcome"],
-        "base_value": 0
-    },
     "patrol_notice": {
         "name": "a patrol notice",
         "description": "A list of patrol routes and times, to be delivered to the Guard Captain.",
@@ -355,9 +348,16 @@
     },
     "recruitment_poster": {
         "name": "a recruitment poster",
-        "description": "A poster calling for new members of the City Watch. It's meant for the Library.",
+        "description": "A poster calling for new members of the City Watch. It's meant for the Elementalist's Study.",
         "item_type": "quest",
         "keywords": ["poster", "recruitment", "recruitment poster"],
+        "base_value": 0
+    },
+    "overdue_books_request": {
+        "name": "a request for overdue books",
+        "description": "A stiff note from the Elementalist, requesting the Librarian fetch his 'borrowed' books.",
+        "item_type": "quest",
+        "keywords": ["request", "books", "overdue books request"],
         "base_value": 0
     },
     "overdue_books": {
@@ -367,9 +367,16 @@
         "keywords": ["books", "stack", "overdue books"],
         "base_value": 0
     },
+    "bank_note": {
+        "name": "a bank note",
+        "description": "A crisp note from the Theatre Master, authorizing a withdrawal of 500 silvers.",
+        "item_type": "quest",
+        "keywords": ["note", "bank note"],
+        "base_value": 0
+    },
     "final_receipt": {
         "name": "a final receipt",
-        "description": "A receipt stamped 'PAID' by the Theatre Master. This should be returned to the Town Clerk.",
+        "description": "A receipt stamped 'PAID' by the Banker. This should be returned to the Town Clerk.",
         "item_type": "quest",
         "keywords": ["receipt", "final receipt"],
         "base_value": 0
