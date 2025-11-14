@@ -142,16 +142,16 @@ body {
     padding: 0;
     align-items: center;
     justify-content: center;
-    min-height: 150px;
+    min-height: 200px;
 }
 #injury-svg {
-    width: 80%;
+    width: 60%;
     height: auto;
 }
 #body-outline {
     fill: #3a3a3a;
     stroke: #777;
-    stroke-width: 1;
+    stroke-width: 0.2;
 }
 .wound-marker {
     fill: #a00000; /* Red */

@@ -181,31 +181,40 @@ function updateVitals(vitals) {
 // ---
 // --- NEW: Wound Marker Creation
 // ---
+
+// ---
+// --- THIS IS THE FIX
+// ---
+// New coordinates mapped to the "0 0 16 16" viewBox of the bi-person-standing icon.
 const WOUND_COORDS = {
-    "head": { x: 50, y: 30, r: 10 },
-    "neck": { x: 50, y: 52, r: 3 },
-    "chest": { x: 50, y: 70, r: 12 },
-    "abdomen": { x: 50, y: 95, r: 10 },
-    "back": { x: 50, y: 80, r: 12 }, // (Same as chest for this simple model)
-    "right_eye": { x: 45, y: 28, r: 2 },
-    "left_eye": { x: 55, y: 28, r: 2 },
-    "right_arm": { x: 30, y: 80, r: 6 },
-    "left_arm": { x: 70, y: 80, r: 6 },
-    "right_hand": { x: 20, y: 88, r: 4 },
-    "left_hand": { x: 80, y: 88, r: 4 },
-    "right_leg": { x: 40, y: 155, r: 8 },
-    "left_leg": { x: 60, y: 155, r: 8 }
+    "head":       { x: 8, y: 1.5, r: 1.5 },
+    "neck":       { x: 8, y: 3.5, r: 0.5 },
+    "chest":      { x: 8, y: 6, r: 2 },
+    "abdomen":    { x: 8, y: 8.5, r: 2 },
+    "back":       { x: 8, y: 7, r: 2 }, // Slightly offset from chest
+    "right_eye":  { x: 7.5, y: 1.2, r: 0.5 },
+    "left_eye":   { x: 8.5, y: 1.2, r: 0.5 },
+    "right_arm":  { x: 5.5, y: 8, r: 1.5 }, // Player's right, SVG's left
+    "left_arm":   { x: 10.5, y: 8, r: 1.5 }, // Player's left, SVG's right
+    "right_hand": { x: 5, y: 9.5, r: 1 },
+    "left_hand":  { x: 11, y: 9.5, r: 1 },
+    "right_leg":  { x: 6.75, y: 12.5, r: 2 },
+    "left_leg":   { x: 9.25, y: 12.5, r: 2 }
 };
+// --- END FIX ---
 
 function createWoundMarker(x, y, rank) {
     const circle = document.createElementNS(svgNS, 'circle');
     circle.setAttribute('cx', x);
     circle.setAttribute('cy', y);
-    circle.setAttribute('r', WOUND_COORDS["head"].r); // Use a standard size for now
+    // --- THIS IS THE FIX ---
+    // Use a smaller, 1px radius to fit the new 16x16 coordinate system
+    circle.setAttribute('r', 1); 
+    // --- END FIX ---
     circle.classList.add('wound-marker');
     
     // You could vary size/color based on rank
-    // circle.setAttribute('r', 3 + (rank * 2)); 
+    // circle.setAttribute('r', 0.5 + (rank * 0.5)); 
     
     injurySvg.appendChild(circle);
 }
@@ -264,7 +273,6 @@ function updateGuiPanels(vitals) {
 // ---
 // --- MAP DRAWING FUNCTION (Unchanged)
 // ---
-// (This section is identical to the previous response)
 const ROOM_SIZE = 24;
 const ROOM_GAP = 12; 
 const ROOM_CENTER = ROOM_SIZE / 2;
