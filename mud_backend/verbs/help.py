@@ -59,7 +59,7 @@ GET (or TAKE) is used to pick up items from the ground or from containers and pl
 """,
 
     "stow": """
-<span class'room-title'>--- Help: STOW / PUT ---</span>
+<span class='room-title'>--- Help: STOW / PUT ---</span>
 STOW (or PUT) is used to move items from your hands into a container.
 
 **Usage:**
@@ -68,7 +68,7 @@ STOW (or PUT) is used to move items from your hands into a container.
 """,
 
     "inventory": """
-<span class'room-title'>--- Help: INVENTORY (INV) ---</span>
+<span class='room-title'>--- Help: INVENTORY (INV) ---</span>
 Displays what you are currently holding, wearing, and carrying in your containers.
 
 **Usage:**
@@ -76,7 +76,24 @@ Displays what you are currently holding, wearing, and carrying in your container
 * **INVENTORY FULL**: (Not yet implemented) Shows a detailed list.
 """,
 
-    # --- THIS IS THE NEW ENTRY ---
+    # ---
+    # --- NEW: Help for TALK
+    # ---
+    "talk": """
+<span class='room-title'>--- Help: TALK ---</span>
+TALK is used to interact with non-player characters (NPCs) in the world. This is the primary way to receive quests and learn information.
+
+**Usage:**
+* **TALK TO {npc}**: Initiates a conversation with the target NPC.
+* **TALK {npc}**: A shortcut for `TALK TO`.
+
+**Example:**
+> TALK TO INNKEEPER
+""",
+    # ---
+    # --- END NEW
+    # ---
+
     "stats": """
 <span class='room-title'>--- Help: Character Attributes ---</span>
 Your character is defined by 12 core attributes, grouped into four categories.

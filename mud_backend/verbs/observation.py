@@ -194,21 +194,23 @@ class Look(BaseVerb):
                     self.player.send_message(f"You could try: {verb_list}")
                 
                 # ---
-                # --- NEW: Tutorial Hook (Step 3: Inventory)
+                # --- MODIFIED: Tutorial Hook (Step 3: Wealth/Talk)
                 # ---
                 item_id = obj.get("item_id")
                 if (item_id == "inn_note" and
                     "intro_lookatnote" in self.player.completed_quests and
-                    "intro_inventory" not in self.player.completed_quests):
+                    "intro_wealth_and_talk" not in self.player.completed_quests):
                     
                     self.player.send_message(
-                        "\n<span class='keyword' data-command='help inventory'>[Help: INVENTORY]</span> - You've read the note! "
-                        "To see what you are holding and wearing, type "
-                        "<span class='keyword' data-command='inventory'>INVENTORY</span> (or <span class='keyword' data-command='inv'>INV</span>)."
+                        "\nAs you read the note, you think about paying the bill for your room. "
+                        "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have. "
+                        "You probably don't have any silvers. Maybe you can "
+                        "<span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper about your poor situation. "
+                        "<span class='keyword' data-command='help talk'>[Help: TALK]</span>"
                     )
-                    self.player.completed_quests.append("intro_inventory")
+                    self.player.completed_quests.append("intro_wealth_and_talk")
                 # ---
-                # --- END NEW
+                # --- END MODIFIED
                 # ---
 
                 return 
@@ -220,11 +222,8 @@ class Look(BaseVerb):
             self.player.send_message(item_data.get('description', 'It is a nondescript object.'))
 
             # ---
-            # --- NEW: Tutorial Hook (Step 3: Inventory) - Also triggers if they look at note in hand
+            # --- MODIFIED: Tutorial Hook (Step 3: Wealth/Talk) - Also triggers if they look at note in hand
             # ---
-            item_id = item_data.get("item_id") # This is not present on all item_data, need to get it from the item_id
-            
-            # We need to find the *actual* item_id, not from the base template
             real_item_id = None
             if location == "worn":
                 for slot, i_id in self.player.worn_items.items():
@@ -239,16 +238,18 @@ class Look(BaseVerb):
             
             if (real_item_id == "inn_note" and
                 "intro_lookatnote" in self.player.completed_quests and
-                "intro_inventory" not in self.player.completed_quests):
+                "intro_wealth_and_talk" not in self.player.completed_quests):
                 
                 self.player.send_message(
-                    "\n<span class='keyword' data-command='help inventory'>[Help: INVENTORY]</span> - You've read the note! "
-                    "To see what you are holding and wearing, type "
-                    "<span class='keyword' data-command='inventory'>INVENTORY</span> (or <span class='keyword' data-command='inv'>INV</span>)."
+                    "\nAs you read the note, you think about paying the bill for your room. "
+                    "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have. "
+                    "You probably don't have any silvers. Maybe you can "
+                    "<span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper about your poor situation. "
+                    "<span class='keyword' data-command='help talk'>[Help: TALK]</span>"
                 )
-                self.player.completed_quests.append("intro_inventory")
+                self.player.completed_quests.append("intro_wealth_and_talk")
             # ---
-            # --- END NEW
+            # --- END MODIFIED
             # ---
             return
 

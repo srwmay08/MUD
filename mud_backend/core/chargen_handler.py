@@ -434,12 +434,7 @@ def _handle_appearance_input(player: Player, text_input: str):
         
         player.worn_items["back"] = "starter_backpack"
         player.worn_items["torso"] = "starter_leather_armor"
-        
-        # --- MODIFICATION: Put dagger in inventory ---
-        # player.worn_items["mainhand"] = "starter_dagger" # <-- OLD
-        player.inventory.append("starter_dagger") # <-- NEW
-        # --- END MODIFICATION ---
-        
+        player.inventory.append("starter_dagger") 
         player.wealth["silvers"] = 0 
         
         # --- NEW: Reset Inn Room for Tutorial ---
@@ -486,13 +481,13 @@ def _handle_appearance_input(player: Player, text_input: str):
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
         )
         
+        # 2. Make the [Help: LOOK] text a clickable keyword
         player.send_message(
-            "\n<span class'keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
+            "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
             "Type <span class='keyword' data-command='look'>LOOK</span> to see your surroundings, objects, and exits."
         )
         
-        # 2. REMOVED the automatic call to show_room_to_player.
-        # The game will now wait for the user to type 'look'.
+        # 3. REMOVED the automatic call to show_room_to_player.
         
         # ---
         # --- END FIX
