@@ -438,7 +438,6 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.wealth["silvers"] = 0 
         
         # --- NEW: Reset Inn Room for Tutorial ---
-        # This ensures the note is hidden for the new player's tutorial sequence.
         inn_room_data = player.world.game_rooms.get("inn_room")
         if inn_room_data:
             # 1. Remove note from visible objects
@@ -472,9 +471,17 @@ def _handle_appearance_input(player: Player, text_input: str):
             player.world.save_room(room_obj)
         # --- END NEW ---
 
-        player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
-        player.messages.clear() 
+        # ---
+        # --- THIS IS THE FIX ---
+        # ---
+        
+        # 1. REMOVED the move_to_room call.
+        # player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
+        
+        # 2. REMOVED the messages.clear() call.
+        # player.messages.clear() 
 
+        # 3. Send your custom welcome messages first.
         player.send_message(
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
@@ -484,6 +491,26 @@ def _handle_appearance_input(player: Player, text_input: str):
             "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
             "Type <span class='keyword' data-command='look'>LOOK</span> to see your surroundings, objects, and exits."
         )
+        
+        # 4. Manually get the room data and call show_room_to_player.
+        # This appends the room description *after* your welcome messages.
+        room_data = player.world.get_room(player.current_room_id)
+        if room_data and room_data.get("room_id") != "void":
+            room_obj = Room(
+                room_id=room_data["room_id"],
+                name=room_data["name"],
+                description=room_data["description"],
+                db_data=room_data
+            )
+            # This function will add the room description to player.messages
+            show_room_to_player(player, room_obj)
+        else:
+            # Fallback in case the room isn't found
+            player.send_message(f"**{config.CHARGEN_START_ROOM}**\n(Error: Could not load room data.)")
+            print(f"[CHARGEN_ERROR] Could not find '{config.CHARGEN_START_ROOM}' for player {player.name}!")
+        # ---
+        # --- END FIX
+        # ---
 
 
 def handle_chargen_input(player: Player, text_input: str):
