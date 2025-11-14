@@ -51,10 +51,6 @@ class Inventory(BaseVerb):
         if worn_items_msg:
             self.player.send_message(f"You are wearing: {', '.join(worn_items_msg)}.")
             
-        # ---
-        # --- MODIFICATION: Removed section 3 (Pack items)
-        # ---
-        
         total_items += len(held_items_msg)
         
         if total_items == 0:
@@ -63,7 +59,7 @@ class Inventory(BaseVerb):
         self.player.send_message(f"\n(Items: {total_items})")
 
         # ---
-        # --- NEW: Tutorial Hook for LOOK IN PACK
+        # --- MODIFIED: Tutorial Hook (Step 4: Look in Pack)
         # ---
         if ("intro_inventory" in self.player.completed_quests and
             "intro_lookinpack" not in self.player.completed_quests):
@@ -74,7 +70,7 @@ class Inventory(BaseVerb):
             )
             self.player.completed_quests.append("intro_lookinpack")
         # ---
-        # --- END NEW
+        # --- END MODIFIED
         # ---
 
     def show_help(self):

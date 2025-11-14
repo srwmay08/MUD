@@ -118,6 +118,24 @@ class Get(BaseVerb):
             self.player.inventory.remove(item_id)
             self.player.worn_items[target_hand_slot] = item_id
             self.player.send_message(f"You get {item_name} from your {container.get('name')} and hold it.")
+
+            # ---
+            # --- MODIFIED: Tutorial Hook (Final Step)
+            # ---
+            if (item_id == "inn_note" and 
+                "intro_stow" in self.player.completed_quests and
+                "intro_lookatnote_or_leave" not in self.player.completed_quests):
+                
+                self.player.send_message(
+                    "\n<span class='keyword' data-command='help look'>[Help: LOOK AT]</span> - You've mastered the basics of item management! "
+                    "You can read the note again by <span class='keyword' data-command='look at note'>LOOK AT NOTE</span>. "
+                    "When you're ready, <span class='keyword' data-command='out'>OUT</span> to leave the room and find the innkeeper."
+                )
+                self.player.completed_quests.append("intro_lookatnote_or_leave")
+            # ---
+            # --- END MODIFIED
+            # ---
+            
             _set_action_roundtime(self.player, 1.0) # 1s RT for getting from pack
             
         # ---
@@ -146,17 +164,17 @@ class Get(BaseVerb):
                 self.world.save_room(self.room)
                 
                 # ---
-                # --- MODIFIED: Tutorial Hook
+                # --- MODIFIED: Tutorial Hook (Step 2: Look At Note)
                 # ---
                 if (item_id == "inn_note" and 
-                    "intro_inventory" not in self.player.completed_quests):
+                    "intro_get" in self.player.completed_quests and
+                    "intro_lookatnote" not in self.player.completed_quests):
                     
                     self.player.send_message(
-                        "\n<span class='keyword' data-command='help inventory'>[Help: INVENTORY]</span> - You are now holding the note. "
-                        "To see what you are holding and wearing, type "
-                        "<span class='keyword' data-command='inventory'>INVENTORY</span> (or <span class='keyword' data-command='inv'>INV</span>)."
+                        "\n<span class='keyword' data-command='help look'>[Help: LOOK AT]</span> - You are now holding the note. "
+                        "To read it, you can <span class='keyword' data-command='look at note'>LOOK AT NOTE</span>."
                     )
-                    self.player.completed_quests.append("intro_inventory")
+                    self.player.completed_quests.append("intro_lookatnote")
                 # --- END MODIFIED ---
 
                 return
@@ -175,6 +193,24 @@ class Get(BaseVerb):
             self.player.worn_items[target_hand_slot] = item_id_from_pack
             item_name = game_items.get(item_id_from_pack, {}).get("name", "an item")
             self.player.send_message(f"You get {item_name} from your pack and hold it.")
+            
+            # ---
+            # --- MODIFIED: Tutorial Hook (Final Step)
+            # ---
+            if (item_id_from_pack == "inn_note" and 
+                "intro_stow" in self.player.completed_quests and
+                "intro_lookatnote_or_leave" not in self.player.completed_quests):
+                
+                self.player.send_message(
+                    "\n<span class='keyword' data-command='help look'>[Help: LOOK AT]</span> - You've mastered the basics of item management! "
+                    "You can read the note again by <span class='keyword' data-command='look at note'>LOOK AT NOTE</span>. "
+                    "When you're ready, <span class='keyword' data-command='out'>OUT</span> to leave the room and find the innkeeper."
+                )
+                self.player.completed_quests.append("intro_lookatnote_or_leave")
+            # ---
+            # --- END MODIFIED
+            # ---
+
             _set_action_roundtime(self.player, 1.0) # 1s RT for getting from pack
 
 

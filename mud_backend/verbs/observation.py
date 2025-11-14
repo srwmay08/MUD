@@ -148,7 +148,7 @@ class Look(BaseVerb):
                     self.player.send_message(f"- {item_data.get('name', 'an item')}")
                 
                 # ---
-                # --- THIS IS THE FIX ---
+                # --- MODIFIED: Tutorial Hook (Step 5: Stow)
                 # ---
                 if ("intro_lookinpack" in self.player.completed_quests and
                     "intro_stow" not in self.player.completed_quests):
@@ -161,7 +161,7 @@ class Look(BaseVerb):
                     )
                     self.player.completed_quests.append("intro_stow")
                 # ---
-                # --- END FIX
+                # --- END MODIFIED
                 # ---
                 return
             else:
@@ -193,6 +193,24 @@ class Look(BaseVerb):
                     verb_list = ", ".join([f'<span class="keyword">{v}</span>' for v in obj['verbs']])
                     self.player.send_message(f"You could try: {verb_list}")
                 
+                # ---
+                # --- NEW: Tutorial Hook (Step 3: Inventory)
+                # ---
+                item_id = obj.get("item_id")
+                if (item_id == "inn_note" and
+                    "intro_lookatnote" in self.player.completed_quests and
+                    "intro_inventory" not in self.player.completed_quests):
+                    
+                    self.player.send_message(
+                        "\n<span class='keyword' data-command='help inventory'>[Help: INVENTORY]</span> - You've read the note! "
+                        "To see what you are holding and wearing, type "
+                        "<span class='keyword' data-command='inventory'>INVENTORY</span> (or <span class='keyword' data-command='inv'>INV</span>)."
+                    )
+                    self.player.completed_quests.append("intro_inventory")
+                # ---
+                # --- END NEW
+                # ---
+
                 return 
 
         # B. Check player's own items (worn or inventory)
@@ -200,6 +218,38 @@ class Look(BaseVerb):
         if item_data:
             self.player.send_message(f"You look at your **{item_data['name']}**.")
             self.player.send_message(item_data.get('description', 'It is a nondescript object.'))
+
+            # ---
+            # --- NEW: Tutorial Hook (Step 3: Inventory) - Also triggers if they look at note in hand
+            # ---
+            item_id = item_data.get("item_id") # This is not present on all item_data, need to get it from the item_id
+            
+            # We need to find the *actual* item_id, not from the base template
+            real_item_id = None
+            if location == "worn":
+                for slot, i_id in self.player.worn_items.items():
+                    if i_id and (target_name in self.world.game_items.get(i_id, {}).get("keywords", []) or target_name == self.world.game_items.get(i_id, {}).get("name", "").lower()):
+                        real_item_id = i_id
+                        break
+            elif location == "inventory":
+                 for i_id in self.player.inventory:
+                    if i_id and (target_name in self.world.game_items.get(i_id, {}).get("keywords", []) or target_name == self.world.game_items.get(i_id, {}).get("name", "").lower()):
+                        real_item_id = i_id
+                        break
+            
+            if (real_item_id == "inn_note" and
+                "intro_lookatnote" in self.player.completed_quests and
+                "intro_inventory" not in self.player.completed_quests):
+                
+                self.player.send_message(
+                    "\n<span class='keyword' data-command='help inventory'>[Help: INVENTORY]</span> - You've read the note! "
+                    "To see what you are holding and wearing, type "
+                    "<span class='keyword' data-command='inventory'>INVENTORY</span> (or <span class='keyword' data-command='inv'>INV</span>)."
+                )
+                self.player.completed_quests.append("intro_inventory")
+            # ---
+            # --- END NEW
+            # ---
             return
 
         # C. Check if target is 'self'
@@ -301,6 +351,9 @@ class Investigate(BaseVerb):
                 
                 self.player.send_message(f"Your investigation reveals: **{found_obj.get('name', 'an item')}**!")
                 
+                # ---
+                # --- MODIFIED: Tutorial Hook (Step 1: Get)
+                # ---
                 if (found_obj.get("item_id") == "inn_note" and
                     "intro_get" not in self.player.completed_quests):
                     self.player.send_message(
@@ -308,6 +361,7 @@ class Investigate(BaseVerb):
                          "To pick it up, you can <span class='keyword' data-command='get note'>GET NOTE</span>."
                     )
                     self.player.completed_quests.append("intro_get")
+                # --- END MODIFIED ---
         
         if found_something:
             self.world.save_room(self.room)
