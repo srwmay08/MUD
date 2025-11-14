@@ -1,5 +1,7 @@
 # mud_backend/core/chargen_handler.py
-from mud_backend.core.game_objects import Player, RACE_DATA
+# --- MODIFIED: Imported Room class ---
+from mud_backend.core.game_objects import Player, RACE_DATA, Room
+# --- END MODIFIED ---
 from mud_backend.core.db import fetch_room_data
 from mud_backend import config 
 
@@ -435,12 +437,44 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.worn_items["mainhand"] = "starter_dagger" 
         player.wealth["silvers"] = 0 
         
+        # --- NEW: Reset Inn Room for Tutorial ---
+        # This ensures the note is hidden for the new player's tutorial sequence.
+        inn_room_data = player.world.game_rooms.get("inn_room")
+        if inn_room_data:
+            # 1. Remove note from visible objects
+            inn_room_data["objects"] = [
+                obj for obj in inn_room_data.get("objects", []) 
+                if obj.get("item_id") != "inn_note"
+            ]
+            
+            # 2. Ensure note is in hidden_objects
+            hidden = inn_room_data.get("hidden_objects", [])
+            if not any(h.get("item_id") == "inn_note" for h in hidden):
+                note_object = {
+                    "name": "a note",
+                    "item_id": "inn_note",
+                    "description": "A folded piece of parchment rests on the table.",
+                    "perception_dc": 10,
+                    "keywords": ["note", "parchment", "a note"],
+                    "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                    "is_item": True
+                }
+                hidden.append(note_object)
+                inn_room_data["hidden_objects"] = hidden
+            
+            # 3. Save the reset state to DB/Cache
+            room_obj = Room(
+                room_id=inn_room_data["room_id"],
+                name=inn_room_data["name"],
+                description=inn_room_data["description"],
+                db_data=inn_room_data
+            )
+            player.world.save_room(room_obj)
+        # --- END NEW ---
+
         player.move_to_room(config.CHARGEN_START_ROOM, "You finish creating your appearance.")
         player.messages.clear() 
 
-        # --- MODIFIED SECTION ---
-        # Removed the premature "investigate" hint. 
-        # Only prompts for LOOK now.
         player.send_message(
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
             "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
@@ -450,7 +484,6 @@ def _handle_appearance_input(player: Player, text_input: str):
             "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
             "Type <span class='keyword' data-command='look'>LOOK</span> to see your surroundings, objects, and exits."
         )
-        # --- END MODIFIED SECTION ---
 
 
 def handle_chargen_input(player: Player, text_input: str):
