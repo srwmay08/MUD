@@ -3,8 +3,9 @@ import socket
 import json
 import os
 import uuid
-# --- FIX: Import 'List' from typing ---
+# --- FIX: Import 'List' and 'glob' ---
 from typing import TYPE_CHECKING, Optional, Any, List
+import glob
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config
@@ -89,38 +90,52 @@ def ensure_initial_data():
     if database is None:
         return
 
-    # --- 1. Load Rooms from JSON ---
+    # --- 1. Load Rooms from JSON (MODIFIED) ---
     print("[DB INIT] Checking initial data from JSON...")
     try:
-        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'rooms.json')
-        with open(json_path, 'r') as f:
-            room_data_list = json.load(f)
+        # Find all files matching "rooms_*.json" in the data directory
+        data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+        json_files = glob.glob(os.path.join(data_dir, 'rooms_*.json'))
         
+        if not json_files:
+            print("[DB ERROR] No 'rooms_*.json' files found in data/ directory.")
+            return
+
         upsert_count = 0
         update_count = 0
-        for room_data in room_data_list:
-            room_id = room_data.get("room_id")
-            if not room_id:
-                continue
-            result = database.rooms.update_one(
-                {"room_id": room_id},
-                {"$set": room_data},
-                upsert=True
-            )
-            if result.upserted_id:
-                upsert_count += 1
-            elif result.modified_count > 0:
-                update_count += 1
+        total_rooms = 0
+
+        for file_path in json_files:
+            file_name = os.path.basename(file_path)
+            # print(f"[DB INIT] Loading zone file: {file_name}")
+            with open(file_path, 'r') as f:
+                room_data_list = json.load(f)
+            
+            for room_data in room_data_list:
+                room_id = room_data.get("room_id")
+                if not room_id:
+                    continue
+                
+                total_rooms += 1
+                result = database.rooms.update_one(
+                    {"room_id": room_id},
+                    {"$set": room_data},
+                    upsert=True
+                )
+                if result.upserted_id:
+                    upsert_count += 1
+                elif result.modified_count > 0:
+                    update_count += 1
         
         if upsert_count > 0 or update_count > 0:
-             print(f"[DB INIT] JSON sync complete. Inserted: {upsert_count}, Updated: {update_count}.")
+             print(f"[DB INIT] JSON sync complete. Total rooms: {total_rooms}. Inserted: {upsert_count}, Updated: {update_count}.")
         else:
-             print("[DB INIT] All room data is up-to-date.")
+             print(f"[DB INIT] All {total_rooms} room(s) are up-to-date.")
              
     except FileNotFoundError:
-        print(f"[DB ERROR] Could not find 'rooms.json' at: {json_path}")
+        print(f"[DB ERROR] Could not find data directory at: {data_dir}")
     except json.JSONDecodeError:
-        print(f"[DB ERROR] 'rooms.json' contains invalid JSON.")
+        print(f"[DB ERROR] A zone file contains invalid JSON.")
     except Exception as e:
         print(f"[DB ERROR] An error occurred loading rooms: {e}")
 
@@ -277,15 +292,21 @@ def save_room_state(room: 'Room'):
 def fetch_all_rooms() -> dict:
     """
     Fetches all rooms and ensures every monster has a unique runtime ID (uid).
+    (MODIFIED to load from all room files)
     """
     database = get_db()
     if database is None:
         print("[DB WARN] No database connection, cannot fetch all rooms.")
-        return {}
+        # --- NEW: Fallback to mock data if DB is down ---
+        print("[DB WARN] Loading MOCK_ROOMS cache.")
+        return MOCK_ROOMS
+        # --- END NEW ---
         
     print("[DB INIT] Caching all rooms from database...")
     rooms_dict = {}
     try:
+        # This function is called *after* ensure_initial_data,
+        # so the DB collection "rooms" has all zones.
         for room_data in database.rooms.find():
             room_id = room_data.get("room_id")
             if room_id:

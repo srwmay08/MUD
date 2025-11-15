@@ -75,7 +75,7 @@
         "body_type": "biped",
         "is_undead": false,
         "is_non_corporeal": false,
-        "areas_found": ["forest_clearing_1", "forest_clearing_2", "north_gate"],
+        "areas_found": [],
         "bcs": true,
         "attack_attributes": ["physical (small blunt)"],
         "defense_attributes": ["low hp"],
@@ -87,7 +87,7 @@
         "respawn_chance_per_tick": 0.3,
         "movement_rules": {
             "wander_chance": 1,
-            "allowed_rooms": ["forest_clearing_1", "forest_clearing_2", "north_gate"]
+            "allowed_rooms": []
         },
         
         "skinnable": true,
@@ -113,7 +113,7 @@
         "keywords": ["guardsman", "guard", "a town guardsman"],
         "faction": "Townsfolk",
         "is_aggressive": false,
-        "description": "A guardsman in leather armor, holding a spear. He watches the northern path warily.",
+        "description": "A guardsman in leather armor, holding a spear. He watches the docks warily.",
         "verbs": ["look", "attack", "talk"],
         "perception_dc": 0,
         "is_monster": true,
