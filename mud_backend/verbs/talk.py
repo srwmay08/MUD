@@ -47,10 +47,16 @@ class Talk(BaseVerb):
         # 2. Find the active quest
         active_quest = get_active_quest_for_npc(self.player, npc_quest_ids)
         
+        # ---
+        # --- THIS IS THE FIX
+        # ---
         if active_quest:
             # 3. Get the detailed talk prompt from the quest
             talk_prompt = active_quest.get("talk_prompt")
-            if talk_prompt:
+            give_target = active_quest.get("give_target_name")
+            is_just_receiver = (give_target and give_target == npc_name.lower())
+
+            if talk_prompt and not is_just_receiver: # <--- THIS IS THE FIX
                 self.player.send_message(f"You talk to the {npc_name}.")
                 self.player.send_message(f"The {npc_name} says, \"{talk_prompt}\"")
                 
@@ -108,6 +114,21 @@ class Talk(BaseVerb):
                     if reward_maneuver == "trip_training":
                         self.player.quest_trip_counter = 0
                 # --- END NEW ---
+            
+            # --- NEW ELSE IF ---
+            elif is_just_receiver:
+                # This NPC is just a turn-in, they don't have a talk prompt for this quest
+                self.player.send_message(f"You talk to the {npc_name}.")
+                item_needed_id = active_quest.get("item_needed")
+                if item_needed_id:
+                    item_name = self.world.game_items.get(item_needed_id, {}).get("name", "an item")
+                    # Find the keyword for the item
+                    item_keyword = item_name.split()[-1].lower() # e.g., "payment"
+                    self.player.send_message(f"The {npc_name} seems to be waiting for something... perhaps you should <span class='keyword' data-command='give clerk {item_keyword}'>GIVE</span> them {item_name}?")
+                else:
+                     self.player.send_message(f"The {npc_name} doesn't seem to have much to say.")
+            # --- END NEW ELSE IF ---
+
             else:
                 self.player.send_message(f"The {npc_name} doesn't seem to have much to say.")
         else:
@@ -127,9 +148,9 @@ class Talk(BaseVerb):
                 
                 is_done = False
                 if (q_id in self.player.completed_quests) or \
-                   (reward_spell and reward_spell in player.known_spells) or \
-                   (reward_maneuver and reward_maneuver in player.known_maneuvers) or \
-                   (reward_maneuver == "trip_training" and "trip" in player.known_maneuvers):
+                   (reward_spell and reward_spell in self.player.known_spells) or \
+                   (reward_maneuver and reward_maneuver in self.player.known_maneuvers) or \
+                   (reward_maneuver == "trip_training" and "trip" in self.player.known_maneuvers):
                     is_done = True
                 
                 if not is_done:
@@ -142,3 +163,6 @@ class Talk(BaseVerb):
             else:
                 # Default "busy" message if there are quests, but none are active for the player
                 self.player.send_message(f"The {npc_name} seems busy with other tasks.")
+        # ---
+        # --- END FIX
+        # ---

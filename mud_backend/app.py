@@ -96,17 +96,29 @@ def _handle_npc_idle_dialogue(world: World, player_name: str, room_id: str):
             npc_quest_ids = npc.get("quest_giver_ids", [])
             active_quest = get_active_quest_for_npc(player_obj, npc_quest_ids)
             
+            # ---
+            # --- THIS IS THE FIX
+            # ---
             if active_quest:
                 idle_prompt = active_quest.get("idle_prompt")
+                give_target = active_quest.get("give_target_name")
+                
+                # NEW CHECK: Don't say the idle prompt if this NPC is just the item receiver
                 if idle_prompt:
-                    if player_obj.current_room_id == room_id:
-                        npc_name = npc.get("name", "Someone")
-                        world.send_message_to_player(
-                            player_name.lower(),
-                            f"The {npc_name} says, \"{idle_prompt}\"",
-                            "message"
-                        )
-                        return 
+                    is_just_receiver = (give_target and give_target == npc.get("name", "").lower())
+                    
+                    if not is_just_receiver: # <--- THIS IS THE FIX
+                        if player_obj.current_room_id == room_id:
+                            npc_name = npc.get("name", "Someone")
+                            world.send_message_to_player(
+                                player_name.lower(),
+                                f"The {npc_name} says, \"{idle_prompt}\"",
+                                "message"
+                            )
+                            return # Only one idle prompt per room
+            # ---
+            # --- END FIX
+            # ---
                         
     except Exception as e:
         print(f"[IDLE_DIALOGUE_ERROR] Error in _handle_npc_idle_dialogue: {e}")
