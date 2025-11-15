@@ -48,10 +48,10 @@
             }
         ],
         "exits": {
-            "docks": "ts_north",
-            "south market": "ts_south",
-            "ambassadors row": "ts_east",
-            "guildsmans walk": "ts_west",
+            "north": "ts_north",
+            "south": "ts_south",
+            "east": "ts_east",
+            "west": "ts_west",
             "northeast": "ts_northeast",
             "northwest": "ts_northwest",
             "southeast": "ts_southeast",
@@ -1152,7 +1152,7 @@
                     "master", "theatre master", "a theatre master"
                 ],
                 "verbs": [
-                    "look",
+                    "look", 
                     "talk to",
                     "give",
                     "examine"
