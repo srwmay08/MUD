@@ -265,6 +265,11 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         # ---
         current_room_id = player_obj.current_room_id
         
+        # ---
+        # --- THIS IS THE FIX: Clear messages before moving
+        # ---
+        player_obj.messages.clear()
+        
         player_obj.move_to_room(target_room_id_step, move_msg)
         
         _set_action_roundtime(player_obj, 3.0) 
@@ -320,6 +325,11 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         if player_obj.current_room_id == final_destination_room_id:
             # Clear final RT
             world.remove_combat_state(player_id)
+            
+            # ---
+            # --- THIS IS THE FIX: Clear messages before final send
+            # ---
+            player_obj.messages.clear()
             player_obj.send_message("You have arrived.")
             world.socketio.emit('command_response', 
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
