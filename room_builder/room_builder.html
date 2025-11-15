@@ -4,89 +4,200 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MUD Room Builder</title>
-    <!-- Load Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for a cleaner look */
+        /* All our pure CSS styles are still here */
         body {
             font-family: 'Inter', sans-serif;
             --tw-bg-opacity: 1;
             background-color: rgb(243 244 246 / var(--tw-bg-opacity)); /* bg-gray-100 */
         }
+
         .form-section {
-            @apply bg-white p-6 rounded-lg shadow-md mb-6;
+            background-color: #fff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            margin-bottom: 1rem;
         }
+
         .form-section-title {
-            @apply text-xl font-semibold text-gray-800 border-b pb-2 mb-4;
+            font-size: 1.5rem; /* 2xl */
+            line-height: 2rem;
+            font-weight: 600;
+            color: rgb(31 41 55); /* text-gray-800 */
+            border-bottom-width: 1px;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
         }
+
         .form-label {
-            @apply block text-sm font-medium text-gray-700 mb-1;
+            display: block; /* This is the key fix! */
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.25rem;
+            font-weight: 500; /* font-medium */
+            color: rgb(55 65 81); /* text-gray-700 */
+            margin-bottom: 0.25rem;
         }
+
         .form-input, .form-textarea, .form-select {
-            @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm;
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border-width: 1px;
+            border-color: rgb(209 213 219); /* border-gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+            font-size: 0.875rem; /* sm:text-sm */
+            line-height: 1.25rem;
         }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            --tw-ring-color: rgb(99 102 241); /* ring-indigo-500 */
+            box-shadow: 0 0 0 2px var(--tw-ring-color);
+            border-color: rgb(99 102 241); /* border-indigo-500 */
+        }
+
         .form-textarea {
-            @apply min-h-[100px];
+            min-height: 150px;
         }
+
         .form-checkbox {
-            @apply h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500;
+            height: 1.25rem; /* h-5 */
+            width: 1.25rem; /* w-5 */
+            color: rgb(79 70 229); /* text-indigo-600 */
+            border-color: rgb(209 213 219); /* border-gray-300 */
+            border-radius: 0.25rem; /* rounded */
         }
+        
+        .form-checkbox:focus {
+            --tw-ring-color: rgb(99 102 241); /* ring-indigo-500 */
+            box-shadow: 0 0 0 2px var(--tw-ring-color);
+        }
+
         .btn {
-            @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem; /* px-4 py-2 */
+            border: 1px solid transparent;
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.25rem;
+            font-weight: 500; /* font-medium */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+            color: #fff; /* text-white */
+            cursor: pointer;
         }
+        
+        .btn:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            --tw-ring-offset-shadow: 0 0 0 2px #fff;
+            box-shadow: var(--tw-ring-offset-shadow), 0 0 0 2px var(--tw-ring-color);
+        }
+
         .btn-primary {
-            @apply bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500;
+            background-color: rgb(79 70 229); /* bg-indigo-600 */
+            --tw-ring-color: rgb(99 102 241); /* focus:ring-indigo-500 */
         }
+        .btn-primary:hover {
+            background-color: rgb(67 56 202); /* hover:bg-indigo-700 */
+        }
+
         .btn-secondary {
-            @apply bg-green-600 hover:bg-green-700 focus:ring-green-500;
+            background-color: rgb(22 163 74); /* bg-green-600 */
+            --tw-ring-color: rgb(34 197 94); /* focus:ring-green-500 */
         }
+        .btn-secondary:hover {
+            background-color: rgb(21 128 61); /* hover:bg-green-700 */
+        }
+
         .btn-danger {
-            @apply bg-red-600 hover:bg-red-700 focus:ring-red-500;
+            background-color: rgb(220 38 38); /* bg-red-600 */
+            --tw-ring-color: rgb(239 68 68); /* focus:ring-red-500 */
         }
+        .btn-danger:hover {
+            background-color: rgb(185 28 28); /* hover:bg-red-700 */
+        }
+
         .btn-small {
-            @apply px-2 py-1 text-xs;
+            padding: 0.25rem 0.5rem; /* px-2 py-1 */
+            font-size: 0.75rem; /* text-xs */
+            line-height: 1rem;
         }
+
         .dynamic-item {
-            @apply bg-gray-50 p-4 rounded-md border border-gray-200 mb-4;
+            background-color: rgb(249 250 251); /* bg-gray-50 */
+            padding: 0.75rem; /* p-3 */
+            border-radius: 0.375rem; /* rounded-md */
+            border-width: 1px;
+            border-color: rgb(229 231 235); /* border-gray-200 */
+            margin-bottom: 0.75rem; /* mb-3 */
         }
+
         .dynamic-item-header {
-            @apply flex justify-between items-center mb-2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
         }
+
         .dynamic-item-title {
-            @apply text-md font-semibold text-gray-700;
+            font-size: 1rem; /* text-md */
+            line-height: 1.5rem;
+            font-weight: 600; /* font-semibold */
+            color: rgb(55 65 81); /* text-gray-700 */
         }
+
         #message-box {
-            @apply fixed top-5 right-5 px-4 py-3 rounded-md shadow-lg z-50 text-white font-medium;
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            z-index: 50;
+            color: #fff;
+            font-weight: 500;
         }
+        
+        #message-box.hidden {
+            display: none;
+        }
+
         #message-box.success {
-            @apply bg-green-500;
+            background-color: rgb(34 197 94); /* bg-green-500 */
         }
+
         #message-box.error {
-            @apply bg-red-500;
+            background-color: rgb(239 68 68); /* bg-red-500 */
         }
     </style>
 </head>
-<body class="bg-gray-100 p-4 md:p-8">
+<body class="bg-gray-100 p-3 md:p-6">
 
     <div class="max-w-4xl mx-auto">
         <h1 class="text-3xl font-bold text-gray-900 mb-6">MUD Room Builder</h1>
         
-        <!-- Form starts here -->
         <form id="room-form">
             
-            <!-- Section: Core Details -->
             <div class="form-section">
                 <h2 class="form-section-title">Core Details</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="room_id" class="form-label">Room ID (Unique)</label>
-                        <input type="text" id="room_id" class="form-input" placeholder="e.g., template_workshop" required>
-                    </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> 
                     <div>
                         <label for="name" class="form-label">Room Name</label>
                         <input type="text" id="name" class="form-input" placeholder="e.g., The Template Workshop" required>
                     </div>
+                    <div>
+                        <label for="room_id" class="form-label">Room ID (Unique)</label>
+                        <input type="text" id="room_id" class="form-input" placeholder="e.g., template_workshop" required>
+                    </div>
+
                 </div>
+                
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                     <div>
                         <label for="x" class="form-label">X</label>
@@ -101,8 +212,8 @@
                         <input type="number" id="z" class="form-input" value="0">
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"> <div>
                         <label for="interior_id" class="form-label">Interior ID</label>
                         <input type="text" id="interior_id" class="form-input" placeholder="e.g., builder_zone">
                     </div>
@@ -112,14 +223,11 @@
                     </div>
                 </div>
                 <div class="mt-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="is_outdoor" class="form-checkbox mr-2">
-                        <label for="is_outdoor" class="form-label mb-0">Is Outdoor?</label>
-                    </div>
+                    <label for="is_outdoor" class="form-label">Is Outdoor?</label>
+                    <input type="checkbox" id="is_outdoor" class="form-checkbox mt-1">
                 </div>
             </div>
 
-            <!-- Section: Descriptions -->
             <div class="form-section">
                 <h2 class="form-section-title">Descriptions</h2>
                 <div>
@@ -134,46 +242,36 @@
                     <label for="desc_storm" class="form-label">STORM Description (Optional)</label>
                     <textarea id="desc_storm" class="form-textarea" placeholder="Appearance during a storm."></textarea>
                 </div>
-                <!-- You can add more dynamic time-based descriptions here if needed -->
             </div>
 
-            <!-- Section: Exits -->
             <div class="form-section">
                 <h2 class="form-section-title">Exits</h2>
                 <div id="exits-container">
-                    <!-- Dynamic exits will be added here -->
-                </div>
+                    </div>
                 <button type="button" onclick="addExit()" class="btn btn-primary btn-small mt-2">Add Exit</button>
             </div>
 
-            <!-- Section: Objects -->
             <div class="form-section">
                 <h2 class="form-section-title">Objects</h2>
                 <div id="objects-container">
-                    <!-- Dynamic objects will be added here -->
-                </div>
+                    </div>
                 <button type="button" onclick="addObject()" class="btn btn-primary btn-small mt-2">Add Object</button>
             </div>
 
-            <!-- Section: Hidden Objects -->
             <div class="form-section">
                 <h2 class="form-section-title">Hidden Objects</h2>
                 <div id="hidden-objects-container">
-                    <!-- Dynamic hidden objects will be added here -->
-                </div>
+                    </div>
                 <button type="button" onclick="addHiddenObject()" class="btn btn-primary btn-small mt-2">Add Hidden Object</button>
             </div>
 
-            <!-- Section: Forageable Items -->
             <div class="form-section">
                 <h2 class="form-section-title">Forageable Items</h2>
                 <div id="forageable-items-container">
-                    <!-- Dynamic forageable items will be added here -->
-                </div>
+                    </div>
                 <button type="button" onclick="addForageable()" class="btn btn-primary btn-small mt-2">Add Forageable Item</button>
             </div>
 
-            <!-- Action Buttons -->
             <div class="form-section flex justify-end space-x-4">
                 <button type="button" onclick="downloadJSON()" class="btn btn-secondary">Download JSON</button>
                 <button type="submit" class="btn btn-primary">Save to Server</button>
@@ -182,7 +280,6 @@
         </form>
     </div>
 
-    <!-- Message box for feedback -->
     <div id="message-box" class="hidden"></div>
 
 
@@ -224,18 +321,21 @@
         function addExit() {
             const container = document.getElementById('exits-container');
             const div = document.createElement('div');
-            div.className = 'dynamic-item grid grid-cols-1 md:grid-cols-3 gap-4';
+            div.className = 'dynamic-item';
             div.innerHTML = `
-                <div>
-                    <label class="form-label">Direction (e.g., north, out)</label>
-                    <input type="text" class="form-input exit-direction" placeholder="out">
-                </div>
-                <div>
-                    <label class="form-label">Target Room ID</label>
-                    <input type="text" class="form-input exit-target" placeholder="void">
-                </div>
-                <div class="flex items-end">
+                <div class="dynamic-item-header">
+                    <h3 class="dynamic-item-title">New Exit</h3>
                     <button type="button" onclick="removeItem(this)" class="btn btn-danger btn-small">Remove</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label">Direction (e.g., north, out)</label>
+                        <input type="text" class="form-input exit-direction" placeholder="out">
+                    </div>
+                    <div>
+                        <label class="form-label">Target Room ID</label>
+                        <input type="text" class="form-input exit-target" placeholder="void">
+                    </div>
                 </div>
             `;
             container.appendChild(div);
@@ -278,21 +378,19 @@
                         <input type="text" class="form-input obj-target_room" placeholder="void">
                     </div>
                 </div>
-                <div class="flex space-x-8 mt-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" class="form-checkbox obj-is_npc mr-2">
-                        <label class="form-label mb-0">Is NPC?</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="form-label">Is NPC?</label>
+                        <input type="checkbox" class="form-checkbox obj-is_npc mt-1">
                     </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" class="form-checkbox obj-is_monster mr-2">
-                        <label class="form-label mb-0">Is Monster?</label>
+                    <div>
+                        <label class="form-label">Is Monster?</label>
+                        <input type="checkbox" class="form-checkbox obj-is_monster mt-1">
                     </div>
                 </div>
-                <!-- NPC/Monster specific fields (optional) -->
                 <div class="mt-4 p-3 bg-gray-100 rounded-md">
                     <h4 class="text-sm font-semibold mb-2 text-gray-600">NPC/Monster Details (Optional)</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> <div>
                             <label class="form-label">Monster ID</label>
                             <input type="text" class="form-input obj-monster_id" placeholder="practice_dummy_template">
                         </div>
@@ -351,11 +449,9 @@
                         <input type="number" class="form-input hobj-perception_dc" value="25">
                     </div>
                 </div>
-                <div class="flex mt-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" class="form-checkbox hobj-is_item mr-2" checked>
-                        <label class="form-label mb-0">Is Item?</label>
-                    </div>
+                <div class="mt-4">
+                    <label class="form-label">Is Item?</label>
+                    <input type="checkbox" class="form-checkbox hobj-is_item mt-1" checked>
                 </div>
             `;
             container.appendChild(div);
@@ -364,23 +460,24 @@
         function addForageable() {
             const container = document.getElementById('forageable-items-container');
             const div = document.createElement('div');
-            div.className = 'dynamic-item grid grid-cols-1 md:grid-cols-3 gap-4';
+            div.className = 'dynamic-item';
             div.innerHTML = `
-                <div>
-                    <label class="form-label">Item ID</label>
-                    <input type="text" class="form-input forage-item_id" placeholder="viridian_leaf">
+                <div class="dynamic-item-header">
+                    <h3 class="dynamic-item-title">New Forageable Item</h3>
+                    <button type="button" onclick="removeItem(this)" class="btn btn-danger btn-small">Remove</button>
                 </div>
-                <div>
-                    <label class="form-label">Item Name</label>
-                    <input type="text" class="form-input forage-item_name" placeholder="viridian leaf">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="col-span-1">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="form-label">Item ID</label>
+                        <input type="text" class="form-input forage-item_id" placeholder="viridian_leaf">
+                    </div>
+                    <div>
+                        <label class="form-label">Item Name</label>
+                        <input type="text" class="form-input forage-item_name" placeholder="viridian leaf">
+                    </div>
+                    <div>
                         <label class="form-label">DC</label>
                         <input type="number" class="form-input forage-dc" value="50">
-                    </div>
-                    <div class="col-span-1 flex items-end">
-                        <button type="button" onclick="removeItem(this)" class="btn btn-danger btn-small w-full">Remove</button>
                     </div>
                 </div>
             `;
@@ -516,7 +613,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(data),
+                    body: JSON.STRINGIFY(data),
                 });
 
                 const result = await response.json();
