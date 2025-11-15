@@ -278,21 +278,22 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         new_room_id = target_room_id_step
         
         # ---
-        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
+        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK (AND THE CRASH)
         # ---
         if (new_room_id == "town_hall" and
-            "innkeeper_quest_1" in player_obj.active_quests and # This check is flawed, should check *item*
             "intro_give_clerk" not in player_obj.completed_quests):
             
              # Check if player has the payment
             has_payment = False
             if "lodging_tax_payment" in player_obj.inventory:
                 has_payment = True
-            for slot in ["mainhand", "offhand"]:
-                if player_obj.worn_items.get(slot) == "lodging_tax_payment":
-                    has_payment = True
-                    break
+            if not has_payment: # Only check hands if not in pack
+                for slot in ["mainhand", "offhand"]:
+                    if player_obj.worn_items.get(slot) == "lodging_tax_payment":
+                        has_payment = True
+                        break
             
+            # Now, check 'has_payment'
             if has_payment:
                 player_obj.send_message(
                     "\nYou have arrived at the Town Hall. You should "
@@ -318,26 +319,29 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         world.socketio.sleep(3.0) 
 
-    # --- Loop is finished ---
+    # ---
+    # --- THIS IS THE FINAL FIX ---
+    # ---
+    # The loop is finished. We need to send the "You have arrived." message
+    # BUT we must NOT clear the messages from the final move_to_room.
+    
     player_obj = world.get_player_obj(player_id)
-    if player_obj: # <-- ADDED CHECK
-        player_obj.is_goto_active = False # <-- CLEAR FLAG
+    if player_obj: 
+        player_obj.is_goto_active = False 
         if player_obj.current_room_id == final_destination_room_id:
             # Clear final RT
             world.remove_combat_state(player_id)
             
-            # ---
-            # --- THIS IS THE FIX: Clear messages before final send
-            # ---
-            player_obj.messages.clear()
+            # --- DO NOT CLEAR MESSAGES ---
+            # player_obj.messages.clear() # <-- REMOVED THIS LINE
+            
             player_obj.send_message("You have arrived.")
             world.socketio.emit('command_response', 
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
                                      to=sid)
-# ---
-# --- END NEW GOTO TASK
-# ---
-
+    # ---
+    # --- END FIX
+    # ---
 
 # --- Class from enter.py ---
 class Enter(BaseVerb):
@@ -402,7 +406,7 @@ class Enter(BaseVerb):
             return # Movement is blocked
             
         # ---
-        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
+        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK (AND THE CRASH)
         # ---
         current_room_id = self.room.room_id
         self.player.move_to_room(target_room_id, move_msg)
@@ -414,10 +418,11 @@ class Enter(BaseVerb):
             has_payment = False
             if "lodging_tax_payment" in self.player.inventory:
                 has_payment = True
-            for slot in ["mainhand", "offhand"]:
-                if self.player.worn_items.get(slot) == "lodging_tax_payment":
-                    has_payment = True
-                    break
+            if not has_payment:
+                for slot in ["mainhand", "offhand"]:
+                    if self.player.worn_items.get(slot) == "lodging_tax_payment":
+                        has_payment = True
+                        break
             
             if has_payment:
                 self.player.send_message(
@@ -545,7 +550,7 @@ class Move(BaseVerb):
                 return # Movement is blocked
             
             # ---
-            # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
+            # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK (AND THE CRASH)
             # ---
             self.player.move_to_room(target_room_id, move_msg)
             
@@ -556,10 +561,11 @@ class Move(BaseVerb):
                 has_payment = False
                 if "lodging_tax_payment" in self.player.inventory:
                     has_payment = True
-                for slot in ["mainhand", "offhand"]:
-                    if self.player.worn_items.get(slot) == "lodging_tax_payment":
-                        has_payment = True
-                        break
+                if not has_payment:
+                    for slot in ["mainhand", "offhand"]:
+                        if self.player.worn_items.get(slot) == "lodging_tax_payment":
+                            has_payment = True
+                            break
                 
                 if has_payment:
                     self.player.send_message(

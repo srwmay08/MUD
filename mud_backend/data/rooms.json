@@ -1149,9 +1149,7 @@
                 "name": "a theatre master",
                 "description": "A man in a velvet coat and a feathered cap, waving his arms about dramatically.",
                 "keywords": [
-                    "master",
-                    "theatre master",
-                    "a theatre master"
+                    "master", "theatre master", "a theatre master"
                 ],
                 "verbs": [
                     "look",
