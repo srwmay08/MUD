@@ -69,28 +69,6 @@ def _spill_item_into_room(world: 'World', room_objects: list, item_id: str) -> s
     return item_name
 
 
-class Absorb(BaseVerb):
-    """
-    Handles the 'absorb' command. (Redundant now, but kept for alias list consistency)
-    """
-    def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
-            return
-
-        exp_in_room = self.room.unabsorbed_social_exp
-        
-        if exp_in_room <= 0:
-            self.player.send_message("There is no experience here to absorb.")
-            return
-
-        self.player.absorb_exp_pulse()
-        
-        self.room.unabsorbed_social_exp = 0
-        self.world.save_room(self.room)
-        
-        _set_action_roundtime(self.player, 1.0, rt_type="hard")
-
-
 class Search(BaseVerb):
     """
     Handles the 'search' command.

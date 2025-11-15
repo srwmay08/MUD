@@ -5,7 +5,6 @@
         "description": {
             "default": "The air of the Golden Market is thick with the competing smells of sea salt, exotic spices, and the nearby sewage channels of the delta. Merchants of every race shout their wares, their stalls crammed together under faded, salt-stained awnings. The murmur of a hundred conversations, haggling, and hushed, dangerous-sounding deals, is constant. In the center, a verdigris-stained bronze statue of a forgotten merchant-prince serves as a perch for gulls and a common meeting spot. Paths, slick with grime and commerce, branch out in all directions."
         },
-        "unabsorbed_social_exp": 100,
         "is_outdoor": true,
         "objects": [
             {

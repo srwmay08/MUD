@@ -936,7 +936,6 @@ class Room:
         self.description = description
         self.db_data = db_data if db_data is not None else {}
         self._id = self.db_data.get("_id") 
-        self.unabsorbed_social_exp = self.db_data.get("unabsorbed_social_exp", 0) 
         self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
         self.exits: Dict[str, str] = self.db_data.get("exits", {})
 
@@ -946,7 +945,6 @@ class Room:
             "room_id": self.room_id,
             "name": self.name,
             "description": self.description,
-            "unabsorbed_social_exp": self.unabsorbed_social_exp,
             "objects": self.objects,
             "exits": self.exits,
         }
