@@ -1,0 +1,24 @@
+{
+    "copper_vein": {
+        "name": "a copper vein",
+        "keywords": ["vein", "copper", "ore", "copper vein"],
+        "description": "A reddish-brown vein of copper ore is embedded in the rock wall.",
+        "verbs": ["LOOK", "EXAMINE", "MINE"],
+        "is_gathering_node": true,
+        "node_type": "mining",
+        "skill_dc": 20,
+        "loot_table_id": "copper_vein_loot",
+        "default_taps": 3
+    },
+    "viridian_leaf_plant": {
+        "name": "a viridian leaf plant",
+        "keywords": ["plant", "leaf", "viridian", "viridian leaf plant"],
+        "description": "A common plant with bright, viridian-colored leaves.",
+        "verbs": ["LOOK", "EXAMINE", "HARVEST"],
+        "is_gathering_node": true,
+        "node_type": "herbalism",
+        "skill_dc": 10,
+        "loot_table_id": "viridian_leaf_loot",
+        "default_taps": 1
+    }
+}

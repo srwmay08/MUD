@@ -44,9 +44,8 @@ class World:
         self.game_skills: Dict[str, Dict] = {}
         self.game_criticals: Dict[str, Any] = {}
         self.game_quests: Dict[str, Any] = {}
-        # --- NEW: Add factions ---
+        self.game_nodes: Dict[str, Any] = {} 
         self.game_factions: Dict[str, Any] = {}
-        # --- END NEW ---
 
         # --- Game Loop Timers ---
         self.last_game_tick_time: float = time.time()
@@ -90,10 +89,10 @@ class World:
         self.game_criticals = db.fetch_all_criticals()
         print("[WORLD INIT] Loading all quests...")
         self.game_quests = db.fetch_all_quests()
-        # --- NEW: Load factions ---
+        print("[WORLD INIT] Loading all nodes...")
+        self.game_nodes = db.fetch_all_nodes()
         print("[WORLD INIT] Loading all factions...")
         self.game_factions = db.fetch_all_factions()
-        # --- END NEW ---
         print("[WORLD INIT] Data loaded.")
 
     # --- Player Accessors (Thread-Safe) ---

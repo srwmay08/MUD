@@ -32,25 +32,18 @@
                 "perception_dc": 15,
                 "is_monster": true,
                 "monster_id": "well_bottom_stirring_monster"
+            },
+            {
+            "node_id": "viridian_leaf_plant",
+            "players_tapped": [],
+            "taps_remaining": 1
             }
         ],
         "exits": {
             "north": "flooded_tunnel",
             "east": "cave_east",
             "west": "cave_west"
-        },
-        "forageable_items": [
-            {
-                "item_id": "viridian_leaf",
-                "item_name": "viridian leaf",
-                "dc": 50
-            },
-            {
-                "item_id": "althion_stem",
-                "item_name": "althion stem",
-                "dc": 85
-            }
-        ]
+        }
     },
     {
         "room_id": "cave_east",

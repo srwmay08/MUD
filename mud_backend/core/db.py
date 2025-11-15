@@ -388,6 +388,13 @@ def fetch_all_quests() -> dict:
     print(f"[DB INIT] ...Cached {len(quests)} quests.")
     return quests
 
+def fetch_all_nodes() -> dict:
+    """Loads nodes.json into a dictionary."""
+    print("[DB INIT] Caching all gathering nodes from nodes.json...")
+    nodes = _load_json_data("nodes.json")
+    print(f"[DB INIT] ...Cached {len(nodes)} nodes.")
+    return nodes
+
 # ---
 # --- NEW: Add fetch_all_factions
 # ---
