@@ -145,18 +145,26 @@ body {
     min-height: 200px;
 }
 #injury-svg {
-    width: 60%;
+    width: 56%; /* Was 80% */
     height: auto;
 }
 #body-outline {
-    fill: #3a3a3a;
-    stroke: #777;
-    stroke-width: 0.2;
+    fill: none;       /* This makes the shape hollow */
+    stroke: #777;     /* This is the line color */
+    stroke-width: 0.5; /* This makes the line very thin (on a 16x16 viewbox) */
 }
+
+/* --- NEW: Style for the new static icons --- */
+.body-icon {
+    fill: #555; /* A slightly lighter gray than the fill */
+    stroke: none; /* No stroke for these */
+}
+/* --- END NEW --- */
+
 .wound-marker {
     fill: #a00000; /* Red */
     stroke: #F00;
-    stroke-width: 1;
+    stroke-width: 0.25; /* Thinner stroke for the smaller icon */
     opacity: 0.8;
 }
 
