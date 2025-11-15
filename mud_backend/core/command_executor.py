@@ -214,6 +214,17 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             if player.current_room_id not in player.visited_rooms:
                 player.visited_rooms.append(player.current_room_id)
             # --- END NEW ---
+
+    # ---
+    # --- NEW: Check if this new command should cancel a GOTO
+    # ---
+    if player.game_state == "playing" and command_line.lower() != "ping":
+        if player.is_goto_active:
+            player.is_goto_active = False 
+            # The background task will see this flag next time it checks
+    # ---
+    # --- END NEW
+    # ---
             
     # --- REFACTORED: Get room from world ---
     room_db_data = world.get_room(player.current_room_id)
@@ -293,7 +304,7 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             if player.chargen_step == 1:
                 send_stat_roll_prompt(player) # Re-prompt for stat rolling
             elif player.chargen_step == 2:
-                send_assignment_prompt(player, "SELECTED") # Re-prompt for stat assignment
+                send_assignment_prompt(player) # Re-prompt for stat assignment
             else:
                 # This covers all appearance questions (step 3+)
                 get_chargen_prompt(player) # Re-prompt for the correct appearance question

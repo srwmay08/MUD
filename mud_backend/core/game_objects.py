@@ -275,6 +275,11 @@ class Player:
         self.visited_rooms: List[str] = self.db_data.get("visited_rooms", [])
         # --- END NEW ---
 
+        # ---
+        # --- NEW: GOTO Flag ---
+        self.is_goto_active: bool = self.db_data.get("is_goto_active", False)
+        # --- END NEW ---
+
 
     @property
     def con_bonus(self) -> int:
@@ -807,7 +812,12 @@ class Player:
 
             # ---
             # --- NEW: Save Map Tracking ---
-            "visited_rooms": self.visited_rooms
+            "visited_rooms": self.visited_rooms,
+            # --- END NEW ---
+
+            # ---
+            # --- NEW: Save GOTO Flag ---
+            "is_goto_active": self.is_goto_active
             # --- END NEW ---
         }
         

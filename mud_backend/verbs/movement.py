@@ -155,7 +155,26 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
     if not player_obj:
         return # Player logged out
 
+    # --- START FIX ---
+    if not player_obj.is_goto_active:
+        # GOTO was canceled before it even started
+        return
+    # --- END FIX ---
+
     for move_direction in path:
+        # --- START FIX ---
+        # --- Re-fetch player and check for cancellation ---
+        player_obj = world.get_player_obj(player_id) 
+        if not player_obj: return # Player logged out
+        
+        if not player_obj.is_goto_active:
+            player_obj.send_message("You stop moving.")
+            world.socketio.emit('command_response', 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 to=sid)
+            return # GOTO was canceled
+        # --- END FIX ---
+
         # --- Wait for any existing RT to clear ---
         while True:
             rt_data = world.get_combat_state(player_id)
@@ -173,9 +192,17 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                 break
         
         # --- Check if player is still connected ---
+        # --- START FIX ---
+        # --- Re-check after RT, just in case ---
         player_obj = world.get_player_obj(player_id)
-        if not player_obj:
-            return # Player logged out
+        if not player_obj: return
+        if not player_obj.is_goto_active:
+            player_obj.send_message("You stop moving.")
+            world.socketio.emit('command_response', 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 to=sid)
+            return
+        # --- END FIX ---
             
         # --- Check for combat ---
         player_state = world.get_combat_state(player_id)
@@ -184,6 +211,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             world.socketio.emit('command_response', 
                                  {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
                                  to=sid)
+            player_obj.is_goto_active = False # <-- ADDED
             return
 
         current_room_data = world.get_room(player_obj.current_room_id)
@@ -192,6 +220,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             world.socketio.emit('command_response', 
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
                                      to=sid)
+            player_obj.is_goto_active = False # <-- ADDED
             return
         
         current_room_obj = Room(
@@ -220,6 +249,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                 world.socketio.emit('command_response', 
                                          {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
                                          to=sid)
+                player_obj.is_goto_active = False # <-- ADDED
                 return
         
         if _check_toll_gate(player_obj, target_room_id_step):
@@ -227,6 +257,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             world.socketio.emit('command_response', 
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
                                      to=sid)
+            player_obj.is_goto_active = False # <-- ADDED
             return
         
         # ---
@@ -284,13 +315,15 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
 
     # --- Loop is finished ---
     player_obj = world.get_player_obj(player_id)
-    if player_obj and player_obj.current_room_id == final_destination_room_id:
-        # Clear final RT
-        world.remove_combat_state(player_id)
-        player_obj.send_message("You have arrived.")
-        world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                                 to=sid)
+    if player_obj: # <-- ADDED CHECK
+        player_obj.is_goto_active = False # <-- CLEAR FLAG
+        if player_obj.current_room_id == final_destination_room_id:
+            # Clear final RT
+            world.remove_combat_state(player_id)
+            player_obj.send_message("You have arrived.")
+            world.socketio.emit('command_response', 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     to=sid)
 # ---
 # --- END NEW GOTO TASK
 # ---
@@ -696,6 +729,8 @@ class GOTO(BaseVerb):
         if not sid:
             self.player.send_message("Error: Could not find your connection.")
             return
+
+        self.player.is_goto_active = True # <-- SET FLAG
             
         # Start the background task
         self.world.socketio.start_background_task(
