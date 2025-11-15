@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUD Room Builder</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a cleaner look */
+        body {
+            font-family: 'Inter', sans-serif;
+            --tw-bg-opacity: 1;
+            background-color: rgb(243 244 246 / var(--tw-bg-opacity)); /* bg-gray-100 */
+        }
+        .form-section {
+            @apply bg-white p-6 rounded-lg shadow-md mb-6;
+        }
+        .form-section-title {
+            @apply text-xl font-semibold text-gray-800 border-b pb-2 mb-4;
+        }
+        .form-label {
+            @apply block text-sm font-medium text-gray-700 mb-1;
+        }
+        .form-input, .form-textarea, .form-select {
+            @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm;
+        }
+        .form-textarea {
+            @apply min-h-[100px];
+        }
+        .form-checkbox {
+            @apply h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500;
+        }
+        .btn {
+            @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2;
+        }
+        .btn-primary {
+            @apply bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500;
+        }
+        .btn-secondary {
+            @apply bg-green-600 hover:bg-green-700 focus:ring-green-500;
+        }
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 focus:ring-red-500;
+        }
+        .btn-small {
+            @apply px-2 py-1 text-xs;
+        }
+        .dynamic-item {
+            @apply bg-gray-50 p-4 rounded-md border border-gray-200 mb-4;
+        }
+        .dynamic-item-header {
+            @apply flex justify-between items-center mb-2;
+        }
+        .dynamic-item-title {
+            @apply text-md font-semibold text-gray-700;
+        }
+        #message-box {
+            @apply fixed top-5 right-5 px-4 py-3 rounded-md shadow-lg z-50 text-white font-medium;
+        }
+        #message-box.success {
+            @apply bg-green-500;
+        }
+        #message-box.error {
+            @apply bg-red-500;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">MUD Room Builder</h1>
+        
+        <!-- Form starts here -->
+        <form id="room-form">
+            
+            <!-- Section: Core Details -->
+            <div class="form-section">
+                <h2 class="form-section-title">Core Details</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="room_id" class="form-label">Room ID (Unique)</label>
+                        <input type="text" id="room_id" class="form-input" placeholder="e.g., template_workshop" required>
+                    </div>
+                    <div>
+                        <label for="name" class="form-label">Room Name</label>
+                        <input type="text" id="name" class="form-input" placeholder="e.g., The Template Workshop" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label for="x" class="form-label">X</label>
+                        <input type="number" id="x" class="form-input" value="0">
+                    </div>
+                    <div>
+                        <label for="y" class="form-label">Y</label>
+                        <input type="number" id="y" class="form-input" value="0">
+                    </div>
+                    <div>
+                        <label for="z" class="form-label">Z</label>
+                        <input type="number" id="z" class="form-input" value="0">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label for="interior_id" class="form-label">Interior ID</label>
+                        <input type="text" id="interior_id" class="form-input" placeholder="e.g., builder_zone">
+                    </div>
+                    <div>
+                        <label for="unabsorbed_social_exp" class="form-label">Unabsorbed Social EXP</label>
+                        <input type="number" id="unabsorbed_social_exp" class="form-input" value="0">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="is_outdoor" class="form-checkbox mr-2">
+                        <label for="is_outdoor" class="form-label mb-0">Is Outdoor?</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Descriptions -->
+            <div class="form-section">
+                <h2 class="form-section-title">Descriptions</h2>
+                <div>
+                    <label for="desc_default" class="form-label">Default Description</label>
+                    <textarea id="desc_default" class="form-textarea" placeholder="The default appearance of the room." required></textarea>
+                </div>
+                <div class="mt-4">
+                    <label for="desc_dawn" class="form-label">DAWN Description (Optional)</label>
+                    <textarea id="desc_dawn" class="form-textarea" placeholder="Appearance at dawn."></textarea>
+                </div>
+                <div class="mt-4">
+                    <label for="desc_storm" class="form-label">STORM Description (Optional)</label>
+                    <textarea id="desc_storm" class="form-textarea" placeholder="Appearance during a storm."></textarea>
+                </div>
+                <!-- You can add more dynamic time-based descriptions here if needed -->
+            </div>
+
+            <!-- Section: Exits -->
+            <div class="form-section">
+                <h2 class="form-section-title">Exits</h2>
+                <div id="exits-container">
+                    <!-- Dynamic exits will be added here -->
+                </div>
+                <button type="button" onclick="addExit()" class="btn btn-primary btn-small mt-2">Add Exit</button>
+            </div>
+
+            <!-- Section: Objects -->
+            <div class="form-section">
+                <h2 class="form-section-title">Objects</h2>
+                <div id="objects-container">
+                    <!-- Dynamic objects will be added here -->
+                </div>
+                <button type="button" onclick="addObject()" class="btn btn-primary btn-small mt-2">Add Object</button>
+            </div>
+
+            <!-- Section: Hidden Objects -->
+            <div class="form-section">
+                <h2 class="form-section-title">Hidden Objects</h2>
+                <div id="hidden-objects-container">
+                    <!-- Dynamic hidden objects will be added here -->
+                </div>
+                <button type="button" onclick="addHiddenObject()" class="btn btn-primary btn-small mt-2">Add Hidden Object</button>
+            </div>
+
+            <!-- Section: Forageable Items -->
+            <div class="form-section">
+                <h2 class="form-section-title">Forageable Items</h2>
+                <div id="forageable-items-container">
+                    <!-- Dynamic forageable items will be added here -->
+                </div>
+                <button type="button" onclick="addForageable()" class="btn btn-primary btn-small mt-2">Add Forageable Item</button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="form-section flex justify-end space-x-4">
+                <button type="button" onclick="downloadJSON()" class="btn btn-secondary">Download JSON</button>
+                <button type="submit" class="btn btn-primary">Save to Server</button>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Message box for feedback -->
+    <div id="message-box" class="hidden"></div>
+
+
+    <script>
+        // --- Helper Functions ---
+        
+        /**
+         * Splits a comma-separated string into an array, trimming whitespace.
+         * Returns an empty array if the string is empty.
+         */
+        function parseList(str) {
+            if (!str) return [];
+            return str.split(',').map(item => item.trim()).filter(item => item.length > 0);
+        }
+
+        /**
+         * Removes the parent '.dynamic-item' of the clicked button.
+         */
+        function removeItem(button) {
+            button.closest('.dynamic-item').remove();
+        }
+
+        /**
+         * Shows a success or error message.
+         */
+        function showMessage(message, type = 'success') {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = message;
+            messageBox.className = type === 'success' ? 'success' : 'error';
+            messageBox.classList.remove('hidden');
+
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        }
+
+        // --- Dynamic Element Adders ---
+
+        function addExit() {
+            const container = document.getElementById('exits-container');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item grid grid-cols-1 md:grid-cols-3 gap-4';
+            div.innerHTML = `
+                <div>
+                    <label class="form-label">Direction (e.g., north, out)</label>
+                    <input type="text" class="form-input exit-direction" placeholder="out">
+                </div>
+                <div>
+                    <label class="form-label">Target Room ID</label>
+                    <input type="text" class="form-input exit-target" placeholder="void">
+                </div>
+                <div class="flex items-end">
+                    <button type="button" onclick="removeItem(this)" class="btn btn-danger btn-small">Remove</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addObject() {
+            const container = document.getElementById('objects-container');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `
+                <div class="dynamic-item-header">
+                    <h3 class="dynamic-item-title">New Object</h3>
+                    <button type="button" onclick="removeItem(this)" class="btn btn-danger btn-small">Remove</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-input obj-name" placeholder="a sturdy door">
+                    </div>
+                    <div>
+                        <label class="form-label">Keywords (comma-separated)</label>
+                        <input type="text" class="form-input obj-keywords" placeholder="door, sturdy door">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea obj-description" placeholder="A simple door."></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label class="form-label">Verbs (comma-separated)</label>
+                        <input type="text" class="form-input obj-verbs" placeholder="look, examine, enter">
+                    </div>
+                    <div>
+                        <label class="form-label">Perception DC</label>
+                        <input type="number" class="form-input obj-perception_dc" value="0">
+                    </div>
+                    <div>
+                        <label class="form-label">Target Room (for doors)</label>
+                        <input type="text" class="form-input obj-target_room" placeholder="void">
+                    </div>
+                </div>
+                <div class="flex space-x-8 mt-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" class="form-checkbox obj-is_npc mr-2">
+                        <label class="form-label mb-0">Is NPC?</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" class="form-checkbox obj-is_monster mr-2">
+                        <label class="form-label mb-0">Is Monster?</label>
+                    </div>
+                </div>
+                <!-- NPC/Monster specific fields (optional) -->
+                <div class="mt-4 p-3 bg-gray-100 rounded-md">
+                    <h4 class="text-sm font-semibold mb-2 text-gray-600">NPC/Monster Details (Optional)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label">Monster ID</label>
+                            <input type="text" class="form-input obj-monster_id" placeholder="practice_dummy_template">
+                        </div>
+                        <div>
+                            <label class="form-label">Quest Giver IDs (comma-separated)</label>
+                            <input type="text" class="form-input obj-quest_giver_ids">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="form-label">All Quests Done Message</label>
+                        <input type="text" class="form-input obj-all_quests_done_message">
+                    </div>
+                    <div class="mt-4">
+                        <label class="form-label">Shop Data (Enter as JSON)</label>
+                        <textarea class="form-textarea font-mono text-sm obj-shop_data" placeholder='{ "type": "builder", "inventory": ["item1"] }'></textarea>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addHiddenObject() {
+            const container = document.getElementById('hidden-objects-container');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `
+                <div class="dynamic-item-header">
+                    <h3 class="dynamic-item-title">New Hidden Object</h3>
+                    <button type="button" onclick="removeItem(this)" class="btn btn-danger btn-small">Remove</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-input hobj-name" placeholder="a hidden schematic">
+                    </div>
+                    <div>
+                        <label class="form-label">Item ID</label>
+                        <input type="text" class="form-input hobj-item_id" placeholder="schematic_item">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea hobj-description" placeholder="A rolled-up schematic."></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label class="form-label">Keywords (comma-separated)</label>
+                        <input type="text" class="form-input hobj-keywords" placeholder="schematic, plans">
+                    </div>
+                    <div>
+                        <label class="form-label">Verbs (comma-separated)</label>
+                        <input type="text" class="form-input hobj-verbs" placeholder="GET, TAKE, LOOK">
+                    </div>
+                    <div>
+                        <label class="form-label">Perception DC</label>
+                        <input type="number" class="form-input hobj-perception_dc" value="25">
+                    </div>
+                </div>
+                <div class="flex mt-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" class="form-checkbox hobj-is_item mr-2" checked>
+                        <label class="form-label mb-0">Is Item?</label>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+        
+        function addForageable() {
+            const container = document.getElementById('forageable-items-container');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item grid grid-cols-1 md:grid-cols-3 gap-4';
+            div.innerHTML = `
+                <div>
+                    <label class="form-label">Item ID</label>
+                    <input type="text" class="form-input forage-item_id" placeholder="viridian_leaf">
+                </div>
+                <div>
+                    <label class="form-label">Item Name</label>
+                    <input type="text" class="form-input forage-item_name" placeholder="viridian leaf">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="col-span-1">
+                        <label class="form-label">DC</label>
+                        <input type="number" class="form-input forage-dc" value="50">
+                    </div>
+                    <div class="col-span-1 flex items-end">
+                        <button type="button" onclick="removeItem(this)" class="btn btn-danger btn-small w-full">Remove</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        // --- Data Collection & Submission ---
+
+        /**
+         * Gathers all data from the form and constructs the JSON object.
+         */
+        function gatherData() {
+            const room = {};
+
+            // Core Details
+            room.room_id = document.getElementById('room_id').value;
+            room.name = document.getElementById('name').value;
+            room.x = parseInt(document.getElementById('x').value) || 0;
+            room.y = parseInt(document.getElementById('y').value) || 0;
+            room.z = parseInt(document.getElementById('z').value) || 0;
+            room.interior_id = document.getElementById('interior_id').value;
+            room.is_outdoor = document.getElementById('is_outdoor').checked;
+            room.unabsorbed_social_exp = parseInt(document.getElementById('unabsorbed_social_exp').value) || 0;
+
+            // Descriptions
+            room.description = {
+                default: document.getElementById('desc_default').value
+            };
+            const descDawn = document.getElementById('desc_dawn').value;
+            if (descDawn) room.description.DAWN = descDawn;
+            const descStorm = document.getElementById('desc_storm').value;
+            if (descStorm) room.description.STORM = descStorm;
+
+            // Exits
+            room.exits = {};
+            document.querySelectorAll('#exits-container .dynamic-item').forEach(item => {
+                const direction = item.querySelector('.exit-direction').value;
+                const target = item.querySelector('.exit-target').value;
+                if (direction) {
+                    room.exits[direction] = target;
+                }
+            });
+
+            // Objects
+            room.objects = [];
+            document.querySelectorAll('#objects-container .dynamic-item').forEach(item => {
+                const obj = {
+                    name: item.querySelector('.obj-name').value,
+                    description: item.querySelector('.obj-description').value,
+                    verbs: parseList(item.querySelector('.obj-verbs').value),
+                    perception_dc: parseInt(item.querySelector('.obj-perception_dc').value) || 0,
+                    keywords: parseList(item.querySelector('.obj-keywords').value),
+                    is_npc: item.querySelector('.obj-is_npc').checked,
+                    is_monster: item.querySelector('.obj-is_monster').checked
+                };
+                
+                const targetRoom = item.querySelector('.obj-target_room').value;
+                if(targetRoom) obj.target_room = targetRoom;
+
+                if (obj.is_monster) {
+                    const monsterId = item.querySelector('.obj-monster_id').value;
+                    if(monsterId) obj.monster_id = monsterId;
+                } else {
+                    obj.monster_id = null;
+                }
+                
+                if (obj.is_npc) {
+                    const questIds = parseList(item.querySelector('.obj-quest_giver_ids').value);
+                    if(questIds.length > 0) obj.quest_giver_ids = questIds;
+                    
+                    const doneMsg = item.querySelector('.obj-all_quests_done_message').value;
+                    if(doneMsg) obj.all_quests_done_message = doneMsg;
+                    
+                    const shopDataStr = item.querySelector('.obj-shop_data').value;
+                    if (shopDataStr) {
+                        try {
+                            obj.shop_data = JSON.parse(shopDataStr);
+                        } catch (e) {
+                            console.warn("Invalid Shop Data JSON. Skipping.", e);
+                            showMessage("Warning: Invalid JSON in Shop Data for one object.", "error");
+                        }
+                    }
+                }
+                
+                if(obj.name) room.objects.push(obj);
+            });
+
+            // Hidden Objects
+            room.hidden_objects = [];
+            document.querySelectorAll('#hidden-objects-container .dynamic-item').forEach(item => {
+                const hobj = {
+                    name: item.querySelector('.hobj-name').value,
+                    item_id: item.querySelector('.hobj-item_id').value,
+                    description: item.querySelector('.hobj-description').value,
+                    perception_dc: parseInt(item.querySelector('.hobj-perception_dc').value) || 0,
+                    keywords: parseList(item.querySelector('.hobj-keywords').value),
+                    verbs: parseList(item.querySelector('.hobj-verbs').value),
+                    is_item: item.querySelector('.hobj-is_item').checked
+                };
+                if(hobj.name) room.hidden_objects.push(hobj);
+            });
+
+            // Forageable Items
+            room.forageable_items = [];
+            document.querySelectorAll('#forageable-items-container .dynamic-item').forEach(item => {
+                const forage = {
+                    item_id: item.querySelector('.forage-item_id').value,
+                    item_name: item.querySelector('.forage-item_name').value,
+                    dc: parseInt(item.querySelector('.forage-dc').value) || 0
+                };
+                if(forage.item_id) room.forageable_items.push(forage);
+            });
+            
+            return room;
+        }
+
+        /**
+         * Handles the main form submission.
+         */
+        async function handleSubmit(event) {
+            event.preventDefault();
+            const data = gatherData();
+            
+            // Basic validation
+            if (!data.room_id || !data.name || !data.description.default) {
+                showMessage("Room ID, Name, and Default Description are required.", "error");
+                return;
+            }
+
+            try {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(`Success! Room saved as ${result.path}`, 'success');
+                } else {
+                    showMessage(`Error: ${result.error}`, 'error');
+                }
+            } catch (err) {
+                console.error("Save error:", err);
+                showMessage(`Network or server error: ${err.message}`, 'error');
+            }
+        }
+        
+        /**
+         * Triggers a client-side download of the JSON file.
+         */
+        function downloadJSON() {
+            const data = gatherData();
+            
+            if (!data.room_id) {
+                showMessage("Please set a Room ID before downloading.", "error");
+                return;
+            }
+            
+            // Save as a list, just like the template
+            const jsonData = JSON.stringify([data], null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${data.room_id}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showMessage("JSON download started.", 'success');
+        }
+
+        // Attach submit listener to the form
+        document.getElementById('room-form').addEventListener('submit', handleSubmit);
+        
+        // Load some default data to make testing easier
+        window.onload = () => {
+            document.getElementById('room_id').value = 'template_workshop';
+            document.getElementById('name').value = 'The Template Workshop';
+            document.getElementById('z').value = '100';
+            document.getElementById('interior_id').value = 'builder_zone';
+            document.getElementById('desc_default').value = "A clean, well-lit workshop. A workbench sits in the center, covered in tools. A helpful 'Builder' NPC stands nearby, and a practice dummy is in the corner. A sturdy 'Door' is the only way out.";
+            document.getElementById('desc_dawn').value = 'The workshop is bathed in the soft, angled light of dawn.';
+            document.getElementById('desc_storm').value = 'Rain lashes against the workshop windows, and the sound of thunder echoes faintly.';
+            
+            addExit();
+            document.querySelector('.exit-direction').value = 'out';
+            document.querySelector('.exit-target').value = 'void';
+            
+            // Add other defaults if you like
+            console.log("MUD Room Builder UI loaded.");
+        };
+
+    </script>
+</body>
+</html>
