@@ -1,9 +1,10 @@
 {
     "copper_vein": {
+        "node_id": "copper_vein",
         "name": "a copper vein",
         "keywords": ["vein", "copper", "ore", "copper vein"],
         "description": "A reddish-brown vein of copper ore is embedded in the rock wall.",
-        "verbs": ["LOOK", "EXAMINE", "MINE"],
+        "verbs": ["LOOK", "EXAMINE", "MINE", "PROSPECT"],
         "is_gathering_node": true,
         "node_type": "mining",
         "skill_dc": 20,
@@ -11,14 +12,27 @@
         "default_taps": 3
     },
     "viridian_leaf_plant": {
+        "node_id": "viridian_leaf_plant",
         "name": "a viridian leaf plant",
         "keywords": ["plant", "leaf", "viridian", "viridian leaf plant"],
         "description": "A common plant with bright, viridian-colored leaves.",
-        "verbs": ["LOOK", "EXAMINE", "HARVEST"],
+        "verbs": ["LOOK", "EXAMINE", "HARVEST", "FORAGE"],
         "is_gathering_node": true,
         "node_type": "herbalism",
         "skill_dc": 10,
         "loot_table_id": "viridian_leaf_loot",
         "default_taps": 1
+    },
+    "young_ash_tree": {
+        "node_id": "young_ash_tree",
+        "name": "a young ash tree",
+        "keywords": ["tree", "ash", "young ash tree"],
+        "description": "A young, healthy-looking ash tree.",
+        "verbs": ["LOOK", "EXAMINE", "CHOP", "SURVEY"],
+        "is_gathering_node": true,
+        "node_type": "lumberjacking",
+        "skill_dc": 15,
+        "loot_table_id": "ash_wood_loot",
+        "default_taps": 2
     }
 }

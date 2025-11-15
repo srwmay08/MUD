@@ -114,103 +114,40 @@ def _set_action_roundtime(player: 'Player', duration_seconds: float, message: st
 
 class Forage(BaseVerb):
     """
-    Handles the 'forage' command.
-    FORAGE {adjective} {noun}
-    FORAGE SENSE
+    Handles the 'forage' (sense) command.
     """
     
     def execute(self):
-        # --- MODIFIED: Use new helper ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END MODIFIED ---
+        
+        # (Assuming 'survival' is the skill for this)
+        survival_skill = self.player.skills.get("survival", 0)
+        
+        _set_action_roundtime(self.player, 3.0, rt_type="hard")
 
-        if not self.args:
-            self.player.send_message("What are you trying to forage for? (e.g., FORAGE VIRIDIAN LEAF or FORAGE SENSE)")
-            _set_action_roundtime(self.player, 1.0, rt_type="hard") # 1s RT for syntax error
+        if survival_skill < 1:
+             self.player.send_message("You don't have the proper training to forage for plants.")
+             return
+             
+        # This logic is copied from the old "FORAGE SENSE"
+        self.player.send_message("You scan the area for forageable plants...")
+        
+        found_nodes = []
+        for obj in self.room.objects:
+            if (obj.get("is_gathering_node") and 
+                obj.get("node_type") == "herbalism"):
+                found_nodes.append(obj)
+        
+        if not found_nodes:
+            self.player.send_message("You do not sense any plants of interest here.")
             return
+        
+        self.player.send_message("You sense the following plants are present:")
+        for node in found_nodes:
+            self.player.send_message(f"- {node.get('name', 'an unknown plant').title()}")
 
-        args_str = " ".join(self.args).lower()
-        player_survival = self.player.skills.get("survival", 0)
-        
-        # --- Handle FORAGE SENSE ---
-        if args_str == "sense":
-            if player_survival >= 25:
-                self.player.send_message("You scan the area for forageable plants...")
-                forageable_items = self.room.db_data.get("forageable_items", [])
-                if not forageable_items:
-                    self.player.send_message("You do not sense any plants of interest here.")
-                    _set_action_roundtime(self.player, 3.0, rt_type="hard") # 3s RT
-                    return
-                
-                self.player.send_message("You sense the following plants are present:")
-                for item in forageable_items:
-                    self.player.send_message(f"- {item.get('item_name', 'an unknown plant').title()}")
-                _set_action_roundtime(self.player, 4.0, rt_type="hard") # 4s RT
-            else:
-                self.player.send_message("You do not have enough skill in Survival to sense nearby plants.")
-                _set_action_roundtime(self.player, 2.0, rt_type="hard") # 2s RT
-            return
 
-        # --- Handle FORAGE <item> ---
-        
-        # Strip "for" if present
-        if args_str.startswith("for "):
-            target_name = args_str[4:].strip()
-        else:
-            target_name = args_str
-            
-        if not target_name:
-            self.player.send_message("Forage for what?")
-            _set_action_roundtime(self.player, 1.0, rt_type="hard") # 1s RT
-            return
-
-        # Check the room's forage table
-        forageable_items = self.room.db_data.get("forageable_items", [])
-        found_plant = None
-        for item in forageable_items:
-            if item.get("item_name", "").lower() == target_name:
-                found_plant = item
-                break
-        
-        if not found_plant:
-            # 10s base RT, reduced by 1s per 15 ranks of survival
-            rt_seconds = max(3.0, 10.0 - (player_survival / 15.0))
-            # --- MODIFIED: Use helper, provide custom message ---
-            _set_action_roundtime(self.player, rt_seconds, "You forage... but find nothing.", rt_type="hard")
-            return
-
-        # We found a matching plant, now roll against the DC
-        item_id = found_plant.get("item_id")
-        item_dc = found_plant.get("dc", 100)
-        # --- FIX: Use self.world.game_items ---
-        item_data = self.world.game_items.get(item_id)
-        
-        if not item_data:
-            self.player.send_message("You forage... but find nothing. (Error: Item data missing)")
-            _set_action_roundtime(self.player, 3.0, rt_type="hard") # 3s RT
-            return
-            
-        item_name = item_data.get("name", "a plant")
-        
-        # Roll: Skill + d100 vs DC
-        roll = player_survival + random.randint(1, 100)
-        
-        if roll >= item_dc:
-            # Success!
-            self.player.inventory.append(item_id)
-            # 8s base RT, reduced by 1s per 15 ranks
-            rt_seconds = max(2.0, 8.0 - (player_survival / 15.0))
-            # --- MODIFIED: Use helper, provide custom message ---
-            _set_action_roundtime(self.player, rt_seconds, f"You forage... and find {item_name}!", rt_type="hard")
-        else:
-            # Failure
-            # 12s base RT, reduced by 1s per 15 ranks
-            rt_seconds = max(4.0, 12.0 - (player_survival / 15.0))
-            # --- MODIFIED: Use helper, provide custom message ---
-            _set_action_roundtime(self.player, rt_seconds, f"You forage for {item_name} but fail to find any.", rt_type="hard")
-
-# --- (Eat and Drink classes are unchanged) ---
 class Eat(BaseVerb):
     """
     Handles the 'eat' command for herbs and food.

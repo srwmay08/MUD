@@ -80,9 +80,31 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "experience": ("experience", "Experience"), "exp": ("experience", "Experience"),
     # "trip": ("maneuvers", "Trip"), # <-- REMOVED (now handled conditionally)
 
-    # Activities
-    "search": ("harvesting", "Search"), "skin": ("harvesting", "Skin"),
-    "forage": ("foraging", "Forage"), "eat": ("foraging", "Eat"), "drink": ("foraging", "Drink"),
+# --- GATHERING VERBS ---
+    # Skinning (Already exists)
+    "skin": ("harvesting", "Skin"),
+    "butcher": ("harvesting", "Skin"), # <-- Alias
+    
+    # Herbalism (New file/refactor)
+    "forage": ("foraging", "Forage"), # This is now the "sense" verb
+    "harvest": ("herbalism", "Harvest"),
+    
+    # Mining (New file)
+    "mine": ("mining", "Mine"),
+    "prospect": ("mining", "Prospect"),
+    
+    # Lumberjacking (New file)
+    "chop": ("lumberjacking", "Chop"),
+    "cut": ("lumberjacking", "Chop"), # <-- Alias
+    "survey": ("lumberjacking", "Survey"),
+    
+    # Fishing (New file)
+    "fish": ("fishing", "Fish"),
+
+    # --- ACTIVITIES ---
+    "search": ("harvesting", "Search"), # Moved from 'Activities'
+    "eat": ("foraging", "Eat"), 
+    "drink": ("foraging", "Drink"),
     
     # Magic
     # "prep": ("magic", "Prep"), "prepare": ("magic", "Prep"), # <-- REMOVED
@@ -260,7 +282,6 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                 live_room_objects.append(obj)
             
             elif node_id:
-                # --- THIS IS THE NEW LOGIC FOR NODES ---
                 template = world.game_nodes.get(node_id)
                 if template:
                     # Merge template (defaults) with instance (room data)
@@ -268,7 +289,10 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                     # This update() is key: it overwrites template
                     # values (like players_tapped: []) with the
                     # saved room values (like players_tapped: ["Player1"])
-                    merged_obj.update(obj) 
+                    merged_obj.update(obj)
+                    # Add a UID for tracking taps, if it doesn't have one
+                    if "uid" not in merged_obj:
+                         merged_obj["uid"] = uuid.uuid4().hex
                     live_room_objects.append(merged_obj)
                 # --- END NEW LOGIC ---
             

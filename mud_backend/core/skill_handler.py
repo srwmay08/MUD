@@ -101,6 +101,8 @@ def _find_skill_by_name(world: 'World', skill_name: str) -> Optional[Dict]:
             return skill_data
     return None
 
+# ... (inside skill_handler.py)
+
 def _format_skill_line(player: Player, skill_data: Dict) -> str:
 # ... (function contents unchanged) ...
     skill_id = skill_data["skill_id"]
@@ -111,27 +113,35 @@ def _format_skill_line(player: Player, skill_data: Dict) -> str:
     
     rank_str = f"({current_rank})"
     cost_str = ""
+    
+    # --- ADD THIS FLAG ---
+    is_trainable = skill_data.get("trainable", True)
 
     if ranks_trained_this_lvl >= 3:
         cost_str = "[Maxed]"
-        # Align left/center for maximum condensation
-        return f"<tr><td style='white-space:nowrap;'>- {skill_name}</td><td style='text-align:center;'>{cost_str}</td><td>{rank_str}</td></tr>"
+    # --- ADD THIS ELIF ---
+    elif not is_trainable:
+        cost_str = "[LBD Only]"
     else:
         costs = get_skill_costs(player, skill_data)
         multiplier = ranks_trained_this_lvl + 1
         
-        # Use simple slash separation and minimal space
         cost_str = (
             f"{costs['ptp'] * multiplier}/{costs['mtp'] * multiplier}/{costs['stp'] * multiplier}"
         )
         
+    # --- MODIFY THIS BLOCK ---
+    if not is_trainable:
+        clickable_name = skill_name # Not clickable
+    else:
         clickable_name = (
             f"<span class='keyword' data-command='train {skill_name} 1'>"
             f"{skill_name}</span>"
         )
+    # --- END MODIFICATION ---
         
-        # Use white-space:nowrap to ensure the name doesn't break
-        return f"<tr><td style='white-space:nowrap;'>- {clickable_name}</td><td style='text-align:center; white-space:nowrap;'>{cost_str}</td><td style='text-align:right;'>{rank_str}</td></tr>"
+    # Use white-space:nowrap to ensure the name doesn't break
+    return f"<tr><td style='white-space:nowrap;'>- {clickable_name}</td><td style='text-align:center; white-space:nowrap;'>{cost_str}</td><td style='text-align:right;'>{rank_str}</td></tr>"
 
 # --- REFACTORED: Use player.world ---
 def _show_all_skills_by_category(player: Player):
@@ -494,6 +504,12 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
         player.send_message(f"Unknown skill: '{skill_name}'.")
         return
         
+    # --- ADD THIS CHECK ---
+    if not skill_data.get("trainable", True):
+        player.send_message(f"You cannot train {skill_data['name']}. It can only be learned by doing.")
+        return
+    # --- END ADDITION ---
+
     skill_id = skill_data["skill_id"]
     
     # 1. Check level-based rank limits

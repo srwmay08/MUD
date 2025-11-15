@@ -366,5 +366,73 @@
         "keywords": ["telepathy"],
         "base_cost": {"ptp": 0, "mtp": 12, "stp": 4},
         "key_attributes": {"ptp": [], "mtp": ["INF", "INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "geology",
+        "name": "Geology",
+        "category": "Lore Skills",
+        "keywords": ["geology", "prospecting"],
+        "trainable": true,
+        "base_cost": {"ptp": 1, "mtp": 5, "stp": 2},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["LOG", "INT"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "botany",
+        "name": "Botany",
+        "category": "Lore Skills",
+        "keywords": ["botany", "plants"],
+        "trainable": true,
+        "base_cost": {"ptp": 1, "mtp": 5, "stp": 2},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["LOG", "WIS"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "forestry",
+        "name": "Forestry",
+        "category": "Lore Skills",
+        "keywords": ["forestry", "woodcutting"],
+        "trainable": true,
+        "base_cost": {"ptp": 3, "mtp": 4, "stp": 1},
+        "key_attributes": {"ptp": ["STR", "DEX"], "mtp": ["LOG"], "stp": ["ESS"]}
+    },
+    {
+        "skill_id": "skinning",
+        "name": "Skinning",
+        "category": "Gathering Skills",
+        "keywords": ["skinning", "butchering"],
+        "trainable": false,
+        "key_attributes": {}
+    },
+    {
+        "skill_id": "mining",
+        "name": "Mining",
+        "category": "Gathering Skills",
+        "keywords": ["mining"],
+        "trainable": false,
+        "key_attributes": {}
+    },
+    {
+        "skill_id": "herbalism",
+        "name": "Herbalism",
+        "category": "Gathering Skills",
+        "keywords": ["herbalism", "harvesting"],
+        "trainable": false,
+        "key_attributes": {}
+    },
+    {
+        "skill_id": "lumberjacking",
+        "name": "Lumberjacking",
+        "category": "Gathering Skills",
+        "keywords": ["lumberjacking", "chopping"],
+        "trainable": false,
+        "key_attributes": {}
+    },
+    {
+        "skill_id": "fishing",
+        "name": "Fishing",
+        "category": "Gathering Skills",
+        "keywords": ["fishing"],
+        "trainable": false,
+        "key_attributes": {}
     }
+]
 ]
