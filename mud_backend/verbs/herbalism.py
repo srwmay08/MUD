@@ -49,17 +49,17 @@ class Harvest(BaseVerb):
             return
             
         # 3. Set Roundtime (based on 'survival' skill)
-        survival_skill = self.player.skills.get("survival", 0)
+        botany_skill = self.player.skills.get("botany", 0) # <-- Use botany
         base_rt = 5.0 # Faster than mining
-        rt_reduction = survival_skill / 20.0 
+        rt_reduction = botany_skill / 20.0 
         rt = max(1.5, base_rt - rt_reduction)
         
         _set_action_roundtime(self.player, rt, f"You begin harvesting {node_obj['name']}...", rt_type="hard")
 
         # 4. Roll for Success
         skill_dc = node_obj.get("skill_dc", 10)
-        attempt_skill_learning(self.player, "survival")
-        roll = survival_skill + random.randint(1, 100)
+        attempt_skill_learning(self.player, "herbalism") # <-- LBD on primary skill
+        roll = botany_skill + random.randint(1, 100) # <-- Roll on secondary skill
         
         if roll < skill_dc:
             self.player.send_message(f"You try to harvest {node_obj['name']} but fail to get anything.")

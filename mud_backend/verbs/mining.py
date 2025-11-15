@@ -66,8 +66,8 @@ class Mine(BaseVerb):
         attempt_skill_learning(self.player, "mining")
         
         # Roll: Skill + d100 vs DC
-        roll = mining_skill + random.randint(1, 100)
-        
+        roll = geology_skill + random.randint(1, 100) # <-- Use geology   
+
         if roll < skill_dc:
             self.player.send_message(f"You try to mine {node_obj['name']} but fail to get any ore.")
             # Add this player to the tapped list even on failure
@@ -119,9 +119,10 @@ class Prospect(BaseVerb):
             return
             
         # (Assuming you add a "geology" skill to skills.json)
-        geology_skill = self.player.skills.get("geology", 0)
-
-        _set_action_roundtime(self.player, 3.0, rt_type="hard")
+        geology_skill = self.player.skills.get("geology", 0) # <-- Use geology
+        base_rt = 8.0 # Example: 8s base time
+        rt_reduction = geology_skill / 20.0 # 1s off per 20 ranks
+        rt = max(2.0, base_rt - rt_reduction) # 2s minimum
         
         if geology_skill < 1:
              self.player.send_message("You don't have the proper training to prospect for ore.")

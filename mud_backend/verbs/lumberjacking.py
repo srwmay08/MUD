@@ -81,7 +81,8 @@ class Chop(BaseVerb):
             node_obj.setdefault("players_tapped", []).append(player_name)
             self.world.save_room(self.room)
             return
-
+        
+    
         # 6. Get Loot
         loot_table_id = node_obj.get("loot_table_id")
         if not loot_table_id:
