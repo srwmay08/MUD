@@ -250,6 +250,11 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     # ---
             
     # --- REFACTORED: Get room from world ---
+    # ---
+    # --- THIS IS THE BUG FIX (Part 1) ---
+    # ---
+    # We get a DEEP COPY, so any UIDs we add won't be saved unless
+    # we explicitly update the cache.
     room_db_data = world.get_room(player.current_room_id)
     # --- END REFACTOR ---
             
@@ -259,58 +264,62 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     # --- THIS IS THE FIX: Object merging logic is now here
     # ---
     live_room_objects = []
+    # This list is from the deep-copied room data
     all_objects = room_db_data.get("objects", []) 
+    
     if all_objects:
-        for obj in all_objects:
-            is_monster = obj.get("is_monster")
-            is_npc = obj.get("is_npc")
-            
-            # --- ADD YOUR NEW CHECK HERE ---
+        for obj in all_objects: # obj is a dict (a stub) in the list
             node_id = obj.get("node_id")
+            monster_id = obj.get("monster_id")
 
-            if (is_monster or is_npc) and not node_id: # Make sure nodes aren't mistaken for monsters
-                # ... (this is your existing monster/NPC logic) ...
-                # ... (it loads the monster template and appends) ...
-                uid = obj.get("uid")
-                if world.get_defeated_monster(uid) is not None:
-                    continue 
-                
-                monster_id = obj.get("monster_id")
-                if monster_id and "stats" not in obj:
-                    template = world.game_monster_templates.get(monster_id)
-                    if template:
-                        current_uid = obj.get("uid") # Use .get for safety
-                        merged_obj = copy.deepcopy(template) # <-- FIX
-                        merged_obj.update(obj) # <-- FIX
-                        if current_uid: # <-- FIX
-                            merged_obj["uid"] = current_uid # <-- FIX
-                        live_room_objects.append(merged_obj) # <-- FIX
-                    else:
-                        live_room_objects.append(obj) # <-- ADDED
-                else:
-                    live_room_objects.append(obj) # <-- ADDED
-
-            
-            elif node_id:
+            # 1. Is it a node?
+            if node_id:
                 template = world.game_nodes.get(node_id)
                 if template:
-                    # Merge template (defaults) with instance (room data)
                     merged_obj = copy.deepcopy(template)
-                    # This update() is key: it overwrites template
-                    # values (like players_tapped: []) with the
-                    # saved room values (like players_tapped: ["Player1"])
-                    merged_obj.update(obj)
-                    # Add a UID for tracking taps, if it doesn't have one
+                    merged_obj.update(obj) 
                     if "uid" not in merged_obj:
                          merged_obj["uid"] = uuid.uuid4().hex
+                         obj["uid"] = merged_obj["uid"] # Save UID to the stub
                     live_room_objects.append(merged_obj)
-                # --- END NEW LOGIC ---
+                # else: skip (bad node_id)
             
+            # 2. Is it a monster/NPC stub?
+            elif monster_id:
+                # --- THIS IS THE FIX (Part 2) ---
+                # Get or CREATE the UID on the stub itself
+                uid = obj.get("uid")
+                if not uid:
+                    uid = uuid.uuid4().hex
+                    obj["uid"] = uid # Save UID back to the stub in room_db_data
+                # --- END FIX ---
+                
+                if uid and world.get_defeated_monster(uid) is not None:
+                    continue # It's defeated, skip it
+                
+                template = world.game_monster_templates.get(monster_id)
+                if template:
+                    merged_obj = copy.deepcopy(template)
+                    merged_obj.update(obj) # Apply instance vars (like the UID we just set)
+                    live_room_objects.append(merged_obj)
+                # else: skip (bad monster_id)
+
+            # 3. Is it a simple object (door, corpse, item, etc.)?
             else:
-                # Not a monster, NPC, or node. Just add it (e.g., door, ladder)
+                if obj.get("is_npc") and "uid" not in obj:
+                    obj["uid"] = uuid.uuid4().hex
+                    
                 live_room_objects.append(obj)
             
     room.objects = live_room_objects
+    
+    # ---
+    # --- THIS IS THE FIX (Part 3) ---
+    # ---
+    # Now that we've added UIDs to the stubs in our *copy* of the
+    # room data (`room_db_data`), we save this copy back into the
+    # world's cache, making the UIDs persistent.
+    world.update_room_cache(room.room_id, room_db_data)
     # ---
     # --- END FIX
     # ---
