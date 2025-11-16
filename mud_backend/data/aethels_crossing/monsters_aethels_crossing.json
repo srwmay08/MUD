@@ -1,0 +1,105 @@
+[
+    {
+        "monster_id": "giant_crab_lvl1",
+        "name": "a giant crab",
+        "keywords": ["crab", "giant crab"],
+        "faction": "Creatures",
+        "is_aggressive": false,
+        "description": "A large, hard-shelled crab at least three feet across. Its mottled, rocky shell looks durable, and its two large claws click together menacingly.",
+        "verbs": ["look", "attack"],
+        "level": 1,
+        "max_hp": 20,
+        "is_monster": true,
+        "family": "Beast",
+        "respawn_time_seconds": 60,
+        "respawn_chance_per_tick": 0.5,
+        "movement_rules": {
+            "wander_chance": 0.0
+        },
+        "stats": {
+            "STR": 35, "CON": 40, "DEX": 20, "AGI": 15,
+            "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
+            "ZEA": 10, "ESS": 10, "DIS": 10, "AUR": 10
+        },
+        "skills": { "brawling": 5 },
+        "loot_table_id": "crab_loot"
+    },
+    {
+        "monster_id": "giant_snail_lvl2",
+        "name": "a giant tide-pool snail",
+        "keywords": ["snail", "giant snail", "tide-pool snail"],
+        "faction": "Creatures",
+        "is_aggressive": false,
+        "description": "A massive, slow-moving snail with a shell that shimmers with an iridescent, oily sheen. It leaves a thick, sticky trail of mucus behind it.",
+        "verbs": ["look", "attack"],
+        "level": 2,
+        "max_hp": 30,
+        "is_monster": true,
+        "family": "Beast",
+        "respawn_time_seconds": 120,
+        "respawn_chance_per_tick": 0.3,
+        "movement_rules": {
+            "wander_chance": 0.0
+        },
+        "stats": {
+            "STR": 20, "CON": 50, "DEX": 10, "AGI": 10,
+            "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
+            "ZEA": 10, "ESS": 10, "DIS": 10, "AUR": 10
+        },
+        "skills": { "brawling": 0 },
+        "loot_table_id": "snail_loot"
+    },
+    {
+        "monster_id": "shore_goblin_lvl3",
+        "name": "a shore-goblin",
+        "keywords": ["goblin", "shore-goblin", "shoregoblin"],
+        "faction": "ShadowtuskOrcs",
+        "is_aggressive": true,
+        "description": "A wiry, green-skinned goblin wearing rags and scraps of sailcloth. It wields a rusted dagger and shrieks as it spots you.",
+        "verbs": ["look", "attack"],
+        "level": 3,
+        "max_hp": 25,
+        "is_monster": true,
+        "family": "Goblin",
+        "respawn_time_seconds": 180,
+        "respawn_chance_per_tick": 0.4,
+        "movement_rules": {
+            "wander_chance": 0.0
+        },
+        "stats": {
+            "STR": 30, "CON": 30, "DEX": 45, "AGI": 40,
+            "LOG": 20, "INT": 20, "WIS": 20, "INF": 20,
+            "ZEA": 20, "ESS": 20, "DIS": 20, "AUR": 20
+        },
+        "skills": { "small_edged": 15 },
+        "equipped": {
+            "mainhand": "rusted_dagger"
+        },
+        "loot_table_id": "shore_goblin_loot"
+    },
+    {
+        "monster_id": "tamed_crab_lvl3",
+        "name": "a tamed giant crab",
+        "keywords": ["crab", "tamed crab", "giant crab", "mount"],
+        "faction": "ShadowtuskOrcs",
+        "is_aggressive": true,
+        "description": "A large crab, scarred and bound with crude rope harnesses. It's missing one claw, but the other is sharp and snaps at the air.",
+        "verbs": ["look", "attack"],
+        "level": 3,
+        "max_hp": 35,
+        "is_monster": true,
+        "family": "Beast",
+        "respawn_time_seconds": 180,
+        "respawn_chance_per_tick": 0.4,
+        "movement_rules": {
+            "wander_chance": 0.0
+        },
+        "stats": {
+            "STR": 40, "CON": 45, "DEX": 20, "AGI": 20,
+            "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
+            "ZEA": 10, "ESS": 10, "DIS": 10, "AUR": 10
+        },
+        "skills": { "brawling": 10 },
+        "loot_table_id": "tamed_crab_loot"
+    }
+]

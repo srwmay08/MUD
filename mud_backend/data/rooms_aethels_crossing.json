@@ -803,7 +803,8 @@
         "exits": {
             "south": "ts_north",
             "north": "docks_main",
-            "east": "node_test_area"
+            "east": "node_test_area",
+            "west": "shore_west_1"
         }
     },
     {

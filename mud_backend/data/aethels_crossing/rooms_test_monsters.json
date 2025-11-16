@@ -1,0 +1,79 @@
+[
+    {
+        "room_id": "shore_west_1",
+        "name": "Crab-Scuttled Shoreline",
+        "x": -1,
+        "y": 2,
+        "z": 0,
+        "is_outdoor": true,
+        "description": {
+            "default": "A narrow, rocky beach stretches west from the main docks. The air smells strongly of low tide and salt. Several giant crabs scuttle between dark pools of water, their hard shells clicking on the wet stones. A path leads back east to the Docks Gate, and another continues west along the shore."
+        },
+        "objects": [
+            {
+                "monster_id": "giant_crab_lvl1"
+            },
+            {
+                "monster_id": "giant_crab_lvl1"
+            }
+        ],
+        "exits": {
+            "east": "north_gate",
+            "west": "shore_west_2"
+        }
+    },
+    {
+        "room_id": "shore_west_2",
+        "name": "Iridescent Tide Pools",
+        "x": -2,
+        "y": 2,
+        "z": 0,
+        "is_outdoor": true,
+        "description": {
+            "default": "The beach opens into a wide flat area filled with large, shimmering tide pools. The ground is slick with a strange, iridescent mucus. Massive, slow-moving snails crawl through the muck. The shore continues west and returns east."
+        },
+        "objects": [
+            {
+                "monster_id": "giant_snail_lvl2"
+            },
+            {
+                "monster_id": "giant_snail_lvl2"
+            },
+            {
+                "monster_id": "giant_snail_lvl2"
+            }
+        ],
+        "exits": {
+            "east": "shore_west_1",
+            "west": "shore_west_3"
+        }
+    },
+    {
+        "room_id": "shore_west_3",
+        "name": "Goblin Crab-Rider Camp",
+        "x": -3,
+        "y": 2,
+        "z": 0,
+        "is_outdoor": true,
+        "description": {
+            "default": "A messy, foul-smelling camp is built from driftwood and shipwrecked timber. Scraps of fish and seaweed are scattered everywhere. Several Shore-Goblins shriek at your approach, their tamed crab-mounts clicking their claws aggressively. The only way out is back east to the tide pools."
+        },
+        "objects": [
+            {
+                "monster_id": "shore_goblin_lvl3"
+            },
+            {
+                "monster_id": "tamed_crab_lvl3"
+            },
+            {
+                "monster_id": "shore_goblin_lvl3"
+            },
+            {
+                "monster_id": "tamed_crab_lvl3"
+            }
+        ],
+        "exits": {
+            "east": "shore_west_2"
+        }
+    }
+]

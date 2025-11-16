@@ -1,0 +1,52 @@
+{
+    "crab_claw": {
+        "name": "a sharp crab claw",
+        "description": "The sharp, serrated claw from a giant crab.",
+        "item_type": "component",
+        "keywords": ["claw", "crab claw"],
+        "base_value": 18,
+        "max_value": 30
+    },
+    "crab_shell_fragment": {
+        "name": "a crab shell fragment",
+        "description": "A hard, mottled fragment from a giant crab's shell.",
+        "item_type": "component",
+        "keywords": ["shell", "fragment", "shell fragment"],
+        "base_value": 10,
+        "max_value": 15
+    },
+    "iridescent_mucus": {
+        "name": "a vial of iridescent mucus",
+        "description": "A vial filled with a thick, shimmering slime. It seems valuable.",
+        "item_type": "component",
+        "keywords": ["vial", "mucus", "slime", "iridescent mucus"],
+        "base_value": 40,
+        "max_value": 60
+    },
+    "paralytic_slime": {
+        "name": "a glob of paralytic slime",
+        "description": "A sticky, grey glob of slime. It numbs the fingers on contact.",
+        "item_type": "component",
+        "keywords": ["glob", "slime", "paralytic slime"],
+        "base_value": 75,
+        "max_value": 110
+    },
+    "rusted_dagger": {
+        "name": "a rusted dagger",
+        "description": "A pitted, rusted dagger. It's barely functional as a weapon.",
+        "item_type": "weapon",
+        "wearable_slot": "mainhand",
+        "skill": "small_edged",
+        "keywords": ["dagger", "rusted dagger"],
+        "base_value": 5,
+        "max_value": 10
+    },
+    "crude_trinket": {
+        "name": "a crude trinket",
+        "description": "A worthless piece of junk, perhaps a button or a shiny shell tied with string.",
+        "item_type": "component",
+        "keywords": ["trinket", "crude trinket"],
+        "base_value": 1,
+        "max_value": 3
+    }
+}

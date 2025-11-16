@@ -1,0 +1,17 @@
+{
+    "crab_loot": [
+        {"item_id": "crab_claw", "chance": 0.8, "quantity": 1},
+        {"item_id": "crab_shell_fragment", "chance": 0.5, "quantity": [1, 2]}
+    ],
+    "tamed_crab_loot": [
+        {"item_id": "crab_shell_fragment", "chance": 0.6, "quantity": 1}
+    ],
+    "snail_loot": [
+        {"item_id": "iridescent_mucus", "chance": 0.6, "quantity": 1},
+        {"item_id": "paralytic_slime", "chance": 0.2, "quantity": 1}
+    ],
+    "shore_goblin_loot": [
+        {"item_id": "rusted_dagger", "chance": 0.3, "quantity": 1},
+        {"item_id": "crude_trinket", "chance": 0.7, "quantity": 1}
+    ]
+}
