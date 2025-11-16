@@ -236,16 +236,22 @@ def calculate_defense_strength(defender: Any,
 
     return final_ds
 
+# ---
+# --- THIS IS THE FIX (Problem 2: Grammar)
+# ---
 HIT_MESSAGES = {
     "player_hit": ["You swing {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
-    "monster_hit": ["{attacker} swings {weapon_display} and strikes {defender}!", "{attacker}'s {weapon_display} finds its mark on {defender}!", "A solid blow from {attacker}'s {weapon_display} connects with {defender}!"],
+    "monster_hit": ["{attacker} swings {weapon_display} and strikes {defender}!", "{attacker} hits {defender} with {weapon_display}!", "A solid blow from {attacker} connects with {defender} using {weapon_display}!"],
     "player_crit": ["A devastating blow! Your {weapon_display} slams into {defender} with incredible force!", "You find a vital spot, driving your {weapon_display} deep into {defender}!", "A perfect strike! {defender} reels from the hit!"],
-    "monster_crit": ["A devastating blow! {attacker}'s {weapon_display} slams into {defender}!", "{attacker} finds a vital spot, driving its {weapon_display} into {defender}!", "A perfect strike! {defender} reels from {attacker}'s hit!"],
+    "monster_crit": ["A devastating blow! {attacker} slams {weapon_display} into {defender}!", "{attacker} finds a vital spot, driving {weapon_display} into {defender}!", "A perfect strike! {defender} reels from {attacker}'s hit!"],
     "player_miss": ["You swing {weapon_display} at {defender}, but miss.", "{defender} deftly avoids your {weapon_display}!", "Your {weapon_display} whistles through the air, hitting nothing."],
-    "monster_miss": ["{attacker} swings {weapon_display} at {defender}, but misses.", "{defender} deftly avoids {attacker}'s {weapon_display}!", "{attacker}'s {weapon_display} whistles through the air, hitting nothing."],
+    "monster_miss": ["{attacker} swings {weapon_display} at {defender}, but misses.", "{defender} deftly avoids {attacker}'s swing!", "{attacker}'s attack whistles through the air, hitting nothing."],
     "player_fumble": ["You swing wildly and lose your balance, fumbling your attack!", "Your {weapon_display} slips! You completely miss {defender}."],
-    "monster_fumble": ["{attacker} swings wildly and loses its balance, fumbling the attack!", "{attacker}'s {weapon_display} slips! It completely misses {defender}."]
+    "monster_fumble": ["{attacker} swings wildly and loses its balance, fumbling the attack!", "{attacker} completely misses {defender}."]
 }
+# ---
+# --- END FIX
+# ---
 
 def get_flavor_message(key, d100_roll, combat_roll_result):
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
@@ -356,12 +362,25 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     if defender_offhand_data and defender_offhand_data.get("item_type") == "shield": 
         defender_offhand_data = None
         
+    # ---
+    # --- THIS IS THE FIX (Problem 2: Grammar)
+    # ---
+    weapon_display = ""
     if is_attacker_player:
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
         attacker.add_field_exp(1)
+        weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist" # e.g., "a simple dagger" or "your fist"
+        msg_key_hit = "player_hit"
+        msg_key_miss = "player_miss"
     else:
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
         attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
+        weapon_display = attacker_weapon_data.get("name", "its natural weapons") if attacker_weapon_data else "its natural weapons" # e.g., "a crude club" or "its natural weapons"
+        msg_key_hit = "monster_hit"
+        msg_key_miss = "monster_miss"
+    # ---
+    # --- END FIX
+    # ---
 
     weapon_damage_factor = 0.100 
     weapon_damage_type = "crush"  
@@ -394,15 +413,6 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         f"  AS: {as_str} vs DS: {ds_str} "
         f"+ ADV: +{combat_advantage} + d100: +{d100_roll} = +{combat_roll_result}"
     )
-
-    if is_attacker_player:
-        weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
-        msg_key_hit = "player_hit"
-        msg_key_miss = "player_miss"
-    else:
-        weapon_display = attacker_weapon_data.get("name", "its natural weapons") if attacker_weapon_data else "its natural weapons"
-        msg_key_hit = "monster_hit"
-        msg_key_miss = "monster_miss"
         
     msg_vars = {"attacker": attacker_name, "defender": defender_name, "weapon_display": weapon_display}
     
@@ -466,19 +476,42 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
 def calculate_roundtime(agility: int) -> float:
     return max(3.0, 5.0 - ((agility - 50) / 25))
 
+# ---
+# --- THIS IS THE FIX (Problem 1: Monster Name)
+# ---
 def _find_combatant(world: 'World', entity_id: str) -> Optional[Any]:
+    """
+    Finds a player object or a MERGED monster/NPC dictionary.
+    """
     player_info = world.get_player_info(entity_id.lower())
     if player_info: return player_info.get("player_obj")
 
-    # --- MODIFIED: Search all rooms for the entity UID ---
-    # This is more robust than relying on combat_state's room_id
+    # Not a player, search all rooms for the entity UID
     for room in world.game_rooms.values():
-        for obj in room.get("objects", []):
-            if obj.get("uid") == entity_id:
-                return obj
-    # --- END MODIFIED ---
+        for obj_stub in room.get("objects", []):
+            if obj_stub.get("uid") == entity_id:
+                # Found the stub, now merge it
+                monster_id = obj_stub.get("monster_id")
+                if monster_id:
+                    template = world.game_monster_templates.get(monster_id)
+                    if template:
+                        merged_obj = copy.deepcopy(template)
+                        merged_obj.update(obj_stub)
+                        return merged_obj
+                    else:
+                        # Return stub as a fallback if template is missing
+                        return obj_stub
+                elif obj_stub.get("is_npc"):
+                    # It's a non-monster NPC (e.g., innkeeper), stub is the full data
+                    return obj_stub
+                else:
+                    # This was a UID for something else (e.g., a corpse?)
+                    return None # Not a valid combatant
     
     return None # Not found anywhere
+# ---
+# --- END FIX
+# ---
 
 def stop_combat(world: 'World', combatant_id: str, target_id: str):
     world.stop_combat_for_all(combatant_id, target_id)
