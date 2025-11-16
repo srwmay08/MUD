@@ -19,6 +19,16 @@ def _find_target_node(room_objects: list, target_name: str, node_type: str) -> D
                 return obj
     return None
 
+def _has_tool(player, required_tool_type: str) -> bool:
+    """Checks if the player is wielding a tool of the required type."""
+    for slot in ["mainhand", "offhand"]:
+        item_id = player.worn_items.get(slot)
+        if item_id:
+            item_data = player.world.game_items.get(item_id)
+            if item_data and item_data.get("tool_type") == required_tool_type:
+                return True
+    return False
+
 class Mine(BaseVerb):
     """
     Handles the 'mine' command.
@@ -28,8 +38,10 @@ class Mine(BaseVerb):
         if _check_action_roundtime(self.player, action_type="other"):
             return
 
-        # 1. Check for required tool (e.g., a pickaxe)
-        # (We can add this later, for now we assume bare hands)
+        # 1. Check for required tool
+        if not _has_tool(self.player, "mining"):
+            self.player.send_message("You need to be wielding a pickaxe to mine.")
+            return
 
         if not self.args:
             self.player.send_message("Mine what?")
@@ -51,7 +63,6 @@ class Mine(BaseVerb):
             return
             
         # 4. Set Roundtime (based on Mining skill)
-        # (Assuming you add a "mining" skill to skills.json)
         mining_skill = self.player.skills.get("mining", 0)
         base_rt = 8.0 # Example: 8s base time
         rt_reduction = mining_skill / 20.0 # 1s off per 20 ranks
@@ -62,14 +73,9 @@ class Mine(BaseVerb):
         # 5. Roll for Success (Skill vs. DC)
         skill_dc = node_obj.get("skill_dc", 20)
         
-        # (Optional: Use your LBD system)
         attempt_skill_learning(self.player, "mining")
         
-        # ---
-        # --- FIX: Define 'geology_skill' before using it
-        # ---
         geology_skill = self.player.skills.get("geology", 0)
-        # --- END FIX ---
         
         # Roll: Skill + d100 vs DC
         roll = geology_skill + random.randint(1, 100) # <-- Use geology   
@@ -87,7 +93,6 @@ class Mine(BaseVerb):
             self.player.send_message("You mine the vein, but it seems to be empty.")
             return
             
-        # Use your existing general-purpose loot generator
         item_ids_to_give = loot_system.generate_loot_from_table(
             loot_table_id,
             self.world.game_loot_tables,
@@ -124,21 +129,21 @@ class Prospect(BaseVerb):
         if _check_action_roundtime(self.player, action_type="other"):
             return
             
-        # (Assuming you add a "geology" skill to skills.json)
         geology_skill = self.player.skills.get("geology", 0) # <-- Use geology
-        base_rt = 8.0 # Example: 8s base time
-        rt_reduction = geology_skill / 20.0 # 1s off per 20 ranks
-        rt = max(2.0, base_rt - rt_reduction) # 2s minimum
         
-        # ---
-        # --- FIX: Commented out skill check for testing
-        # ---
-        # if geology_skill < 1:
-        #      self.player.send_message("You don't have the proper training to prospect for ore.")
-        #      return
-        # --- END FIX ---
+        # --- NEW: Tool Check ---
+        if not _has_tool(self.player, "mining"):
+            self.player.send_message("You need to be wielding a pickaxe to prospect.")
+            return
+        # --- END NEW ---
 
-        self.player.send_message("You scan the area for mineral deposits...")
+        _set_action_roundtime(self.player, 3.0, rt_type="hard")
+        
+        if geology_skill < 1: 
+             self.player.send_message("You don't have the proper training to prospect for ore.") 
+             return
+
+        self.player.send_message("You scan the area for mineral deposits...") 
         
         found_nodes = []
         for obj in self.room.objects:

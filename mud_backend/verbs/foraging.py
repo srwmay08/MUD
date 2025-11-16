@@ -28,6 +28,18 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
                     return item_id, slot
     return None, None
 
+def _has_tool(player, required_tool_type: str) -> bool:
+    """Checks if the player is wielding a tool of the required type."""
+    for slot in ["mainhand", "offhand"]:
+        item_id = player.worn_items.get(slot)
+        if item_id:
+            item_data = player.world.game_items.get(item_id)
+            # --- FIX: Check for small_edged as a fallback for herbalism ---
+            if item_data and (item_data.get("tool_type") == required_tool_type or
+                              (required_tool_type == "herbalism" and item_data.get("skill") == "small_edged")):
+                return True
+    return False
+
 # ---
 # --- NEW: CENTRAL ROUNDTIME HELPER FUNCTIONS
 # ---
@@ -123,6 +135,12 @@ class Forage(BaseVerb):
         
         # (Assuming 'survival' is the skill for this)
         survival_skill = self.player.skills.get("survival", 0)
+        
+        # --- NEW: Tool Check ---
+        if not _has_tool(self.player, "herbalism"):
+            self.player.send_message("You need a sickle or knife to properly forage for plants.")
+            return
+        # --- END NEW ---
         
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
 

@@ -8,6 +8,16 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
 
+def _has_tool(player, required_tool_type: str) -> bool:
+    """Checks if the player is wielding a tool of the required type."""
+    for slot in ["mainhand", "offhand"]:
+        item_id = player.worn_items.get(slot)
+        if item_id:
+            item_data = player.world.game_items.get(item_id)
+            if item_data and item_data.get("tool_type") == required_tool_type:
+                return True
+    return False
+
 class Fish(BaseVerb):
     """
     Handles the 'fish' command.
@@ -17,8 +27,10 @@ class Fish(BaseVerb):
         if _check_action_roundtime(self.player, action_type="other"):
             return
 
-        # 1. Check for required tool (e.g., a fishing pole)
-        # (We can add this later)
+        # 1. Check for required tool
+        if not _has_tool(self.player, "fishing"):
+            self.player.send_message("You need to be wielding a fishing pole to fish.")
+            return
 
         # 2. Check if this is a valid fishing spot
         if not self.room.db_data.get("is_fishing_spot", False):
@@ -30,7 +42,6 @@ class Fish(BaseVerb):
             return
 
         # 3. Set Roundtime (based on Fishing skill)
-        # (Assuming you add a "fishing" skill to skills.json)
         fishing_skill = self.player.skills.get("fishing", 0)
         base_rt = 15.0 # Fishing takes time
         rt_reduction = fishing_skill / 10.0 # 1s off per 10 ranks
@@ -72,3 +83,7 @@ class Fish(BaseVerb):
                 self.player.send_message(f"- {item_name}")
 
         # Note: No node to update, as this is a zone-based skill.
+
+# ---
+# --- REMOVED THE 'Scan' VERB CLASS
+# ---

@@ -19,6 +19,16 @@ def _find_target_node(room_objects: list, target_name: str, node_type: str) -> D
                 return obj
     return None
 
+def _has_tool(player, required_tool_type: str) -> bool:
+    """Checks if the player is wielding a tool of the required type."""
+    for slot in ["mainhand", "offhand"]:
+        item_id = player.worn_items.get(slot)
+        if item_id:
+            item_data = player.world.game_items.get(item_id)
+            if item_data and item_data.get("tool_type") == required_tool_type:
+                return True
+    return False
+
 class Chop(BaseVerb):
     """
     Handles the 'chop' command.
@@ -28,8 +38,10 @@ class Chop(BaseVerb):
         if _check_action_roundtime(self.player, action_type="other"):
             return
 
-        # 1. Check for required tool (e.g., an axe)
-        # (We can add this later, for now we assume bare hands)
+        # 1. Check for required tool
+        if not _has_tool(self.player, "lumberjacking"):
+            self.player.send_message("You need to be wielding an axe to chop wood.")
+            return
 
         if not self.args:
             self.player.send_message("Chop what?")
@@ -71,18 +83,9 @@ class Chop(BaseVerb):
 
         if roll < skill_dc:
             self.player.send_message(f"You try to chop {node_obj['name']} but fail to get any wood.")
-            # ---
-            # --- FIX: Add player to tapped list on failure and return
-            # ---
             node_obj.setdefault("players_tapped", []).append(player_name)
             self.world.save_room(self.room)
             return
-            # --- END FIX ---
-
-        
-        # ---
-        # --- FIX: Removed duplicate, broken roll block that was here
-        # ---
         
     
         # 6. Get Loot
@@ -126,18 +129,19 @@ class Survey(BaseVerb):
         if _check_action_roundtime(self.player, action_type="other"):
             return
             
-        # (Assuming you add a "forestry" skill to skills.json)
         forestry_skill = self.player.skills.get("forestry", 0) 
+
+        # --- NEW: Tool Check ---
+        if not _has_tool(self.player, "lumberjacking"):
+            self.player.send_message("You need to be wielding an axe to survey trees.")
+            return
+        # --- END NEW ---
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
-        # ---
-        # --- FIX: Commented out skill check for testing
-        # ---
-        # if forestry_skill < 1: 
-        #      self.player.send_message("You don't have the proper training to survey for trees.") 
-        #      return
-        # --- END FIX ---
+        if forestry_skill < 1: 
+             self.player.send_message("You don't have the proper training to survey for trees.") 
+             return
 
         self.player.send_message("You scan the area for useable trees...") 
         

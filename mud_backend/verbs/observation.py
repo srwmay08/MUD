@@ -185,10 +185,25 @@ class Look(BaseVerb):
                 self.player.send_message(f"You investigate the **{obj['name']}**.")
                 self.player.send_message(obj.get('description', 'It is a nondescript object.'))
                 
+                # --- SPECIAL LOOK: WINDOW ---
                 if (self.player.current_room_id == "inn_room" and 
                     "window" in obj.get("keywords", [])):
                     self.player.send_message(_get_weather_message_for_window())
                 
+                # ---
+                # --- NEW: SPECIAL LOOK: FISHING SPOT
+                # ---
+                if "FISH" in obj.get("verbs", []):
+                    # It's a fishable object. Now check the room.
+                    if (self.room.db_data.get("is_fishing_spot", False) and
+                        self.room.db_data.get("fishing_loot_table_id")):
+                        self.player.send_message("Upon closer inspection, you sense that it contains fish.")
+                    else:
+                        self.player.send_message("You look, but don't see any fish.")
+                # ---
+                # --- END NEW
+                # ---
+
                 if 'verbs' in obj:
                     verb_list = ", ".join([f'<span class="keyword">{v}</span>' for v in obj['verbs']])
                     self.player.send_message(f"You could try: {verb_list}")

@@ -20,6 +20,16 @@ def _find_target_node(room_objects: list, target_name: str, node_type: str) -> D
                 return obj
     return None
 
+def _has_tool(player, required_tool_type: str) -> bool:
+    """Checks if the player is wielding a tool of the required type."""
+    for slot in ["mainhand", "offhand"]:
+        item_id = player.worn_items.get(slot)
+        if item_id:
+            item_data = player.world.game_items.get(item_id)
+            if item_data and item_data.get("tool_type") == required_tool_type:
+                return True
+    return False
+
 class Harvest(BaseVerb):
     """
     Handles the 'harvest' command.
@@ -28,6 +38,14 @@ class Harvest(BaseVerb):
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"):
             return
+
+        # --- NEW: Tool Check ---
+        if not _has_tool(self.player, "herbalism"):
+            # Allow "starter_dagger" as a fallback
+            if not _has_tool(self.player, "small_edged"): # Check for any small edged weapon
+                 self.player.send_message("You need to be wielding a sickle or knife to harvest plants.")
+                 return
+        # --- END NEW ---
 
         if not self.args:
             self.player.send_message("Harvest what?")
