@@ -169,6 +169,14 @@ class Survey(BaseVerb):
                     refresh_room = True
 
         if refresh_room:
+            # ---
+            # --- THIS IS THE FIX: Save the room state
+            # ---
+            self.world.save_room(self.room)
+            # ---
+            # --- END FIX
+            # ---
+            
             self.world.broadcast_to_room(
                 self.room.room_id, 
                 f"{self.player.name} spots {found_nodes_list[0]}!", 
