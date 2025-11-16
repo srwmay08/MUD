@@ -1,4 +1,6 @@
 # mud_backend/core/room_handler.py
+import copy
+import uuid
 from mud_backend.core.game_objects import Player, Room
 # --- MODIFIED: Import environment module and global weather ---
 from mud_backend.core.game_loop import environment
@@ -89,85 +91,100 @@ def show_room_to_player(player: Player, room: Room):
     """
     Sends all room information (name, desc, objects, exits, players) to the player.
     """
-    # Send Room Name
     player.send_message(f"**{room.name}**")
     
-    # Get Dynamic Description
+    # --- NEW LOGIC FOR DESCRIPTIONS ---
     room_descriptions = room.description
     current_time = environment.current_time_of_day # Get current time
     current_weather = environment.current_weather # Get current weather
     
+    # Use the new helper to find the best description
     room_desc_text = _get_dynamic_description(
         room_descriptions, 
         current_time, 
         current_weather
     )
+        
+    player.send_message(room_desc_text)
+    # --- END NEW LOGIC ---
     
-    # --- START MODIFICATION ---
+    # ---
+    # --- REMOVED redundant ambient_desc. The main description
+    # --- now contains all the time and weather info.
+    # ---
     
-    # 1. Get all visible objects
+    # ---
+    # --- THIS IS THE FIX: Insert Template Merging Logic
+    # ---
+    live_room_objects = []
+    all_objects = room.objects # Get the raw list from the Room object
+    
+    if all_objects:
+        for obj in all_objects:
+            is_monster = obj.get("is_monster")
+            is_npc = obj.get("is_npc")
+            node_id = obj.get("node_id")
+
+            if (is_monster or is_npc) and not node_id:
+                uid = obj.get("uid")
+                if player.world.get_defeated_monster(uid) is not None:
+                    continue 
+                
+                monster_id = obj.get("monster_id")
+                if monster_id and "stats" not in obj:
+                    template = player.world.game_monster_templates.get(monster_id)
+                    if template:
+                        # --- Create a new object by merging ---
+                        merged_obj = copy.deepcopy(template)
+                        merged_obj.update(obj)
+                        # Ensure original UID is preserved
+                        if "uid" in obj:
+                            merged_obj["uid"] = obj["uid"]
+                        live_room_objects.append(merged_obj)
+                    else:
+                         live_room_objects.append(obj) # Append original if template not found
+                else:
+                    live_room_objects.append(obj) # Already a full object (or corpse)
+            
+            elif node_id:
+                template = player.world.game_nodes.get(node_id)
+                if template:
+                    merged_obj = copy.deepcopy(template)
+                    merged_obj.update(obj)
+                    if "uid" not in merged_obj:
+                         merged_obj["uid"] = uuid.uuid4().hex
+                    live_room_objects.append(merged_obj)
+                # If template not found, it's skipped (no "else")
+            
+            else:
+                live_room_objects.append(obj)
+    # ---
+    # --- END FIX
+    # ---
+
+    # --- Skill-Based Object Perception ---
     player_perception = player.stats.get("WIS", 0)
-    visible_objects = []
-    if room.objects:
-        for obj in room.objects:
+    
+    # 1. Show Objects
+    # --- MODIFIED: Iterate over live_room_objects ---
+    if live_room_objects:
+        html_objects = []
+        for obj in live_room_objects:
+    # --- END MODIFIED ---
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
-                visible_objects.append(obj)
-    
-    # 2. Define the sorting key function
-    def get_sort_key(obj):
-        # True = 1, False = 0.
-        # We sort by (not is_npc), (not is_monster), name.
-        # NPC: (not True, ...) -> (0, ...) -> First
-        # Monster: (not False, not True, ...) -> (1, 0, ...) -> Second
-        # Object: (not False, not False, ...) -> (1, 1, ...) -> Third
-        is_npc = obj.get('is_npc', False)
-        is_monster = obj.get('is_monster', False)
-        name = obj.get('name', '')
+                # --- This line will no longer crash ---
+                obj_name = obj['name'] 
+                verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
+                verb_str = ','.join(verbs).lower()
+                html_objects.append(
+                    f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
+                )
         
-        # Ensure NPCs that are *also* monsters (like guards) are still NPCs
-        if is_npc:
-            is_monster = False # Treat them only as NPCs for sorting
-            
-        return (not is_npc, not is_monster, name)
-
-    # 3. Sort the visible objects
-    sorted_objects = sorted(visible_objects, key=get_sort_key)
+        if html_objects:
+            player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
     
-    # 4. Build the clickable object names from the sorted list
-    object_names = []
-    for obj in sorted_objects:
-        obj_name = obj['name']
-        verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
-        verb_str = ','.join(verbs).lower()
-        object_names.append(
-            f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
-        )
-    
-    # 5. Build the "You also see..." string
-    if object_names:
-        objects_str = ""
-        if len(object_names) == 1:
-            objects_str = f"You also see {object_names[0]}."
-        elif len(object_names) == 2:
-            objects_str = f"You also see {object_names[0]} and {object_names[1]}."
-        else:
-            # Join all but the last with a comma, then add "and" before the last one
-            all_but_last = ", ".join(object_names[:-1])
-            last = object_names[-1]
-            objects_str = f"You also see {all_but_last}, and {last}."
-        
-        # Append this string to the main description as a new line
-        room_desc_text += f"\n{objects_str}"
-        
-    # 6. Send the combined room description and object list
-    player.send_message(room_desc_text)
-
-    # 7. REMOVED the old "Obvious objects here:" block
-    
-    # --- END MODIFICATION ---
-    
-    # --- Show Other Players (Unchanged) ---
+    # --- UPDATED: Show Other Players ---
     other_players_in_room = []
     
     for sid, data in player.world.get_all_players_info():
@@ -185,16 +202,11 @@ def show_room_to_player(player: Player, room: Room):
         player.send_message(f"Also here: {', '.join(other_players_in_room)}.")
     # --- END UPDATED LOGIC ---
 
-    # --- Show Exits (Modified for paths/exits) ---
+    # 2. Show Exits
     if room.exits:
+        # --- MODIFICATION: Create clickable exit links ---
         exit_names = []
         for name in room.exits.keys():
             exit_names.append(f'<span class="keyword" data-command="{name}">{name.capitalize()}</span>')
-        
-        # --- START MODIFICATION ---
-        # Use the room's data to check if it's an outdoor room
-        is_outdoor = room.db_data.get("is_outdoor", False)
-        exit_label = "Obvious paths" if is_outdoor else "Obvious exits"
-        
-        player.send_message(f"{exit_label}: {', '.join(exit_names)}")
+        player.send_message(f"Obvious exits: {', '.join(exit_names)}")
         # --- END MODIFICATION ---
