@@ -32,10 +32,22 @@ class Attack(BaseVerb):
             "messages": [] 
         }
         
+        # ---
+        # --- THIS IS THE FIX (Problem 2) ---
+        # ---
+        # Show the attack message (e.g., "You swing...")
         resolve_data["messages"].append(attack_results['attacker_msg'])
+        # ALWAYS show the roll string
+        resolve_data["messages"].append(attack_results['roll_string'])
+        # ---
+        # --- END FIX
+        # ---
         
         if attack_results['hit']:
-            resolve_data["messages"].append(attack_results['roll_string'])
+            # --- MOVED: These lines are now above
+            # resolve_data["messages"].append(attack_results['attacker_msg'])
+            # resolve_data["messages"].append(attack_results['roll_string'])
+            # ---
             resolve_data["messages"].append(attack_results['damage_msg'])
             
             damage = attack_results['damage']

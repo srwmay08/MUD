@@ -536,21 +536,44 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
 
         sid_to_skip = None
         if is_defender_player:
-            send_to_player_callback(defender.name, attack_results['defender_msg'], "combat_other")
+            # ---
+            # --- THIS IS THE FIX (Problem 1) ---
+            # ---
+            # Send all combat messages as the 'message' event
+            send_to_player_callback(defender.name, attack_results['defender_msg'], "message")
+            # ---
+            # --- END FIX
+            # ---
             defender_info = world.get_player_info(defender.name.lower())
             if defender_info: sid_to_skip = defender_info.get("sid")
         
         # --- MODIFIED: Use the correct broadcast message ---
+        # This callback is bugged in app.py, but we'll send the right msg_type anyway
         broadcast_callback(attacker_room_id, attack_results['broadcast_msg'], "combat_broadcast", skip_sid=sid_to_skip)
         # --- END MODIFIED ---
         
-        if is_defender_player: send_to_player_callback(defender.name, attack_results['roll_string'], "combat_roll")
+        if is_defender_player: 
+            # ---
+            # --- THIS IS THE FIX (Problem 1) ---
+            # ---
+            send_to_player_callback(defender.name, attack_results['roll_string'], "message")
+            # ---
+            # --- END FIX
+            # ---
 
         if attack_results['hit']:
             damage = attack_results['damage']
             is_fatal = attack_results['is_fatal']
             
-            if is_defender_player: send_to_player_callback(defender.name, attack_results['defender_damage_msg'], "combat_other")
+            # ---
+            # --- THIS IS THE FIX (Problem 1) ---
+            # ---
+            if is_defender_player: send_to_player_callback(defender.name, attack_results['defender_damage_msg'], "message")
+            # ---
+            # --- END FIX
+            # ---
+            
+            # This callback is also bugged in app.py
             broadcast_callback(attacker_room_id, attack_results['broadcast_damage_msg'], "combat_broadcast", skip_sid=sid_to_skip)
 
             if is_defender_player:
