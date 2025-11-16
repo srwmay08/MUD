@@ -65,6 +65,12 @@ class Mine(BaseVerb):
         # (Optional: Use your LBD system)
         attempt_skill_learning(self.player, "mining")
         
+        # ---
+        # --- FIX: Define 'geology_skill' before using it
+        # ---
+        geology_skill = self.player.skills.get("geology", 0)
+        # --- END FIX ---
+        
         # Roll: Skill + d100 vs DC
         roll = geology_skill + random.randint(1, 100) # <-- Use geology   
 
@@ -124,9 +130,13 @@ class Prospect(BaseVerb):
         rt_reduction = geology_skill / 20.0 # 1s off per 20 ranks
         rt = max(2.0, base_rt - rt_reduction) # 2s minimum
         
-        if geology_skill < 1:
-             self.player.send_message("You don't have the proper training to prospect for ore.")
-             return
+        # ---
+        # --- FIX: Commented out skill check for testing
+        # ---
+        # if geology_skill < 1:
+        #      self.player.send_message("You don't have the proper training to prospect for ore.")
+        #      return
+        # --- END FIX ---
 
         self.player.send_message("You scan the area for mineral deposits...")
         

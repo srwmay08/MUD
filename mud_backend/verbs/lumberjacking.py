@@ -71,16 +71,18 @@ class Chop(BaseVerb):
 
         if roll < skill_dc:
             self.player.send_message(f"You try to chop {node_obj['name']} but fail to get any wood.")
-
-        
-        # Roll: Skill + d100 vs DC
-        roll = lumberjacking_skill + random.randint(1, 100) 
-        
-        if roll < skill_dc:
-            self.player.send_message(f"You try to chop {node_obj['name']} but fail to get any wood.") 
+            # ---
+            # --- FIX: Add player to tapped list on failure and return
+            # ---
             node_obj.setdefault("players_tapped", []).append(player_name)
             self.world.save_room(self.room)
             return
+            # --- END FIX ---
+
+        
+        # ---
+        # --- FIX: Removed duplicate, broken roll block that was here
+        # ---
         
     
         # 6. Get Loot
@@ -129,9 +131,13 @@ class Survey(BaseVerb):
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
-        if forestry_skill < 1: 
-             self.player.send_message("You don't have the proper training to survey for trees.") 
-             return
+        # ---
+        # --- FIX: Commented out skill check for testing
+        # ---
+        # if forestry_skill < 1: 
+        #      self.player.send_message("You don't have the proper training to survey for trees.") 
+        #      return
+        # --- END FIX ---
 
         self.player.send_message("You scan the area for useable trees...") 
         
@@ -147,4 +153,4 @@ class Survey(BaseVerb):
         
         self.player.send_message("You sense the following trees are present:") 
         for node in found_nodes:
-            self.player.send_message(f"- {node.get('name', 'an unknown tree').title()}") 
+            self.player.send_message(f"- {node.get('name', 'an unknown tree').title()}")
