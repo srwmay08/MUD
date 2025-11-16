@@ -1,12 +1,16 @@
 import random
 import time
 import math
+import copy
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import loot_system
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
+# --- NEW: Import show_room_to_player ---
+from mud_backend.core.room_handler import show_room_to_player
+# --- END NEW ---
 
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
     """Helper to find a gathering node by name and type."""
@@ -137,26 +141,52 @@ class Survey(BaseVerb):
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
-        # ---
-        # --- FIX: Removed skill check
-        # ---
-        # if forestry_skill < 1: 
-        #      self.player.send_message("You don't have the proper training to survey for trees.") 
-        #      return
-        # --- END FIX ---
-
         self.player.send_message("You scan the area for useable trees...") 
+
+        # ---
+        # --- NEW REVEAL LOGIC
+        # ---
+        found_nodes_list = []
+        refresh_room = False
         
-        found_nodes = []
-        for obj in self.room.objects:
-            if (obj.get("is_gathering_node") and 
-                obj.get("node_type") == "lumberjacking"): 
-                found_nodes.append(obj)
-        
-        if not found_nodes:
-            self.player.send_message("You do not sense any useable trees here.") 
-            return
-        
-        self.player.send_message("You sense the following trees are present:") 
-        for node in found_nodes:
-            self.player.send_message(f"- {node.get('name', 'an unknown tree').title()}")
+        hidden_objects = self.room.db_data.get("hidden_objects", [])
+        for i in range(len(hidden_objects) - 1, -1, -1):
+            obj_stub = hidden_objects[i]
+            
+            if obj_stub.get("node_type") == "lumberjacking":
+                dc = obj_stub.get("perception_dc", 999)
+                roll = forestry_skill + random.randint(1, 100)
+                
+                if roll >= dc:
+                    found_stub = self.room.db_data["hidden_objects"].pop(i)
+                    full_node = copy.deepcopy(self.world.game_nodes.get(found_stub["node_id"]))
+                    if not full_node: continue
+                    
+                    full_node.update(found_stub)
+                    self.room.objects.append(full_node)
+                    
+                    found_nodes_list.append(full_node.get("name", "a tree"))
+                    refresh_room = True
+
+        if refresh_room:
+            self.world.broadcast_to_room(
+                self.room.room_id, 
+                f"{self.player.name} spots {found_nodes_list[0]}!", 
+                "message",
+                skip_sid=None
+            )
+            
+            for sid, data in self.world.get_all_players_info():
+                if data["current_room_id"] == self.room.room_id:
+                    player_obj = data.get("player_obj")
+                    if player_obj:
+                        player_obj.messages.clear()
+                        show_room_to_player(player_obj, self.room)
+                        self.world.socketio.emit('command_response', 
+                            {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                            to=sid)
+        else:
+            self.player.send_message("You do not sense any useable trees here.")
+        # ---
+        # --- END NEW LOGIC
+        # ---

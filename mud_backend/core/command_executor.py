@@ -279,10 +279,11 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                 if monster_id and "stats" not in obj:
                     template = world.game_monster_templates.get(monster_id)
                     if template:
-                        current_uid = obj["uid"]
+                        current_uid = obj.get("uid") # Use .get for safety
                         merged_obj = copy.deepcopy(template) # <-- FIX
                         merged_obj.update(obj) # <-- FIX
-                        merged_obj["uid"] = current_uid # <-- FIX
+                        if current_uid: # <-- FIX
+                            merged_obj["uid"] = current_uid # <-- FIX
                         live_room_objects.append(merged_obj) # <-- FIX
                     else:
                         live_room_objects.append(obj) # <-- ADDED

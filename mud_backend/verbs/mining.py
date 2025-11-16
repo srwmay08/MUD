@@ -1,15 +1,21 @@
 import random
 import time
 import math
+import copy
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import loot_system
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
+# --- NEW: Import show_room_to_player ---
+from mud_backend.core.room_handler import show_room_to_player
+# --- END NEW ---
 
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
     """Helper to find a gathering node by name and type."""
+    # This helper only needs to search room.objects,
+    # because nodes must be "sensed" (moved to room.objects) before harvesting.
     for obj in room_objects:
         if (obj.get("is_gathering_node") and 
             obj.get("node_type") == node_type):
@@ -137,26 +143,60 @@ class Prospect(BaseVerb):
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
-        # ---
-        # --- FIX: Removed skill check
-        # ---
-        # if geology_skill < 1: 
-        #      self.player.send_message("You don't have the proper training to prospect for ore.") 
-        #      return
-        # --- END FIX ---
-
         self.player.send_message("You scan the area for mineral deposits...") 
         
-        found_nodes = []
-        for obj in self.room.objects:
-            if (obj.get("is_gathering_node") and 
-                obj.get("node_type") == "mining"):
-                found_nodes.append(obj)
+        # ---
+        # --- NEW REVEAL LOGIC
+        # ---
+        found_nodes_list = []
+        refresh_room = False
         
-        if not found_nodes:
+        # Iterate backwards so we can pop items
+        hidden_objects = self.room.db_data.get("hidden_objects", [])
+        for i in range(len(hidden_objects) - 1, -1, -1):
+            obj_stub = hidden_objects[i]
+            
+            if obj_stub.get("node_type") == "mining":
+                dc = obj_stub.get("perception_dc", 999)
+                roll = geology_skill + random.randint(1, 100)
+                
+                if roll >= dc:
+                    # Success! Pop from hidden and add to live
+                    found_stub = self.room.db_data["hidden_objects"].pop(i)
+                    
+                    # Get full template
+                    full_node = copy.deepcopy(self.world.game_nodes.get(found_stub["node_id"]))
+                    if not full_node: continue
+                    
+                    full_node.update(found_stub) # Apply instance data (like taps)
+                    self.room.objects.append(full_node) # Add to live room
+                    
+                    found_nodes_list.append(full_node.get("name", "a node"))
+                    refresh_room = True
+
+        if refresh_room:
+            # Broadcast to the room
+            self.world.broadcast_to_room(
+                self.room.room_id, 
+                f"{self.player.name} spots {found_nodes_list[0]}!", 
+                "message",
+                skip_sid=None # Send to everyone
+            )
+            
+            # Refresh the room for everyone present
+            for sid, data in self.world.get_all_players_info():
+                if data["current_room_id"] == self.room.room_id:
+                    player_obj = data.get("player_obj")
+                    if player_obj:
+                        # Clear messages before showing room
+                        player_obj.messages.clear()
+                        show_room_to_player(player_obj, self.room)
+                        # Send their prompt / vitals
+                        self.world.socketio.emit('command_response', 
+                            {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                            to=sid)
+        else:
             self.player.send_message("You do not sense any deposits here.")
-            return
-        
-        self.player.send_message("You sense the following deposits are present:")
-        for node in found_nodes:
-            self.player.send_message(f"- {node.get('name', 'an unknown deposit').title()}")
+        # ---
+        # --- END NEW LOGIC
+        # ---
