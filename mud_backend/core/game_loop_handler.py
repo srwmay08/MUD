@@ -26,8 +26,31 @@ def _prune_active_players(world: 'World', log_prefix: str, broadcast_callback: C
     player_list = world.get_all_players_info()
     
     for player_name, data in player_list:
-        if (current_time - data["last_seen"]) > world.player_timeout_seconds:
+        # ---
+        # --- MODIFIED: Check IDLEKICK and IDLETIME flags
+        # ---
+        player_obj = data.get("player_obj")
+
+        # Default to 30 minutes if flags are missing
+        idletime_minutes = 30
+        idlekick_on = "on"
+        
+        if player_obj:
+            idlekick_on = player_obj.flags.get("idlekick", "on")
+            idletime_minutes = player_obj.flags.get("idletime", 30)
+
+        # If IDLEKICK is OFF, skip this player entirely
+        if idlekick_on == "off":
+            continue
+
+        # Convert player's idle time to seconds
+        player_timeout_seconds = idletime_minutes * 60
+        
+        if (current_time - data["last_seen"]) > player_timeout_seconds:
             stale_players.append(player_name)
+        # ---
+        # --- END MODIFIED
+        # ---
             
     if stale_players:
         for player_name in stale_players:

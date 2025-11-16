@@ -82,13 +82,34 @@ class Get(BaseVerb):
             if target_container_name.startswith("my "):
                 target_container_name = target_container_name[3:].strip()
 
+        # ---
+        # --- MODIFIED: Hand Preference Logic
+        # ---
+        target_hand_slot = None
         right_hand_slot = "mainhand"
         left_hand_slot = "offhand"
-        target_hand_slot = None
-        if self.player.worn_items.get(right_hand_slot) is None:
-            target_hand_slot = right_hand_slot
-        elif self.player.worn_items.get(left_hand_slot) is None:
-            target_hand_slot = left_hand_slot
+        
+        if self.player.flags.get("righthand", "on") == "on":
+            # Player prefers right hand
+            if self.player.worn_items.get(right_hand_slot) is None:
+                target_hand_slot = right_hand_slot
+            elif self.player.worn_items.get(left_hand_slot) is None:
+                target_hand_slot = left_hand_slot
+        elif self.player.flags.get("lefthand", "on") == "on":
+            # Player prefers left hand
+            if self.player.worn_items.get(left_hand_slot) is None:
+                target_hand_slot = left_hand_slot
+            elif self.player.worn_items.get(right_hand_slot) is None:
+                target_hand_slot = right_hand_slot
+        else:
+            # Default behavior (e.g., if both flags are somehow 'off')
+            if self.player.worn_items.get(right_hand_slot) is None:
+                target_hand_slot = right_hand_slot
+            elif self.player.worn_items.get(left_hand_slot) is None:
+                target_hand_slot = left_hand_slot
+        # ---
+        # --- END MODIFIED
+        # ---
 
         game_items = self.world.game_items
 
@@ -230,7 +251,26 @@ class Drop(BaseVerb):
             self.player.send_message("Drop what?")
             return
 
+        # ---
+        # --- MODIFIED: SAFEDROP Check
+        # ---
         args_str = " ".join(self.args).lower()
+        is_confirmed = False
+        
+        # Check if the *last* argument is "confirm"
+        if self.args and self.args[-1].lower() == "confirm":
+            is_confirmed = True
+            # Re-build args and args_str without "confirm"
+            self.args = self.args[:-1]
+            args_str = " ".join(self.args).lower()
+        
+        if not self.args:
+             self.player.send_message("Drop what?")
+             return
+        # ---
+        # --- END MODIFIED
+        # ---
+
         target_item_name = args_str
         target_container_name = None
 
@@ -314,6 +354,17 @@ class Drop(BaseVerb):
                 return
         else:
             # --- DROP ON GROUND ---
+            
+            # ---
+            # --- MODIFIED: SAFEDROP Check
+            # ---
+            if self.player.flags.get("safedrop", "on") == "on" and not is_confirmed:
+                self.player.send_message(f"SAFEDROP is on. To drop {item_name}, type 'DROP {target_item_name} CONFIRM'.")
+                return
+            # ---
+            # --- END MODIFIED
+            # ---
+            
             if item_location == "inventory":
                 self.player.inventory.remove(item_id_to_drop)
             else:

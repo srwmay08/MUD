@@ -122,6 +122,10 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "sell": ("shop", "Sell"), "appraise": ("shop", "Appraise"),
     "help": ("help", "Help"), # <-- NEW
 
+    # --- NEW: Add FLAG ---
+    "flag": ("flag", "Flag"), "flags": ("flag", "Flag"),
+    # --- END NEW ---
+
     # Training
     "check": ("training", "CheckIn"), "checkin": ("training", "CheckIn"),
     "train": ("training", "Train"), "done": ("training", "Done"),

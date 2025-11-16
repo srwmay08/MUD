@@ -235,6 +235,10 @@
                     <textarea id="desc_default" class="form-textarea" placeholder="The default appearance of the room." required></textarea>
                 </div>
                 <div class="mt-4">
+                    <label for="desc_brief" class="form-label">BRIEF Description (Optional)</label>
+                    <textarea id="desc_brief" class="form-textarea" style="min-height: 60px;" placeholder="A short, one-line description for BRIEF mode."></textarea>
+                </div>
+                <div class="mt-4">
                     <label for="desc_dawn" class="form-label">DAWN Description (Optional)</label>
                     <textarea id="desc_dawn" class="form-textarea" placeholder="Appearance at dawn."></textarea>
                 </div>
@@ -506,6 +510,14 @@
             room.description = {
                 default: document.getElementById('desc_default').value
             };
+            // ---
+            // --- NEW: Add brief description
+            // ---
+            const descBrief = document.getElementById('desc_brief').value;
+            if (descBrief) room.description.brief = descBrief;
+            // ---
+            // --- END NEW
+            // ---
             const descDawn = document.getElementById('desc_dawn').value;
             if (descDawn) room.description.DAWN = descDawn;
             const descStorm = document.getElementById('desc_storm').value;
@@ -613,7 +625,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.STRINGIFY(data),
+                    body: JSON.stringify(data),
                 });
 
                 const result = await response.json();
@@ -665,6 +677,15 @@
             document.getElementById('z').value = '100';
             document.getElementById('interior_id').value = 'builder_zone';
             document.getElementById('desc_default').value = "A clean, well-lit workshop. A workbench sits in the center, covered in tools. A helpful 'Builder' NPC stands nearby, and a practice dummy is in the corner. A sturdy 'Door' is the only way out.";
+            
+            // ---
+            // --- NEW: Add default for brief
+            // ---
+            document.getElementById('desc_brief').value = "A clean workshop with a workbench, NPC, and dummy.";
+            // ---
+            // --- END NEW
+            // ---
+            
             document.getElementById('desc_dawn').value = 'The workshop is bathed in the soft, angled light of dawn.';
             document.getElementById('desc_storm').value = 'Rain lashes against the workshop windows, and the sound of thunder echoes faintly.';
             

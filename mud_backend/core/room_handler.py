@@ -111,20 +111,47 @@ def show_room_to_player(player: Player, room: Room):
     """
     player.send_message(f"**{room.name}**")
     
-    # --- NEW LOGIC FOR DESCRIPTIONS ---
-    room_descriptions = room.description
-    current_time = environment.current_time_of_day # Get current time
-    current_weather = environment.current_weather # Get current weather
-    
-    # Use the new helper to find the best description
-    room_desc_text = _get_dynamic_description(
-        room_descriptions, 
-        current_time, 
-        current_weather
-    )
+    # ---
+    # --- MODIFIED: Check DESCRIPTIONS flag
+    # ---
+    desc_flag = player.flags.get("descriptions", "on")
+
+    if desc_flag == "on":
+        # Full dynamic description
+        room_descriptions = room.description
+        current_time = environment.current_time_of_day # Get current time
+        current_weather = environment.current_weather # Get current weather
         
-    player.send_message(room_desc_text)
-    # --- END NEW LOGIC ---
+        room_desc_text = _get_dynamic_description(
+            room_descriptions, 
+            current_time, 
+            current_weather
+        )
+        player.send_message(room_desc_text)
+
+    elif desc_flag == "brief":
+        # Brief description, with fallback to default
+        room_descriptions = room.description
+        brief_desc = room.description.get("brief")
+        
+        if not brief_desc:
+            # Fallback to default
+            brief_desc = room.description.get("default")
+            # If default is a dict, get its default
+            if isinstance(brief_desc, dict):
+                brief_desc = brief_desc.get("default", "A room.")
+        
+        if isinstance(brief_desc, str):
+             player.send_message(brief_desc)
+        else:
+             player.send_message("A brief room.") # Ultimate fallback
+
+    elif desc_flag == "off":
+        # Do not send any description
+        pass
+    # ---
+    # --- END MODIFIED
+    # ---
     
     # ---
     # --- THIS IS THE FIX: Object merging logic is now here.
