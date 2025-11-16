@@ -48,8 +48,8 @@
         "keywords": ["sword", "short sword"],
         "base_value": 100,
         "attacks": [
-            { "verb": "slashes", "damage_type": "slash", "chance": 0.7 },
-            { "verb": "stabs", "damage_type": "puncture", "chance": 0.3 }
+            { "verb": "slash", "damage_type": "slash", "chance": 0.7 },
+            { "verb": "stab", "damage_type": "puncture", "chance": 0.3 }
         ]
     },
     "leather_tunic": {
@@ -106,7 +106,7 @@
         "keywords": ["pickaxe", "pick"],
         "base_value": 150,
         "attacks": [
-            { "verb": "swings", "damage_type": "puncture", "chance": 1.0 }
+            { "verb": "swing", "damage_type": "puncture", "chance": 1.0 }
         ]
     },
     "wood_axe": {
@@ -119,7 +119,7 @@
         "keywords": ["axe", "wood axe"],
         "base_value": 120,
         "attacks": [
-            { "verb": "chops", "damage_type": "slash", "chance": 1.0 }
+            { "verb": "chop", "damage_type": "slash", "chance": 1.0 }
         ]
     },
     "sickle": {
@@ -132,7 +132,7 @@
         "keywords": ["sickle", "knife"],
         "base_value": 80,
         "attacks": [
-            { "verb": "slashes", "damage_type": "slash", "chance": 1.0 }
+            { "verb": "slash", "damage_type": "slash", "chance": 1.0 }
         ]
     },
     "fishing_pole": {
@@ -144,7 +144,7 @@
         "keywords": ["pole", "fishing pole"],
         "base_value": 100,
         "attacks": [
-            { "verb": "whips", "damage_type": "impact", "chance": 1.0 }
+            { "verb": "whip", "damage_type": "impact", "chance": 1.0 }
         ]
     },
     "starter_backpack": {
@@ -191,7 +191,7 @@
         "keywords": ["shield", "wooden shield"],
         "base_value": 75,
         "attacks": [
-            { "verb": "bashes", "damage_type": "impact", "chance": 1.0 }
+            { "verb": "bash", "damage_type": "impact", "chance": 1.0 }
         ]
     },
     
@@ -229,7 +229,7 @@
         "keywords": ["knuckle dusters", "dusters"],
         "base_value": 40,
         "attacks": [
-            { "verb": "punches", "damage_type": "crush", "chance": 1.0 }
+            { "verb": "punch", "damage_type": "crush", "chance": 1.0 }
         ]
     },
     "starter_dagger": {
@@ -241,8 +241,8 @@
         "keywords": ["dagger", "simple dagger"],
         "base_value": 50,
         "attacks": [
-            { "verb": "stabs", "damage_type": "puncture", "chance": 0.8 },
-            { "verb": "slashes", "damage_type": "slash", "chance": 0.2 }
+            { "verb": "stab", "damage_type": "puncture", "chance": 0.8 },
+            { "verb": "slash", "damage_type": "slash", "chance": 0.2 }
         ]
     },
     "starter_short_sword": {
@@ -254,8 +254,8 @@
         "keywords": ["sword", "short sword"],
         "base_value": 100,
         "attacks": [
-            { "verb": "slashes", "damage_type": "slash", "chance": 0.7 },
-            { "verb": "stabs", "damage_type": "puncture", "chance": 0.3 }
+            { "verb": "slash", "damage_type": "slash", "chance": 0.7 },
+            { "verb": "stab", "damage_type": "puncture", "chance": 0.3 }
         ],
         "damage_factors": {
             "cloth": 0.350,
@@ -281,8 +281,8 @@
         "keywords": ["sword", "bastard sword"],
         "base_value": 150,
         "attacks": [
-            { "verb": "slashes", "damage_type": "slash", "chance": 0.8 },
-            { "verb": "stabs", "damage_type": "puncture", "chance": 0.2 }
+            { "verb": "slash", "damage_type": "slash", "chance": 0.8 },
+            { "verb": "stab", "damage_type": "puncture", "chance": 0.2 }
         ]
     },
     "starter_club": {
@@ -294,7 +294,7 @@
         "keywords": ["club", "wooden club"],
         "base_value": 30,
         "attacks": [
-            { "verb": "bludgeons", "damage_type": "crush", "chance": 1.0 }
+            { "verb": "bludgeon", "damage_type": "crush", "chance": 1.0 }
         ]
     },
     "starter_mace": {
@@ -306,8 +306,8 @@
         "keywords": ["mace", "simple mace"],
         "base_value": 90,
         "attacks": [
-            { "verb": "crushes", "damage_type": "crush", "chance": 0.7 },
-            { "verb": "bashes", "damage_type": "impact", "chance": 0.3 }
+            { "verb": "crush", "damage_type": "crush", "chance": 0.7 },
+            { "verb": "bash", "damage_type": "impact", "chance": 0.3 }
         ],
         "damage_factors": {
             "cloth": 0.400,
@@ -333,8 +333,8 @@
         "keywords": ["greatclub", "club"],
         "base_value": 130,
         "attacks": [
-            { "verb": "smashes", "damage_type": "crush", "chance": 0.6 },
-            { "verb": "batters", "damage_type": "impact", "chance": 0.4 }
+            { "verb": "smash", "damage_type": "crush", "chance": 0.6 },
+            { "verb": "batter", "damage_type": "impact", "chance": 0.4 }
         ]
     },
     "starter_spear": {
@@ -346,7 +346,7 @@
         "keywords": ["spear", "simple spear"],
         "base_value": 110,
         "attacks": [
-            { "verb": "stabs", "damage_type": "puncture", "chance": 1.0 }
+            { "verb": "stab", "damage_type": "puncture", "chance": 1.0 }
         ]
     },
     "starter_bow": {
@@ -358,7 +358,7 @@
         "keywords": ["bow", "short bow"],
         "base_value": 100,
         "attacks": [
-            { "verb": "shoots", "damage_type": "ballistic", "chance": 1.0 }
+            { "verb": "shoot", "damage_type": "ballistic", "chance": 1.0 }
         ]
     },
     "starter_crossbow": {
@@ -370,7 +370,7 @@
         "keywords": ["crossbow", "light crossbow"],
         "base_value": 120,
         "attacks": [
-            { "verb": "fires", "damage_type": "ballistic", "chance": 1.0 }
+            { "verb": "fire", "damage_type": "ballistic", "chance": 1.0 }
         ]
     },
     "starter_throwing_knife": {
@@ -418,7 +418,7 @@
         "keywords": ["staff", "wooden staff"],
         "base_value": 60,
         "attacks": [
-            { "verb": "whacks", "damage_type": "impact", "chance": 1.0 }
+            { "verb": "whack", "damage_type": "impact", "chance": 1.0 }
         ]
     },
 

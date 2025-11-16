@@ -41,7 +41,7 @@
         "base_value": 5,
         "max_value": 10,
         "attacks": [
-            { "verb": "stabs", "damage_type": "puncture", "chance": 1.0 }
+            { "verb": "stab", "damage_type": "puncture", "chance": 1.0 }
         ],
         "damage_factors": {
             "unarmed": 0.300,

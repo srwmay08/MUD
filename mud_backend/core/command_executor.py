@@ -59,6 +59,7 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "remove": ("equipment", "Remove"),
     "inventory": ("inventory", "Inventory"), "inv": ("inventory", "Inventory"),
     "wealth": ("inventory", "Wealth"),
+    "swap": ("inventory", "Swap"),
 
     # Observation
     "look": ("observation", "Look"), "examine": ("observation", "Examine"),

@@ -18,7 +18,14 @@ from mud_backend import config
 from mud_backend.core.utils import get_stat_bonus, RACE_MODIFIERS, DEFAULT_RACE_MODS
 # --- NEW: Import faction handler ---
 from mud_backend.core import faction_handler
-# --- END NEW ---
+# ---
+# --- MODIFICATION: Import LBD skill handler ---
+# ---
+from mud_backend.core.skill_handler import attempt_skill_learning
+# ---
+# --- END MODIFICATION
+# ---
+
 
 # ---
 # --- NEW HELPER FUNCTION: _get_weighted_attack
@@ -432,14 +439,28 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     attacker_weapon_data: Optional[Dict[str, Any]] = None
     
     if is_attacker_player:
-        attacker.add_field_exp(1) # Grant LBD exp for attacking
+        # ---
+        # --- MODIFICATION: LBD BUG FIX
+        # ---
+        # We replace the `add_field_exp(1)` call with LBD logic
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
+        weapon_skill_to_learn = "brawling"
+        if attacker_weapon_data:
+            weapon_skill_to_learn = attacker_weapon_data.get("skill", "brawling")
+        
+        # Grant LBD for the weapon skill
+        attempt_skill_learning(attacker, weapon_skill_to_learn)
+        # ---
+        # --- END MODIFICATION
+        # ---
+        
         if attacker_weapon_data:
             # Player is using a weapon, get attacks from the item
             attack_list = attacker_weapon_data.get("attacks", [])
         else:
             # Player is brawling
-            attack_list = [{ "verb": "punches", "damage_type": "crush", "weapon_name": "your fist", "chance": 1.0 }]
+            # --- MODIFICATION: Use base verb "punch" ---
+            attack_list = [{ "verb": "punch", "damage_type": "crush", "weapon_name": "your fist", "chance": 1.0 }]
     else:
         # Attacker is an NPC/Monster
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
@@ -453,7 +474,8 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         
     # Failsafe for misconfigured monsters/items
     if not attack_list:
-        attack_list = [{ "verb": "attacks", "damage_type": "crush", "weapon_name": "something", "chance": 1.0 }]
+        # --- MODIFICATION: Use base verb "attack" ---
+        attack_list = [{ "verb": "attack", "damage_type": "crush", "weapon_name": "something", "chance": 1.0 }]
 
     # Select the attack
     selected_attack = _get_weighted_attack(attack_list)
@@ -462,7 +484,8 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         selected_attack = attack_list[0]
 
     # Now, determine verb, damage type, and weapon name from the *selected* attack
-    attack_verb = selected_attack.get("verb", "attacks")
+    # --- MODIFICATION: Get base verb ---
+    attack_verb = selected_attack.get("verb", "attack") # e.g., "stab", "slash", "pinch"
     weapon_damage_type = selected_attack.get("damage_type", "crush")
     
     # Get damage factors and weapon display name
@@ -554,15 +577,27 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         'is_fatal': False
     }
 
+    # ---
+    # --- MODIFICATION: GRAMMAR FIX
+    # ---
+    # Conjugate for 3rd person
+    attack_verb_npc = attack_verb + "s"
+    if attack_verb.endswith('s') or attack_verb.endswith('sh') or attack_verb.endswith('ch') or attack_verb.endswith('x') or attack_verb.endswith('o'):
+        attack_verb_npc = attack_verb + "es" # e.g., slash -> slashes, punch -> punches, bash -> bashes
+
     # Build the "Attempt" messages
     if is_attacker_player:
         results['attempt_msg'] = f"You {attack_verb} {weapon_display} at {defender_name}!"
-        results['defender_attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at you!"
-        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at {defender_name}!"
+        results['defender_attempt_msg'] = "" # Not used in this path
+        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb_npc} {weapon_display} at {defender_name}!"
     else:
-        results['attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at you!"
-        results['defender_attempt_msg'] = f"You {attack_verb} {weapon_display} at {attacker_name}!"
-        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at {defender_name}!"
+        # Attacker is monster
+        results['attempt_msg'] = f"{attacker_name} {attack_verb_npc} {weapon_display} at you!" # This is for the player (defender)
+        results['defender_attempt_msg'] = "" # Not used in this path
+        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb_npc} {weapon_display} at {defender_name}!"
+    # ---
+    # --- END GRAMMAR FIX
+    # ---
 
     # Build the "Result" messages
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:

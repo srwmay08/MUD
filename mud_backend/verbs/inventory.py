@@ -2,6 +2,13 @@
 from mud_backend.verbs.base_verb import BaseVerb
 # --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend import config
+# ---
+# --- NEW: Import RT helpers ---
+# ---
+from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+# ---
+# --- END NEW ---
+
 
 class Inventory(BaseVerb):
     """
@@ -121,3 +128,43 @@ class Wealth(BaseVerb):
         # ---
         # --- END FIX
         # ---
+
+# ---
+# --- NEW: SWAP VERB
+# ---
+class Swap(BaseVerb):
+    """
+    Handles the 'swap' command.
+    Swaps the items in the player's main hand and off hand.
+    """
+    def execute(self):
+        if _check_action_roundtime(self.player, action_type="other"):
+            return
+
+        mainhand_item_id = self.player.worn_items.get("mainhand")
+        offhand_item_id = self.player.worn_items.get("offhand")
+
+        if not mainhand_item_id and not offhand_item_id:
+            self.player.send_message("Your hands are empty.")
+            return
+
+        # Swap the item IDs
+        self.player.worn_items["mainhand"] = offhand_item_id
+        self.player.worn_items["offhand"] = mainhand_item_id
+
+        # Build the message
+        if mainhand_item_id and offhand_item_id:
+            mainhand_name = self.world.game_items.get(mainhand_item_id, {}).get("name", "an item")
+            offhand_name = self.world.game_items.get(offhand_item_id, {}).get("name", "an item")
+            self.player.send_message(f"You swap {mainhand_name} to your left hand and {offhand_name} to your right hand.")
+        elif mainhand_item_id: # Was in mainhand, now in offhand
+            mainhand_name = self.world.game_items.get(mainhand_item_id, {}).get("name", "an item")
+            self.player.send_message(f"You swap {mainhand_name} to your left hand.")
+        elif offhand_item_id: # Was in offhand, now in mainhand
+            offhand_name = self.world.game_items.get(offhand_item_id, {}).get("name", "an item")
+            self.player.send_message(f"You swap {offhand_name} to your right hand.")
+
+        _set_action_roundtime(self.player, 1.0)
+# ---
+# --- END NEW VERB
+# ---
