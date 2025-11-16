@@ -57,6 +57,20 @@
         "3": { "message": "A powerful surge flashes through the {defender}, cooking their insides.", "extra_damage": 10, "wound_rank": 3, "stun": true }
     }
   },
+  "impact": {
+    "head": {
+      "1": { "message": "A glancing impact bruises the {defender}'s head.", "extra_damage": 2, "wound_rank": 1 },
+      "2": { "message": "A solid impact rings the {defender}'s bell.", "extra_damage": 4, "wound_rank": 1, "stun": true },
+      "3": { "message": "A heavy impact to the {defender}'s head sends them seeing stars.", "extra_damage": 7, "wound_rank": 2, "stun": true },
+      "4": { "message": "A concussive impact splits the {defender}'s helm, staggering them.", "extra_damage": 10, "wound_rank": 2, "stun": true },
+      "5": { "message": "A devastating impact caves in the {defender}'s head. A fatal blow!", "extra_damage": 20, "wound_rank": 3, "fatal": true }
+    },
+    "chest": {
+      "1": { "message": "A solid thump to the {defender}'s chest.", "extra_damage": 1, "wound_rank": 1 },
+      "2": { "message": "A heavy impact to the {defender}'s chest knocks the wind out of them.", "extra_damage": 3, "wound_rank": 1, "stun": true },
+      "3": { "message": "A powerful impact cracks the {defender}'s ribs.", "extra_damage": 5, "wound_rank": 2, "stun": true }
+    }
+  },
   "wounds": {
     "head": { "1": "minor bruises about the head", "2": "minor lacerations about the head", "3": "severe head trauma and bleeding" },
     "neck": { "1": "minor bruises on your neck", "2": "moderate bleeding from your neck", "3": "serious bleeding from the neck" },

@@ -16,8 +16,10 @@
         "movement_rules": {
             "wander_chance": 0.0
         },
-        "attack_verb": "pinches",
-        "weapon_name": "its claw",
+        "attacks": [
+            { "verb": "pinches", "weapon_name": "its claw", "damage_type": "crush", "chance": 0.5 },
+            { "verb": "bashes", "weapon_name": "its heavy claw", "damage_type": "impact", "chance": 0.5 }
+        ],
         "ambient_message_chance": 0.2,
         "ambient_messages": [
             "snaps its heavy pincers together with a loud, sharp CLACK.",
@@ -55,6 +57,9 @@
         "movement_rules": {
             "wander_chance": 0.0
         },
+        "attacks": [
+            { "verb": "rasps", "weapon_name": "its file-like tongue", "damage_type": "slash", "chance": 1.0 }
+        ],
         "stats": {
             "STR": 20, "CON": 50, "DEX": 10, "AGI": 10,
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
@@ -108,8 +113,10 @@
         "movement_rules": {
             "wander_chance": 0.0
         },
-        "attack_verb": "snaps",
-        "weapon_name": "its heavy claw",
+        "attacks": [
+            { "verb": "snaps", "weapon_name": "its heavy claw", "damage_type": "crush", "chance": 0.5 },
+            { "verb": "slams", "weapon_name": "its heavy claw", "damage_type": "impact", "chance": 0.5 }
+        ],
         "stats": {
             "STR": 40, "CON": 45, "DEX": 20, "AGI": 20,
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,

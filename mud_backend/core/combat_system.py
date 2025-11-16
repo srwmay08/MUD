@@ -4,7 +4,7 @@ import re
 import math
 import time
 import copy
-from typing import Dict, Any, Optional, TYPE_CHECKING
+from typing import Dict, Any, Optional, TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
@@ -20,6 +20,44 @@ from mud_backend.core.utils import get_stat_bonus, RACE_MODIFIERS, DEFAULT_RACE_
 from mud_backend.core import faction_handler
 # --- END NEW ---
 
+# ---
+# --- NEW HELPER FUNCTION: _get_weighted_attack
+# ---
+def _get_weighted_attack(attack_list: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    Selects a random attack from a list based on weighted chances.
+    
+    Example list:
+    [
+        { "verb": "slash", "damage_type": "slash", "chance": 0.7 },
+        { "verb": "stab", "damage_type": "puncture", "chance": 0.3 }
+    ]
+    """
+    if not attack_list:
+        return None
+
+    # Calculate total weight
+    total_weight = sum(attack.get("chance", 0) for attack in attack_list)
+    if total_weight == 0:
+        # Failsafe: if no chances are defined, pick one at random
+        return random.choice(attack_list)
+    
+    # Get a random number between 0 and total_weight
+    roll = random.uniform(0, total_weight)
+    
+    # Find which attack this roll corresponds to
+    upto = 0
+    for attack in attack_list:
+        chance = attack.get("chance", 0)
+        if upto + chance >= roll:
+            return attack
+        upto += chance
+    
+    # Failsafe (shouldn't be reached, but good to have)
+    return random.choice(attack_list)
+# ---
+# --- END NEW HELPER
+# ---
 
 STANCE_MODIFIERS = {
     "offensive": {"as_mod": 1.15, "ds_mod": 0.70},
@@ -300,8 +338,13 @@ def _get_critical_result(
     if rank <= 0:
         return {"message": "", "extra_damage": 0, "wound_rank": 0}
 
+    # --- THIS IS THE FIX: Check for the damage type ---
     if damage_type not in world.game_criticals:
+        # Failsafe: if the type doesn't exist (e.g., "Acid"), default to "slash"
+        # This allows you to add new damage types without crashing the server
+        # before you've written their crit tables.
         damage_type = "slash"
+    # --- END FIX ---
         
     crit_table = world.game_criticals[damage_type]
     
@@ -364,43 +407,73 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         defender_offhand_data = None
         
     # ---
-    # --- THIS IS THE MODIFICATION
+    # --- THIS IS THE REFACTORED ATTACK SELECTION LOGIC
     # ---
-    weapon_display = ""
-    attack_verb = "swing" # Default for player
+    
+    selected_attack: Optional[Dict[str, Any]] = None
+    attack_list: List[Dict[str, Any]] = []
+    attacker_weapon_data: Optional[Dict[str, Any]] = None
     
     if is_attacker_player:
+        attacker.add_field_exp(1) # Grant LBD exp for attacking
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
-        attacker.add_field_exp(1)
-        weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
-        if not attacker_weapon_data:
-            attack_verb = "swing" # Player default punch
+        if attacker_weapon_data:
+            # Player is using a weapon, get attacks from the item
+            attack_list = attacker_weapon_data.get("attacks", [])
+        else:
+            # Player is brawling
+            attack_list = [{ "verb": "punches", "damage_type": "crush", "weapon_name": "your fist", "chance": 1.0 }]
         msg_key_hit = "player_hit"
         msg_key_miss = "player_miss"
     else:
+        # Attacker is an NPC/Monster
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
         attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
-        
-        # NEW: Check for custom monster attack verb/weapon
-        attack_verb = attacker.get("attack_verb", "swings") # Default to "swings"
-        
         if attacker_weapon_data:
-            weapon_display = attacker_weapon_data.get("name", "its weapon")
+            # Monster is using an equipped weapon, get attacks from the item
+            attack_list = attacker_weapon_data.get("attacks", [])
         else:
-            weapon_display = attacker.get("weapon_name", "its natural weapons") # Default to "its natural weapons"
-
+            # Monster is using natural attacks, get attacks from monster data
+            attack_list = attacker.get("attacks", [])
         msg_key_hit = "monster_hit"
         msg_key_miss = "monster_miss"
+        
+    # Failsafe for misconfigured monsters/items
+    if not attack_list:
+        attack_list = [{ "verb": "attacks", "damage_type": "crush", "weapon_name": "something", "chance": 1.0 }]
+
+    # Select the attack
+    selected_attack = _get_weighted_attack(attack_list)
+    if not selected_attack:
+        # This should never happen if the failsafe above works
+        selected_attack = attack_list[0]
+
+    # Now, determine verb, damage type, and weapon name from the *selected* attack
+    attack_verb = selected_attack.get("verb", "attacks")
+    weapon_damage_type = selected_attack.get("damage_type", "crush")
+    
+    # Get damage factors and weapon display name
+    weapon_damage_factor = 0.100
+    weapon_display = ""
+
+    if attacker_weapon_data:
+        # Player or NPC is using a weapon ITEM
+        # Get factors from the weapon item itself
+        weapon_damage_factor = attacker_weapon_data.get("damage_factors", {}).get(defender_armor_type_str, 0.100)
+        weapon_display = attacker_weapon_data.get("name", "their weapon")
+    else:
+        # Player brawling or Monster natural attack
+        # Get weapon name from the selected attack
+        weapon_display = selected_attack.get("weapon_name", "their fist")
+        
+        # For monsters, check for damage_factors on the monster itself
+        damage_factors = attacker.get("damage_factors", {}) if not is_attacker_player else {}
+        weapon_damage_factor = damage_factors.get(defender_armor_type_str, 0.100)
+
     # ---
-    # --- END MODIFICATION
+    # --- END REFACTORED LOGIC
     # ---
 
-    weapon_damage_factor = 0.100 
-    weapon_damage_type = "crush"  
-    if attacker_weapon_data:
-        weapon_damage_type = attacker_weapon_data.get("damage_type", "crush")
-        weapon_damage_factor = attacker_weapon_data.get("damage_factors", {}).get(defender_armor_type_str, 0.100)
-    
     attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
     is_ranged_attack = attacker_weapon_type in ["bow"]
 
