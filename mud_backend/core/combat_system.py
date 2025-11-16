@@ -236,21 +236,22 @@ def calculate_defense_strength(defender: Any,
 
     return final_ds
 
+
 # ---
-# --- THIS IS THE FIX (Problem 2: Grammar)
+# --- THIS IS THE MODIFICATION
 # ---
 HIT_MESSAGES = {
-    "player_hit": ["You swing {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
-    "monster_hit": ["{attacker} swings {weapon_display} and strikes {defender}!", "{attacker} hits {defender} with {weapon_display}!", "A solid blow from {attacker} connects with {defender} using {weapon_display}!"],
+    "player_hit": ["You {verb} {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
+    "monster_hit": ["{attacker} {verb} {weapon_display} and strikes {defender}!", "{attacker} hits {defender} with {weapon_display}!", "A solid blow from {attacker} connects with {defender} using {weapon_display}!"],
     "player_crit": ["A devastating blow! Your {weapon_display} slams into {defender} with incredible force!", "You find a vital spot, driving your {weapon_display} deep into {defender}!", "A perfect strike! {defender} reels from the hit!"],
     "monster_crit": ["A devastating blow! {attacker} slams {weapon_display} into {defender}!", "{attacker} finds a vital spot, driving {weapon_display} into {defender}!", "A perfect strike! {defender} reels from {attacker}'s hit!"],
-    "player_miss": ["You swing {weapon_display} at {defender}, but miss.", "{defender} deftly avoids your {weapon_display}!", "Your {weapon_display} whistles through the air, hitting nothing."],
-    "monster_miss": ["{attacker} swings {weapon_display} at {defender}, but misses.", "{defender} deftly avoids {attacker}'s swing!", "{attacker}'s attack whistles through the air, hitting nothing."],
-    "player_fumble": ["You swing wildly and lose your balance, fumbling your attack!", "Your {weapon_display} slips! You completely miss {defender}."],
-    "monster_fumble": ["{attacker} swings wildly and loses its balance, fumbling the attack!", "{attacker} completely misses {defender}."]
+    "player_miss": ["You {verb} {weapon_display} at {defender}, but miss.", "{defender} deftly avoids your {weapon_display}!", "Your {weapon_display} whistles through the air, hitting nothing."],
+    "monster_miss": ["{attacker} {verb} {weapon_display} at {defender}, but misses.", "{defender} deftly avoids {attacker}'s {verb}!", "{attacker}'s attack whistles through the air, hitting nothing."],
+    "player_fumble": ["You {verb} wildly and lose your balance, fumbling your attack!", "Your {weapon_display} slips! You completely miss {defender}."],
+    "monster_fumble": ["{attacker} {verb} wildly and loses its balance, fumbling the attack!", "{attacker} completely misses {defender}."]
 }
 # ---
-# --- END FIX
+# --- END MODIFICATION
 # ---
 
 def get_flavor_message(key, d100_roll, combat_roll_result):
@@ -363,23 +364,35 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         defender_offhand_data = None
         
     # ---
-    # --- THIS IS THE FIX (Problem 2: Grammar)
+    # --- THIS IS THE MODIFICATION
     # ---
     weapon_display = ""
+    attack_verb = "swing" # Default for player
+    
     if is_attacker_player:
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
         attacker.add_field_exp(1)
-        weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist" # e.g., "a simple dagger" or "your fist"
+        weapon_display = attacker_weapon_data.get("name", "your fist") if attacker_weapon_data else "your fist"
+        if not attacker_weapon_data:
+            attack_verb = "swing" # Player default punch
         msg_key_hit = "player_hit"
         msg_key_miss = "player_miss"
     else:
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
         attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
-        weapon_display = attacker_weapon_data.get("name", "its natural weapons") if attacker_weapon_data else "its natural weapons" # e.g., "a crude club" or "its natural weapons"
+        
+        # NEW: Check for custom monster attack verb/weapon
+        attack_verb = attacker.get("attack_verb", "swings") # Default to "swings"
+        
+        if attacker_weapon_data:
+            weapon_display = attacker_weapon_data.get("name", "its weapon")
+        else:
+            weapon_display = attacker.get("weapon_name", "its natural weapons") # Default to "its natural weapons"
+
         msg_key_hit = "monster_hit"
         msg_key_miss = "monster_miss"
     # ---
-    # --- END FIX
+    # --- END MODIFICATION
     # ---
 
     weapon_damage_factor = 0.100 
@@ -413,8 +426,12 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         f"  AS: {as_str} vs DS: {ds_str} "
         f"+ ADV: +{combat_advantage} + d100: +{d100_roll} = +{combat_roll_result}"
     )
-        
-    msg_vars = {"attacker": attacker_name, "defender": defender_name, "weapon_display": weapon_display}
+    
+    # ---
+    # --- THIS IS THE MODIFICATION: Add 'verb'
+    # ---
+    msg_vars = {"attacker": attacker_name, "defender": defender_name, "weapon_display": weapon_display, "verb": attack_verb}
+    # --- END MODIFICATION ---
     
     results = {
         'hit': False, 'damage': 0, 'roll_string': roll_string,

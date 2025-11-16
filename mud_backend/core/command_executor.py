@@ -261,38 +261,42 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     room = Room(room_db_data.get("room_id", "void"), room_db_data.get("name", "The Void"), room_db_data.get("description", "..."), db_data=room_db_data)
 
     # ---
-    # --- THIS IS THE FIX: Object merging logic is now here
+    # --- THIS IS THE FIX: Object merging logic is now HERE
     # ---
     live_room_objects = []
     # This list is from the deep-copied room data
-    all_objects = room_db_data.get("objects", []) 
+    all_objects_stubs = room_db_data.get("objects", []) 
     
-    if all_objects:
-        for obj in all_objects: # obj is a dict (a stub) in the list
-            node_id = obj.get("node_id")
-            monster_id = obj.get("monster_id")
+    # Get a reference to the stubs list in the *cache* to update UIDs
+    room_data_in_cache = world.game_rooms.get(room.room_id, {})
+    all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
+    cache_stubs_by_content = {str(s): s for s in all_objects_stubs_in_cache}
+    
+    if all_objects_stubs:
+        for obj_stub in all_objects_stubs: # obj is a dict (a stub) in the list
+            node_id = obj_stub.get("node_id")
+            monster_id = obj_stub.get("monster_id")
+            obj_stub_in_cache = cache_stubs_by_content.get(str(obj_stub)) # Get cache reference
 
             # 1. Is it a node?
             if node_id:
                 template = world.game_nodes.get(node_id)
                 if template:
                     merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj) 
+                    merged_obj.update(obj_stub) 
                     if "uid" not in merged_obj:
                          merged_obj["uid"] = uuid.uuid4().hex
-                         obj["uid"] = merged_obj["uid"] # Save UID to the stub
+                         if obj_stub_in_cache:
+                            obj_stub_in_cache["uid"] = merged_obj["uid"] # Save UID to cache
                     live_room_objects.append(merged_obj)
-                # else: skip (bad node_id)
             
             # 2. Is it a monster/NPC stub?
             elif monster_id:
-                # --- THIS IS THE FIX (Part 2) ---
-                # Get or CREATE the UID on the stub itself
-                uid = obj.get("uid")
+                uid = obj_stub.get("uid")
                 if not uid:
                     uid = uuid.uuid4().hex
-                    obj["uid"] = uid # Save UID back to the stub in room_db_data
-                # --- END FIX ---
+                    if obj_stub_in_cache:
+                        obj_stub_in_cache["uid"] = uid # Save UID back to the stub in cache
                 
                 if uid and world.get_defeated_monster(uid) is not None:
                     continue # It's defeated, skip it
@@ -300,26 +304,21 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                 template = world.game_monster_templates.get(monster_id)
                 if template:
                     merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj) # Apply instance vars (like the UID we just set)
+                    merged_obj.update(obj_stub) # Apply instance vars (like the UID)
+                    merged_obj["uid"] = uid # Ensure UID is set
                     live_room_objects.append(merged_obj)
-                # else: skip (bad monster_id)
 
             # 3. Is it a simple object (door, corpse, item, etc.)?
             else:
-                if obj.get("is_npc") and "uid" not in obj:
-                    obj["uid"] = uuid.uuid4().hex
+                if obj_stub.get("is_npc") and "uid" not in obj_stub:
+                    uid = uuid.uuid4().hex
+                    obj_stub["uid"] = uid
+                    if obj_stub_in_cache:
+                        obj_stub_in_cache["uid"] = uid
                     
-                live_room_objects.append(obj)
+                live_room_objects.append(obj_stub)
             
     room.objects = live_room_objects
-    
-    # ---
-    # --- THIS IS THE FIX (Part 3) ---
-    # ---
-    # Now that we've added UIDs to the stubs in our *copy* of the
-    # room data (`room_db_data`), we save this copy back into the
-    # world's cache, making the UIDs persistent.
-    world.update_room_cache(room.room_id, room_db_data)
     # ---
     # --- END FIX
     # ---

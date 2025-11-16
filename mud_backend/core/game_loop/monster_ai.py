@@ -201,3 +201,54 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                             print(f"{log_time_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
                     elif config.DEBUG_MODE:
                         print(f"{log_time_prefix} - MONSTER_AI: {monster.get('name')} move failed (room state changed).")
+
+
+# ---
+# --- NEW FUNCTION FOR AMBIENT MESSAGES
+# ---
+def process_monster_ambient_messages(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
+    """
+    Processes ambient, non-combat messages for all active monsters in rooms with players.
+    """
+    
+    # Get all rooms (this is a copy)
+    all_rooms = world.get_all_rooms()
+    # Get all player locations
+    player_locations = set()
+    for p_name, p_data in world.get_all_players_info():
+        player_locations.add(p_data.get("current_room_id"))
+
+    for room_id in player_locations:
+        room_data = all_rooms.get(room_id)
+        if not room_data or "objects" not in room_data:
+            continue
+
+        # Room is active (has players), check monsters
+        for obj in room_data.get("objects", []):
+            if obj.get("is_monster"):
+                monster_uid = obj.get("uid")
+                
+                # Skip if in combat
+                if not monster_uid or world.get_combat_state(monster_uid):
+                    continue
+                
+                # Check for ambient messages
+                ambient_chance = obj.get("ambient_message_chance", 0.0)
+                ambient_messages = obj.get("ambient_messages", [])
+                
+                if ambient_messages and random.random() < ambient_chance:
+                    # Pick and send a message
+                    message_text = random.choice(ambient_messages)
+                    monster_name = obj.get("name", "A creature")
+                    
+                    # Format the broadcast. The messages are written from the monster's
+                    # perspective (e.g., "snaps its heavy pincers..."), so we just prepend the name.
+                    broadcast_msg = f"The {monster_name} {message_text}"
+                    
+                    broadcast_callback(room_id, broadcast_msg, "ambient")
+                    
+                    # Only one ambient message per room per tick to avoid spam
+                    break
+# ---
+# --- END NEW FUNCTION
+# ---

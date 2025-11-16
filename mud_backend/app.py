@@ -48,7 +48,7 @@ print("[SERVER START] Creating World instance...")
 world = World()
 world.socketio = socketio 
 # ---
-# --- THIS IS THE FIX ---
+# --- THIS IS THE FIX
 # ---
 world.app = app # Give the world access to the Flask app context
 # ---
@@ -206,11 +206,28 @@ def game_tick_thread(world_instance: World):
             if current_time - world_instance.last_monster_tick_time >= config.MONSTER_TICK_INTERVAL_SECONDS:
                 world_instance.last_monster_tick_time = current_time
                 log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+                # ---
+                # --- THIS IS THE MODIFICATION
+                # ---
+                log_prefix = f"{log_time} - MONSTER_TICK"
+                
+                # Handle monster movement
                 monster_ai.process_monster_ai(
                     world=world_instance,
-                    log_time_prefix=f"{log_time} - MONSTER_TICK",
+                    log_time_prefix=log_prefix,
                     broadcast_callback=broadcast_to_room
                 )
+                
+                # --- NEW: Handle monster ambient messages ---
+                monster_ai.process_monster_ambient_messages(
+                    world=world_instance,
+                    log_time_prefix=log_prefix,
+                    broadcast_callback=broadcast_to_room
+                )
+                # --- END NEW ---
+                # ---
+                # --- END MODIFICATION
+                # ---
 
             did_global_tick = check_and_run_game_tick(
                 world=world_instance,

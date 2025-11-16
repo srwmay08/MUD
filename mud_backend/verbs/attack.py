@@ -147,7 +147,13 @@ class Attack(BaseVerb):
                         break
 
         if not target_monster_data:
-            self.player.send_message(f"You don't see a **{target_name}** here to attack.")
+            # ---
+            # --- THIS IS THE FIX (Error message)
+            # ---
+            self.player.send_message(f"You don't see a '{target_name}' here to attack.")
+            # ---
+            # --- END FIX
+            # ---
             return
 
         # Get both template ID and Unique ID

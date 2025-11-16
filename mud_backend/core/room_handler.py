@@ -127,7 +127,77 @@ def show_room_to_player(player: Player, room: Room):
     # --- END NEW LOGIC ---
     
     # ---
-    # --- REMOVED: Object merging logic is no longer here.
+    # --- THIS IS THE FIX: Object merging logic is now here.
+    # ---
+    world = player.world
+    merged_objects = []
+    # Get the raw stubs from the room's db_data
+    all_objects_stubs = room.db_data.get("objects", []) 
+    
+    # Get a reference to the stubs list in the *cache* to update UIDs
+    room_data_in_cache = world.game_rooms.get(room.room_id, {})
+    all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
+    
+    # A safer way to map, just in case
+    # This maps the *string representation* of a stub to its *cache instance*
+    cache_stubs_by_content = {}
+    if all_objects_stubs_in_cache:
+        cache_stubs_by_content = {str(s): s for s in all_objects_stubs_in_cache}
+
+
+    if all_objects_stubs:
+        for obj_stub in all_objects_stubs: # obj is a dict (a stub) in the list
+            node_id = obj_stub.get("node_id")
+            monster_id = obj_stub.get("monster_id")
+            
+            # Find the corresponding stub in the cache to update it
+            obj_stub_in_cache = cache_stubs_by_content.get(str(obj_stub))
+
+            # 1. Is it a node?
+            if node_id:
+                template = world.game_nodes.get(node_id)
+                if template:
+                    merged_obj = copy.deepcopy(template)
+                    merged_obj.update(obj_stub) 
+                    if "uid" not in merged_obj:
+                         merged_obj["uid"] = uuid.uuid4().hex
+                         if obj_stub_in_cache:
+                            obj_stub_in_cache["uid"] = merged_obj["uid"] # Save UID
+                    merged_objects.append(merged_obj)
+            
+            # 2. Is it a monster/NPC stub?
+            elif monster_id:
+                uid = obj_stub.get("uid")
+                if not uid:
+                    uid = uuid.uuid4().hex
+                    if obj_stub_in_cache:
+                        obj_stub_in_cache["uid"] = uid # Save UID back to the stub in cache
+                
+                if uid and world.get_defeated_monster(uid) is not None:
+                    continue # It's defeated, skip it
+                
+                template = world.game_monster_templates.get(monster_id)
+                if template:
+                    merged_obj = copy.deepcopy(template)
+                    merged_obj.update(obj_stub) # Apply instance vars (like the UID)
+                    merged_obj["uid"] = uid # Ensure UID is set
+                    merged_objects.append(merged_obj)
+
+            # 3. Is it a simple object (door, corpse, item, etc.)?
+            else:
+                if obj_stub.get("is_npc") and "uid" not in obj_stub:
+                    uid = uuid.uuid4().hex
+                    obj_stub["uid"] = uid
+                    if obj_stub_in_cache:
+                        obj_stub_in_cache["uid"] = uid
+                    
+                merged_objects.append(obj_stub)
+    
+    # Now that merging is done, we overwrite the room's object list
+    # with the live, merged data for the rest of this function.
+    room.objects = merged_objects
+    # ---
+    # --- END FIX
     # ---
     
     # --- Skill-Based Object Perception ---
