@@ -3,17 +3,24 @@ import socket
 import json
 import os
 import uuid
-# --- MODIFIED: Added 'glob' ---
+# --- FIX: Import 'List' and 'glob' ---
 from typing import TYPE_CHECKING, Optional, Any, List
 import glob
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config
+# --- NEW: Import password hashing utilities ---
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# --- REFACTORED: Removed game_state import ---
+# from mud_backend.core import game_state
+# --- END REFACTOR ---
 
 if TYPE_CHECKING:
     from .game_objects import Player, Room
+    # --- REFACTORED: Add World type hint ---
     from .game_state import World
+    # --- END REFACTOR ---
 
 MONGO_URI = config.MONGO_URI
 DATABASE_NAME = config.DATABASE_NAME
@@ -21,6 +28,9 @@ DATABASE_NAME = config.DATABASE_NAME
 client: Optional[MongoClient] = None
 db = None
 
+# ---
+# --- THIS IS THE FIX: Create a static mock room cache
+# ---
 MOCK_ROOMS = {
     "town_square": { 
         "room_id": "town_square", 
@@ -56,6 +66,9 @@ MOCK_ROOMS = {
         "interior_id": "inn"
     }
 }
+# ---
+# --- END FIX
+# ---
 
 def get_db():
     global client, db 
@@ -71,6 +84,9 @@ def get_db():
             db = None
     return db
 
+# ---
+# --- MODIFIED: This function is now recursive for rooms
+# ---
 def ensure_initial_data():
     """Ensures base entities exist from JSON definitions."""
     database = get_db()
@@ -80,20 +96,16 @@ def ensure_initial_data():
     # --- 1. Load Rooms from JSON (MODIFIED) ---
     print("[DB INIT] Checking initial data from JSON...")
     try:
-        # --- NEW ROOM LOADING LOGIC ---
-        # 1. Look for the new 'data/rooms/' subdirectory
-        data_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'rooms')
-        json_files = glob.glob(os.path.join(data_dir, '*.json'))
+        # Find all files matching "rooms_*.json" in the data directory
+        data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
         
-        # 2. If it's not there, fall back to the old 'data/rooms_*.json' structure
+        # --- MODIFIED: Use recursive=True and **/ to search subdirectories ---
+        json_files = glob.glob(os.path.join(data_dir, '**/rooms_*.json'), recursive=True)
+        # --- END MODIFIED ---
+        
         if not json_files:
-            data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-            json_files = glob.glob(os.path.join(data_dir, 'rooms_*.json'))
-
-        if not json_files:
-            print("[DB ERROR] No 'rooms_*.json' or 'data/rooms/*.json' files found.")
+            print("[DB ERROR] No 'rooms_*.json' files found in data/ directory.")
             return
-        # --- END NEW ROOM LOADING LOGIC ---
 
         upsert_count = 0
         update_count = 0
@@ -134,11 +146,12 @@ def ensure_initial_data():
         print(f"[DB ERROR] An error occurred loading rooms: {e}")
 
     # 2. Test Player 'Alice'
+    # --- MODIFIED: Add account_username to Alice ---
     if database.players.count_documents({"name": "Alice"}) == 0:
         database.players.insert_one(
             {
                 "name": "Alice", 
-                "account_username": "dev", 
+                "account_username": "dev", # <-- NEW: Link to an account
                 "current_room_id": "town_square",
                 "level": 0, "experience": 0, "game_state": "playing", "chargen_step": 99,
                 "stats": {
@@ -164,7 +177,7 @@ def ensure_initial_data():
         })
         print("[DB INIT] Inserted test account 'dev' (password: dev).")
 
-# --- Account Functions (Unchanged) ---
+# --- NEW: Account Functions ---
 
 def fetch_account(username: str) -> Optional[dict]:
     """Fetches an account by username (case-insensitive)."""
@@ -191,12 +204,15 @@ def check_account_password(account_data: dict, password: str) -> bool:
     """Checks a given password against the stored hash."""
     return check_password_hash(account_data.get("password_hash", ""), password)
 
+# --- NEW: Character (Player) Functions ---
+
 def fetch_characters_for_account(account_username: str) -> List[dict]:
     """Fetches all player characters associated with an account."""
     database = get_db()
     if database is None: return []
     
     characters = []
+    # Find all players where 'account_username' matches (case-insensitive)
     cursor = database.players.find({
         "account_username": {"$regex": f"^{account_username}$", "$options": "i"}
     })
@@ -204,11 +220,12 @@ def fetch_characters_for_account(account_username: str) -> List[dict]:
         characters.append(char)
     return characters
 
-# --- Player & Room Functions (Unchanged) ---
+# --- MODIFIED: Player & Room Functions ---
 
 def fetch_player_data(player_name: str) -> dict:
     database = get_db()
     if database is None: return {} 
+    # Check for player name (case-insensitive)
     player_data = database.players.find_one({"name": {"$regex": f"^{player_name}$", "$options": "i"}})
     return player_data if player_data else {}
 
@@ -216,17 +233,26 @@ def fetch_player_data(player_name: str) -> dict:
 def fetch_room_data(room_id: str) -> dict:
     database = get_db()
     if database is None:
+        # --- MOCK DB FALLBACK ---
+        # --- THIS IS THE FIX ---
+        # Return from our static mock cache if it exists
         mock = MOCK_ROOMS.get(room_id)
         if mock:
             return mock
-        return {} 
+        # --- END FIX ---
+        return {} # Original fallback
         
     room_data = database.rooms.find_one({"room_id": room_id})
     if room_data is None:
+        # ---
+        # --- THIS IS THE SECOND FIX ---
+        # If the DB is connected but the query fails, *also* check mock data
+        # This handles race conditions where the cache isn't populated yet
         mock = MOCK_ROOMS.get(room_id)
         if mock:
             print(f"[DB WARN] room_id '{room_id}' not found in DB, serving mock data.")
             return mock
+        # --- END FIX ---
         return {"room_id": "void", "name": "The Void", "description": "Nothing but endless darkness here."}
     return room_data
 
@@ -237,6 +263,7 @@ def save_game_state(player: 'Player'):
         return
         
     player_data = player.to_dict()
+    # Ensure account_username is saved
     player_data["account_username"] = player.account_username 
     
     result = database.players.update_one(
@@ -271,21 +298,27 @@ def save_room_state(room: 'Room'):
 def fetch_all_rooms() -> dict:
     """
     Fetches all rooms and ensures every monster has a unique runtime ID (uid).
+    (MODIFIED to load from all room files)
     """
     database = get_db()
     if database is None:
         print("[DB WARN] No database connection, cannot fetch all rooms.")
+        # --- NEW: Fallback to mock data if DB is down ---
         print("[DB WARN] Loading MOCK_ROOMS cache.")
         return MOCK_ROOMS
+        # --- END NEW ---
         
     print("[DB INIT] Caching all rooms from database...")
     rooms_dict = {}
     try:
+        # This function is called *after* ensure_initial_data,
+        # so the DB collection "rooms" has all zones.
         for room_data in database.rooms.find():
             room_id = room_data.get("room_id")
             if room_id:
                 if "objects" in room_data:
                     for obj in room_data["objects"]:
+                        # --- MODIFIED: Assign UID to NPCs as well ---
                         if (obj.get("is_monster") or obj.get("is_npc")) and "uid" not in obj:
                             obj["uid"] = uuid.uuid4().hex
                 rooms_dict[room_id] = room_data
@@ -295,96 +328,120 @@ def fetch_all_rooms() -> dict:
         print(f"[DB ERROR] Failed to fetch all rooms: {e}")
         return {}
 
-# ---
-# --- NEW HELPER FUNCTIONS
-# ---
-def _load_json_data(file_path: str) -> Any:
-    """Helper to load a JSON file from a full path."""
+def _load_json_data(filename: str) -> Any: # Changed to Any
+    """Helper to load a JSON file from the 'data' directory."""
     try:
-        with open(file_path, 'r') as f:
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', filename)
+        with open(json_path, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        print(f"[DB ERROR] Could not find file at: {file_path}")
+        print(f"[DB ERROR] Could not find '{filename}' at: {json_path}")
     except json.JSONDecodeError:
-        print(f"[DB ERROR] File contains invalid JSON: {file_path}")
+        print(f"[DB ERROR] '{filename}' contains invalid JSON.")
     except Exception as e:
-        print(f"[DB ERROR] An error occurred loading '{file_path}': {e}")
-    return None # Return None on failure
-
-def _load_all_json_from_dir(directory_name: str, merge_type: str = "dict") -> Any:
-    """
-    Loads all *.json files from a subdirectory in 'data/'
-    and merges them as either a single dictionary or a single list.
-    
-    Includes fallback to a single flat file (e.g., 'data/items.json').
-    """
-    data_dir = os.path.join(os.path.dirname(__file__), '..', 'data', directory_name)
-    json_files = glob.glob(os.path.join(data_dir, '*.json'))
-    
-    # Fallback to the old flat file if the directory is empty/missing
-    if not json_files:
-        original_file = os.path.join(os.path.dirname(__file__), '..', 'data', f'{directory_name}.json')
-        if os.path.exists(original_file):
-            json_files = [original_file]
-        else:
-            print(f"[DB WARN] No JSON files found for '{directory_name}' in data/ or data/{directory_name}/.")
-            return [] if merge_type == "list" else {}
-
-    master_data = [] if merge_type == "list" else {}
-    
-    for file_path in json_files:
-        file_content = _load_json_data(file_path)
-        
-        if file_content is not None:
-            if merge_type == "list" and isinstance(file_content, list):
-                master_data.extend(file_content)
-            elif merge_type == "dict" and isinstance(file_content, dict):
-                master_data.update(file_content)
-            else:
-                print(f"[DB ERROR] File {file_path} is not of expected type '{merge_type}'.")
-                        
-    return master_data
+        print(f"[DB ERROR] An error occurred loading '{filename}': {e}")
+    return {} if ".json" in filename else [] # Return list for e.g. leveling.json
 
 # ---
-# --- MODIFIED DATA FETCHERS
+# --- MODIFIED: This function is now recursive for monsters
 # ---
-
 def fetch_all_monsters() -> dict:
-    print("[DB INIT] Caching all monsters...")
-    # Monsters files are lists [...]
-    all_monsters_list = _load_all_json_from_dir("monsters", "list")
-    monster_templates = {m["monster_id"]: m for m in all_monsters_list if isinstance(m, dict) and m.get("monster_id")}
-    print(f"[DB INIT] ...Cached {len(monster_templates)} monsters.")
+    """
+    Fetches all monsters from all 'monsters*.json' files in the data directory.
+    """
+    print("[DB INIT] Caching all monsters from monsters*.json files...")
+    monster_templates = {}
+    try:
+        data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+        # --- THIS IS THE FIX: Removed the underscore from the pattern ---
+        json_files = glob.glob(os.path.join(data_dir, '**/monsters*.json'), recursive=True)
+
+        for file_path in json_files:
+            # print(f"[DB INIT] Loading monster file: {os.path.basename(file_path)}")
+            with open(file_path, 'r') as f:
+                monster_list = json.load(f)
+            
+            if isinstance(monster_list, list):
+                for m in monster_list:
+                    if isinstance(m, dict) and m.get("monster_id"):
+                        # This will overwrite monsters with the same ID; last one loaded wins.
+                        monster_templates[m["monster_id"]] = m
+            else:
+                 print(f"[DB WARN] Monster file {file_path} is not a valid list.")
+    except Exception as e:
+        print(f"[DB ERROR] An error occurred loading monsters: {e}")
+        
+    print(f"[DB INIT] ...Cached {len(monster_templates)} monsters from {len(json_files)} file(s).")
     return monster_templates
 
+# ---
+# --- MODIFIED: This function is now recursive for loot
+# ---
 def fetch_all_loot_tables() -> dict:
-    print("[DB INIT] Caching all loot tables...")
-    # Loot file is a dictionary {...}
-    loot_tables = _load_all_json_from_dir("loot", "dict")
-    print(f"[DB INIT] ...Cached {len(loot_tables)} loot tables.")
+    """
+    Fetches all loot tables from all 'loot*.json' files in the data directory.
+    """
+    print("[DB INIT] Caching all loot tables from loot*.json files...")
+    loot_tables = {}
+    try:
+        data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+        # --- THIS IS THE FIX: Removed the underscore from the pattern ---
+        json_files = glob.glob(os.path.join(data_dir, '**/loot*.json'), recursive=True)
+
+        for file_path in json_files:
+            # print(f"[DB INIT] Loading loot file: {os.path.basename(file_path)}")
+            with open(file_path, 'r') as f:
+                table_data = json.load(f)
+            if isinstance(table_data, dict):
+                loot_tables.update(table_data) # Loot tables are dicts, so we merge them
+            else:
+                print(f"[DB WARN] Loot file {file_path} is not a valid dictionary.")
+    except Exception as e:
+        print(f"[DB ERROR] An error occurred loading loot tables: {e}")
+    
+    print(f"[DB INIT] ...Cached {len(loot_tables)} loot tables from {len(json_files)} file(s).")
     return loot_tables
 
+# ---
+# --- MODIFIED: This function is now recursive for items
+# ---
 def fetch_all_items() -> dict:
-    print("[DB INIT] Caching all items...")
-    # Item files are dictionaries {...}
-    all_items_master_dict = _load_all_json_from_dir("items", "dict")
-    print(f"[DB INIT] ...Cached {len(all_items_master_dict)} items.")
-    return all_items_master_dict
+    """
+    Fetches all items from all 'items*.json' files in the data directory.
+    """
+    print("[DB INIT] Caching all items from items*.json files...")
+    items = {}
+    try:
+        data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+        # --- THIS IS THE FIX: Removed the underscore from the pattern ---
+        json_files = glob.glob(os.path.join(data_dir, '**/items*.json'), recursive=True)
+
+        for file_path in json_files:
+            # print(f"[DB INIT] Loading item file: {os.path.basename(file_path)}")
+            with open(file_path, 'r') as f:
+                item_data = json.load(f)
+            if isinstance(item_data, dict):
+                items.update(item_data) # Items are dicts, so we merge them
+            else:
+                 print(f"[DB WARN] Item file {file_path} is not a valid dictionary.")
+    except Exception as e:
+        print(f"[DB ERROR] An error occurred loading items: {e}")
+    
+    print(f"[DB INIT] ...Cached {len(items)} items from {len(json_files)} file(s).")
+    return items
 
 def fetch_all_levels() -> list:
-    print("[DB INIT] Caching level table...")
-    # Leveling file is a list [...]
-    level_data = _load_all_json_from_dir("leveling", "list")
+    print("[DB INIT] Caching level table from leveling.json...")
+    level_data = _load_json_data("leveling.json")
     if isinstance(level_data, list):
         print(f"[DB INIT] ...Cached {len(level_data)} level thresholds.")
         return level_data
-    print("[DB ERROR] Leveling data is not a valid list.")
+    print("[DB ERROR] 'leveling.json' is not a valid list.")
     return []
 
 def fetch_all_skills() -> dict:
-    print("[DB INIT] Caching all skills...")
-    # Skills file is a list [...]
-    skill_list = _load_all_json_from_dir("skills", "list")
+    print("[DB INIT] Caching all skills from skills.json...")
+    skill_list = _load_json_data("skills.json")
     if not isinstance(skill_list, list):
         print("[DB ERROR] 'skills.json' is not a valid list.")
         return {}
@@ -394,32 +451,32 @@ def fetch_all_skills() -> dict:
 
 def fetch_all_criticals() -> dict:
     """Loads criticals.json into a dictionary."""
-    print("[DB INIT] Caching all criticals...")
-    # Criticals file is a dictionary {...}
-    criticals = _load_all_json_from_dir("criticals", "dict")
+    print("[DB INIT] Caching all criticals from criticals.json...")
+    criticals = _load_json_data("criticals.json")
     print(f"[DB INIT] ...Cached {len(criticals)} critical tables.")
     return criticals
 
 def fetch_all_quests() -> dict:
     """Loads quests.json into a dictionary."""
-    print("[DB INIT] Caching all quests...")
-    # Quests file is a dictionary {...}
-    quests = _load_all_json_from_dir("quests", "dict")
+    print("[DB INIT] Caching all quests from quests.json...")
+    quests = _load_json_data("quests.json")
     print(f"[DB INIT] ...Cached {len(quests)} quests.")
     return quests
 
 def fetch_all_nodes() -> dict:
     """Loads nodes.json into a dictionary."""
-    print("[DB INIT] Caching all gathering nodes...")
-    # Nodes file is a dictionary {...}
-    nodes = _load_all_json_from_dir("nodes", "dict")
+    print("[DB INIT] Caching all gathering nodes from nodes.json...")
+    nodes = _load_json_data("nodes.json")
     print(f"[DB INIT] ...Cached {len(nodes)} nodes.")
     return nodes
 
+# ---
+# --- NEW: Add fetch_all_factions
+# ---
 def fetch_all_factions() -> dict:
     """Loads faction.json into a dictionary."""
-    print("[DB INIT] Caching all factions...")
-    # Faction file is a dictionary {...}
-    factions = _load_all_json_from_dir("faction", "dict")
+    print("[DB INIT] Caching all factions from faction.json...")
+    factions = _load_json_data("faction.json")
     print(f"[DB INIT] ...Cached {len(factions.get('factions', 0))} factions.")
     return factions
+# --- END NEW ---
