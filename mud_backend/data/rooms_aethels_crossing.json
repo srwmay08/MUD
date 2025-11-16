@@ -421,7 +421,7 @@
                 "name": "a note",
                 "item_id": "inn_note",
                 "description": "A folded piece of parchment rests on the table.",
-                "perception_dc": 10,
+                "perception_dc": 1,
                 "keywords": [
                     "note",
                     "parchment",
