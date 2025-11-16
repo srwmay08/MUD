@@ -122,6 +122,14 @@ class Mine(BaseVerb):
         taps_left = node_obj.get("default_taps", 1) - len(node_obj.get("players_tapped", []))
         if taps_left <= 0:
             self.player.send_message(f"The {node_obj['name']} is now depleted.")
+            # ---
+            # --- THIS IS THE FIX ---
+            # ---
+            if node_obj in self.room.objects:
+                self.room.objects.remove(node_obj)
+            # ---
+            # --- END FIX
+            # ---
             # (Here you would remove it from room.objects and add it to a
             # respawn timer, similar to how monsters work)
             
@@ -176,33 +184,30 @@ class Prospect(BaseVerb):
 
         if refresh_room:
             # ---
-            # --- THIS IS THE FIX: Save the room state
+            # --- THIS IS THE FIX ---
             # ---
+            # 1. Save the room so the node is persistent
             self.world.save_room(self.room)
-            # ---
-            # --- END FIX
-            # ---
             
-            # Broadcast to the room
+            # 2. Get the player's SID to skip them in the broadcast
+            player_info = self.world.get_player_info(self.player.name.lower())
+            sid = player_info.get("sid") if player_info else None
+            
+            # 3. Broadcast to *everyone else* in the room
             self.world.broadcast_to_room(
                 self.room.room_id, 
                 f"{self.player.name} spots {found_nodes_list[0]}!", 
                 "message",
-                skip_sid=None # Send to everyone
+                skip_sid=sid # Send to everyone *except* the player
             )
             
-            # Refresh the room for everyone present
-            for sid, data in self.world.get_all_players_info():
-                if data["current_room_id"] == self.room.room_id:
-                    player_obj = data.get("player_obj")
-                    if player_obj:
-                        # Clear messages before showing room
-                        player_obj.messages.clear()
-                        show_room_to_player(player_obj, self.room)
-                        # Send their prompt / vitals
-                        self.world.socketio.emit('command_response', 
-                            {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
-                            to=sid)
+            # 4. Send a simple message *only* to the player
+            self.player.send_message(f"You spot {found_nodes_list[0]}!")
+            
+            # 5. REMOVED the loop that called show_room_to_player
+            # ---
+            # --- END FIX
+            # ---
         else:
             self.player.send_message("You do not sense any deposits here.")
         # ---

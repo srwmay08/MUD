@@ -113,6 +113,14 @@ class Harvest(BaseVerb):
         taps_left = node_obj.get("default_taps", 1) - len(node_obj.get("players_tapped", []))
         if taps_left <= 0:
             self.player.send_message(f"The {node_obj['name']} is now depleted.")
+            # ---
+            # --- THIS IS THE FIX ---
+            # ---
+            if node_obj in self.room.objects:
+                self.room.objects.remove(node_obj)
+            # ---
+            # --- END FIX
+            # ---
             # (Add respawn logic here)
             
         self.world.save_room(self.room)

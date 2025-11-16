@@ -87,6 +87,24 @@ def _get_dynamic_description(
     return "You are in a nondescript location."
 
 
+# ---
+# --- THIS IS THE NEW SORTING HELPER
+# ---
+def _get_object_sort_priority(obj: Dict[str, Any]) -> int:
+    """Assigns a numerical priority to objects for sorting."""
+    if obj.get("is_npc"):
+        return 1
+    if obj.get("is_monster"):
+        return 2
+    if obj.get("is_gathering_node"):
+        return 3
+    if obj.get("is_item") or obj.get("is_corpse"):
+        return 4
+    return 5 # Other objects (doors, ponds, statues, etc.)
+# ---
+# --- END NEW HELPER
+# ---
+
 def show_room_to_player(player: Player, room: Room):
     """
     Sends all room information (name, desc, objects, exits, players) to the player.
@@ -114,6 +132,19 @@ def show_room_to_player(player: Player, room: Room):
     
     # --- Skill-Based Object Perception ---
     player_perception = player.stats.get("WIS", 0)
+    
+    # ---
+    # --- THIS IS THE NEW SORTING FIX
+    # ---
+    # Sort the objects list before displaying it
+    if room.objects:
+        room.objects.sort(key=lambda obj: (
+            _get_object_sort_priority(obj), 
+            obj.get("name", "z") # Secondary sort by name
+        ))
+    # ---
+    # --- END SORTING FIX
+    # ---
     
     # 1. Show Objects
     # --- MODIFIED: Iterate over room.objects (which is now pre-merged) ---
