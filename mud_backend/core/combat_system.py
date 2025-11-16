@@ -392,6 +392,16 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         defender_name_possessive = f"{defender_name}'"
     # --- END MODIFICATION ---
 
+    # ---
+    # --- THIS IS THE FIX: Define attacker_name_possessive
+    # ---
+    attacker_name_possessive = f"{attacker_name}'s"
+    if attacker_name.endswith('s'):
+        attacker_name_possessive = f"{attacker_name}'"
+    # ---
+    # --- END FIX
+    # ---
+
     if is_defender_player:
         defender_armor_data = defender.get_equipped_item_data("torso")
         defender_shield_data = defender.get_equipped_item_data("offhand")
@@ -466,6 +476,7 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
 
     if attacker_weapon_data:
         # Player or NPC is using a weapon ITEM
+        # Get factors from the weapon item itself
         weapon_damage_factor = attacker_weapon_data.get("damage_factors", {}).get(defender_armor_type_str, 0.100)
         weapon_display = attacker_weapon_data.get("name", "their weapon")
         
@@ -477,6 +488,7 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         # --- END MODIFICATION ---
     else:
         # Player brawling or Monster natural attack
+        # Get weapon name from the selected attack
         weapon_display = selected_attack.get("weapon_name", "their fist")
         
         # --- MODIFICATION ---
