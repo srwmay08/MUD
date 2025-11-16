@@ -144,9 +144,13 @@ class Forage(BaseVerb):
         
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
 
-        if survival_skill < 1:
-             self.player.send_message("You don't have the proper training to forage for plants.")
-             return
+        # ---
+        # --- FIX: Removed skill check
+        # ---
+        # if survival_skill < 1:
+        #      self.player.send_message("You don't have the proper training to forage for plants.")
+        #      return
+        # --- END FIX ---
              
         # This logic is copied from the old "FORAGE SENSE"
         self.player.send_message("You scan the area for forageable plants...")

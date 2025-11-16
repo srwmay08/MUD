@@ -256,9 +256,63 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     room = Room(room_db_data.get("room_id", "void"), room_db_data.get("name", "The Void"), room_db_data.get("description", "..."), db_data=room_db_data)
 
     # ---
-    # --- REMOVED: Object merging logic moved to room_handler.py
+    # --- THIS IS THE FIX: Object merging logic is now here
     # ---
-    room.objects = room_db_data.get("objects", []) 
+    live_room_objects = []
+    all_objects = room_db_data.get("objects", []) 
+    if all_objects:
+        for obj in all_objects:
+            is_monster = obj.get("is_monster")
+            is_npc = obj.get("is_npc")
+            
+            # --- ADD YOUR NEW CHECK HERE ---
+            node_id = obj.get("node_id")
+
+            if (is_monster or is_npc) and not node_id: # Make sure nodes aren't mistaken for monsters
+                # ... (this is your existing monster/NPC logic) ...
+                # ... (it loads the monster template and appends) ...
+                uid = obj.get("uid")
+                if world.get_defeated_monster(uid) is not None:
+                    continue 
+                
+                monster_id = obj.get("monster_id")
+                if monster_id and "stats" not in obj:
+                    template = world.game_monster_templates.get(monster_id)
+                    if template:
+                        current_uid = obj["uid"]
+                        merged_obj = copy.deepcopy(template) # <-- FIX
+                        merged_obj.update(obj) # <-- FIX
+                        merged_obj["uid"] = current_uid # <-- FIX
+                        live_room_objects.append(merged_obj) # <-- FIX
+                    else:
+                        live_room_objects.append(obj) # <-- ADDED
+                else:
+                    live_room_objects.append(obj) # <-- ADDED
+
+            
+            elif node_id:
+                template = world.game_nodes.get(node_id)
+                if template:
+                    # Merge template (defaults) with instance (room data)
+                    merged_obj = copy.deepcopy(template)
+                    # This update() is key: it overwrites template
+                    # values (like players_tapped: []) with the
+                    # saved room values (like players_tapped: ["Player1"])
+                    merged_obj.update(obj)
+                    # Add a UID for tracking taps, if it doesn't have one
+                    if "uid" not in merged_obj:
+                         merged_obj["uid"] = uuid.uuid4().hex
+                    live_room_objects.append(merged_obj)
+                # --- END NEW LOGIC ---
+            
+            else:
+                # Not a monster, NPC, or node. Just add it (e.g., door, ladder)
+                live_room_objects.append(obj)
+            
+    room.objects = live_room_objects
+    # ---
+    # --- END FIX
+    # ---
 
 
     parts = command_line.strip().split()

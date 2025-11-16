@@ -131,17 +131,19 @@ class Survey(BaseVerb):
             
         forestry_skill = self.player.skills.get("forestry", 0) 
 
-        # --- NEW: Tool Check ---
         if not _has_tool(self.player, "lumberjacking"):
             self.player.send_message("You need to be wielding an axe to survey trees.")
             return
-        # --- END NEW ---
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
-        if forestry_skill < 1: 
-             self.player.send_message("You don't have the proper training to survey for trees.") 
-             return
+        # ---
+        # --- FIX: Removed skill check
+        # ---
+        # if forestry_skill < 1: 
+        #      self.player.send_message("You don't have the proper training to survey for trees.") 
+        #      return
+        # --- END FIX ---
 
         self.player.send_message("You scan the area for useable trees...") 
         

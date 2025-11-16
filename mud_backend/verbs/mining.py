@@ -131,17 +131,19 @@ class Prospect(BaseVerb):
             
         geology_skill = self.player.skills.get("geology", 0) # <-- Use geology
         
-        # --- NEW: Tool Check ---
         if not _has_tool(self.player, "mining"):
             self.player.send_message("You need to be wielding a pickaxe to prospect.")
             return
-        # --- END NEW ---
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
-        if geology_skill < 1: 
-             self.player.send_message("You don't have the proper training to prospect for ore.") 
-             return
+        # ---
+        # --- FIX: Removed skill check
+        # ---
+        # if geology_skill < 1: 
+        #      self.player.send_message("You don't have the proper training to prospect for ore.") 
+        #      return
+        # --- END FIX ---
 
         self.player.send_message("You scan the area for mineral deposits...") 
         

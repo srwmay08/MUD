@@ -109,67 +109,17 @@ def show_room_to_player(player: Player, room: Room):
     # --- END NEW LOGIC ---
     
     # ---
-    # --- REMOVED redundant ambient_desc. The main description
-    # --- now contains all the time and weather info.
+    # --- REMOVED: Object merging logic is no longer here.
     # ---
     
-    # ---
-    # --- THIS IS THE FIX: Insert Template Merging Logic
-    # ---
-    live_room_objects = []
-    all_objects = room.objects # Get the raw list from the Room object
-    
-    if all_objects:
-        for obj in all_objects:
-            is_monster = obj.get("is_monster")
-            is_npc = obj.get("is_npc")
-            node_id = obj.get("node_id")
-
-            if (is_monster or is_npc) and not node_id:
-                uid = obj.get("uid")
-                if player.world.get_defeated_monster(uid) is not None:
-                    continue 
-                
-                monster_id = obj.get("monster_id")
-                if monster_id and "stats" not in obj:
-                    template = player.world.game_monster_templates.get(monster_id)
-                    if template:
-                        # --- Create a new object by merging ---
-                        merged_obj = copy.deepcopy(template)
-                        merged_obj.update(obj)
-                        # Ensure original UID is preserved
-                        if "uid" in obj:
-                            merged_obj["uid"] = obj["uid"]
-                        live_room_objects.append(merged_obj)
-                    else:
-                         live_room_objects.append(obj) # Append original if template not found
-                else:
-                    live_room_objects.append(obj) # Already a full object (or corpse)
-            
-            elif node_id:
-                template = player.world.game_nodes.get(node_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj)
-                    if "uid" not in merged_obj:
-                         merged_obj["uid"] = uuid.uuid4().hex
-                    live_room_objects.append(merged_obj)
-                # If template not found, it's skipped (no "else")
-            
-            else:
-                live_room_objects.append(obj)
-    # ---
-    # --- END FIX
-    # ---
-
     # --- Skill-Based Object Perception ---
     player_perception = player.stats.get("WIS", 0)
     
     # 1. Show Objects
-    # --- MODIFIED: Iterate over live_room_objects ---
-    if live_room_objects:
+    # --- MODIFIED: Iterate over room.objects (which is now pre-merged) ---
+    if room.objects:
         html_objects = []
-        for obj in live_room_objects:
+        for obj in room.objects:
     # --- END MODIFIED ---
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
