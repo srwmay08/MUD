@@ -16,6 +16,20 @@
         "movement_rules": {
             "wander_chance": 0.0
         },
+        "attack_verb": "pinches",
+        "weapon_name": "its claw",
+        "ambient_message_chance": 0.2,
+        "ambient_messages": [
+            "The crab snaps its heavy pincers together with a loud, sharp CLACK.",
+            "The crab scuttles sideways on the sand, its many legs a blur.",
+            "Foam and bubbles gurgle from the crab's mandibles as it clacks aggressively.",
+            "The crab raises its formidable claws high, waving them in a threatening display.",
+            "The crab's stalk-like eyes quiver as they track your movements.",
+            "A low chittering sound comes from the crab as it digs its legs into the ground.",
+            "The crab hunches down, bracing itself behind its hard, mottled carapace.",
+            "The crab circles you warily, its largest pincer open and ready.",
+            "The crab stamps the ground with its legs, kicking up a small spray of water and sand."
+        ],
         "stats": {
             "STR": 35, "CON": 40, "DEX": 20, "AGI": 15,
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
@@ -94,6 +108,8 @@
         "movement_rules": {
             "wander_chance": 0.0
         },
+        "attack_verb": "snaps",
+        "weapon_name": "its heavy claw",
         "stats": {
             "STR": 40, "CON": 45, "DEX": 20, "AGI": 20,
             "LOG": 10, "INT": 10, "WIS": 10, "INF": 10,
