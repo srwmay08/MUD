@@ -33,22 +33,30 @@ class Attack(BaseVerb):
         }
         
         # ---
-        # --- THIS IS THE FIX (Problem 2) ---
+        # --- THIS IS THE FIX (Multi-line message handling) ---
         # ---
-        # Show the attack message (e.g., "You swing...")
-        resolve_data["messages"].append(attack_results['attacker_msg'])
-        # ALWAYS show the roll string
+        # 1. Show the attempt
+        resolve_data["messages"].append(attack_results['attempt_msg'])
+        
+        # 2. Show the roll string
         resolve_data["messages"].append(attack_results['roll_string'])
+        
+        # 3. Show the result (hit or miss)
+        resolve_data["messages"].append(attack_results['result_msg'])
         # ---
         # --- END FIX
         # ---
         
         if attack_results['hit']:
-            # --- MOVED: These lines are now above
-            # resolve_data["messages"].append(attack_results['attacker_msg'])
-            # resolve_data["messages"].append(attack_results['roll_string'])
             # ---
-            resolve_data["messages"].append(attack_results['damage_msg'])
+            # --- THIS IS THE FIX (Critical message) ---
+            # ---
+            # 4. Show the critical message (if any)
+            if attack_results['critical_msg']:
+                resolve_data["messages"].append(attack_results['critical_msg'])
+            # ---
+            # --- END FIX
+            # ---
             
             damage = attack_results['damage']
             is_fatal = attack_results['is_fatal']
@@ -65,7 +73,15 @@ class Attack(BaseVerb):
             )
 
             if new_hp <= 0 or is_fatal:
-                resolve_data["messages"].append(f"**The {target_monster_data['name']} has been DEFEATED!**")
+                # ---
+                # --- THIS IS THE FIX (Consequence message) ---
+                # ---
+                # 5. Show the consequence (death)
+                consequence_msg = f"**The {target_monster_data['name']} has been DEFEATED!**"
+                resolve_data["messages"].append(consequence_msg)
+                # ---
+                # --- END FIX
+                # ---
                 resolve_data["combat_continues"] = False 
                 
                 nominal_xp = 1000 # TODO: Get from template
@@ -183,8 +199,14 @@ class Attack(BaseVerb):
         if combat_info and combat_info.get("target_id") and combat_info.get("target_id") != monster_uid:
             pass 
 
+        # ---
+        # --- THIS IS THE FIX (Don't show "You attack..." if already fighting)
+        # ---
         if not monster_is_fighting_player:
              self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
+        # ---
+        # --- END FIX
+        # ---
         
         resolve_data = self._resolve_and_handle_attack(target_monster_data)
         

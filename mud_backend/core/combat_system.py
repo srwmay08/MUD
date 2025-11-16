@@ -276,29 +276,28 @@ def calculate_defense_strength(defender: Any,
 
 
 # ---
-# --- THIS IS THE MODIFICATION
-# ---
-HIT_MESSAGES = {
-    "player_hit": ["You {verb} {weapon_display} and strike {defender}!", "Your {weapon_display} finds its mark on {defender}!", "A solid blow from {weapon_display} connects with {defender}!"],
-    "monster_hit": ["{attacker} {verb} {weapon_display} and strikes {defender}!", "{attacker} hits {defender} with {weapon_display}!", "A solid blow from {attacker} connects with {defender} using {weapon_display}!"],
-    "player_crit": ["A devastating blow! Your {weapon_display} slams into {defender} with incredible force!", "You find a vital spot, driving your {weapon_display} deep into {defender}!", "A perfect strike! {defender} reels from the hit!"],
-    "monster_crit": ["A devastating blow! {attacker} slams {weapon_display} into {defender}!", "{attacker} finds a vital spot, driving {weapon_display} into {defender}!", "A perfect strike! {defender} reels from {attacker}'s hit!"],
-    "player_miss": ["You {verb} {weapon_display} at {defender}, but miss.", "{defender} deftly avoids your {weapon_display}!", "Your {weapon_display} whistles through the air, hitting nothing."],
-    "monster_miss": ["{attacker} {verb} {weapon_display} at {defender}, but misses.", "{defender} deftly avoids {attacker}'s {verb}!", "{attacker}'s attack whistles through the air, hitting nothing."],
-    "player_fumble": ["You {verb} wildly and lose your balance, fumbling your attack!", "Your {weapon_display} slips! You completely miss {defender}."],
-    "monster_fumble": ["{attacker} {verb} wildly and loses its balance, fumbling the attack!", "{attacker} completely misses {defender}."]
-}
-# ---
-# --- END MODIFICATION
+# --- MODIFICATION: Removed HIT_MESSAGES and get_flavor_message
 # ---
 
-def get_flavor_message(key, d100_roll, combat_roll_result):
-    if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
-        if d100_roll >= 95: return random.choice(HIT_MESSAGES[key.replace("hit", "crit")])
-        else: return random.choice(HIT_MESSAGES[key])
-    else:
-        if d100_roll <= 5: return random.choice(HIT_MESSAGES[key.replace("miss", "fumble")])
-        else: return random.choice(HIT_MESSAGES[key.replace("hit", "miss")])
+# ---
+# --- NEW: Added lists for randomized miss messages
+# ---
+PLAYER_MISS_MESSAGES = [
+    "   A clean miss.",
+    "   You miss {defender} completely.",
+    "   {defender} avoids the attack!",
+    "   An awkward miss.",
+    "   Your attack goes wide."
+]
+MONSTER_MISS_MESSAGES = [
+    "   A clean miss.",
+    "   {attacker} misses {defender} completely.",
+    "   {defender} avoids the attack!",
+    "   An awkward miss.",
+    "   The attack goes wide."
+]
+# --- END NEW ---
+
 
 HIT_LOCATIONS = [
     "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
@@ -384,6 +383,14 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     is_defender_player = isinstance(defender, Player)
     defender_name = defender.name if is_defender_player else defender.get("name", "Creature")
     defender_stance = defender.stance if is_defender_player else defender.get("stance", "creature")
+    
+    # ---
+    # --- MODIFICATION: Make defender name possessive
+    # ---
+    defender_name_possessive = f"{defender_name}'s"
+    if defender_name.endswith('s'):
+        defender_name_possessive = f"{defender_name}'"
+    # --- END MODIFICATION ---
 
     if is_defender_player:
         defender_armor_data = defender.get_equipped_item_data("torso")
@@ -423,8 +430,6 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         else:
             # Player is brawling
             attack_list = [{ "verb": "punches", "damage_type": "crush", "weapon_name": "your fist", "chance": 1.0 }]
-        msg_key_hit = "player_hit"
-        msg_key_miss = "player_miss"
     else:
         # Attacker is an NPC/Monster
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
@@ -435,8 +440,6 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         else:
             # Monster is using natural attacks, get attacks from monster data
             attack_list = attacker.get("attacks", [])
-        msg_key_hit = "monster_hit"
-        msg_key_miss = "monster_miss"
         
     # Failsafe for misconfigured monsters/items
     if not attack_list:
@@ -455,18 +458,35 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     # Get damage factors and weapon display name
     weapon_damage_factor = 0.100
     weapon_display = ""
+    # ---
+    # --- MODIFICATION: Get broadcast weapon display name
+    # ---
+    broadcast_weapon_display = "" # e.g., "his fist" or "a sword"
+    # --- END MODIFICATION ---
 
     if attacker_weapon_data:
         # Player or NPC is using a weapon ITEM
-        # Get factors from the weapon item itself
         weapon_damage_factor = attacker_weapon_data.get("damage_factors", {}).get(defender_armor_type_str, 0.100)
         weapon_display = attacker_weapon_data.get("name", "their weapon")
+        
+        # --- MODIFICATION ---
+        if is_attacker_player:
+            broadcast_weapon_display = f"your {attacker_weapon_data.get('name', 'weapon')}"
+        else:
+            broadcast_weapon_display = f"{attacker_name_possessive} {attacker_weapon_data.get('name', 'weapon')}"
+        # --- END MODIFICATION ---
     else:
         # Player brawling or Monster natural attack
-        # Get weapon name from the selected attack
         weapon_display = selected_attack.get("weapon_name", "their fist")
         
-        # For monsters, check for damage_factors on the monster itself
+        # --- MODIFICATION ---
+        if is_attacker_player:
+             broadcast_weapon_display = "your fist"
+        else:
+             # e.g., "its claw"
+             broadcast_weapon_display = selected_attack.get("weapon_name", f"{attacker_name_possessive} fist")
+        # --- END MODIFICATION ---
+        
         damage_factors = attacker.get("damage_factors", {}) if not is_attacker_player else {}
         weapon_damage_factor = damage_factors.get(defender_armor_type_str, 0.100)
 
@@ -501,18 +521,38 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     )
     
     # ---
-    # --- THIS IS THE MODIFICATION: Add 'verb'
+    # --- NEW: Build all message parts
     # ---
-    msg_vars = {"attacker": attacker_name, "defender": defender_name, "weapon_display": weapon_display, "verb": attack_verb}
-    # --- END MODIFICATION ---
+    msg_vars = {
+        "attacker": attacker_name, 
+        "defender": defender_name, 
+        "weapon_display": weapon_display, 
+        "verb": attack_verb
+    }
     
     results = {
-        'hit': False, 'damage': 0, 'roll_string': roll_string,
-        'attacker_msg': "", 'defender_msg': "", 'broadcast_msg': "",
-        'damage_msg': "", 'defender_damage_msg': "", 'broadcast_damage_msg': "",
+        'hit': False, 'damage': 0, 
+        'attempt_msg': "",          # For the attacker
+        'defender_attempt_msg': "", # For the defender
+        'broadcast_attempt_msg': "",# For the room
+        'roll_string': roll_string, # For attacker/defender
+        'result_msg': "",           # For attacker/defender
+        'broadcast_result_msg': "", # For the room
+        'critical_msg': "",         # For everyone
         'is_fatal': False
     }
 
+    # Build the "Attempt" messages
+    if is_attacker_player:
+        results['attempt_msg'] = f"You {attack_verb} {weapon_display} at {defender_name}!"
+        results['defender_attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at you!"
+        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at {defender_name}!"
+    else:
+        results['attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at you!"
+        results['defender_attempt_msg'] = f"You {attack_verb} {weapon_display} at {attacker_name}!"
+        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb} {weapon_display} at {defender_name}!"
+
+    # Build the "Result" messages
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
         
@@ -537,30 +577,42 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
             if wound_rank > existing_wound:
                 defender.wounds[hit_location] = wound_rank
         
-        flavor_msg = get_flavor_message(msg_key_hit, d100_roll, combat_roll_result)
-        results['attacker_msg'] = flavor_msg.format(**msg_vars)
+        # Create result message
+        results['result_msg'] = f"   ... and hits for {total_damage} points of damage!"
         
-        # --- MODIFIED: Create a generic broadcast message ---
-        broadcast_flavor_msg = get_flavor_message(msg_key_hit.replace("player", "monster"), d100_roll, combat_roll_result)
-        results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
-        # --- END MODIFIED ---
-        results['defender_msg'] = flavor_msg.format(**msg_vars)
+        # Create broadcast result (simpler)
+        if is_attacker_player:
+            results['broadcast_result_msg'] = f"You hit {defender_name} for {total_damage} points of damage!"
+        else:
+            results['broadcast_result_msg'] = f"{attacker_name} hits {defender_name} for {total_damage} points of damage!"
         
-        crit_msg = crit_result.get("message", "A solid hit!").format(defender=defender_name)
+        # Create critical message (if any)
+        crit_msg = crit_result.get("message", "").format(defender=defender_name)
+        if crit_msg:
+            results['critical_msg'] = f"   {crit_msg}"
         
-        results['damage_msg'] = f"  ... and hit for {total_damage} points of damage!\n  {crit_msg}"
-        results['defender_damage_msg'] = f"...and hit you for **{total_damage}** points of damage!\n{crit_msg}"
-        results['broadcast_damage_msg'] = f"{attacker_name} hits for **{total_damage}** damage!\n{crit_msg}"
-
     else:
+        # It's a miss
         results['hit'] = False
-        flavor_msg = get_flavor_message(msg_key_miss, d100_roll, combat_roll_result)
-        results['attacker_msg'] = flavor_msg.format(**msg_vars)
-        results['defender_msg'] = flavor_msg.format(**msg_vars)
-        broadcast_flavor_msg = get_flavor_message(msg_key_miss.replace("player", "monster"), d100_roll, combat_roll_result)
-        results['broadcast_msg'] = broadcast_flavor_msg.format(**msg_vars)
+        if is_attacker_player:
+            results['result_msg'] = random.choice(PLAYER_MISS_MESSAGES).format(**msg_vars)
+            results['broadcast_result_msg'] = f"You miss {defender_name}."
+        else:
+            # Attacker is monster, defender is player
+            # We must swap 'attacker' and 'defender' for the player's view
+            defender_pov_vars = {
+                "attacker": "You", 
+                "defender": attacker_name, 
+                "weapon_display": weapon_display, 
+                "verb": attack_verb
+            }
+            results['result_msg'] = random.choice(PLAYER_MISS_MESSAGES).format(**defender_pov_vars)
+            results['broadcast_result_msg'] = f"{attacker_name} misses {defender_name}."
 
     return results
+    # ---
+    # --- END NEW MESSAGE LOGIC
+    # ---
 
 
 def calculate_roundtime(agility: int) -> float:
@@ -660,45 +712,38 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
         sid_to_skip = None
         if is_defender_player:
             # ---
-            # --- THIS IS THE FIX (Problem 1) ---
+            # --- THIS IS THE FIX (Multi-line messages for defender)
             # ---
-            # Send all combat messages as the 'message' event
-            send_to_player_callback(defender.name, attack_results['defender_msg'], "message")
+            send_to_player_callback(defender.name, attack_results['attempt_msg'], "message")
+            send_to_player_callback(defender.name, attack_results['roll_string'], "message")
+            send_to_player_callback(defender.name, attack_results['result_msg'], "message")
+            if attack_results['hit'] and attack_results['critical_msg']:
+                 send_to_player_callback(defender.name, attack_results['critical_msg'], "message")
             # ---
             # --- END FIX
             # ---
             defender_info = world.get_player_info(defender.name.lower())
             if defender_info: sid_to_skip = defender_info.get("sid")
         
-        # --- MODIFIED: Use the correct broadcast message ---
-        # This callback is bugged in app.py, but we'll send the right msg_type anyway
-        broadcast_callback(attacker_room_id, attack_results['broadcast_msg'], "combat_broadcast", skip_sid=sid_to_skip)
+        # --- MODIFIED: Send simple broadcast message ---
+        broadcast_msg = attack_results['broadcast_attempt_msg']
+        if attack_results['hit']:
+            broadcast_msg = attack_results['broadcast_result_msg']
+            if attack_results['critical_msg']:
+                broadcast_msg += f"\n{attack_results['critical_msg']}"
+        else:
+            # The broadcast_attempt_msg already said they attacked,
+            # so just append the simple miss result.
+            broadcast_msg += f"\n{attack_results['broadcast_result_msg']}"
+        
+        broadcast_callback(attacker_room_id, broadcast_msg, "combat_broadcast", skip_sid=sid_to_skip)
         # --- END MODIFIED ---
         
-        if is_defender_player: 
-            # ---
-            # --- THIS IS THE FIX (Problem 1) ---
-            # ---
-            send_to_player_callback(defender.name, attack_results['roll_string'], "message")
-            # ---
-            # --- END FIX
-            # ---
 
         if attack_results['hit']:
             damage = attack_results['damage']
             is_fatal = attack_results['is_fatal']
             
-            # ---
-            # --- THIS IS THE FIX (Problem 1) ---
-            # ---
-            if is_defender_player: send_to_player_callback(defender.name, attack_results['defender_damage_msg'], "message")
-            # ---
-            # --- END FIX
-            # ---
-            
-            # This callback is also bugged in app.py
-            broadcast_callback(attacker_room_id, attack_results['broadcast_damage_msg'], "combat_broadcast", skip_sid=sid_to_skip)
-
             if is_defender_player:
                 defender.hp -= damage
                 
@@ -710,7 +755,11 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     vitals_data = defender.get_vitals()
                     send_vitals_callback(defender.name, vitals_data)
                     
-                    broadcast_callback(attacker_room_id, f"**{defender.name} has been DEFEATED!**", "combat_death")
+                    # --- NEW: Consequence Message ---
+                    consequence_msg = f"**{defender.name} has been DEFEATED!**"
+                    send_to_player_callback(defender.name, consequence_msg, "combat_death")
+                    broadcast_callback(attacker_room_id, consequence_msg, "combat_death", skip_sid=sid_to_skip)
+                    # --- END NEW ---
                     
                     defender.move_to_room(
                         config.PLAYER_DEATH_ROOM_ID, 
@@ -749,7 +798,10 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                 )
                 
                 if new_hp <= 0 or is_fatal:
-                    broadcast_callback(attacker_room_id, f"**The {defender['name']} has been DEFEATED!**", "combat_death")
+                    # --- NEW: Consequence Message ---
+                    consequence_msg = f"**The {defender['name']} has been DEFEATED!**"
+                    broadcast_callback(attacker_room_id, consequence_msg, "combat_death", skip_sid=sid_to_skip)
+                    # --- END NEW ---
                     
                     # Create corpse
                     corpse_data = loot_system.create_corpse_object_data(
