@@ -68,7 +68,30 @@
         "keywords": ["ring", "gold ring"],
         "base_value": 250
     },
-
+    "copper_ore": {
+        "name": "a chunk of copper ore",
+        "description": "A chunk of raw, unrefined copper ore.",
+        "item_type": "component",
+        "keywords": ["ore", "copper", "chunk", "copper ore"],
+        "base_value": 20,
+        "max_value": 35
+    },
+    "ash_wood": {
+        "name": "a log of ash wood",
+        "description": "A sturdy log of ash wood.",
+        "item_type": "component",
+        "keywords": ["wood", "log", "ash", "ash wood"],
+        "base_value": 15,
+        "max_value": 30
+    },
+    "river_fish": {
+        "name": "a small river fish",
+        "description": "A small, silvery river fish.",
+        "item_type": "component",
+        "keywords": ["fish", "river fish"],
+        "base_value": 10,
+        "max_value": 20
+    },
     "starter_backpack": {
         "name": "a starter backpack",
         "description": "A simple but sturdy leather backpack.",

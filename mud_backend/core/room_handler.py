@@ -89,48 +89,85 @@ def show_room_to_player(player: Player, room: Room):
     """
     Sends all room information (name, desc, objects, exits, players) to the player.
     """
+    # Send Room Name
     player.send_message(f"**{room.name}**")
     
-    # --- NEW LOGIC FOR DESCRIPTIONS ---
+    # Get Dynamic Description
     room_descriptions = room.description
     current_time = environment.current_time_of_day # Get current time
     current_weather = environment.current_weather # Get current weather
     
-    # Use the new helper to find the best description
     room_desc_text = _get_dynamic_description(
         room_descriptions, 
         current_time, 
         current_weather
     )
-        
-    player.send_message(room_desc_text)
-    # --- END NEW LOGIC ---
     
-    # ---
-    # --- REMOVED redundant ambient_desc. The main description
-    # --- now contains all the time and weather info.
-    # ---
+    # --- START MODIFICATION ---
     
-    # --- Skill-Based Object Perception ---
+    # 1. Get all visible objects
     player_perception = player.stats.get("WIS", 0)
-    
-    # 1. Show Objects
+    visible_objects = []
     if room.objects:
-        html_objects = []
         for obj in room.objects:
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
-                obj_name = obj['name']
-                verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
-                verb_str = ','.join(verbs).lower()
-                html_objects.append(
-                    f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
-                )
-        
-        if html_objects:
-            player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
+                visible_objects.append(obj)
     
-    # --- UPDATED: Show Other Players ---
+    # 2. Define the sorting key function
+    def get_sort_key(obj):
+        # True = 1, False = 0.
+        # We sort by (not is_npc), (not is_monster), name.
+        # NPC: (not True, ...) -> (0, ...) -> First
+        # Monster: (not False, not True, ...) -> (1, 0, ...) -> Second
+        # Object: (not False, not False, ...) -> (1, 1, ...) -> Third
+        is_npc = obj.get('is_npc', False)
+        is_monster = obj.get('is_monster', False)
+        name = obj.get('name', '')
+        
+        # Ensure NPCs that are *also* monsters (like guards) are still NPCs
+        if is_npc:
+            is_monster = False # Treat them only as NPCs for sorting
+            
+        return (not is_npc, not is_monster, name)
+
+    # 3. Sort the visible objects
+    sorted_objects = sorted(visible_objects, key=get_sort_key)
+    
+    # 4. Build the clickable object names from the sorted list
+    object_names = []
+    for obj in sorted_objects:
+        obj_name = obj['name']
+        verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
+        verb_str = ','.join(verbs).lower()
+        object_names.append(
+            f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
+        )
+    
+    # 5. Build the "You also see..." string
+    if object_names:
+        objects_str = ""
+        if len(object_names) == 1:
+            objects_str = f"You also see {object_names[0]}."
+        elif len(object_names) == 2:
+            objects_str = f"You also see {object_names[0]} and {object_names[1]}."
+        else:
+            # Join all but the last with a comma, then add "and" before the last one
+            all_but_last = ", ".join(object_names[:-1])
+            last = object_names[-1]
+            objects_str = f"You also see {all_but_last}, and {last}."
+        
+        # Append this string to the main description as a new line
+        room_desc_text += f"\n{objects_str}"
+        
+    # 6. Send the combined room description and object list
+    player.send_message(room_desc_text)
+
+    # 7. REMOVED the old "Obvious objects here:" block
+    
+    # --- END MODIFICATION ---
+    
+    # --- Show Other Players (Unchanged) ---
     other_players_in_room = []
     
     for sid, data in player.world.get_all_players_info():
@@ -148,11 +185,16 @@ def show_room_to_player(player: Player, room: Room):
         player.send_message(f"Also here: {', '.join(other_players_in_room)}.")
     # --- END UPDATED LOGIC ---
 
-    # 2. Show Exits
+    # --- Show Exits (Modified for paths/exits) ---
     if room.exits:
-        # --- MODIFICATION: Create clickable exit links ---
         exit_names = []
         for name in room.exits.keys():
             exit_names.append(f'<span class="keyword" data-command="{name}">{name.capitalize()}</span>')
-        player.send_message(f"Obvious exits: {', '.join(exit_names)}")
+        
+        # --- START MODIFICATION ---
+        # Use the room's data to check if it's an outdoor room
+        is_outdoor = room.db_data.get("is_outdoor", False)
+        exit_label = "Obvious paths" if is_outdoor else "Obvious exits"
+        
+        player.send_message(f"{exit_label}: {', '.join(exit_names)}")
         # --- END MODIFICATION ---

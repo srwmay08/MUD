@@ -535,7 +535,10 @@
                         "viridian_leaf",
                         "althion_stem",
                         "orc_ear",
-                        "orc_tusk"
+                        "orc_tusk",
+                        "copper_ore",
+                        "ash_wood",
+                        "river_fish"
                     ]
                 }
             }
@@ -776,13 +779,13 @@
     },
     {
         "room_id": "north_gate",
-        "name": "Docks",
+        "name": "Docks Gate",
         "x": 0,
         "y": 2,
         "z": 0,
         "is_outdoor": true,
         "description": {
-            "default": "The smell of salt and fish is strong here. A sturdy stone gatehouse marks the southern exit back to the market. The docks spread out to the north, bustling with sailors and dockhands. A town guardsman stands watch here."
+            "default": "The smell of salt and fish is strong here. A sturdy stone gatehouse marks the southern exit back to the market. The docks spread out to the north, bustling with sailors and dockhands. A town guardsman stands watch here. A path leads east into a quiet clearing."
         },
         "objects": [
             {
@@ -799,7 +802,8 @@
         ],
         "exits": {
             "south": "ts_north",
-            "north": "docks_main"
+            "north": "docks_main",
+            "east": "node_test_area"
         }
     },
     {
