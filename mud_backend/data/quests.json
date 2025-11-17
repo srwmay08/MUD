@@ -61,7 +61,9 @@
         "reward_xp": 250,
         "reward_item_in_hands": "ore_requisition",
         "idle_prompt": "Ah, you're awake. Come see me when you're ready to settle your bill.",
-        "talk_prompt": "Ah, you're awake! About your bill... you can check your <span class='keyword' data-command='wealth'>WEALTH</span>, but I suspect you're a bit light. No matter. I have an arrangement with the Town Clerk. Take this late 'Lodging Tax' payment to him at the Town Hall. You can use <span class='keyword' data-command='goto townhall'>GOTO TOWNHALL</span>. He'll... have more for you to do. Welcome to the city. <span class='keyword' data-command='help goto'>[Help: GOTO]</span>",
+        
+        "talk_prompt": "Ah, you're awake! About your bill... you can check your <span class='keyword' data-command='wealth'>WEALTH</span>, but I suspect you're a bit light. No matter. Before you head out, you can <span class='keyword' data-command='check in'>CHECK IN</span> with me any time to use the room for training. When you're ready to clear your bill, I have an arrangement with the Town Clerk. Take this late 'Lodging Tax' payment to him at the Town Hall. You can use <span class='keyword' data-command='goto townhall'>GOTO TOWNHALL</span>. He'll... have more for you to do. Welcome to the city. <span class='keyword' data-command='help goto'>[Help: GOTO]</span> <span class='keyword' data-command='help check in'>[Help: CHECK IN]</span>",
+        
         "grant_item_on_talk": "lodging_tax_payment",
         "reward_message": "The Town Clerk takes the envelope. 'The Innkeeper's late again... Thank you. Listen, I'm buried in work. Could you run a few more deliveries? First, take this ore requisition to the Armorer at the Armory. You can <span class='keyword' data-command='goto armory'>GOTO ARMORY</span>.'",
         "already_learned_message": "The Innkeeper nods. 'The Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"

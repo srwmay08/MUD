@@ -374,6 +374,12 @@ class Enter(BaseVerb):
         if not target_room_id:
             self.player.send_message(f"The {target_name} leads nowhere right now.")
             return
+        
+        # --- NEW LOGIC ---
+        if target_room_id == "inn_room":
+            self.player.send_message("The door to your old room is locked. You should <span class='keyword' data-command='talk to innkeeper'>TALK TO THE INNKEEPER</span> if you wish to check in for training.")
+            return
+        # --- END NEW LOGIC ---
             
         current_posture = self.player.posture
         

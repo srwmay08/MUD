@@ -147,6 +147,13 @@ def send_stat_roll_prompt(player: Player):
     player.send_message("- <span class='keyword'>REROLL</span>")
     player.send_message("- <span class='keyword'>USE THIS ROLL</span> (Selects the CURRENT roll)")
     player.send_message("- <span class='keyword'>USE BEST ROLL</span> (Selects the BEST roll)")
+    # ---
+    # --- THIS IS THE FIX
+    # ---
+    player.send_message("- <span class='keyword' data-command='help stats'>HELP STATS</span> (Shows what stats do)")
+    # ---
+    # --- END FIX
+    # ---
 
 def _handle_stat_roll_input(player: Player, command: str):
     """Handles commands during the stat rolling step (step 1)."""
@@ -218,6 +225,13 @@ def send_assignment_prompt(player: Player):
     unassigned_str = ", ".join(unassigned_stats)
     
     player.send_message(f"\n--- Assign Your Stats ---")
+    # ---
+    # --- THIS IS THE FIX
+    # ---
+    player.send_message("Type <span class='keyword' data-command='help stats'>HELP STATS</span> at any time for a description of each attribute.")
+    # ---
+    # --- END FIX
+    # ---
     
     if player.stats:
         player.send_message(format_stats(player.stats))
@@ -509,9 +523,13 @@ def handle_chargen_input(player: Player, text_input: str):
 
     if command == "help":
         room_db_data = fetch_room_data(player.current_room_id)
+        # --- MODIFIED: Use world.get_room to get a valid Room object ---
         dummy_room = player.world.get_room(player.current_room_id)
         if not dummy_room:
-             dummy_room = {"room_id": "inn_room", "name": "A Room", "description": "...", "objects": [], "exits": {}}
+             # Fallback just in case
+             dummy_room_data = {"room_id": "inn_room", "name": "A Room", "description": "...", "objects": [], "exits": {}}
+             dummy_room = Room(dummy_room_data["room_id"], dummy_room_data["name"], dummy_room_data["description"], dummy_room_data)
+        # --- END MODIFIED ---
         
         help_verb = Help(player.world, player, dummy_room, args, command)
         help_verb.execute()
