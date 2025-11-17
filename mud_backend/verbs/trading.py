@@ -215,13 +215,16 @@ class Give(BaseVerb):
                     reward_message = active_quest.get("reward_message", "You have completed the task!")
                     self.player.send_message(reward_message)
                     
-                    # 2. Grant XP (immediate, not field)
+                    # ---
+                    # --- MODIFIED: Grant Quest XP via grant_experience
+                    # ---
                     reward_xp = active_quest.get("reward_xp", 0)
                     if reward_xp > 0:
-                        self.player.experience += reward_xp
-                        self.player.send_message(f"You have gained {reward_xp} experience!")
-                        # Check for level up immediately
-                        self.player._check_for_level_up()
+                        # This now goes through the Band splitting system
+                        self.player.grant_experience(reward_xp, source="quest")
+                    # ---
+                    # --- END MODIFIED
+                    # ---
                         
                     # 3. Grant Silver
                     reward_silver = active_quest.get("reward_silver", 0)
@@ -737,3 +740,4 @@ class Exchange(BaseVerb):
         # --- NEW: Set RT ---
         _set_action_roundtime(self.player, 1.0)
         # --- END NEW ---
+}

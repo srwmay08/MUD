@@ -85,7 +85,14 @@ class Attack(BaseVerb):
                 resolve_data["combat_continues"] = False 
                 
                 nominal_xp = 1000 # TODO: Get from template
-                self.player.add_field_exp(nominal_xp)
+                
+                # ---
+                # --- MODIFIED: Use grant_experience for Band splitting
+                # ---
+                self.player.grant_experience(nominal_xp, source="combat")
+                # ---
+                # --- END MODIFIED
+                # ---
                 
                 # ---
                 # --- NEW: Apply Faction Adjustments
