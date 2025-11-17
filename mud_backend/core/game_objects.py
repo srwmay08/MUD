@@ -5,9 +5,6 @@ from mud_backend import config
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 
-# Import the defaults from the new flag verb
-from mud_backend.verbs.flag import DEFAULT_FLAGS
-
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
@@ -171,17 +168,6 @@ class Player:
         self.account_username: str = self.db_data.get("account_username", "")
         # --- END NEW ---
 
-        # ---
-        # --- NEW: Player Flags
-        # ---
-        self.flags: Dict[str, Any] = self.db_data.get("flags", {})
-        # Ensure all default flags are set if they're missing
-        for key, default_value in DEFAULT_FLAGS.items():
-            self.flags.setdefault(key, default_value)
-        # ---
-        # --- END NEW
-        # ---
-
         self.experience: int = self.db_data.get("experience", 0)
         self.unabsorbed_exp: int = self.db_data.get("unabsorbed_exp", 0)
         self.level: int = self.db_data.get("level", 0)
@@ -278,6 +264,11 @@ class Player:
         # --- NEW: Faction Standings
         # ---
         self.factions: Dict[str, int] = self.db_data.get("factions", {})
+        
+        # --- THIS IS THE REQUIRED CHANGE 1 ---
+        self.flags: Dict[str, Any] = self.db_data.get("flags", {})
+        # --- END CHANGE ---
+        
         # --- END NEW ---
 
         # --- NEW: Quest Trackers ---
@@ -760,13 +751,6 @@ class Player:
             "game_state": self.game_state,
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
-            # ---
-            # --- NEW: Save Flags
-            # ---
-            "flags": self.flags,
-            # ---
-            # --- END NEW
-            # ---
             "hp": self.hp,
             # --- MODIFIED: Save Mana, Stamina, Spirit ---
             # "max_mana": self.max_mana, # Removed, is calculated
@@ -825,6 +809,11 @@ class Player:
             # --- NEW: Save Factions
             # ---
             "factions": self.factions,
+            
+            # --- THIS IS THE REQUIRED CHANGE 2 ---
+            "flags": self.flags,
+            # --- END CHANGE ---
+            
             # --- END NEW ---
             
             # --- NEW: Save Quest Trackers ---
