@@ -172,6 +172,12 @@ class Done(BaseVerb):
         self.player.send_message("You are given some starting gear to help you on your way.")
         # --- END UPDATED LOGIC ---
         
-        # Move player to the town square to start the game
+        # ---
+        # --- THIS IS THE FIX (Bug 2: Wrong room)
+        # ---
+        # Move player back to the inn lobby
         # (This also handles broadcasting their arrival)
-        self.player.move_to_room(config.CHARGEN_COMPLETE_ROOM, "You exit the inn.")
+        self.player.move_to_room("inn_front_desk", "You finish your training and head back to the common room.")
+        # ---
+        # --- END FIX
+        # ---

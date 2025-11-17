@@ -180,6 +180,7 @@ def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
                 "x": room.get("x"), # Will be None if not set
                 "y": room.get("y"),
                 "z": room.get("z"),
+                "interior_id": room.get("interior_id"), # Add this line
                 "exits": room.get("exits", {}),
                 "special_exits": special_exits
             }
@@ -223,6 +224,17 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             player.stamina = player.max_stamina
             player.spirit = player.max_spirit
             # --- END NEW ---
+
+            # ---
+            # --- THIS IS THE FIX (Bug 1: Grant starting TPs)
+            # ---
+            ptps, mtps, stps = player._calculate_tps_per_level()
+            player.ptps = ptps
+            player.mtps = mtps
+            player.stps = stps
+            # ---
+            # --- END FIX
+            # ---
 
             # ---
             # --- NEW: Add start room to visited list ---
