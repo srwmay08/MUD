@@ -2,6 +2,9 @@
 from mud_backend.verbs.base_verb import BaseVerb
 import re
 
+# ---
+# --- MODIFIED: Added groupinvites
+# ---
 # Define valid options for flags
 FLAG_OPTIONS = {
     "mechanics": ["on", "numberless", "flavorless", "brief", "off"],
@@ -12,7 +15,8 @@ FLAG_OPTIONS = {
     "idlekick": ["on", "off"],
     "righthand": ["on", "off"],
     "lefthand": ["on", "off"],
-    "safedrop": ["on", "off"]
+    "safedrop": ["on", "off"],
+    "groupinvites": ["on", "off"] # <-- NEW
 }
 
 # Define the default state for all flags
@@ -26,8 +30,12 @@ DEFAULT_FLAGS = {
     "idletime": 30,
     "righthand": "on",
     "lefthand": "off",
-    "safedrop": "on"
+    "safedrop": "on",
+    "groupinvites": "on" # <-- NEW
 }
+# ---
+# --- END MODIFIED
+# ---
 
 class Flag(BaseVerb):
     """
@@ -47,6 +55,20 @@ class Flag(BaseVerb):
             self.player.send_message(f"{key.upper():<15} {str(current_value).upper()}")
 
     def execute(self):
+        # ---
+        # --- NEW: Alias GROUP OPEN/CLOSE
+        # ---
+        args_str = " ".join(self.args).lower()
+        if args_str == "group open":
+            self.args = ["groupinvites", "on"]
+            self.player.send_message("(Alias for: FLAG GROUPINVITES ON)")
+        elif args_str == "group close":
+            self.args = ["groupinvites", "off"]
+            self.player.send_message("(Alias for: FLAG GROUPINVITES OFF)")
+        # ---
+        # --- END NEW
+        # ---
+
         if not self.args:
             self._show_current_flags()
             return

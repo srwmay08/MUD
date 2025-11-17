@@ -1,7 +1,9 @@
 # mud_backend/verbs/help.py
 from mud_backend.verbs.base_verb import BaseVerb
 
-# --- NEW: Help text data ---
+# ---
+# --- MODIFIED: Added GROUP, BAND, WHISPER help
+# ---
 HELP_TEXT = {
     "look": """
 <span class='room-title'>--- Help: LOOK ---</span>
@@ -22,11 +24,6 @@ EXAMINE is used to understand the properties of creatures, items, objects, weapo
 **Usage:**
 * **EXAMINE {creature}**: Used on a target to determine a character's ability in combat against that creature.
 * **EXAMINE {item}**: Used on an item to determine its strength, durability, integrity, and any additional properties.
-
-**Example (Item):**
-> Careful examination indicates the grey leather has a base strength of 20 and a base durability of 285. You also determine the current integrity of the grey leather to be at 100.0%.
-> You examine the grey leather closely, lightly running your fingers over the material.
-> You sense that the leather is imbued with the magic of nature...
 """,
 
     "investigate": """
@@ -45,7 +42,7 @@ MOVE (or GO) is a mechanical verb used for movement. It is used to traverse port
 **Usage:**
 * You can type the full direction: `MOVE NORTH`, `GO SOUTH`.
 * You can use abbreviations: `N`, `S`, `E`, `W`, `NE`, `NW`, `SE`, `SW`.
-* You can also move through special exits: `IN`, `OUT`, `UP`, `DOWN`.
+* You can also move through special exits: `IN`, `OUT`, 'UP', `DOWN`.
 * Often, just typing the exit name is enough: `OUT`.
 """,
 
@@ -84,7 +81,7 @@ Displays what you are currently holding, wearing, and carrying in your container
 """,
 
     "wealth": """
-<span class'room-title'>--- Help: WEALTH ---</span>
+<span class='room-title'>--- Help: WEALTH ---</span>
 Displays how much silver you are currently carrying.
 
 **Usage:**
@@ -99,13 +96,10 @@ TALK is used to interact with non-player characters (NPCs) in the world. This is
 **Usage:**
 * **TALK TO {npc}**: Initiates a conversation with the target NPC.
 * **TALK {npc}**: A shortcut for `TALK TO`.
-
-**Example:**
-> TALK TO INNKEEPER
 """,
 
     "list": """
-<span class'room-title'>--- Help: LIST ---</span>
+<span class='room-title'>--- Help: LIST ---</span>
 When at a shop, use LIST to see what the merchant is selling.
 
 **Usage:**
@@ -136,8 +130,6 @@ FORAGE allows you to search the area for harvestable herbs and plants. This cost
 
 **Usage:**
 * **FORAGE**: Searches the area for anything you can find.
-* **FORAGE {plant name}**: (Not yet implemented) Searches for a specific plant.
-* **FORAGE SENSE**: (Not yet implemented) Uses your skill to sense what plants are in the area.
 """,
 
     "attack": """
@@ -181,9 +173,53 @@ Your character is defined by 12 core attributes, grouped into four categories.
 <span class='room-title'>--- Hybrid Attributes (2) ---</span>
 * **Discipline (DIS):** Measures force of will, determination, and focus. A classic hybrid stat bridging Mental and Spiritual, it affects experience-gain limits and resistance to mental/emotional attacks.
 * **Aura (AUR):** Measures the innate connection to spiritual, mental, and elemental magic. A hybrid stat bridging Mental and Spiritual, it determines the total pool of Spirit Points (SP).
+""",
+
+    "group": """
+<span class='room-title'>--- Help: GROUP ---</span>
+Manages the online-only grouping system.
+
+**Usage:**
+* **GROUP**: Shows your current group status.
+* **GROUP OPEN**: Allows others to invite you. (Alias for FLAG GROUPINVITES ON)
+* **GROUP CLOSE**: Prevents others from inviting you. (Alias for FLAG GROUPINVITES OFF)
+* **GROUP {player}**: Invites {player} to join your group. (Leader only)
+* **GROUP LEADER {player}**: Makes {player} the new group leader. (Leader only)
+* **GROUP REMOVE {player}**: Removes {player} from the group. (Leader only)
+* **JOIN {player}**: Accepts an invitation from {player}.
+* **LEAVE**: Leaves your current group.
+* **DISBAND**: Disbands a group you are leading.
+* **HOLD {player}**: (Roleplay) Invites {player} to join your group.
+* **WHISPER GROUP {msg}**: Sends a private message to all group members.
+* **WHISPER OOC GROUP {msg}**: Sends a private OOC message to all group members.
+""",
+
+    "band": """
+<span class='room-title'>--- Help: BAND ---</span>
+Manages your persistent Adventuring Band for XP sharing.
+
+**Usage:**
+* **BAND CREATE**: Creates a new adventuring band with you as leader.
+* **BAND INVITE {name}**: Invites {name} to join your band. (Leader only)
+* **BAND JOIN {leader_name}**: Accepts a pending invitation from {leader_name}.
+* **BAND LIST**: Lists all members in your band.
+* **BAND REMOVE**: Removes you from your adventuring band.
+* **BAND KICK {name}**: Kicks {name} from your band. (Leader only)
+* **BAND DELETE**: Deletes the entire adventuring band. (Leader only)
+* **BT {message}**: (Band Talk) Sends a message to all online band members.
+""",
+
+    "whisper": """
+<span class='room-title'>--- Help: WHISPER ---</span>
+Sends a private message to a player or your group.
+
+**Usage:**
+* **WHISPER {player} {message}**: Sends a private message to {player}.
+* **WHISPER GROUP {message}**: Sends a private message to all group members.
+* **WHISPER OOC GROUP {message}**: Sends a private OOC message to all group members.
 """
 }
-# --- END HELP TEXT ---
+# --- END NEW ---
 
 
 class Help(BaseVerb):
@@ -193,13 +229,15 @@ class Help(BaseVerb):
     
     def execute(self):
         if not self.args:
-            self.player.send_message("What do you need help with? (e.g., HELP LOOK, HELP GET, HELP STATS)")
+            self.player.send_message("What do you need help with? (e.g., HELP LOOK, HELP GET, HELP STATS, HELP GROUP, HELP BAND)")
             # TODO: List all available help topics
             return
 
         target_topic = " ".join(self.args).lower()
         
-        # Simple alias check
+        # ---
+        # --- MODIFIED: Added new aliases
+        # ---
         if target_topic in ["go", "n", "s", "e", "w"]:
             target_topic = "move"
         if target_topic == "take":
@@ -208,7 +246,6 @@ class Help(BaseVerb):
             target_topic = "stow"
         if target_topic == "inv":
             target_topic = "inventory"
-        # --- NEW ALIASES ---
         if target_topic == "goto":
             target_topic = "goto"
         if target_topic in ["buy", "order"]:
@@ -223,7 +260,19 @@ class Help(BaseVerb):
             target_topic = "stance"
         if target_topic == "wealth":
             target_topic = "wealth"
-        # --- END NEW ---
+            
+        # Grouping Aliases
+        if target_topic in ["join", "leave", "disband", "hold"]:
+            target_topic = "group"
+        # Band Aliases
+        if target_topic == "bt":
+            target_topic = "band"
+        # Whisper Alias
+        if target_topic == "whisper":
+            target_topic = "whisper"
+        # ---
+        # --- END MODIFIED
+        # ---
             
         # --- NEW: Aliases for all 12 stats ---
         if target_topic in [

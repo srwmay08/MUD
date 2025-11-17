@@ -34,7 +34,7 @@ from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
 # ---
-# --- MODIFIED: VERB ALIASES (Added 'goto' and 'help')
+# --- MODIFIED: VERB ALIASES (Added Group, Band, Whisper)
 # ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -79,52 +79,49 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "stat": ("stats", "Stats"), "stats": ("stats", "Stats"),
     "skill": ("skills", "Skills"), "skills": ("skills", "Skills"),
     "experience": ("experience", "Experience"), "exp": ("experience", "Experience"),
-    # "trip": ("maneuvers", "Trip"), # <-- REMOVED (now handled conditionally)
+    # "trip": ("maneuvers", "Trip"), # <-- Handled conditionally
 
 # --- GATHERING VERBS ---
-    # Skinning (Already exists)
     "skin": ("harvesting", "Skin"),
-    "butcher": ("harvesting", "Skin"), # <-- Alias
-    
-    # Herbalism (New file/refactor)
-    "forage": ("foraging", "Forage"), # This is now the "sense" verb
+    "butcher": ("harvesting", "Skin"),
+    "forage": ("foraging", "Forage"),
     "harvest": ("herbalism", "Harvest"),
-    
-    # Mining (New file)
     "mine": ("mining", "Mine"),
     "prospect": ("mining", "Prospect"),
-    
-    # Lumberjacking (New file)
     "chop": ("lumberjacking", "Chop"),
-    "cut": ("lumberjacking", "Chop"), # <-- Alias
+    "cut": ("lumberjacking", "Chop"),
     "survey": ("lumberjacking", "Survey"),
-    
-    # Fishing (New file)
     "fish": ("fishing", "Fish"),
-    # "scan": ("fishing", "Scan"), # <-- REMOVED
 
     # --- ACTIVITIES ---
-    "search": ("harvesting", "Search"), # Moved from 'Activities'
+    "search": ("harvesting", "Search"),
     "eat": ("foraging", "Eat"), 
     "drink": ("foraging", "Drink"),
     
-    # Magic
-    # "prep": ("magic", "Prep"), "prepare": ("magic", "Prep"), # <-- REMOVED
-    # "cast": ("magic", "Cast"), # <-- REMOVED
-    
-    # Systems
+    # --- Communication ---
     "say": ("say", "Say"),
     "talk": ("talk", "Talk"), 
+    "whisper": ("whisper", "Whisper"),
+    "bt": ("band", "BT"),
+
+    # --- Trading & Shops ---
     "give": ("trading", "Give"), "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"),
     "exchange": ("trading", "Exchange"),
     "list": ("shop", "List"), "buy": ("shop", "Buy"),
     "sell": ("shop", "Sell"), "appraise": ("shop", "Appraise"),
-    "help": ("help", "Help"), # <-- NEW
-
-    # --- NEW: Add FLAG ---
+    
+    # --- Grouping & Bands ---
+    "group": ("group", "Group"),
+    "hold": ("group", "Hold"),
+    "join": ("group", "Join"),
+    "leave": ("group", "Leave"),
+    "disband": ("group", "Disband"),
+    "band": ("band", "Band"),
+    
+    # --- Systems ---
+    "help": ("help", "Help"),
     "flag": ("flags", "Flag"), "flags": ("flags", "Flag"),
-    # --- END NEW ---
 
     # Training
     "check": ("training", "CheckIn"), "checkin": ("training", "CheckIn"),
@@ -253,6 +250,12 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             # --- NEW: Add current room to visited list on load ---
             if player.current_room_id not in player.visited_rooms:
                 player.visited_rooms.append(player.current_room_id)
+            # --- END NEW ---
+            
+            # ---
+            # --- NEW: Load transient group ID from world state
+            # ---
+            player.group_id = world.get_player_group_id_on_load(player.name.lower())
             # --- END NEW ---
 
     # ---

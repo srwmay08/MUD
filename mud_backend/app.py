@@ -132,20 +132,68 @@ def game_tick_thread(world_instance: World):
     with app.app_context():
         while True:
             current_time = time.time()
+            log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+            log_prefix = f"{log_time} - GAME_TICK"
 
             def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
-                if skip_sid:
-                    socketio.emit("message", message, to=room_id, skip_sid=skip_sid)
-                else:
-                    socketio.emit("message", message, to=room_id)
+                # ---
+                # --- MODIFIED: Check AMBIENT and SHOWDEATH flags
+                # ---
+                is_ambient = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay"]
+                is_death = msg_type == "combat_death"
+
+                if not is_ambient and not is_death:
+                    # Normal broadcast (e.g., combat hits)
+                    if skip_sid:
+                        socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
+                    else:
+                        socketio.emit(msg_type, message, to=room_id)
+                    return
+
+                # Flag-checked broadcast: Iterate over players in the room
+                for p_name, p_data in world_instance.get_all_players_info():
+                    if p_data.get("current_room_id") == room_id:
+                        player_obj = p_data.get("player_obj")
+                        player_sid = p_data.get("sid")
+                        
+                        if not player_obj or not player_sid or player_sid == skip_sid:
+                            continue
+
+                        # Check flags
+                        if is_ambient and player_obj.flags.get("ambient", "on") == "off":
+                            continue # Skip this player
+                        
+                        if is_death and player_obj.flags.get("showdeath", "on") == "off":
+                            continue # Skip this player
+                            
+                        # This player should receive the message
+                        socketio.emit(msg_type, message, to=player_sid)
+                # ---
+                # --- END MODIFIED
+                # ---
                 
             def send_to_player(player_name, message, msg_type):
                 player_info = world_instance.get_player_info(player_name.lower())
+                if not player_info:
+                    return
+
+                # ---
+                # --- MODIFIED: Check SHOWDEATH flag
+                # ---
+                player_obj = player_info.get("player_obj")
+                sid = player_info.get("sid")
                 
-                if player_info:
-                    sid = player_info.get("sid")
-                    if sid:
-                        socketio.emit(msg_type, message, to=sid)
+                if not player_obj or not sid:
+                    return
+
+                # Check flags
+                if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off":
+                    return # Skip this message
+                
+                socketio.emit(msg_type, message, to=sid)
+                # ---
+                # --- END MODIFIED
+                # ---
 
             def send_vitals_to_player(player_name, vitals_data):
                 """Emits a 'update_vitals' event to a specific player."""
@@ -205,29 +253,52 @@ def game_tick_thread(world_instance: World):
             
             if current_time - world_instance.last_monster_tick_time >= config.MONSTER_TICK_INTERVAL_SECONDS:
                 world_instance.last_monster_tick_time = current_time
-                log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
-                # ---
-                # --- THIS IS THE MODIFICATION
-                # ---
-                log_prefix = f"{log_time} - MONSTER_TICK"
+                monster_log_prefix = f"{log_time} - MONSTER_TICK"
                 
                 # Handle monster movement
                 monster_ai.process_monster_ai(
                     world=world_instance,
-                    log_time_prefix=log_prefix,
+                    log_time_prefix=monster_log_prefix,
                     broadcast_callback=broadcast_to_room
                 )
                 
-                # --- NEW: Handle monster ambient messages ---
+                # Handle monster ambient messages
                 monster_ai.process_monster_ambient_messages(
                     world=world_instance,
-                    log_time_prefix=log_prefix,
+                    log_time_prefix=monster_log_prefix,
                     broadcast_callback=broadcast_to_room
                 )
-                # --- END NEW ---
-                # ---
-                # --- END MODIFICATION
-                # ---
+
+            # ---
+            # --- NEW: Band XP Payout Tick (Every 5 minutes)
+            # ---
+            time_since_last_band_payout = current_time - world_instance.last_band_payout_time
+            if time_since_last_band_payout >= 300: # 300 seconds = 5 minutes
+                world_instance.last_band_payout_time = current_time
+                
+                if config.DEBUG_MODE:
+                    print(f"{log_prefix} - Processing Band XP Payout...")
+                
+                try:
+                    with world_instance.player_lock:
+                        for player_name, player_data in world_instance.get_all_players_info():
+                            player_obj = player_data.get("player_obj")
+                            if player_obj and player_obj.band_xp_bank > 0 and player_obj.death_sting_points == 0:
+                                amount = player_obj.band_xp_bank
+                                player_obj.band_xp_bank = 0
+                                
+                                # Use add_field_exp directly, as this is a *payout*
+                                # not a new *gain*. grant_experience is for new XP.
+                                player_obj.add_field_exp(amount, is_band_share=True)
+                                
+                                # Save the player's new state (bank emptied)
+                                db.save_game_state(player_obj)
+                                
+                except Exception as e:
+                    print(f"[ERROR] Failed during Band XP Payout: {e}")
+            # ---
+            # --- END NEW
+            # ---
 
             did_global_tick = check_and_run_game_tick(
                 world=world_instance,
@@ -255,13 +326,22 @@ def handle_disconnect():
     player_info = None
     
     if player_name_to_remove:
-        player_info = world.remove_player(player_name_to_remove.lower())
+        # ---
+        # --- MODIFIED: Get player object *before* removing
+        # ---
+        player_obj = world.get_player_obj(player_name_to_remove.lower())
+        player_info = world.remove_player(player_name_to_remove.lower()) # This handles group leave
             
     if player_name_to_remove and player_info:
         room_id = player_info["current_room_id"]
         print(f"[CONNECTION] Player {player_name_to_remove} disconnected: {sid}")
         disappears_message = f'<span class="keyword" data-name="{player_name_to_remove}" data-verbs="look">{player_name_to_remove}</span> disappears.'
         emit("message", disappears_message, to=room_id)
+        
+        # --- NEW: Save player on disconnect ---
+        if player_obj:
+            db.save_game_state(player_obj)
+        # --- END NEW ---
     else:
         print(f"[CONNECTION] Unauthenticated client disconnected: {sid}")
 
@@ -312,6 +392,16 @@ def handle_command_event(data):
                     session['characters'] = [c['name'] for c in chars]
                     session['state'] = 'char_select'
                     emit("show_char_list", {"chars": session['characters']}, to=sid)
+            
+            # ---
+            # --- NEW: Handle bad password
+            # ---
+            else:
+                print(f"[AUTH] Failed login for: {username}")
+                emit("login_failed", "Invalid password.", to=sid)
+                session['state'] = 'auth_user'
+                emit("prompt_username", to=sid)
+            # --- END NEW ---
         
         elif state == 'char_create_name':
             new_char_name = command.capitalize()
@@ -377,6 +467,35 @@ def handle_command_event(data):
                     )
             
             emit("command_response", result_data, to=sid)
+            
+            # ---
+            # --- NEW: Send Band join/pending messages on login
+            # ---
+            player_obj = world.get_player_obj(char_name.lower())
+            if player_obj:
+                # 1. Check for pending band invites
+                band_with_invite = world.get_band_invite_for_player(player_obj.name.lower())
+                if band_with_invite:
+                    leader_name = band_with_invite["leader"].capitalize()
+                    player_obj.send_message(
+                        f"{leader_name} has invited you to join their adventuring band. "
+                        f"Type '<span class='keyword' data-command='band join {leader_name}'>BAND JOIN {leader_name}</span>' to accept."
+                    )
+                
+                # 2. Check for banked XP
+                if player_obj.band_xp_bank > 0:
+                    if player_obj.death_sting_points > 0:
+                        player_obj.send_message(f"You have {player_obj.band_xp_bank} banked experience from your band, but you must work off your Death's Sting to receive it.")
+                    else:
+                        # Grant it immediately
+                        amount = player_obj.band_xp_bank
+                        player_obj.band_xp_bank = 0
+                        player_obj.add_field_exp(amount, is_band_share=True)
+                        db.save_game_state(player_obj) # Save change
+            # ---
+            # --- END NEW
+            # ---
+
 
         elif state == 'in_game':
             player_name = session.get('player_name')

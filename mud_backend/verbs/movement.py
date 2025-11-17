@@ -8,7 +8,7 @@ import time
 # --- END MODIFIED ---
 # --- NEW: Import deque for pathfinding ---
 from collections import deque
-from typing import Optional, List, Dict, Set
+from typing import Optional, List, Dict, Set, TYPE_CHECKING
 # ---
 # --- THIS IS THE FIX: Import the Room class
 # ---
@@ -18,13 +18,13 @@ from mud_backend.core.game_objects import Room
 # ---
 # --- NEW: Add imports needed for background task ---
 from mud_backend.core.room_handler import show_room_to_player
-# ---
-# --- THIS IS THE FIX: REMOVE join_room and leave_room (which were unused)
-# ---
-# from flask_socketio import join_room, leave_room # <-- REMOVED
-# ---
-# --- END FIX
-# ---
+# --- NEW: Import skill check ---
+from mud_backend.core.skill_handler import attempt_skill_learning
+# --- END NEW ---
+
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+    from mud_backend.core.game_objects import Player
 
 
 # ---
@@ -56,31 +56,17 @@ GOTO_MAP = {
     "innkeeper": "inn_front_desk"
 }
 
-# ---
-# --- THIS IS THE FIX
-# ---
 def _check_toll_gate(player, target_room_id: str) -> bool:
     """
     A helper function to check for special movement rules, like tolls.
     Returns True if movement is BLOCKED, False otherwise.
     """
-    
-    # ---
-    # --- MODIFIED: Changed player.room.room_id to player.current_room_id
-    # ---
-    # The Player object has 'current_room_id' (a string), not 'room' (an object)
     if player.current_room_id == "north_gate_outside" and target_room_id == "north_gate_inside":
-    # --- END MODIFIED ---
-        
-        # Check if player has the 'gate_pass' item (example)
         if "gate_pass" not in player.inventory:
             player.send_message("The guard blocks your way. 'You need a pass to enter the city.'")
             return True # Block movement
             
     return False # Allow movement
-# ---
-# --- END FIX
-# ---
 
 # ---
 # --- NEW: Pathfinding Function (BFS)
@@ -103,7 +89,7 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
         if not room:
             continue
 
-        exits = room.get("exits", {})
+        exits = room.get("exits", {}).copy() # Use a copy
         
         # ---
         # --- THIS IS THE FIX
@@ -143,6 +129,89 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
 # ---
 
 # ---
+# --- NEW: Group Movement Helper
+# ---
+def _handle_group_move(
+    world: 'World', 
+    leader_player: 'Player',
+    original_room_id: str, 
+    target_room_id: str,
+    move_msg: str,
+    move_verb: str,
+    skill_dc: int = 0
+):
+    """
+    Handles moving all group members who are with the leader.
+    Checks for individual skill checks (climb, etc.) if a dc > 0 is provided.
+    """
+    group = world.get_group(leader_player.group_id)
+    if not group or group["leader"] != leader_player.name.lower():
+        return # Not in a group or not the leader
+
+    leader_name = leader_player.name
+
+    for member_key in group["members"]:
+        if member_key == leader_name.lower():
+            continue # Skip the leader
+            
+        member_obj = world.get_player_obj(member_key)
+        
+        # Check if member is online and in the leader's *original* room
+        if member_obj and member_obj.current_room_id == original_room_id:
+            
+            # --- Check if member is busy ---
+            if _check_action_roundtime(member_obj, action_type="move"):
+                member_obj.send_message(f"You are busy and cannot follow {leader_name}.")
+                world.send_message_to_group(
+                    group["id"], 
+                    f"{member_obj.name} is busy and gets left behind.",
+                    skip_player_key=member_key
+                )
+                continue # Skip this member
+
+            member_can_move = True
+            failure_message = ""
+
+            # Re-check skill-based moves for each member
+            if move_verb == "climb":
+                # Using 'climbing' skill
+                skill_rank = member_obj.skills.get("climbing", 0)
+                roll = skill_rank + random.randint(1, 100)
+                attempt_skill_learning(member_obj, "climbing")
+                
+                if roll < skill_dc:
+                    member_can_move = False
+                    failure_message = f"You try to follow {leader_name} but fail to climb!"
+                
+            elif move_verb == "swim":
+                # Using 'swimming' skill
+                skill_rank = member_obj.skills.get("swimming", 0)
+                roll = skill_rank + random.randint(1, 100)
+                attempt_skill_learning(member_obj, "swimming")
+                
+                if roll < skill_dc:
+                    member_can_move = False
+                    failure_message = f"You try to follow {leader_name} but fail to swim!"
+
+            # If all checks pass, move the member
+            if member_can_move:
+                # Use the same success message as the leader
+                member_obj.move_to_room(target_room_id, move_msg)
+            else:
+                # Send failure to member and group
+                if failure_message:
+                    member_obj.send_message(failure_message)
+                world.send_message_to_group(
+                    group["id"], 
+                    f"{member_obj.name} fails to {move_verb} and is left behind.", 
+                    skip_player_key=member_key
+                )
+# ---
+# --- END NEW HELPER
+# ---
+
+
+# ---
 # --- NEW: GOTO Background Task
 # ---
 def _execute_goto_path(world, player_id: str, path: List[str], final_destination_room_id: str, sid: str):
@@ -155,14 +224,10 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
     if not player_obj:
         return # Player logged out
 
-    # --- START FIX ---
     if not player_obj.is_goto_active:
-        # GOTO was canceled before it even started
-        return
-    # --- END FIX ---
+        return # GOTO was canceled before it even started
 
     for move_direction in path:
-        # --- START FIX ---
         # --- Re-fetch player and check for cancellation ---
         player_obj = world.get_player_obj(player_id) 
         if not player_obj: return # Player logged out
@@ -170,10 +235,9 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         if not player_obj.is_goto_active:
             player_obj.send_message("You stop moving.")
             world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                  to=sid)
             return # GOTO was canceled
-        # --- END FIX ---
 
         # --- Wait for any existing RT to clear ---
         while True:
@@ -181,119 +245,99 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             if rt_data:
                 next_action = rt_data.get("next_action_time", 0)
                 if time.time() < next_action:
-                    # We are in RT, sleep for a bit and check again
                     world.socketio.sleep(0.5) 
                 else:
-                    # RT is clear, clear the state
                     world.remove_combat_state(player_id)
                     break
             else:
-                # No RT data
                 break
         
-        # --- Check if player is still connected ---
-        # --- START FIX ---
-        # --- Re-check after RT, just in case ---
+        # --- Re-check after RT ---
         player_obj = world.get_player_obj(player_id)
         if not player_obj: return
         if not player_obj.is_goto_active:
             player_obj.send_message("You stop moving.")
             world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                  to=sid)
             return
-        # --- END FIX ---
             
         # --- Check for combat ---
         player_state = world.get_combat_state(player_id)
         if player_state and player_state.get("state_type") == "combat":
             player_obj.send_message("You are attacked and your movement stops!")
             world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                  to=sid)
-            player_obj.is_goto_active = False # <-- ADDED
+            player_obj.is_goto_active = False
             return
 
-        current_room_data = world.get_room(player_obj.current_room_id)
+        original_room_id = player_obj.current_room_id
+        current_room_data = world.get_room(original_room_id)
         if not current_room_data:
             player_obj.send_message("Your path seems to have vanished. Stopping.")
             world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                      to=sid)
-            player_obj.is_goto_active = False # <-- ADDED
+            player_obj.is_goto_active = False
             return
         
-        current_room_obj = Room(
-            current_room_data.get("room_id", "void"),
-            current_room_data.get("name", "The Void"),
-            current_room_data.get("description", "..."),
-            db_data=current_room_data
-        )
-
-        target_room_id_step = current_room_data.get("exits", {}).get(move_direction)
-        move_msg = f"You move {move_direction}..."
+        target_room_id_step = None
+        move_msg = ""
+        move_verb = move_direction # e.g., "north"
+        skill_dc = 0
         
-        if not target_room_id_step:
-            current_room_obj.objects = current_room_data.get("objects", [])
-            enter_obj = next((obj for obj in current_room_obj.objects 
+        # Is it a simple exit?
+        if move_direction in current_room_data.get("exits", {}):
+            target_room_id_step = current_room_data.get("exits", {}).get(move_direction)
+            move_msg = f"You move {move_direction}..."
+        else:
+            # It must be an object
+            enter_obj = next((obj for obj in current_room_data.get("objects", []) 
                               if ((move_direction in obj.get("keywords", []) or 
-                                   move_direction == obj.get("name", "").lower()) and # <-- Check name too
-                                  ("ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", [])))
+                                   move_direction == obj.get("name", "").lower()) and
+                                  (obj.get("target_room")))
                              ), None)
-                             
+            
             if enter_obj:
                 target_room_id_step = enter_obj.get("target_room")
-                move_msg = f"You enter the {enter_obj.get('name')}..."
+                if "CLIMB" in enter_obj.get("verbs", []):
+                    move_verb = "climb"
+                    skill_dc = 20 # TODO: Get DC from object
+                    move_msg = f"You climb the {enter_obj.get('name')}..."
+                else: # Default to ENTER
+                    move_verb = "enter"
+                    move_msg = f"You enter the {enter_obj.get('name')}..."
             else:
                 player_obj.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
                 world.socketio.emit('command_response', 
-                                         {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                         {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                          to=sid)
-                player_obj.is_goto_active = False # <-- ADDED
+                player_obj.is_goto_active = False
                 return
         
         if _check_toll_gate(player_obj, target_room_id_step):
             player_obj.send_message("Your movement is blocked. Stopping.")
             world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                      to=sid)
-            player_obj.is_goto_active = False # <-- ADDED
+            player_obj.is_goto_active = False
             return
         
-        # ---
-        # --- THIS IS THE FIX: Tutorial Hook for GOTO
-        # ---
-        current_room_id = player_obj.current_room_id
-        
-        # ---
-        # --- THIS IS THE FIX: Clear messages before moving
-        # ---
+        # --- Leader move ---
         player_obj.messages.clear()
-        
         player_obj.move_to_room(target_room_id_step, move_msg)
         
-        _set_action_roundtime(player_obj, 3.0) 
-        
-        old_room_id = current_room_id
-        new_room_id = target_room_id_step
-        
         # ---
-        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK (AND THE CRASH)
+        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
         # ---
-        if (new_room_id == "town_hall" and
+        if (target_room_id_step == "town_hall" and
             "intro_give_clerk" not in player_obj.completed_quests):
             
-             # Check if player has the payment
-            has_payment = False
-            if "lodging_tax_payment" in player_obj.inventory:
-                has_payment = True
-            if not has_payment: # Only check hands if not in pack
-                for slot in ["mainhand", "offhand"]:
-                    if player_obj.worn_items.get(slot) == "lodging_tax_payment":
-                        has_payment = True
-                        break
+            has_payment = "lodging_tax_payment" in player_obj.inventory or \
+                          player_obj.worn_items.get("mainhand") == "lodging_tax_payment" or \
+                          player_obj.worn_items.get("offhand") == "lodging_tax_payment"
             
-            # Now, check 'has_payment'
             if has_payment:
                 player_obj.send_message(
                     "\nYou have arrived at the Town Hall. You should "
@@ -304,44 +348,41 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         # --- END FIX
         # ---
 
-        if old_room_id and new_room_id != old_room_id:
-            world.socketio.server.leave_room(sid, old_room_id)
+        # --- Group move (in-task) ---
+        _handle_group_move(
+            world, player_obj, original_room_id, target_room_id_step,
+            move_msg, move_verb, skill_dc
+        )
+        
+        _set_action_roundtime(player_obj, 3.0) 
+        
+        # --- Handle SocketIO room changes ---
+        if original_room_id and target_room_id_step != original_room_id:
+            world.socketio.server.leave_room(sid, original_room_id)
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
-            world.socketio.emit("message", leaves_message, to=old_room_id)
+            world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sid)
             
-            world.socketio.server.enter_room(sid, new_room_id)
+            world.socketio.server.enter_room(sid, target_room_id_step)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
-            world.socketio.emit("message", arrives_message, to=new_room_id, skip_sid=sid)
+            world.broadcast_to_room(target_room_id_step, arrives_message, "message", skip_sid=sid)
         
         world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                  to=sid)
         
         world.socketio.sleep(3.0) 
 
-    # ---
-    # --- THIS IS THE FINAL FIX ---
-    # ---
-    # The loop is finished. We need to send the "You have arrived." message
-    # BUT we must NOT clear the messages from the final move_to_room.
-    
+    # --- Loop finished ---
     player_obj = world.get_player_obj(player_id)
     if player_obj: 
         player_obj.is_goto_active = False 
         if player_obj.current_room_id == final_destination_room_id:
-            # Clear final RT
-            world.remove_combat_state(player_id)
-            
-            # --- DO NOT CLEAR MESSAGES ---
-            # player_obj.messages.clear() # <-- REMOVED THIS LINE
-            
+            world.remove_combat_state(player_id) # Clear final RT
             player_obj.send_message("You have arrived.")
             world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                      to=sid)
-    # ---
-    # --- END FIX
-    # ---
+
 
 # --- Class from enter.py ---
 class Enter(BaseVerb):
@@ -358,16 +399,12 @@ class Enter(BaseVerb):
         target_name = " ".join(self.args).lower()
         
         enterable_object = next((obj for obj in self.room.objects 
-                                 if obj['name'].lower() == target_name and "ENTER" in obj.get("verbs", [])), None)
+                                 if (obj['name'].lower() == target_name or target_name in obj.get("keywords", []))
+                                 and "ENTER" in obj.get("verbs", [])), None)
 
         if not enterable_object:
-            # --- NEW: Check keywords as a fallback ---
-            enterable_object = next((obj for obj in self.room.objects 
-                                     if target_name in obj.get("keywords", []) and "ENTER" in obj.get("verbs", [])), None)
-            if not enterable_object:
-                self.player.send_message(f"You cannot enter the **{target_name}**.")
-                return
-            # --- END NEW ---
+            self.player.send_message(f"You cannot enter the **{target_name}**.")
+            return
 
         target_room_id = enterable_object.get("target_room")
 
@@ -375,27 +412,19 @@ class Enter(BaseVerb):
             self.player.send_message(f"The {target_name} leads nowhere right now.")
             return
         
-        # --- NEW LOGIC ---
         if target_room_id == "inn_room":
             self.player.send_message("The door to your old room is locked. You should <span class='keyword' data-command='talk to innkeeper'>TALK TO THE INNKEEPER</span> if you wish to check in for training.")
             return
-        # --- END NEW LOGIC ---
             
         current_posture = self.player.posture
-        
-        # ---
-        # --- MODIFIED: Variable RT for Enter
-        # ---
-        rt = 0.0 # Default to 0
+        rt = 0.0
         move_msg = ""
         
-        # Check keywords for "door" or "gate"
         obj_keywords = enterable_object.get("keywords", [])
         is_door_or_gate = "door" in obj_keywords or "gate" in obj_keywords
         
         if current_posture == "standing":
             move_msg = f"You enter the {enterable_object.get('name', target_name)}..."
-            # Only apply RT if it's NOT a door or gate
             if not is_door_or_gate:
                 rt = 3.0
         elif current_posture == "prone":
@@ -405,44 +434,34 @@ class Enter(BaseVerb):
         else: # sitting or kneeling
             self.player.send_message("You must stand up first.")
             return
-        # --- END MODIFIED ---
 
-        # --- Check for toll gates before moving ---
         if _check_toll_gate(self.player, target_room_id):
-            return # Movement is blocked
+            return
             
-        # ---
-        # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK (AND THE CRASH)
-        # ---
-        current_room_id = self.room.room_id
+        original_room_id = self.room.room_id # --- Store for group move
         self.player.move_to_room(target_room_id, move_msg)
         
-        if (target_room_id == "town_hall" and
-            "intro_give_clerk" not in self.player.completed_quests):
-            
-             # Check if player has the payment
-            has_payment = False
-            if "lodging_tax_payment" in self.player.inventory:
-                has_payment = True
-            if not has_payment:
-                for slot in ["mainhand", "offhand"]:
-                    if self.player.worn_items.get(slot) == "lodging_tax_payment":
-                        has_payment = True
-                        break
-            
+        # --- Tutorial Hook ---
+        if (target_room_id == "town_hall" and "intro_give_clerk" not in self.player.completed_quests):
+            has_payment = "lodging_tax_payment" in self.player.inventory or \
+                          self.player.worn_items.get("mainhand") == "lodging_tax_payment" or \
+                          self.player.worn_items.get("offhand") == "lodging_tax_payment"
             if has_payment:
                 self.player.send_message(
                     "\nYou have arrived at the Town Hall. You should "
                     "<span class='keyword' data-command='give clerk payment'>GIVE</span> the <span class='keyword' data-command='look at payment'>payment</span> to the <span class='keyword' data-command='look at clerk'>clerk</span>."
                 )
                 self.player.completed_quests.append("intro_give_clerk")
-        # ---
-        # --- END FIX
-        # ---
         
-        # --- MODIFIED: Only set RT if it's greater than 0 ---
         if rt > 0:
             _set_action_roundtime(self.player, rt)
+            
+        # --- NEW: GROUP MOVEMENT ---
+        _handle_group_move(
+            self.world, self.player, original_room_id, target_room_id,
+            move_msg, "enter", skill_dc=0
+        )
+        # --- END NEW ---
 
 
 # --- Class from climb.py ---
@@ -481,35 +500,40 @@ class Climb(BaseVerb):
             self.player.send_message("You must stand up first to climb.")
             return
             
-        # ---
-        # --- MODIFIED: Variable RT for Climb
-        # ---
         climbing_skill = self.player.skills.get("climbing", 0)
-        dc = climbable_object.get("climb_dc", 20) # Default DC is 20
+        dc = climbable_object.get("climb_dc", 20)
         
+        # --- Skill check for leader ---
         roll = random.randint(1, 100) + climbing_skill
+        attempt_skill_learning(self.player, "climbing") # LBD
         success_margin = roll - dc
         
-        rt = 3.0 # Default RT
+        rt = 3.0
+        move_msg = ""
         
         if success_margin < 0: # Failure
-            # Takes longer if you fail the roll
             rt = max(3.0, 10.0 - (climbing_skill / 10.0))
-            move_msg = f"You struggle with the {target_name} but eventually make it..."
+            self.player.send_message(f"You struggle with the {target_name} but fail to climb it.")
+            _set_action_roundtime(self.player, rt)
+            return # Failed, stop here
         else: # Success
-            # Faster if you succeed
             rt = max(1.0, 5.0 - (success_margin / 20.0))
             move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
-        # --- END MODIFIED ---
             
-        # --- Check for toll gates before moving ---
         if _check_toll_gate(self.player, target_room_id):
-            return # Movement is blocked
+            return
             
+        original_room_id = self.room.room_id # --- Store for group move
         self.player.move_to_room(target_room_id, move_msg)
-        
-        # Set variable roundtime
         _set_action_roundtime(self.player, rt)
+        
+        # --- NEW: GROUP MOVEMENT ---
+        _handle_group_move(
+            self.world, self.player, original_room_id, target_room_id,
+            move_msg, "climb", skill_dc=dc
+        )
+        # --- END NEW ---
+
 
 # --- Class from move.py ---
 class Move(BaseVerb):
@@ -533,59 +557,45 @@ class Move(BaseVerb):
         target_room_id = self.room.exits.get(normalized_direction)
         
         if target_room_id:
-            # ---
-            # --- MODIFIED: Cardinal Movement RT
-            # ---
             current_posture = self.player.posture
             move_msg = ""
-            rt = 0.0 # <-- RT is now 0 for directional move
+            rt = 0.0 
             
             if current_posture == "standing":
                 move_msg = f"You move {normalized_direction}..."
-                # rt = 3.0 # <-- Original
             elif current_posture == "prone":
                 move_msg = f"You crawl {normalized_direction}..."
-                # rt = 8.0 # <-- Original
             else: # sitting or kneeling
                 self.player.send_message("You must stand up first.")
                 return
-            # --- END MODIFIED ---
             
-            # --- Check for toll gates before moving ---
             if _check_toll_gate(self.player, target_room_id):
-                return # Movement is blocked
+                return
             
-            # ---
-            # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK (AND THE CRASH)
-            # ---
+            original_room_id = self.room.room_id # --- Store for group move
             self.player.move_to_room(target_room_id, move_msg)
             
-            if (target_room_id == "town_hall" and
-                "intro_give_clerk" not in self.player.completed_quests):
-                
-                 # Check if player has the payment
-                has_payment = False
-                if "lodging_tax_payment" in self.player.inventory:
-                    has_payment = True
-                if not has_payment:
-                    for slot in ["mainhand", "offhand"]:
-                        if self.player.worn_items.get(slot) == "lodging_tax_payment":
-                            has_payment = True
-                            break
-                
+            # --- Tutorial Hook ---
+            if (target_room_id == "town_hall" and "intro_give_clerk" not in self.player.completed_quests):
+                has_payment = "lodging_tax_payment" in self.player.inventory or \
+                              self.player.worn_items.get("mainhand") == "lodging_tax_payment" or \
+                              self.player.worn_items.get("offhand") == "lodging_tax_payment"
                 if has_payment:
                     self.player.send_message(
                         "\nYou have arrived at the Town Hall. You should "
                         "<span class='keyword' data-command='give clerk payment'>GIVE</span> the <span class='keyword' data-command='look at payment'>payment</span> to the <span class='keyword' data-command='look at clerk'>clerk</span>."
                     )
                     self.player.completed_quests.append("intro_give_clerk")
-            # ---
-            # --- END FIX
-            # ---
-            
-            # --- MODIFIED: Only set RT if it's greater than 0 ---
+
             if rt > 0:
                 _set_action_roundtime(self.player, rt)
+            
+            # --- NEW: GROUP MOVEMENT ---
+            _handle_group_move(
+                self.world, self.player, original_room_id, target_room_id,
+                move_msg, normalized_direction, skill_dc=0
+            )
+            # --- END NEW ---
             return
 
         # --- CHECK 2: Is it an object you can 'enter'? ---
@@ -620,36 +630,26 @@ class Exit(BaseVerb):
             target_room_id = self.room.exits.get("out")
 
             if target_room_id:
-                # ---
-                # --- MODIFIED: 'out' exit RT
-                # ---
                 current_posture = self.player.posture
                 move_msg = ""
-                rt = 0.0 # <-- RT is now 0 for 'out'
+                rt = 0.0 
                 
                 if current_posture == "standing":
                     move_msg = "You head out..."
-                    # rt = 3.0 # <-- Original
                 elif current_posture == "prone":
                     move_msg = "You crawl out..."
-                    # rt = 8.0 # <-- Original
                 else: # sitting or kneeling
                     self.player.send_message("You must stand up first.")
                     return
-                # --- END MODIFIED ---
 
-                # --- Check for toll gates before moving ---
                 if _check_toll_gate(self.player, target_room_id):
-                    return # Movement is blocked
+                    return
 
-                # ---
-                # --- THIS IS THE FIX: Tutorial Hook for TALK
-                # ---
-                current_room_id = self.room.room_id
-                # Call move_to_room *first* so the player.messages list is cleared
+                original_room_id = self.room.room_id # --- Store for group move
                 self.player.move_to_room(target_room_id, move_msg)
                 
-                if (current_room_id == "inn_room" and
+                # --- Tutorial Hook ---
+                if (original_room_id == "inn_room" and
                     target_room_id == "inn_front_desk" and
                     "intro_leave_room_tasks" in self.player.completed_quests and
                     "intro_talk_to_innkeeper" not in self.player.completed_quests):
@@ -659,13 +659,16 @@ class Exit(BaseVerb):
                         "to the innkeeper about your bill. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
                     )
                     self.player.completed_quests.append("intro_talk_to_innkeeper")
-                # ---
-                # --- END FIX
-                # ---
                 
-                # --- MODIFIED: Only set RT if it's greater than 0 ---
                 if rt > 0:
                     _set_action_roundtime(self.player, rt)
+
+                # --- NEW: GROUP MOVEMENT ---
+                _handle_group_move(
+                    self.world, self.player, original_room_id, target_room_id,
+                    move_msg, "out", skill_dc=0
+                )
+                # --- END NEW ---
                 return
             else:
                 # --- No "out" exit, try to "enter" the most obvious exit object ---
@@ -738,9 +741,6 @@ class GOTO(BaseVerb):
             
         self.player.send_message(f"You begin moving towards {target_room_name}...")
         
-        # ---
-        # --- THIS IS THE FIX
-        # ---
         player_id = self.player.name.lower()
         player_info = self.world.get_player_info(player_id)
         if not player_info:
@@ -763,6 +763,3 @@ class GOTO(BaseVerb):
             target_room_id,
             sid
         )
-        # ---
-        # --- END FIX
-        # ---
