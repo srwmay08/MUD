@@ -285,6 +285,16 @@ class Player:
         self.is_goto_active: bool = self.db_data.get("is_goto_active", False)
         # --- END NEW ---
 
+        # ---
+        # --- NEW: Grouping and Banding
+        # ---
+        self.group_id: Optional[str] = None # Non-persistent, managed by World
+        self.band_id: Optional[str] = self.db_data.get("band_id", None) # Persistent
+        self.band_xp_bank: int = self.db_data.get("band_xp_bank", 0) # Persistent
+        # ---
+        # --- END NEW
+        # ---
+
 
     @property
     def con_bonus(self) -> int:
@@ -816,7 +826,7 @@ class Player:
             
             # --- END NEW ---
             
-            # --- NEW: Save Quest Trackers ---
+            # --- NEW: Quest Trackers ---
             "quest_trip_counter": self.quest_trip_counter,
             # --- END NEW ---
 
@@ -827,8 +837,17 @@ class Player:
 
             # ---
             # --- NEW: Save GOTO Flag ---
-            "is_goto_active": self.is_goto_active
+            "is_goto_active": self.is_goto_active,
             # --- END NEW ---
+            
+            # ---
+            # --- NEW: Grouping and Banding
+            # ---
+            "band_id": self.band_id,
+            "band_xp_bank": self.band_xp_bank
+            # ---
+            # --- END NEW
+            # ---
         }
         
         if self._id:
