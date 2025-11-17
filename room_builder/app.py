@@ -132,6 +132,8 @@ def game_tick_thread(world_instance: World):
     with app.app_context():
         while True:
             current_time = time.time()
+            log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+            log_prefix = f"{log_time} - GAME_TICK"
 
             def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
                 # ---
@@ -231,6 +233,36 @@ def game_tick_thread(world_instance: World):
                     giver_obj = world_instance.get_player_obj(giver_name.lower())
                     if giver_obj:
                         giver_obj.send_message(f"Your offer to {receiver_name} for {item_name} has expired.")
+
+            # ---
+            # --- NEW: CHECK PENDING GROUP INVITES
+            # ---
+            if world_instance.pending_group_invites:
+                expired_invites = []
+                with world_instance.group_lock:
+                    invite_items = list(world_instance.pending_group_invites.items())
+                
+                for invitee_name, invite_data in invite_items:
+                    if current_time - invite_data.get("time", 0) > 30:
+                        expired_invites.append((invitee_name, invite_data))
+                
+                for invitee_name, invite_data in expired_invites:
+                    world_instance.remove_pending_group_invite(invitee_name)
+                    
+                    inviter_name = invite_data.get("from_player_name", "Someone")
+                    
+                    # Notify the invitee (who declined by timing out)
+                    invitee_obj = world_instance.get_player_obj(invitee_name)
+                    if invitee_obj:
+                        invitee_obj.send_message(f"The group invitation from {inviter_name} has expired.")
+                    
+                    # Notify the inviter
+                    inviter_obj = world_instance.get_player_obj(inviter_name.lower())
+                    if inviter_obj:
+                        inviter_obj.send_message(f"Your group invitation to {invitee_name.capitalize()} has expired.")
+            # ---
+            # --- END NEW LOGIC
+            # ---
             
             active_players_list = world_instance.get_all_players_info()
             for player_name_lower, player_data in active_players_list:
@@ -251,29 +283,52 @@ def game_tick_thread(world_instance: World):
             
             if current_time - world_instance.last_monster_tick_time >= config.MONSTER_TICK_INTERVAL_SECONDS:
                 world_instance.last_monster_tick_time = current_time
-                log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
-                # ---
-                # --- THIS IS THE MODIFICATION
-                # ---
-                log_prefix = f"{log_time} - MONSTER_TICK"
+                monster_log_prefix = f"{log_time} - MONSTER_TICK"
                 
                 # Handle monster movement
                 monster_ai.process_monster_ai(
                     world=world_instance,
-                    log_time_prefix=log_prefix,
+                    log_time_prefix=monster_log_prefix,
                     broadcast_callback=broadcast_to_room
                 )
                 
-                # --- NEW: Handle monster ambient messages ---
+                # Handle monster ambient messages
                 monster_ai.process_monster_ambient_messages(
                     world=world_instance,
-                    log_time_prefix=log_prefix,
+                    log_time_prefix=monster_log_prefix,
                     broadcast_callback=broadcast_to_room
                 )
-                # --- END NEW ---
-                # ---
-                # --- END MODIFICATION
-                # ---
+
+            # ---
+            # --- NEW: Band XP Payout Tick (Every 5 minutes)
+            # ---
+            time_since_last_band_payout = current_time - world_instance.last_band_payout_time
+            if time_since_last_band_payout >= 300: # 300 seconds = 5 minutes
+                world_instance.last_band_payout_time = current_time
+                
+                if config.DEBUG_MODE:
+                    print(f"{log_prefix} - Processing Band XP Payout...")
+                
+                try:
+                    with world_instance.player_lock:
+                        for player_name, player_data in world_instance.get_all_players_info():
+                            player_obj = player_data.get("player_obj")
+                            if player_obj and player_obj.band_xp_bank > 0 and player_obj.death_sting_points == 0:
+                                amount = player_obj.band_xp_bank
+                                player_obj.band_xp_bank = 0
+                                
+                                # Use add_field_exp directly, as this is a *payout*
+                                # not a new *gain*. grant_experience is for new XP.
+                                player_obj.add_field_exp(amount, is_band_share=True)
+                                
+                                # Save the player's new state (bank emptied)
+                                db.save_game_state(player_obj)
+                                
+                except Exception as e:
+                    print(f"[ERROR] Failed during Band XP Payout: {e}")
+            # ---
+            # --- END NEW
+            # ---
 
             did_global_tick = check_and_run_game_tick(
                 world=world_instance,
@@ -301,13 +356,22 @@ def handle_disconnect():
     player_info = None
     
     if player_name_to_remove:
-        player_info = world.remove_player(player_name_to_remove.lower())
+        # ---
+        # --- MODIFIED: Get player object *before* removing
+        # ---
+        player_obj = world.get_player_obj(player_name_to_remove.lower())
+        player_info = world.remove_player(player_name_to_remove.lower()) # This handles group leave
             
     if player_name_to_remove and player_info:
         room_id = player_info["current_room_id"]
         print(f"[CONNECTION] Player {player_name_to_remove} disconnected: {sid}")
         disappears_message = f'<span class="keyword" data-name="{player_name_to_remove}" data-verbs="look">{player_name_to_remove}</span> disappears.'
         emit("message", disappears_message, to=room_id)
+        
+        # --- NEW: Save player on disconnect ---
+        if player_obj:
+            db.save_game_state(player_obj)
+        # --- END NEW ---
     else:
         print(f"[CONNECTION] Unauthenticated client disconnected: {sid}")
 
@@ -358,6 +422,16 @@ def handle_command_event(data):
                     session['characters'] = [c['name'] for c in chars]
                     session['state'] = 'char_select'
                     emit("show_char_list", {"chars": session['characters']}, to=sid)
+            
+            # ---
+            # --- NEW: Handle bad password
+            # ---
+            else:
+                print(f"[AUTH] Failed login for: {username}")
+                emit("login_failed", "Invalid password.", to=sid)
+                session['state'] = 'auth_user'
+                emit("prompt_username", to=sid)
+            # --- END NEW ---
         
         elif state == 'char_create_name':
             new_char_name = command.capitalize()
@@ -423,6 +497,42 @@ def handle_command_event(data):
                     )
             
             emit("command_response", result_data, to=sid)
+            
+            # ---
+            # --- NEW: Send Band join/pending messages on login
+            # ---
+            player_obj = world.get_player_obj(char_name.lower())
+            if player_obj:
+                # 1. Check for pending band invites
+                # --- FIX: Need to check all bands ---
+                band_with_invite = None
+                with world.band_lock:
+                    for band in world.active_bands.values():
+                        if player_obj.name.lower() in band.get("pending_invites", {}):
+                            band_with_invite = band
+                            break
+                
+                if band_with_invite:
+                    leader_name = band_with_invite["leader"].capitalize()
+                    player_obj.send_message(
+                        f"{leader_name} has invited you to join their adventuring band. "
+                        f"Type '<span class='keyword' data-command='band join {leader_name}'>BAND JOIN {leader_name}</span>' to accept."
+                    )
+                
+                # 2. Check for banked XP
+                if player_obj.band_xp_bank > 0:
+                    if player_obj.death_sting_points > 0:
+                        player_obj.send_message(f"You have {player_obj.band_xp_bank} banked experience from your band, but you must work off your Death's Sting to receive it.")
+                    else:
+                        # Grant it immediately
+                        amount = player_obj.band_xp_bank
+                        player_obj.band_xp_bank = 0
+                        player_obj.add_field_exp(amount, is_band_share=True)
+                        db.save_game_state(player_obj) # Save change
+            # ---
+            # --- END NEW
+            # ---
+
 
         elif state == 'in_game':
             player_name = session.get('player_name')

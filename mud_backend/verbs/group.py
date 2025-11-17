@@ -131,10 +131,14 @@ class Group(BaseVerb):
         }
         self.world.set_pending_group_invite(target_player_name, invite)
         
-        target_player_obj.send_message(
-            f"{self.player.name} has invited you to join their group. "
-            f"Type '<span class='keyword' data-command='join {self.player.name}'>JOIN {self.player.name}</span>' to accept."
+        # --- THIS IS THE FIX ---
+        self.world.send_message_to_player(
+            target_player_obj.name.lower(), # Send to the target player
+            f"{self.player.name} has invited you to join their group. (Expires in 30 seconds)\n"
+            f"Type '<span class='keyword' data-command='join {self.player.name}'>JOIN {self.player.name}</span>' to accept.",
+            "message" # Explicitly set message type
         )
+        # --- END FIX ---
 
     def _show_group_status(self):
         group = self.world.get_group(self.player.group_id)
@@ -204,10 +208,14 @@ class Hold(BaseVerb):
         }
         self.world.set_pending_group_invite(target_player_name, invite)
         
-        target_player_obj.send_message(
-            f"{self.player.name} reaches out to you, inviting you to join their group. "
-            f"Type '<span class='keyword' data-command='join {self.player.name}'>JOIN {self.player.name}</span>' to accept."
+        # --- THIS IS THE FIX ---
+        self.world.send_message_to_player(
+            target_player_obj.name.lower(), # Send to the target player
+            f"{self.player.name} reaches out to you, inviting you to join their group. (Expires in 30 seconds)\n"
+            f"Type '<span class='keyword' data-command='join {self.player.name}'>JOIN {self.player.name}</span>' to accept.",
+            "message" # Explicitly set message type
         )
+        # --- END FIX ---
 
 
 class Join(BaseVerb):

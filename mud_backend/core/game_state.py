@@ -164,6 +164,23 @@ class World:
         with self.player_lock:
             return list(self.active_players.items())
 
+    # ---
+    # --- THIS IS THE FIX: The missing function
+    # ---
+    def get_player_group_id_on_load(self, player_name_lower: str) -> Optional[str]:
+        """
+        Checks all active groups to see if a logging-in player
+        belongs to one.
+        """
+        with self.group_lock:
+            for group_id, group_data in self.active_groups.items():
+                if player_name_lower in group_data.get("members", []):
+                    return group_id
+        return None
+    # ---
+    # --- END FIX
+    # ---
+
     # --- Room Accessors (Thread-Safe) ---
 
     def get_room(self, room_id: str) -> Optional[Dict[str, Any]]:
@@ -358,6 +375,17 @@ class World:
     def remove_band(self, band_id: str) -> Optional[Dict[str, Any]]:
         with self.band_lock:
             return self.active_bands.pop(band_id, None)
+            
+    # --- NEW: Helper to find band invites on login ---
+    def get_band_invite_for_player(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
+        """
+        Checks all active bands for a pending invite for the player.
+        """
+        with self.band_lock:
+            for band_data in self.active_bands.values():
+                if player_name_lower in band_data.get("pending_invites", {}):
+                    return band_data
+        return None
 
     # --- Messaging Helpers ---
 
