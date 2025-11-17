@@ -1,4 +1,5 @@
 # mud_backend/core/game_objects.py
+# MODIFIED FILE
 import math
 import time
 from mud_backend import config
@@ -284,16 +285,14 @@ class Player:
         # --- NEW: GOTO Flag ---
         self.is_goto_active: bool = self.db_data.get("is_goto_active", False)
         # --- END NEW ---
-
+        
         # ---
-        # --- NEW: Grouping and Banding
+        # --- NEW: Grouping and Bands
         # ---
-        self.group_id: Optional[str] = None # Non-persistent, managed by World
+        self.group_id: Optional[str] = self.db_data.get("group_id", None) # Transient, loaded from world state
         self.band_id: Optional[str] = self.db_data.get("band_id", None) # Persistent
         self.band_xp_bank: int = self.db_data.get("band_xp_bank", 0) # Persistent
-        # ---
-        # --- END NEW
-        # ---
+        # --- END NEW ---
 
 
     @property
@@ -532,13 +531,23 @@ class Player:
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
-    def add_field_exp(self, nominal_amount: int):
+    # ---
+    # --- NEW: Master XP Granting Method
+    # ---
+    def grant_experience(self, nominal_amount: int, source: str = "combat"):
+        """
+        Grants experience to the player, handling Death's Sting and Band splitting.
+        This is the new central function for ALL experience gains.
+        """
+        
+        # 1. Handle Death's Sting
         if self.death_sting_points > 0:
             original_nominal = nominal_amount
             nominal_amount = math.trunc(original_nominal * 0.25)
             points_worked_off = original_nominal - nominal_amount
             old_sting = self.death_sting_points
             self.death_sting_points -= points_worked_off
+            
             if self.death_sting_points <= 0:
                 self.death_sting_points = 0
                 if old_sting > 0:
@@ -546,26 +555,76 @@ class Player:
             else:
                  self.send_message(f"(You work off {points_worked_off} of death's sting.)")
 
+        # 2. Handle Band Splitting
+        band = self.world.get_band(self.band_id)
+        if band:
+            num_members = len(band.get("members", []))
+            if num_members > 0:
+                share = math.trunc(nominal_amount / num_members)
+                
+                # Give self their share
+                self.add_field_exp(share, is_band_share=True)
+                
+                # Distribute to other members
+                for member_key in band.get("members", []):
+                    if member_key == self.name.lower():
+                        continue # Skip self
+                        
+                    member_obj = self.world.get_player_obj(member_key)
+                    if member_obj:
+                        # Member is online
+                        if member_obj.death_sting_points > 0:
+                            member_obj.band_xp_bank += share
+                        else:
+                            member_obj.add_field_exp(share, is_band_share=True)
+                    else:
+                        # Member is offline, update their bank in the DB
+                        self.world.db.update_player_band_xp_bank(member_key, share)
+                
+                return # Stop here, we've handled the XP
+        
+        # 3. No Band, grant full amount
+        self.add_field_exp(nominal_amount)
+
+    def add_field_exp(self, nominal_amount: int, is_band_share: bool = False):
+        """
+        Adds experience to the player's unabsorbed pool.
+        This is now a helper function called by grant_experience.
+        """
+        # (Death's Sting logic was moved to grant_experience)
+
         pool_cap = self.field_exp_capacity
         current_pool = self.unabsorbed_exp
+        
         if current_pool >= pool_cap:
-            self.send_message("Your mind is completely saturated. You can learn no more.")
+            if not is_band_share: # Don't spam for band XP
+                self.send_message("Your mind is completely saturated. You can learn no more.")
             return
+            
         accrual_decline_factor = 1.0 - (0.05 * math.floor(current_pool / 100.0))
         actual_gained = math.trunc(nominal_amount * accrual_decline_factor)
+        
         if actual_gained <= 0:
-            if nominal_amount > 0:
+            if not is_band_share and nominal_amount > 0:
                 self.send_message("Your mind is too full to learn from this.")
-            else:
-                self.send_message("You learn nothing new from this.")
             return
+            
         if current_pool + actual_gained > pool_cap:
             actual_gained = pool_cap - current_pool
             self.unabsorbed_exp = pool_cap
-            self.send_message(f"Your mind is saturated! You only gain {actual_gained} experience.")
+            if not is_band_share:
+                self.send_message(f"Your mind is saturated! You only gain {actual_gained} experience.")
+            else:
+                self.send_message(f"You gain {actual_gained} experience from your band, saturating your mind.")
         else:
             self.unabsorbed_exp += actual_gained
-            self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
+            if not is_band_share:
+                self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
+            else:
+                self.send_message(f"You gain {actual_gained} field experience from your band. ({self.mind_status})")
+    # ---
+    # --- END XP METHODS
+    # ---
 
     def absorb_exp_pulse(self, room_type: str = "other") -> bool:
         if self.unabsorbed_exp <= 0:
@@ -826,7 +885,7 @@ class Player:
             
             # --- END NEW ---
             
-            # --- NEW: Quest Trackers ---
+            # --- NEW: Save Quest Trackers ---
             "quest_trip_counter": self.quest_trip_counter,
             # --- END NEW ---
 
@@ -839,15 +898,13 @@ class Player:
             # --- NEW: Save GOTO Flag ---
             "is_goto_active": self.is_goto_active,
             # --- END NEW ---
-            
+
             # ---
-            # --- NEW: Grouping and Banding
+            # --- NEW: Save Band Info
             # ---
             "band_id": self.band_id,
             "band_xp_bank": self.band_xp_bank
-            # ---
-            # --- END NEW
-            # ---
+            # --- END NEW ---
         }
         
         if self._id:

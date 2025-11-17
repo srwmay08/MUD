@@ -1,10 +1,14 @@
 # mud_backend/core/game_state.py
+# MODIFIED FILE
 import time
 import threading
 import copy
 from mud_backend import config
 from typing import Dict, Any, Optional, List, Tuple
 from mud_backend.core import db
+# --- NEW: Import Player for type hinting ---
+from mud_backend.core.game_objects import Player
+# --- END NEW ---
 
 #
 # --- THIS FILE IS NO LONGER A GLOBAL MODULE ---
@@ -21,7 +25,7 @@ class World:
     def __init__(self):
         self.socketio = None
         # ---
-        # --- THIS IS THE FIX ---
+        # --- THIS IS THE FIX
         # ---
         self.app = None # To hold the Flask app context
         # ---
@@ -35,6 +39,11 @@ class World:
         self.active_players: Dict[str, Dict[str, Any]] = {}
         self.combat_state: Dict[str, Dict[str, Any]] = {}
         self.pending_trades: Dict[str, Dict[str, Any]] = {}
+        # --- NEW: Grouping and Band State ---
+        self.active_groups: Dict[str, Dict[str, Any]] = {} # { "group_id": {"leader": "p1", "members": ["p1", "p2"]} }
+        self.pending_group_invites: Dict[str, Dict[str, Any]] = {} # { "p2_lower": {"from": "p1", "group_id": "gid", "time": 123} }
+        self.active_bands: Dict[str, Dict[str, Any]] = {} # { "band_id": {"leader": "p1", "members": ["p1", "p2", "p3"]} }
+        # --- END NEW ---
 
         # --- Global Data Caches (Read-only after load) ---
         self.game_monster_templates: Dict[str, Dict] = {}
@@ -53,6 +62,9 @@ class World:
         self.last_monster_tick_time: float = time.time()
         self.game_tick_counter: int = 0
         self.player_timeout_seconds: int = config.PLAYER_TIMEOUT_SECONDS
+        # --- NEW: Band Payout Timer ---
+        self.last_band_payout_time: float = time.time()
+        # --- END NEW ---
 
         # --- Threading Locks ---
         self.player_lock = threading.RLock()
@@ -61,6 +73,10 @@ class World:
         self.room_lock = threading.RLock()
         self.monster_hp_lock = threading.RLock()
         self.defeated_lock = threading.RLock()
+        # --- NEW: Grouping and Band Locks ---
+        self.group_lock = threading.RLock()
+        self.band_lock = threading.RLock()
+        # --- END NEW ---
 
     # --- Data Loading ---
     
@@ -93,6 +109,10 @@ class World:
         self.game_nodes = db.fetch_all_nodes()
         print("[WORLD INIT] Loading all factions...")
         self.game_factions = db.fetch_all_factions()
+        # --- NEW: Load Bands ---
+        print("[WORLD INIT] Loading all adventuring bands...")
+        self.active_bands = db.fetch_all_bands(database)
+        # --- END NEW ---
         print("[WORLD INIT] Data loaded.")
 
     # --- Player Accessors (Thread-Safe) ---
@@ -113,6 +133,30 @@ class World:
             self.active_players[player_name_lower] = data
             
     def remove_player(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
+        # --- NEW: Handle group leave on disconnect ---
+        player_obj = self.get_player_obj(player_name_lower)
+        if player_obj and player_obj.group_id:
+            group = self.get_group(player_obj.group_id)
+            if group:
+                group_id = player_obj.group_id
+                player_obj.group_id = None
+                if player_name_lower in group["members"]:
+                    group["members"].remove(player_name_lower)
+                
+                self.send_message_to_group(group_id, f"{player_obj.name} has left the group (disconnected).")
+                
+                if group["leader"] == player_name_lower:
+                    if group["members"]:
+                        new_leader_key = group["members"][0]
+                        group["leader"] = new_leader_key
+                        self.set_group(group_id, group)
+                        self.send_message_to_group(group_id, f"{new_leader_key.capitalize()} is the new group leader.")
+                    else:
+                        self.remove_group(group_id)
+                else:
+                    self.set_group(group_id, group)
+        # --- END NEW ---
+            
         with self.player_lock:
             return self.active_players.pop(player_name_lower, None)
 
@@ -264,7 +308,59 @@ class World:
         with self.trade_lock:
             return self.pending_trades.pop(player_name_lower, None)
 
-    # --- NEW METHOD ---
+    # ---
+    # --- NEW: Grouping Accessors (Thread-Safe)
+    # ---
+    
+    def get_group(self, group_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not group_id: return None
+        with self.group_lock:
+            return self.active_groups.get(group_id)
+
+    def set_group(self, group_id: str, data: Dict[str, Any]):
+        with self.group_lock:
+            self.active_groups[group_id] = data
+            
+    def remove_group(self, group_id: str) -> Optional[Dict[str, Any]]:
+        with self.group_lock:
+            return self.active_groups.pop(group_id, None)
+            
+    def get_pending_group_invite(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
+        with self.group_lock:
+            # Check for and remove expired invites
+            invite = self.pending_group_invites.get(player_name_lower)
+            if invite and (time.time() - invite.get("time", 0)) > 30:
+                self.pending_group_invites.pop(player_name_lower, None)
+                return None
+            return invite
+    
+    def set_pending_group_invite(self, player_name_lower: str, data: Dict[str, Any]):
+        with self.group_lock:
+            self.pending_group_invites[player_name_lower] = data
+
+    def remove_pending_group_invite(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
+        with self.group_lock:
+            return self.pending_group_invites.pop(player_name_lower, None)
+
+    # ---
+    # --- NEW: Band Accessors (Thread-Safe)
+    # ---
+    
+    def get_band(self, band_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not band_id: return None
+        with self.band_lock:
+            return self.active_bands.get(band_id)
+
+    def set_band(self, band_id: str, data: Dict[str, Any]):
+        with self.band_lock:
+            self.active_bands[band_id] = data
+            
+    def remove_band(self, band_id: str) -> Optional[Dict[str, Any]]:
+        with self.band_lock:
+            return self.active_bands.pop(band_id, None)
+
+    # --- Messaging Helpers ---
+
     def send_message_to_player(self, player_name_lower: str, message: str, msg_type: str = "message"):
         """Emits a message directly to a player's socket."""
         if not self.socketio:
@@ -281,9 +377,7 @@ class World:
                     print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} has no SID. Cannot send: {message}")
         elif config.DEBUG_MODE:
                 print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} not active. Cannot send: {message}")
-    # --- END NEW METHOD ---
     
-    # --- NEW: Broadcast Helper ---
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
         """Emits a message to all players in a room, optionally skipping one."""
         if not self.socketio:
@@ -295,4 +389,27 @@ class World:
             self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
         else:
             self.socketio.emit(msg_type, message, to=room_id)
-    # --- END NEW ---
+
+    # ---
+    # --- NEW: Group/Band Messaging Helpers
+    # ---
+    
+    def send_message_to_group(self, group_id: str, message: str, msg_type: str = "message", skip_player_key: Optional[str] = None):
+        """Sends a message to all *online* members of a group."""
+        group = self.get_group(group_id)
+        if not group:
+            return
+            
+        for member_key in group["members"]:
+            if member_key != skip_player_key:
+                self.send_message_to_player(member_key, message, msg_type)
+
+    def send_message_to_band(self, band_id: str, message: str, msg_type: str = "message", skip_player_key: Optional[str] = None):
+        """Sends a message to all *online* members of a band."""
+        band = self.get_band(band_id)
+        if not band:
+            return
+            
+        for member_key in band["members"]:
+            if member_key != skip_player_key:
+                self.send_message_to_player(member_key, message, msg_type)

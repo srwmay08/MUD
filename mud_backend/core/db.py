@@ -1,4 +1,5 @@
 # mud_backend/core/db.py
+# MODIFIED FILE
 import socket 
 import json
 import os
@@ -276,6 +277,77 @@ def save_game_state(player: 'Player'):
         print(f"\n[DB SAVE] Player {player.name} created with ID: {player._id} for account {player.account_username}")
     else:
         pass # Standard save
+        
+# ---
+# --- NEW: Band DB Functions
+# ---
+
+def save_band(band_data: Dict[str, Any]):
+    """Saves a band's data to the 'bands' collection."""
+    database = get_db()
+    if database is None:
+        print(f"\n[DB SAVE MOCK] Band {band_data.get('id')} state saved (Mock).")
+        return
+        
+    band_id = band_data.get("id")
+    if not band_id:
+        print("[DB ERROR] Cannot save band, 'id' is missing.")
+        return
+        
+    database.bands.update_one(
+        {"id": band_id},
+        {"$set": band_data},
+        upsert=True
+    )
+
+def delete_band(band_id: str):
+    """Deletes a band from the 'bands' collection."""
+    database = get_db()
+    if database is None:
+        print(f"\n[DB SAVE MOCK] Band {band_id} deleted (Mock).")
+        return
+    database.bands.delete_one({"id": band_id})
+    
+def fetch_all_bands(database) -> Dict[str, Dict[str, Any]]:
+    """Loads all bands from the DB into a dictionary for caching."""
+    if database is None:
+        return {}
+    
+    print("[DB INIT] Caching all bands from database...")
+    bands_dict = {}
+    try:
+        for band_data in database.bands.find():
+            band_id = band_data.get("id")
+            if band_id:
+                bands_dict[band_id] = band_data
+        print(f"[DB INIT] ...Cached {len(bands_dict)} bands.")
+        return bands_dict
+    except Exception as e:
+        print(f"[DB ERROR] Failed to fetch all bands: {e}")
+        return {}
+        
+def update_player_band(player_name_lower: str, band_id: Optional[str]):
+    """Sets or unsets a player's band_id in the database."""
+    database = get_db()
+    if database is None: return
+    
+    database.players.update_one(
+        {"name": {"$regex": f"^{player_name_lower}$", "$options": "i"}},
+        {"$set": {"band_id": band_id}}
+    )
+
+def update_player_band_xp_bank(player_name_lower: str, amount_to_add: int):
+    """Adds a value to a player's band_xp_bank in the database."""
+    database = get_db()
+    if database is None: return
+    
+    database.players.update_one(
+        {"name": {"$regex": f"^{player_name_lower}$", "$options": "i"}},
+        {"$inc": {"band_xp_bank": amount_to_add}}
+    )
+    
+# --- END NEW ---
+
 
 def save_room_state(room: 'Room'):
     """Saves the current state of a room object to the database."""
