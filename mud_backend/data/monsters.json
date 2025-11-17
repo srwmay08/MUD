@@ -86,7 +86,7 @@
         "respawn_time_seconds": 90,
         "respawn_chance_per_tick": 0.3,
         "movement_rules": {
-            "wander_chance": 1,
+            "wander_chance": 0.1,
             "allowed_rooms": []
         },
         
