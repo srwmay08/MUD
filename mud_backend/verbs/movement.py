@@ -16,8 +16,8 @@ from mud_backend.core.game_objects import Room
 # ---
 # --- END FIX
 # ---
-# --- NEW: Add imports needed for background task ---
-from mud_backend.core.room_handler import show_room_to_player
+# --- MODIFIED: Add imports needed for background task ---
+from mud_backend.core.room_handler import show_room_to_player, _get_map_data
 # --- NEW: Import skill check ---
 from mud_backend.core.skill_handler import attempt_skill_learning
 # --- END NEW ---
@@ -129,7 +129,7 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
 # ---
 
 # ---
-# --- NEW: Group Movement Helper
+# --- MODIFIED: Group Movement Helper (Broadcast Fix)
 # ---
 def _handle_group_move(
     world: 'World', 
@@ -154,10 +154,21 @@ def _handle_group_move(
         if member_key == leader_name.lower():
             continue # Skip the leader
             
-        member_obj = world.get_player_obj(member_key)
+        # ---
+        # --- THIS IS THE FIX: Get member_info to find their SID
+        # ---
+        member_info = world.get_player_info(member_key)
+        if not member_info:
+            continue # Follower isn't online
+            
+        member_obj = member_info.get("player_obj")
+        sid = member_info.get("sid")
         
-        # Check if member is online and in the leader's *original* room
-        if member_obj and member_obj.current_room_id == original_room_id:
+        # Check if member is online, has a session, and is in the leader's *original* room
+        if member_obj and sid and member_obj.current_room_id == original_room_id:
+        # ---
+        # --- END FIX
+        # ---
             
             # --- Check if member is busy ---
             if _check_action_roundtime(member_obj, action_type="move"):
@@ -195,8 +206,36 @@ def _handle_group_move(
 
             # If all checks pass, move the member
             if member_can_move:
-                # Use the same success message as the leader
+                # ---
+                # --- THIS IS THE FIX: Handle all broadcast/socket logic
+                # ---
+                member_obj.messages.clear()
+                # 1. Move the player object
                 member_obj.move_to_room(target_room_id, move_msg)
+                
+                # 2. Leave old Socket.IO room
+                world.socketio.server.leave_room(sid, original_room_id)
+                leaves_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> leaves.'
+                # 3. Broadcast leave message to old room (skip self)
+                world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sid)
+                
+                # 4. Join new Socket.IO room
+                world.socketio.server.enter_room(sid, target_room_id)
+                arrives_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> arrives.'
+                # 5. Broadcast arrive message to new room (skip self)
+                world.broadcast_to_room(target_room_id, arrives_message, "message", skip_sid=sid)
+
+                # 6. Send the command_response to the follower's client
+                vitals_data = member_obj.get_vitals()
+                map_data = _get_map_data(member_obj, world)
+                world.socketio.emit(
+                    'command_response', 
+                    {'messages': member_obj.messages, 'vitals': vitals_data, 'map_data': map_data}, 
+                    to=sid
+                )
+                # ---
+                # --- END FIX
+                # ---
             else:
                 # Send failure to member and group
                 if failure_message:
@@ -207,7 +246,7 @@ def _handle_group_move(
                     skip_player_key=member_key
                 )
 # ---
-# --- END NEW HELPER
+# --- END MODIFIED HELPER
 # ---
 
 
