@@ -1,6 +1,9 @@
 # mud_backend/verbs/attack.py
 import time
 import copy 
+# --- NEW: Import math ---
+import math
+# --- END NEW ---
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend import config 
 from mud_backend.core import combat_system
@@ -84,12 +87,39 @@ class Attack(BaseVerb):
                 # ---
                 resolve_data["combat_continues"] = False 
                 
-                nominal_xp = 1000 # TODO: Get from template
+                # ---
+                # --- NEW: XP Calculation based on Level Difference
+                # ---
+                player_level = self.player.level
+                monster_level = target_monster_data.get("level", 1)
+                level_diff = player_level - monster_level # (e.g., PL 10, ML 8 = +2)
+                
+                nominal_xp = 0
+                if level_diff >= 10:
+                    nominal_xp = 0
+                elif 1 <= level_diff <= 9:
+                    nominal_xp = 100 - (10 * level_diff)
+                elif level_diff == 0:
+                    nominal_xp = 100
+                elif -4 <= level_diff <= -1:
+                    nominal_xp = 100 + (10 * abs(level_diff))
+                elif level_diff <= -5:
+                    nominal_xp = 150
+                
+                nominal_xp = max(0, nominal_xp) # Ensure it's not negative
+                
+                # Add the gain message
+                if nominal_xp > 0:
+                    resolve_data["messages"].append(f"You have gained {nominal_xp} experience from the kill.")
+                # ---
+                # --- END NEW XP CALC
+                # ---
                 
                 # ---
                 # --- MODIFIED: Use grant_experience for Band splitting
                 # ---
-                self.player.grant_experience(nominal_xp, source="combat")
+                if nominal_xp > 0:
+                    self.player.grant_experience(nominal_xp, source="combat")
                 # ---
                 # --- END MODIFIED
                 # ---

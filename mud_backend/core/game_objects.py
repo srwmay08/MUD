@@ -656,7 +656,13 @@ class Player:
         self.unabsorbed_exp -= amount_to_absorb
         self.experience += amount_to_absorb
         
-        absorption_msg = f"You absorb {amount_to_absorb} experience. ({self.unabsorbed_exp} remaining)"
+        # ---
+        # --- THIS IS THE FIX: Set message to None
+        # ---
+        absorption_msg = None
+        # ---
+        # --- END FIX
+        # ---
 
         if self.con_lost > 0:
             self.con_recovery_pool += amount_to_absorb
@@ -666,8 +672,13 @@ class Player:
                 self.stats["CON"] = self.stats.get("CON", 50) + regained
                 self.con_lost -= regained
                 self.con_recovery_pool -= (regained * 2000)
-                # We can't send_message here, so append to the main message
-                absorption_msg += f"\nYou feel some of your vitality return! (Recovered {regained} CON)"
+                # ---
+                # --- THIS IS THE FIX: Set message, don't append
+                # ---
+                absorption_msg = f"You feel some of your vitality return! (Recovered {regained} CON)"
+                # ---
+                # --- END FIX
+                # ---
                 
         self._check_for_level_up() # This calls self.send_message, which is fine
         return absorption_msg
@@ -876,13 +887,13 @@ class Player:
             # --- END NEW ---
             
             # ---
-            # --- NEW: Save Magic Properties
+            # --- NEW: Magic Properties
             # ---
             "prepared_spell": self.prepared_spell,
             "buffs": self.buffs,
             # --- END NEW ---
             
-            # --- NEW: Save Learned Abilities ---
+            # --- NEW: Learned Abilities ---
             "known_spells": self.known_spells,
             "known_maneuvers": self.known_maneuvers,
             "completed_quests": self.completed_quests,
@@ -904,12 +915,12 @@ class Player:
             # --- END NEW ---
 
             # ---
-            # --- NEW: Save Map Tracking ---
+            # --- NEW: Map Tracking ---
             "visited_rooms": self.visited_rooms,
             # --- END NEW ---
 
             # ---
-            # --- NEW: Save GOTO Flag ---
+            # --- NEW: GOTO Flag ---
             "is_goto_active": self.is_goto_active,
             # --- END NEW ---
 
