@@ -765,8 +765,13 @@ class Player:
         """
         Handles all logic for moving a player to a new room.
         Stops combat, updates state, and sends messages.
+        
+        --- THIS IS THE FIX ---
+        This function NO LONGER calls show_room_to_player.
+        The function that *calls* move_to_room is responsible for showing the room.
+        --- END FIX ---
         """
-        from mud_backend.core.room_handler import show_room_to_player
+        # from mud_backend.core.room_handler import show_room_to_player # <-- REMOVED
 
         # --- REFACTORED: Use world methods ---
         new_room_data = self.world.get_room(target_room_id)
@@ -776,13 +781,8 @@ class Player:
             self.send_message("You try to move, but find only an endless void. You quickly scramble back.")
             return
 
-        new_room = Room(
-            room_id=new_room_data["room_id"],
-            name=new_room_data["name"],
-            description=new_room_data["description"],
-            db_data=new_room_data
-        )
-
+        # (No need to create a Room object here anymore)
+        
         self._stop_combat()
         self.current_room_id = target_room_id
 
@@ -793,7 +793,7 @@ class Player:
         # --- END NEW ---
 
         self.send_message(move_message)
-        show_room_to_player(self, new_room) # show_room_to_player also needs refactoring
+        # show_room_to_player(self, new_room) # <-- REMOVED
 
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
