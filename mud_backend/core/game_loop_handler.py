@@ -6,7 +6,7 @@ from typing import Callable, TYPE_CHECKING
 # --- REFACTORED: Import World for type hinting ---
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
-# --- END REFACTOR ---
+# --- END REFACTORED ---
 
 # --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend.core.game_objects import Player 
@@ -14,6 +14,21 @@ from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 from mud_backend.core import loot_system
 from mud_backend import config # <-- ADDED MISSING IMPORT
+
+# ---
+# --- THIS IS THE FIX: Function moved from app.py
+# ---
+def _get_absorption_room_type(room_id: str) -> str:
+    """Determines the room type for experience absorption."""
+    if room_id in getattr(config, 'NODE_ROOM_IDS', []):
+        return "on_node"
+    if room_id in getattr(config, 'TOWN_ROOM_IDS', []):
+        return "in_town"
+    return "other"
+# ---
+# --- END FIX
+# ---
+
 
 # --- REFACTORED: Accept world object ---
 def _prune_active_players(world: 'World', log_prefix: str, broadcast_callback: Callable):
@@ -108,6 +123,17 @@ def _process_player_vitals(world: 'World', log_prefix: str, send_to_player_callb
         if player_obj.spirit < player_obj.max_spirit and spirit_regen_amount > 0:
             player_obj.spirit = min(player_obj.max_spirit, player_obj.spirit + spirit_regen_amount)
             vitals_changed = True
+
+        # ---
+        # --- **** THIS IS THE FIX FOR EXP ABSORPTION ****
+        # ---
+        room_type = _get_absorption_room_type(player_obj.current_room_id)
+        # absorb_exp_pulse() returns True if it absorbed anything
+        if player_obj.absorb_exp_pulse(room_type):
+            vitals_changed = True # Mark for a vitals update
+        # ---
+        # --- **** END FIX ****
+        # ---
             
         # --- THIS IS THE FIX: Send update if anything changed ---
         if vitals_changed:

@@ -34,14 +34,13 @@ from mud_backend.core.room_handler import _handle_npc_idle_dialogue
 # --- END FIX
 # ---
 
-
-def _get_absorption_room_type(room_id: str) -> str:
-    """Determines the room type for experience absorption."""
-    if room_id in getattr(config, 'NODE_ROOM_IDS', []):
-        return "on_node"
-    if room_id in getattr(config, 'TOWN_ROOM_IDS', []):
-        return "in_town"
-    return "other"
+# ---
+# --- THIS IS THE FIX: This function is now in game_loop_handler
+# ---
+# (def _get_absorption_room_type... has been REMOVED)
+# ---
+# --- END FIX
+# ---
 
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'static'))
@@ -97,23 +96,39 @@ def game_tick_thread(world_instance: World):
                 # ---
                 is_ambient = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay"]
                 is_death = msg_type == "combat_death"
+                
+                # --- THIS IS THE FIX: Support list/set of SIDs ---
+                sids_to_skip = set()
+                if isinstance(skip_sid, str):
+                    sids_to_skip.add(skip_sid)
+                elif isinstance(skip_sid, (list, set)):
+                    sids_to_skip.update(skip_sid)
+                # --- END FIX ---
+
 
                 if not is_ambient and not is_death:
                     # Normal broadcast (e.g., combat hits)
-                    if skip_sid:
-                        socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
-                    else:
-                        socketio.emit(msg_type, message, to=room_id)
+                    
+                    # --- THIS IS THE FIX: Iterate to allow skipping multiple SIDs ---
+                    room_occupants = world_instance.get_all_players_info()
+                    for p_name, p_data in room_occupants:
+                        if p_data.get("current_room_id") == room_id:
+                            p_sid = p_data.get("sid")
+                            if p_sid and p_sid not in sids_to_skip:
+                                socketio.emit(msg_type, message, to=p_sid)
                     return
-
+                    # --- END FIX ---
+                
                 # Flag-checked broadcast: Iterate over players in the room
                 for p_name, p_data in world_instance.get_all_players_info():
                     if p_data.get("current_room_id") == room_id:
                         player_obj = p_data.get("player_obj")
                         player_sid = p_data.get("sid")
                         
-                        if not player_obj or not player_sid or player_sid == skip_sid:
+                        # --- THIS IS THE FIX: Use set for skipping ---
+                        if not player_obj or not player_sid or player_sid in sids_to_skip:
                             continue
+                        # --- END FIX ---
 
                         # Check flags
                         if is_ambient and player_obj.flags.get("ambient", "on") == "off":
@@ -505,12 +520,32 @@ def handle_command_event(data):
                 if old_room_id:
                     leave_room(old_room_id, sid=sid)
                     leaves_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> leaves.'
-                    emit("message", leaves_message, to=old_room_id)
+                    emit("message", leaves_message, to=old_room_id, skip_sid=sid)
                 
                 join_room(new_room_id, sid=sid)
                 arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
-                emit("message", arrives_message, to=new_room_id, skip_sid=sid)
-                
+
+                # ---
+                # --- THIS IS THE FIX: Skip all followers in the new room
+                # ---
+                sids_to_skip = {sid}
+                if player_obj:
+                    group = world.get_group(player_obj.group_id)
+                    if group and group["leader"] == player_name.lower():
+                        for member_key in group["members"]:
+                            if member_key == player_name.lower(): continue
+                            member_info = world.get_player_info(member_key)
+                            if member_info and member_info.get("current_room_id") == new_room_id:
+                                member_sid = member_info.get("sid")
+                                if member_sid:
+                                    sids_to_skip.add(member_sid)
+
+                # Use the robust broadcast_to_room function defined in the tick thread
+                broadcast_to_room(new_room_id, arrives_message, "message", skip_sid=sids_to_skip)
+                # ---
+                # --- END FIX
+                # ---
+
                 socketio.start_background_task(
                     _handle_npc_idle_dialogue, 
                     world, 

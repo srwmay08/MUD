@@ -136,8 +136,8 @@ def _handle_group_move(
     leader_player: 'Player',
     original_room_id: str, 
     target_room_id: str,
-    move_msg: str,
-    move_verb: str,
+    move_msg: str, # This is the LEADER's move message (e.g., "You move north...")
+    move_verb: str, # This is the objective verb (e.g., "north", "enter", "climb")
     skill_dc: int = 0
 ):
     """
@@ -154,9 +154,6 @@ def _handle_group_move(
         if member_key == leader_name.lower():
             continue # Skip the leader
             
-        # ---
-        # --- THIS IS THE FIX: Get member_info to find their SID
-        # ---
         member_info = world.get_player_info(member_key)
         if not member_info:
             continue # Follower isn't online
@@ -166,9 +163,6 @@ def _handle_group_move(
         
         # Check if member is online, has a session, and is in the leader's *original* room
         if member_obj and sid and member_obj.current_room_id == original_room_id:
-        # ---
-        # --- END FIX
-        # ---
             
             # --- Check if member is busy ---
             if _check_action_roundtime(member_obj, action_type="move"):
@@ -206,16 +200,29 @@ def _handle_group_move(
 
             # If all checks pass, move the member
             if member_can_move:
-                # ---
-                # --- THIS IS THE FIX: Handle all broadcast/socket logic
-                # ---
-                member_obj.messages.clear()
-                # 1. Move the player object
-                member_obj.move_to_room(target_room_id, move_msg)
                 
                 # ---
                 # --- **** THIS IS THE FIX FOR FOLLOWERS ****
                 # ---
+                # Generate a follower-specific move message
+                follower_move_msg = ""
+                if move_verb == "enter":
+                    follower_move_msg = f"You follow {leader_name} inside..."
+                elif move_verb == "climb":
+                    follower_move_msg = f"You follow {leader_name}, climbing..."
+                elif move_verb == "out":
+                    follower_move_msg = f"You follow {leader_name} out..."
+                elif move_verb in DIRECTION_MAP.values() or move_verb in DIRECTION_MAP.keys():
+                    # It's a direction
+                    follower_move_msg = f"You follow {leader_name} {move_verb}..."
+                else:
+                    # Failsafe for things like 'goto' paths (e.g., 'door')
+                    follower_move_msg = f"You follow {leader_name}..."
+
+                member_obj.messages.clear()
+                # 1. Move the player object using the *new* message
+                member_obj.move_to_room(target_room_id, follower_move_msg) 
+                
                 # 1b. Get and show the new room to the follower
                 new_room_data = world.get_room(target_room_id)
                 new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
@@ -226,9 +233,23 @@ def _handle_group_move(
                 
                 # 2. Leave old Socket.IO room
                 world.socketio.server.leave_room(sid, original_room_id)
+                
+                # ---
+                # --- **** THIS IS THE FIX FOR LEADER ****
+                # ---
+                # [NEW] Get leader's SID to skip them on the "leaves" broadcast
+                leader_info = world.get_player_info(leader_name.lower())
+                leader_sid = leader_info.get("sid") if leader_info else None
+                sids_to_skip_for_leave = {sid}
+                if leader_sid:
+                    sids_to_skip_for_leave.add(leader_sid)
+
                 leaves_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> leaves.'
-                # 3. Broadcast leave message to old room (skip self)
-                world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sid)
+                # 3. Broadcast leave message to old room (skip self AND LEADER)
+                world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sids_to_skip_for_leave)
+                # ---
+                # --- **** END FIX ****
+                # ---
                 
                 # 4. Join new Socket.IO room
                 world.socketio.server.enter_room(sid, target_room_id)
@@ -244,9 +265,6 @@ def _handle_group_move(
                     {'messages': member_obj.messages, 'vitals': vitals_data, 'map_data': map_data}, 
                     to=sid
                 )
-                # ---
-                # --- END FIX
-                # ---
             else:
                 # Send failure to member and group
                 if failure_message:
@@ -374,6 +392,18 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             player_obj.is_goto_active = False
             return
         
+        # ---
+        # --- **** THIS IS THE FIX FOR GOTO LEADER ****
+        # ---
+        # Add group message *before* moving
+        group = world.get_group(player_obj.group_id)
+        is_leader = group and group["leader"] == player_obj.name.lower() and len(group["members"]) > 1
+        if is_leader:
+            move_msg = f"You move {move_direction}... and your group follows."
+        # ---
+        # --- **** END FIX ****
+        # ---
+
         # --- Leader move ---
         player_obj.messages.clear()
         player_obj.move_to_room(target_room_id_step, move_msg)
@@ -425,7 +455,24 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             
             world.socketio.server.enter_room(sid, target_room_id_step)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
-            world.broadcast_to_room(target_room_id_step, arrives_message, "message", skip_sid=sid)
+            
+            # ---
+            # --- **** THIS IS THE GOTO/LEADER ARRIVES FIX ****
+            # ---
+            sids_to_skip = {sid}
+            if group and is_leader:
+                 for member_key in group["members"]:
+                    if member_key == player_id: continue
+                    member_info = world.get_player_info(member_key)
+                    if member_info and member_info.get("current_room_id") == target_room_id_step:
+                        member_sid = member_info.get("sid")
+                        if member_sid:
+                            sids_to_skip.add(member_sid)
+            
+            world.broadcast_to_room(target_room_id_step, arrives_message, "message", skip_sid=sids_to_skip)
+            # ---
+            # --- **** END FIX ****
+            # ---
         
         world.socketio.emit('command_response', 
                                  {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
@@ -498,6 +545,17 @@ class Enter(BaseVerb):
 
         if _check_toll_gate(self.player, target_room_id):
             return
+        
+        # ---
+        # --- **** THIS IS THE FIX FOR LEADER ****
+        # ---
+        group = self.world.get_group(self.player.group_id)
+        is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
+        if is_leader:
+            move_msg = f"You enter the {enterable_object.get('name', target_name)}... and your group follows."
+        # ---
+        # --- **** END FIX ****
+        # ---
             
         original_room_id = self.room.room_id # --- Store for group move
         self.player.move_to_room(target_room_id, move_msg)
@@ -593,6 +651,17 @@ class Climb(BaseVerb):
             
         if _check_toll_gate(self.player, target_room_id):
             return
+        
+        # ---
+        # --- **** THIS IS THE FIX FOR LEADER ****
+        # ---
+        group = self.world.get_group(self.player.group_id)
+        is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
+        if is_leader:
+            move_msg = f"You grasp the {target_name} and begin to climb... and your group follows."
+        # ---
+        # --- **** END FIX ****
+        # ---
             
         original_room_id = self.room.room_id # --- Store for group move
         self.player.move_to_room(target_room_id, move_msg)
@@ -653,6 +722,17 @@ class Move(BaseVerb):
             
             if _check_toll_gate(self.player, target_room_id):
                 return
+            
+            # ---
+            # --- **** THIS IS THE FIX FOR LEADER ****
+            # ---
+            group = self.world.get_group(self.player.group_id)
+            is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
+            if is_leader:
+                move_msg = f"You move {normalized_direction}... and your group follows."
+            # ---
+            # --- **** END FIX ****
+            # ---
             
             original_room_id = self.room.room_id # --- Store for group move
             self.player.move_to_room(target_room_id, move_msg)
@@ -736,6 +816,17 @@ class Exit(BaseVerb):
 
                 if _check_toll_gate(self.player, target_room_id):
                     return
+
+                # ---
+                # --- **** THIS IS THE FIX FOR LEADER ****
+                # ---
+                group = self.world.get_group(self.player.group_id)
+                is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
+                if is_leader:
+                    move_msg = "You head out... and your group follows."
+                # ---
+                # --- **** END FIX ****
+                # ---
 
                 original_room_id = self.room.room_id # --- Store for group move
                 self.player.move_to_room(target_room_id, move_msg)
