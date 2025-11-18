@@ -579,7 +579,7 @@ class Player:
                             member_obj.add_field_exp(share, is_band_share=True)
                     else:
                         # Member is offline, update their bank in the DB
-                        self.world.db.update_player_band_xp_bank(member_key, share)
+                        db.update_player_band_xp_bank(member_key, share)
                 
                 return # Stop here, we've handled the XP
         
@@ -626,9 +626,14 @@ class Player:
     # --- END XP METHODS
     # ---
 
-    def absorb_exp_pulse(self, room_type: str = "other") -> bool:
+    def absorb_exp_pulse(self, room_type: str = "other") -> Optional[str]:
+        """
+        Absorbs one pulse of experience.
+        Returns the message string if absorption happened, otherwise None.
+        """
         if self.unabsorbed_exp <= 0:
-            return False
+            return None
+        
         base_rate = 19
         logic_divisor = 7
         if room_type == "on_node":
@@ -637,16 +642,22 @@ class Player:
         elif room_type == "in_town":
             base_rate = 22
             logic_divisor = 5
+            
         logic_bonus = math.floor(self.stats.get("LOG", 0) / logic_divisor)
         pool_bonus = min(10, math.floor(self.unabsorbed_exp / 200.0))
-        group_bonus = 0
+        group_bonus = 0 # TODO: Add group bonus logic
+        
         amount_to_absorb = int(base_rate + logic_bonus + pool_bonus + group_bonus)
         amount_to_absorb = min(self.unabsorbed_exp, amount_to_absorb)
+        
         if amount_to_absorb <= 0:
-            return False
+            return None
+            
         self.unabsorbed_exp -= amount_to_absorb
         self.experience += amount_to_absorb
-        self.send_message(f"You absorb {amount_to_absorb} experience. ({self.unabsorbed_exp} remaining)")
+        
+        absorption_msg = f"You absorb {amount_to_absorb} experience. ({self.unabsorbed_exp} remaining)"
+
         if self.con_lost > 0:
             self.con_recovery_pool += amount_to_absorb
             points_to_regain = self.con_recovery_pool // 2000
@@ -655,9 +666,12 @@ class Player:
                 self.stats["CON"] = self.stats.get("CON", 50) + regained
                 self.con_lost -= regained
                 self.con_recovery_pool -= (regained * 2000)
-                self.send_message(f"You feel some of your vitality return! (Recovered {regained} CON)")
-        self._check_for_level_up()
-        return True
+                # We can't send_message here, so append to the main message
+                absorption_msg += f"\nYou feel some of your vitality return! (Recovered {regained} CON)"
+                
+        self._check_for_level_up() # This calls self.send_message, which is fine
+        return absorption_msg
+
 
     def _get_xp_target_for_level(self, level: int) -> int:
         # --- REFACTORED: Get level table from self.world ---

@@ -6,7 +6,7 @@ from typing import Callable, TYPE_CHECKING
 # --- REFACTORED: Import World for type hinting ---
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
-# --- END REFACTORED ---
+# --- END REFACTOR ---
 
 # --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend.core.game_objects import Player 
@@ -129,8 +129,10 @@ def _process_player_vitals(world: 'World', log_prefix: str, send_to_player_callb
         # ---
         room_type = _get_absorption_room_type(player_obj.current_room_id)
         # absorb_exp_pulse() returns True if it absorbed anything
-        if player_obj.absorb_exp_pulse(room_type):
+        absorption_msg = player_obj.absorb_exp_pulse(room_type)
+        if absorption_msg:
             vitals_changed = True # Mark for a vitals update
+            send_to_player_callback(player_obj.name, absorption_msg, "message")
         # ---
         # --- **** END FIX ****
         # ---
