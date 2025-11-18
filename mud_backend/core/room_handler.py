@@ -1,10 +1,18 @@
 # mud_backend/core/room_handler.py
 import copy
 import uuid
+import random # <-- NEW IMPORT
 from mud_backend.core.game_objects import Player, Room
 # --- MODIFIED: Import environment module and global weather ---
 from mud_backend.core.game_loop import environment
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING # <-- MODIFIED
+# --- NEW: Import quest handler ---
+from mud_backend.core.quest_handler import get_active_quest_for_npc
+
+if TYPE_CHECKING:
+    from mud_backend.core.game_state import World
+# --- END NEW ---
+
 
 # ---
 # --- NEW HELPER FUNCTION
@@ -288,3 +296,112 @@ def show_room_to_player(player: Player, room: Room):
             exit_names.append(f'<span class="keyword" data-command="{name}">{name.capitalize()}</span>')
         player.send_message(f"Obvious exits: {', '.join(exit_names)}")
         # --- END MODIFICATION ---
+
+# ---
+# --- NEW: FUNCTION MOVED FROM command_executor.py
+# ---
+def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
+    """
+    Builds a dictionary of map data for all rooms the player has visited.
+    """
+    map_data = {}
+    for room_id in player.visited_rooms:
+        # Use world.get_room to get the raw data from cache
+        room = world.game_rooms.get(room_id)
+        if room:
+            # Extract only what the client needs
+            special_exits = []
+            for obj in room.get("objects", []):
+                verb = None
+                target_room = obj.get("target_room")
+                
+                if not target_room:
+                    continue
+                    
+                if "ENTER" in obj.get("verbs", []):
+                    verb = "ENTER"
+                elif "CLIMB" in obj.get("verbs", []):
+                    verb = "CLIMB"
+                elif "EXIT" in obj.get("verbs", []):
+                    verb = "EXIT" # e.g., "out"
+                
+                if verb:
+                    special_exits.append({
+                        "name": obj.get("name", "door"),
+                        "target_room": target_room,
+                        "verb": verb
+                    })
+
+            map_data[room_id] = {
+                "room_id": room.get("room_id"),
+                "name": room.get("name"),
+                "x": room.get("x"), # Will be None if not set
+                "y": room.get("y"),
+                "z": room.get("z"),
+                "interior_id": room.get("interior_id"), # Add this line
+                "exits": room.get("exits", {}),
+                "special_exits": special_exits
+            }
+    return map_data
+# ---
+# --- END MOVED FUNCTION
+# ---
+
+# ---
+# --- NEW: FUNCTION MOVED FROM app.py
+# ---
+def _handle_npc_idle_dialogue(world: 'World', player_name: str, room_id: str):
+    """
+    Waits a random time, then checks for NPCs and sends idle quest prompts.
+    This is run in a background thread by socketio.
+    """
+    try:
+        delay = random.randint(3, 10)
+        world.socketio.sleep(delay)
+
+        player_obj = world.get_player_obj(player_name.lower())
+        if not player_obj:
+            return 
+
+        if player_obj.current_room_id != room_id:
+            return 
+
+        room_data = world.game_rooms.get(room_id)
+        if not room_data:
+            return
+            
+        npcs = []
+        for obj in room_data.get("objects", []):
+            if obj.get("quest_giver_ids") and not obj.get("is_monster"):
+                npcs.append(obj)
+        
+        if not npcs:
+            return
+            
+        for npc in npcs:
+            npc_quest_ids = npc.get("quest_giver_ids", [])
+            active_quest = get_active_quest_for_npc(player_obj, npc_quest_ids)
+            
+            if active_quest:
+                idle_prompt = active_quest.get("idle_prompt")
+                give_target = active_quest.get("give_target_name")
+                
+                # NEW CHECK: Don't say the idle prompt if this NPC is just the item receiver
+                if idle_prompt:
+                    is_just_receiver = (give_target and give_target == npc.get("name", "").lower())
+                    
+                    if not is_just_receiver:
+                        if player_obj.current_room_id == room_id:
+                            npc_name = npc.get("name", "Someone")
+                            world.send_message_to_player(
+                                player_name.lower(),
+                                f"The {npc_name} says, \"{idle_prompt}\"",
+                                "message"
+                            )
+                            return # Only one idle prompt per room
+                        
+    except Exception as e:
+        print(f"[IDLE_DIALOGUE_ERROR] Error in _handle_npc_idle_dialogue: {e}")
+# ---
+# --- END MOVED FUNCTION
+# ---

@@ -22,7 +22,13 @@ from mud_backend.core.chargen_handler import (
     send_stat_roll_prompt,
     send_assignment_prompt 
 )
-from mud_backend.core.room_handler import show_room_to_player
+# ---
+# --- THIS IS THE FIX: Import from new location
+# ---
+from mud_backend.core.room_handler import show_room_to_player, _get_map_data
+# ---
+# --- END FIX
+# ---
 from mud_backend.core.skill_handler import show_skill_list 
 
 # --- REFACTORED: Removed game_state import ---
@@ -137,53 +143,11 @@ DIRECTION_MAP = {
 }
 
 # ---
-# --- NEW: Helper function to build map data
+# --- THIS IS THE FIX: The _get_map_data function has been moved to room_handler.py
 # ---
-def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
-    """
-    Builds a dictionary of map data for all rooms the player has visited.
-    """
-    map_data = {}
-    for room_id in player.visited_rooms:
-        # Use world.get_room to get the raw data from cache
-        room = world.game_rooms.get(room_id)
-        if room:
-            # Extract only what the client needs
-            special_exits = []
-            for obj in room.get("objects", []):
-                verb = None
-                target_room = obj.get("target_room")
-                
-                if not target_room:
-                    continue
-                    
-                if "ENTER" in obj.get("verbs", []):
-                    verb = "ENTER"
-                elif "CLIMB" in obj.get("verbs", []):
-                    verb = "CLIMB"
-                elif "EXIT" in obj.get("verbs", []):
-                    verb = "EXIT" # e.g., "out"
-                
-                if verb:
-                    special_exits.append({
-                        "name": obj.get("name", "door"),
-                        "target_room": target_room,
-                        "verb": verb
-                    })
-
-            map_data[room_id] = {
-                "room_id": room.get("room_id"),
-                "name": room.get("name"),
-                "x": room.get("x"), # Will be None if not set
-                "y": room.get("y"),
-                "z": room.get("z"),
-                "interior_id": room.get("interior_id"), # Add this line
-                "exits": room.get("exits", {}),
-                "special_exits": special_exits
-            }
-    return map_data
+# (The local definition of _get_map_data has been removed)
 # ---
-# --- END NEW HELPER
+# --- END FIX
 # ---
 
 

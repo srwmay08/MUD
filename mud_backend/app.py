@@ -26,6 +26,13 @@ from mud_backend.core.game_objects import Player
 # --- NEW: Import faction handler ---
 from mud_backend.core import faction_handler
 # --- END NEW ---
+# ---
+# --- THIS IS THE FIX: Import the moved function
+# ---
+from mud_backend.core.room_handler import _handle_npc_idle_dialogue
+# ---
+# --- END FIX
+# ---
 
 
 def _get_absorption_room_type(room_id: str) -> str:
@@ -64,64 +71,13 @@ else:
 def index():
     return render_template("index.html")
 
-def _handle_npc_idle_dialogue(world: World, player_name: str, room_id: str):
-    """
-    Waits a random time, then checks for NPCs and sends idle quest prompts.
-    This is run in a background thread by socketio.
-    """
-    try:
-        delay = random.randint(3, 10)
-        socketio.sleep(delay)
-
-        player_obj = world.get_player_obj(player_name.lower())
-        if not player_obj:
-            return 
-
-        if player_obj.current_room_id != room_id:
-            return 
-
-        room_data = world.game_rooms.get(room_id)
-        if not room_data:
-            return
-            
-        npcs = []
-        for obj in room_data.get("objects", []):
-            if obj.get("quest_giver_ids") and not obj.get("is_monster"):
-                npcs.append(obj)
-        
-        if not npcs:
-            return
-            
-        for npc in npcs:
-            npc_quest_ids = npc.get("quest_giver_ids", [])
-            active_quest = get_active_quest_for_npc(player_obj, npc_quest_ids)
-            
-            # ---
-            # --- THIS IS THE FIX
-            # ---
-            if active_quest:
-                idle_prompt = active_quest.get("idle_prompt")
-                give_target = active_quest.get("give_target_name")
-                
-                # NEW CHECK: Don't say the idle prompt if this NPC is just the item receiver
-                if idle_prompt:
-                    is_just_receiver = (give_target and give_target == npc.get("name", "").lower())
-                    
-                    if not is_just_receiver: # <--- THIS IS THE FIX
-                        if player_obj.current_room_id == room_id:
-                            npc_name = npc.get("name", "Someone")
-                            world.send_message_to_player(
-                                player_name.lower(),
-                                f"The {npc_name} says, \"{idle_prompt}\"",
-                                "message"
-                            )
-                            return # Only one idle prompt per room
-            # ---
-            # --- END FIX
-            # ---
-                        
-    except Exception as e:
-        print(f"[IDLE_DIALOGUE_ERROR] Error in _handle_npc_idle_dialogue: {e}")
+# ---
+# --- THIS IS THE FIX: The function is now defined in room_handler.py
+# ---
+# (The local definition of _handle_npc_idle_dialogue has been removed)
+# ---
+# --- END FIX
+# ---
 
 
 def game_tick_thread(world_instance: World):
@@ -233,6 +189,36 @@ def game_tick_thread(world_instance: World):
                     giver_obj = world_instance.get_player_obj(giver_name.lower())
                     if giver_obj:
                         giver_obj.send_message(f"Your offer to {receiver_name} for {item_name} has expired.")
+
+            # ---
+            # --- NEW: CHECK PENDING GROUP INVITES
+            # ---
+            if world_instance.pending_group_invites:
+                expired_invites = []
+                with world_instance.group_lock:
+                    invite_items = list(world_instance.pending_group_invites.items())
+                
+                for invitee_name, invite_data in invite_items:
+                    if current_time - invite_data.get("time", 0) > 30:
+                        expired_invites.append((invitee_name, invite_data))
+                
+                for invitee_name, invite_data in expired_invites:
+                    world_instance.remove_pending_group_invite(invitee_name)
+                    
+                    inviter_name = invite_data.get("from_player_name", "Someone")
+                    
+                    # Notify the invitee (who declined by timing out)
+                    invitee_obj = world_instance.get_player_obj(invitee_name)
+                    if invitee_obj:
+                        invitee_obj.send_message(f"The group invitation from {inviter_name} has expired.")
+                    
+                    # Notify the inviter
+                    inviter_obj = world_instance.get_player_obj(inviter_name.lower())
+                    if inviter_obj:
+                        inviter_obj.send_message(f"Your group invitation to {invitee_name.capitalize()} has expired.")
+            # ---
+            # --- END NEW LOGIC
+            # ---
             
             active_players_list = world_instance.get_all_players_info()
             for player_name_lower, player_data in active_players_list:
