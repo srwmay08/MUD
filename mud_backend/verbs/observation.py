@@ -352,6 +352,16 @@ class Investigate(BaseVerb):
         found_something = False
         for i in range(len(hidden_objects) - 1, -1, -1):
             obj = hidden_objects[i]
+            
+            # ---
+            # --- THIS IS THE FIX: Skip nodes
+            # ---
+            if obj.get("node_id") or obj.get("node_type"):
+                continue
+            # ---
+            # --- END FIX
+            # ---
+            
             dc = obj.get("perception_dc", 100)
             
             skill_rank = self.player.skills.get("investigation", 0)

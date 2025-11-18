@@ -409,8 +409,13 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         player_obj.move_to_room(target_room_id_step, move_msg)
         
         # ---
-        # --- **** THIS IS THE FIX FOR GOTO LEADER ****
+        # --- **** THIS IS THE FIX FOR GOTO LEADER (Followers move first) ****
         # ---
+        _handle_group_move(
+            world, player_obj, original_room_id, target_room_id_step,
+            move_msg, move_verb, skill_dc
+        )
+        
         # Get and show the new room to the leader
         new_room_data = world.get_room(target_room_id_step)
         new_room = Room(target_room_id_step, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
@@ -440,10 +445,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         # ---
 
         # --- Group move (in-task) ---
-        _handle_group_move(
-            world, player_obj, original_room_id, target_room_id_step,
-            move_msg, move_verb, skill_dc
-        )
+        # --- (MOVED UP) ---
         
         _set_action_roundtime(player_obj, 3.0) 
         
@@ -451,7 +453,23 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         if original_room_id and target_room_id_step != original_room_id:
             world.socketio.server.leave_room(sid, original_room_id)
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
-            world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sid)
+            
+            # ---
+            # --- **** THIS IS THE GOTO/LEADER LEAVES FIX ****
+            # ---
+            sids_to_skip_leave = {sid}
+            if group and is_leader:
+                 for member_key in group["members"]:
+                    if member_key == player_id: continue
+                    member_info = world.get_player_info(member_key)
+                    if member_info and member_info.get("current_room_id") == original_room_id:
+                        member_sid = member_info.get("sid")
+                        if member_sid:
+                            sids_to_skip_leave.add(member_sid)
+            world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sids_to_skip_leave)
+            # ---
+            # --- **** END FIX ****
+            # ---
             
             world.socketio.server.enter_room(sid, target_room_id_step)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
@@ -459,7 +477,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             # ---
             # --- **** THIS IS THE GOTO/LEADER ARRIVES FIX ****
             # ---
-            sids_to_skip = {sid}
+            sids_to_skip_arrive = {sid}
             if group and is_leader:
                  for member_key in group["members"]:
                     if member_key == player_id: continue
@@ -467,9 +485,9 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                     if member_info and member_info.get("current_room_id") == target_room_id_step:
                         member_sid = member_info.get("sid")
                         if member_sid:
-                            sids_to_skip.add(member_sid)
+                            sids_to_skip_arrive.add(member_sid)
             
-            world.broadcast_to_room(target_room_id_step, arrives_message, "message", skip_sid=sids_to_skip)
+            world.broadcast_to_room(target_room_id_step, arrives_message, "message", skip_sid=sids_to_skip_arrive)
             # ---
             # --- **** END FIX ****
             # ---
@@ -561,8 +579,15 @@ class Enter(BaseVerb):
         self.player.move_to_room(target_room_id, move_msg)
         
         # ---
-        # --- **** THIS IS THE FIX FOR LEADER ****
+        # --- **** THIS IS THE FIX FOR LOGIC ORDER ****
         # ---
+        # 1. Handle group move *before* showing room
+        _handle_group_move(
+            self.world, self.player, original_room_id, target_room_id,
+            move_msg, "enter", skill_dc=0
+        )
+
+        # 2. Now get new room data and show it
         new_room_data = self.world.get_room(target_room_id)
         new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(self.player, new_room)
@@ -585,12 +610,7 @@ class Enter(BaseVerb):
         if rt > 0:
             _set_action_roundtime(self.player, rt)
             
-        # --- NEW: GROUP MOVEMENT ---
-        _handle_group_move(
-            self.world, self.player, original_room_id, target_room_id,
-            move_msg, "enter", skill_dc=0
-        )
-        # --- END NEW ---
+        # --- (Group move logic moved up) ---
 
 
 # --- Class from climb.py ---
@@ -667,8 +687,15 @@ class Climb(BaseVerb):
         self.player.move_to_room(target_room_id, move_msg)
         
         # ---
-        # --- **** THIS IS THE FIX FOR LEADER ****
+        # --- **** THIS IS THE FIX FOR LOGIC ORDER ****
         # ---
+        # 1. Handle group move *before* showing room
+        _handle_group_move(
+            self.world, self.player, original_room_id, target_room_id,
+            move_msg, "climb", skill_dc=dc
+        )
+
+        # 2. Now get new room data and show it
         new_room_data = self.world.get_room(target_room_id)
         new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(self.player, new_room)
@@ -678,12 +705,7 @@ class Climb(BaseVerb):
         
         _set_action_roundtime(self.player, rt)
         
-        # --- NEW: GROUP MOVEMENT ---
-        _handle_group_move(
-            self.world, self.player, original_room_id, target_room_id,
-            move_msg, "climb", skill_dc=dc
-        )
-        # --- END NEW ---
+        # --- (Group move logic moved up) ---
 
 
 # --- Class from move.py ---
@@ -738,8 +760,15 @@ class Move(BaseVerb):
             self.player.move_to_room(target_room_id, move_msg)
             
             # ---
-            # --- **** THIS IS THE FIX FOR LEADER ****
+            # --- **** THIS IS THE FIX FOR LOGIC ORDER ****
             # ---
+            # 1. Handle group move *before* showing room
+            _handle_group_move(
+                self.world, self.player, original_room_id, target_room_id,
+                move_msg, normalized_direction, skill_dc=0
+            )
+
+            # 2. Now get new room data and show it
             new_room_data = self.world.get_room(target_room_id)
             new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
             show_room_to_player(self.player, new_room)
@@ -762,12 +791,7 @@ class Move(BaseVerb):
             if rt > 0:
                 _set_action_roundtime(self.player, rt)
             
-            # --- NEW: GROUP MOVEMENT ---
-            _handle_group_move(
-                self.world, self.player, original_room_id, target_room_id,
-                move_msg, normalized_direction, skill_dc=0
-            )
-            # --- END NEW ---
+            # --- (Group move logic moved up) ---
             return
 
         # --- CHECK 2: Is it an object you can 'enter'? ---
@@ -832,8 +856,15 @@ class Exit(BaseVerb):
                 self.player.move_to_room(target_room_id, move_msg)
                 
                 # ---
-                # --- **** THIS IS THE FIX FOR LEADER ****
+                # --- **** THIS IS THE FIX FOR LOGIC ORDER ****
                 # ---
+                # 1. Handle group move *before* showing room
+                _handle_group_move(
+                    self.world, self.player, original_room_id, target_room_id,
+                    move_msg, "out", skill_dc=0
+                )
+
+                # 2. Now get new room data and show it
                 new_room_data = self.world.get_room(target_room_id)
                 new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
                 show_room_to_player(self.player, new_room)
@@ -856,12 +887,7 @@ class Exit(BaseVerb):
                 if rt > 0:
                     _set_action_roundtime(self.player, rt)
 
-                # --- NEW: GROUP MOVEMENT ---
-                _handle_group_move(
-                    self.world, self.player, original_room_id, target_room_id,
-                    move_msg, "out", skill_dc=0
-                )
-                # --- END NEW ---
+                # --- (Group move logic moved up) ---
                 return
             else:
                 # --- No "out" exit, try to "enter" the most obvious exit object ---

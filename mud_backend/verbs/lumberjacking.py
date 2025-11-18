@@ -143,9 +143,15 @@ class Survey(BaseVerb):
             
         forestry_skill = self.player.skills.get("forestry", 0) 
 
-        if not _has_tool(self.player, "lumberjacking"):
-            self.player.send_message("You need to be wielding an axe to survey trees.")
-            return
+        # ---
+        # --- THIS IS THE FIX: Removed tool check
+        # ---
+        # if not _has_tool(self.player, "lumberjacking"):
+        #     self.player.send_message("You need to be wielding an axe to survey trees.")
+        #     return
+        # ---
+        # --- END FIX
+        # ---
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         

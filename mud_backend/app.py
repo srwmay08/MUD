@@ -516,28 +516,46 @@ def handle_command_event(data):
                 if old_room_id:
                     leave_room(old_room_id, sid=sid)
                     leaves_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> leaves.'
-                    emit("message", leaves_message, to=old_room_id, skip_sid=sid)
+                    
+                    # ---
+                    # --- THIS IS THE FIX: Skip all followers in the *old* room
+                    # ---
+                    sids_to_skip_leave = {sid}
+                    if player_obj:
+                        group = world.get_group(player_obj.group_id)
+                        if group and group["leader"] == player_name.lower():
+                            for member_key in group["members"]:
+                                if member_key == player_name.lower(): continue
+                                member_info = world.get_player_info(member_key)
+                                # Check if they were in the *old* room (they should be)
+                                if member_info and member_info.get("current_room_id") == old_room_id:
+                                    member_sid = member_info.get("sid")
+                                    if member_sid:
+                                        sids_to_skip_leave.add(member_sid)
+                    
+                    broadcast_to_room(old_room_id, leaves_message, "message", skip_sid=sids_to_skip_leave)
                 
                 join_room(new_room_id, sid=sid)
                 arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
 
                 # ---
-                # --- THIS IS THE FIX: Skip all followers in the new room
+                # --- THIS IS THE FIX: Skip all followers in the *new* room
                 # ---
-                sids_to_skip = {sid}
+                sids_to_skip_arrive = {sid}
                 if player_obj:
                     group = world.get_group(player_obj.group_id)
                     if group and group["leader"] == player_name.lower():
                         for member_key in group["members"]:
                             if member_key == player_name.lower(): continue
                             member_info = world.get_player_info(member_key)
+                            # Check if they are in the *new* room
                             if member_info and member_info.get("current_room_id") == new_room_id:
                                 member_sid = member_info.get("sid")
                                 if member_sid:
-                                    sids_to_skip.add(member_sid)
+                                    sids_to_skip_arrive.add(member_sid)
 
                 # Use the robust broadcast_to_room function defined in the tick thread
-                broadcast_to_room(new_room_id, arrives_message, "message", skip_sid=sids_to_skip)
+                broadcast_to_room(new_room_id, arrives_message, "message", skip_sid=sids_to_skip_arrive)
                 # ---
                 # --- END FIX
                 # ---

@@ -140,11 +140,15 @@ class Forage(BaseVerb):
         # (Assuming 'survival' is the skill for this)
         survival_skill = self.player.skills.get("survival", 0)
         
-        # --- NEW: Tool Check ---
-        if not _has_tool(self.player, "herbalism"):
-            self.player.send_message("You need a sickle or knife to properly forage for plants.")
-            return
-        # --- END NEW ---
+        # ---
+        # --- THIS IS THE FIX: Removed tool check
+        # ---
+        # if not _has_tool(self.player, "herbalism"):
+        #     self.player.send_message("You need a sickle or knife to properly forage for plants.")
+        #     return
+        # ---
+        # --- END FIX
+        # ---
         
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
              
