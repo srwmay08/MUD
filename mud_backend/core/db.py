@@ -5,7 +5,7 @@ import json
 import os
 import uuid
 # --- FIX: Import 'List' and 'glob' ---
-from typing import TYPE_CHECKING, Optional, Any, List
+from typing import TYPE_CHECKING, Optional, Any, List, Dict
 import glob
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
