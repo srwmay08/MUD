@@ -213,6 +213,17 @@ def _handle_group_move(
                 # 1. Move the player object
                 member_obj.move_to_room(target_room_id, move_msg)
                 
+                # ---
+                # --- **** THIS IS THE FIX FOR FOLLOWERS ****
+                # ---
+                # 1b. Get and show the new room to the follower
+                new_room_data = world.get_room(target_room_id)
+                new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+                show_room_to_player(member_obj, new_room)
+                # ---
+                # --- **** END FIX ****
+                # ---
+                
                 # 2. Leave old Socket.IO room
                 world.socketio.server.leave_room(sid, original_room_id)
                 leaves_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> leaves.'
@@ -368,6 +379,17 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         player_obj.move_to_room(target_room_id_step, move_msg)
         
         # ---
+        # --- **** THIS IS THE FIX FOR GOTO LEADER ****
+        # ---
+        # Get and show the new room to the leader
+        new_room_data = world.get_room(target_room_id_step)
+        new_room = Room(target_room_id_step, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+        show_room_to_player(player_obj, new_room)
+        # ---
+        # --- **** END FIX ****
+        # ---
+        
+        # ---
         # --- THIS IS THE FIX: Tutorial Hook for GIVE CLERK
         # ---
         if (target_room_id_step == "town_hall" and
@@ -480,6 +502,16 @@ class Enter(BaseVerb):
         original_room_id = self.room.room_id # --- Store for group move
         self.player.move_to_room(target_room_id, move_msg)
         
+        # ---
+        # --- **** THIS IS THE FIX FOR LEADER ****
+        # ---
+        new_room_data = self.world.get_room(target_room_id)
+        new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+        show_room_to_player(self.player, new_room)
+        # ---
+        # --- **** END FIX ****
+        # ---
+        
         # --- Tutorial Hook ---
         if (target_room_id == "town_hall" and "intro_give_clerk" not in self.player.completed_quests):
             has_payment = "lodging_tax_payment" in self.player.inventory or \
@@ -564,6 +596,17 @@ class Climb(BaseVerb):
             
         original_room_id = self.room.room_id # --- Store for group move
         self.player.move_to_room(target_room_id, move_msg)
+        
+        # ---
+        # --- **** THIS IS THE FIX FOR LEADER ****
+        # ---
+        new_room_data = self.world.get_room(target_room_id)
+        new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+        show_room_to_player(self.player, new_room)
+        # ---
+        # --- **** END FIX ****
+        # ---
+        
         _set_action_roundtime(self.player, rt)
         
         # --- NEW: GROUP MOVEMENT ---
@@ -613,6 +656,16 @@ class Move(BaseVerb):
             
             original_room_id = self.room.room_id # --- Store for group move
             self.player.move_to_room(target_room_id, move_msg)
+            
+            # ---
+            # --- **** THIS IS THE FIX FOR LEADER ****
+            # ---
+            new_room_data = self.world.get_room(target_room_id)
+            new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+            show_room_to_player(self.player, new_room)
+            # ---
+            # --- **** END FIX ****
+            # ---
             
             # --- Tutorial Hook ---
             if (target_room_id == "town_hall" and "intro_give_clerk" not in self.player.completed_quests):
@@ -686,6 +739,16 @@ class Exit(BaseVerb):
 
                 original_room_id = self.room.room_id # --- Store for group move
                 self.player.move_to_room(target_room_id, move_msg)
+                
+                # ---
+                # --- **** THIS IS THE FIX FOR LEADER ****
+                # ---
+                new_room_data = self.world.get_room(target_room_id)
+                new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+                show_room_to_player(self.player, new_room)
+                # ---
+                # --- **** END FIX ****
+                # ---
                 
                 # --- Tutorial Hook ---
                 if (original_room_id == "inn_room" and

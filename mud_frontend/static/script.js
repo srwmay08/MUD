@@ -271,7 +271,7 @@ function updateGuiPanels(vitals) {
 
 
 // ---
-// --- MAP DRAWING FUNCTION (Unchanged)
+// --- MAP DRAWING FUNCTION (THIS IS THE FIX)
 // ---
 const ROOM_SIZE = 24;
 const ROOM_GAP = 12; 
@@ -280,38 +280,62 @@ const TOTAL_CELL_SIZE = ROOM_SIZE + ROOM_GAP;
 const ARROW_LEN = 6; 
 
 function drawMap(mapData, currentRoomId) {
+    // ---
+    // --- THIS IS THE FIX: Clear map elements *before* checking for the room
+    // ---
+    mapSvg.innerHTML = ''; 
+    mapRoomName.innerText = 'Loading...';
+    mapRoomExits.innerText = '...';
+    // ---
+    // --- END FIX
+    // ---
+    
     const currentRoom = mapData[currentRoomId];
     if (!currentRoom || currentRoom.x === undefined || currentRoom.y === undefined) {
-        mapSvg.innerHTML = ''; 
         mapRoomName.innerText = 'Unknown';
-        mapRoomExits.innerText = '...';
         return;
     }
-    mapSvg.innerHTML = '';
+
+    // ---
+    // --- THIS IS THE FIX: Set the room name *before* the drawing loop
+    // ---
+    mapRoomName.innerText = currentRoom.name || "Unknown";
+    // ---
+    // --- END FIX
+    // ---
+    
     const svgRect = mapSvg.getBoundingClientRect();
     const svgWidth = svgRect.width;
     const svgHeight = svgRect.height;
+    
     const cX = currentRoom.x || 0;
     const cY = currentRoom.y || 0;
     const cZ = currentRoom.z || 0;
     const cInterior = currentRoom.interior_id || null; 
+    
     const offsetX = (svgWidth / 2) - (cX * TOTAL_CELL_SIZE) - ROOM_CENTER;
     const offsetY = (svgHeight / 2) - (-cY * TOTAL_CELL_SIZE) - ROOM_CENTER;
+    
     const allExits = new Set();
+    
     for (const roomId in mapData) {
         const room = mapData[roomId];
         const roomZ = room.z || 0;
         const roomInterior = room.interior_id || null;
+        
         if (room.x === undefined || room.y === undefined || roomZ !== cZ || roomInterior !== cInterior) {
             continue;
         }
+        
         const rX = offsetX + (room.x * TOTAL_CELL_SIZE);
         const rY = offsetY + (-room.y * TOTAL_CELL_SIZE); 
+        
         const g = document.createElementNS(svgNS, 'g');
         g.classList.add('map-room');
         if (roomId === currentRoomId) {
             g.classList.add('current');
         }
+        
         const rect = document.createElementNS(svgNS, 'rect');
         rect.setAttribute('x', rX);
         rect.setAttribute('y', rY);
@@ -319,6 +343,7 @@ function drawMap(mapData, currentRoomId) {
         rect.setAttribute('height', ROOM_SIZE);
         rect.setAttribute('rx', 3);
         g.appendChild(rect);
+        
         const exits = room.exits || {};
         const drawExit = (dir, x1, y1, x2, y2) => {
             const path = document.createElementNS(svgNS, 'path');
@@ -327,6 +352,7 @@ function drawMap(mapData, currentRoomId) {
             g.appendChild(path);
             if (roomId === currentRoomId) allExits.add(dir);
         };
+        
         if (exits.north)    drawExit('N',  rX + ROOM_CENTER, rY, rX + ROOM_CENTER, rY - ARROW_LEN);
         if (exits.south)    drawExit('S',  rX + ROOM_CENTER, rY + ROOM_SIZE, rX + ROOM_CENTER, rY + ROOM_SIZE + ARROW_LEN);
         if (exits.east)     drawExit('E',  rX + ROOM_SIZE, rY + ROOM_CENTER, rX + ROOM_SIZE + ARROW_LEN, rY + ROOM_CENTER);
@@ -335,8 +361,10 @@ function drawMap(mapData, currentRoomId) {
         if (exits.northwest) drawExit('NW', rX, rY, rX - ARROW_LEN, rY - ARROW_LEN);
         if (exits.southeast) drawExit('SE', rX + ROOM_SIZE, rY + ROOM_SIZE, rX + ROOM_SIZE + ARROW_LEN, rY + ROOM_SIZE + ARROW_LEN);
         if (exits.southwest) drawExit('SW', rX, rY + ROOM_SIZE, rX - ARROW_LEN, rY + ROOM_SIZE + ARROW_LEN);
+        
         const specialExits = room.special_exits || [];
         let hasUp = false, hasDown = false, hasInOut = false;
+        
         specialExits.forEach(exit => {
             const targetRoom = mapData[exit.target_room];
             if (targetRoom && targetRoom.z !== undefined) {
@@ -348,11 +376,13 @@ function drawMap(mapData, currentRoomId) {
             }
             if (roomId === currentRoomId) allExits.add(exit.name.toUpperCase());
         });
+        
         const text = document.createElementNS(svgNS, 'text');
         let symbol = '';
         if (hasUp) symbol = '▲';
         if (hasDown) symbol = '▼';
         if (hasInOut && !hasUp && !hasDown) symbol = '○'; 
+        
         if (symbol) {
             text.setAttribute('x', rX + ROOM_CENTER);
             text.setAttribute('y', rY + ROOM_CENTER + 4);
@@ -365,8 +395,14 @@ function drawMap(mapData, currentRoomId) {
         }
         mapSvg.appendChild(g);
     }
-    mapRoomName.innerText = currentRoom.name || "Unknown";
+
+    // ---
+    // --- THIS IS THE FIX: Set exits at the end
+    // ---
     mapRoomExits.innerText = Array.from(allExits).join(', ') || 'None';
+    // ---
+    // --- END FIX
+    // ---
 }
 
 
@@ -397,6 +433,20 @@ socket.on('command_response', (data) => {
 socket.on('message', (message) => {
     addMessage(message);
 });
+// ---
+// --- NEW: Added listeners for group/band chat
+// ---
+socket.on('group_chat', (message) => {
+    addMessage(message, 'group-chat'); // You'll need to add a 'group-chat' style
+});
+socket.on('group_chat_ooc', (message) => {
+    addMessage(message, 'group-chat-ooc'); // You'll need to add a 'group-chat-ooc' style
+});
+socket.on('band_chat', (message) => {
+    addMessage(message, 'band-chat'); // You'll need to add a 'band-chat' style
+});
+// --- END NEW ---
+
 
 socket.on('tick', () => {
     if (currentClientState === "in_game" && currentGameState === "playing" && !rtTimer) {
