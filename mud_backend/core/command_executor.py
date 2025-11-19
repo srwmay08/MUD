@@ -135,20 +135,26 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
 }
 # --- END MODIFIED ---
 
+# ---
+# --- NEW: Commands that should NEVER be queued (always run immediately)
+# ---
+ALWAYS_ALLOWED_COMMANDS = {
+    'look', 'l', 'examine', 'x', 'investigate',
+    'inventory', 'inv', 'wealth', 'score',
+    'health', 'hp', 'stats', 'skills', 'experience', 'exp',
+    'help', 'flag', 'flags',
+    'say', 'whisper', 'talk', 'bt',
+    'group', 'band', 'list', 'appraise', # Shop list/appraise are usually safe
+    'check', 'checkin', 'train', 'done' # Training commands
+}
+# --- END NEW ---
+
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
     "north": "north", "south": "south", "east": "east", "west": "west",
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
-
-# ---
-# --- THIS IS THE FIX: The _get_map_data function has been moved to room_handler.py
-# ---
-# (The local definition of _get_map_data has been removed)
-# ---
-# --- END FIX
-# ---
 
 
 # --- REFACTORED: 'world' is the first argument + add account_username ---
@@ -311,6 +317,52 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     parts = command_line.strip().split()
     command = parts[0].lower() if parts else ""
     args = parts[1:] if parts else []
+
+    # ---
+    # --- NEW: COMMAND QUEUE (TYPE-AHEAD) LOGIC ---
+    # ---
+    # Only check for queueing if we are playing and it's not a utility command
+    if player.game_state == "playing" and command_line.lower() != "ping":
+        # 1. Check if this is a command we should potentially queue (i.e., NOT always allowed)
+        if command not in ALWAYS_ALLOWED_COMMANDS and command in VERB_ALIASES:
+            
+            # 2. Check Roundtime
+            current_time = time.time()
+            combat_state = world.get_combat_state(player.name.lower())
+            
+            if combat_state:
+                next_action = combat_state.get("next_action_time", 0)
+                remaining_rt = next_action - current_time
+                
+                if remaining_rt > 0:
+                    # Player is in RT.
+                    
+                    # 3. Type-Ahead Check
+                    # If RT is small (< 1.0s) and queue is empty, queue it.
+                    if remaining_rt <= 1.0:
+                        if len(player.command_queue) == 0:
+                            player.command_queue.append(command_line)
+                            # Optional: Send a distinct feedback for queued action?
+                            # player.send_message(f"[Queued: {command_line}]") 
+                            
+                            # Return state immediately, do not process verb
+                            vitals_data = player.get_vitals()
+                            map_data = _get_map_data(player, world)
+                            return {
+                                "messages": player.messages, 
+                                "game_state": player.game_state,
+                                "vitals": vitals_data,
+                                "map_data": map_data
+                            }
+                        else:
+                            # Queue is full (limit 1 to prevent spam/confusion)
+                            pass 
+                    
+                    # If RT is large (> 1.0s), we just let it fall through.
+                    # The verb itself calls `_check_action_roundtime` which sends the "Wait X seconds" message.
+    # ---
+    # --- END NEW LOGIC ---
+    # ---
         
     if player.game_state == "chargen":
         if player.chargen_step == 0 and command == "look":

@@ -294,6 +294,13 @@ class Player:
         self.band_xp_bank: int = self.db_data.get("band_xp_bank", 0) # Persistent
         # --- END NEW ---
 
+        # --- NEW: Command Queue for Type-Ahead ---
+        self.command_queue: List[str] = [] 
+        # -----------------------------------------
+
+        self._id = self.db_data.get("_id") 
+        # ... rest of init ...
+
 
     @property
     def con_bonus(self) -> int:
