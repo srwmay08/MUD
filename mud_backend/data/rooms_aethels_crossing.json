@@ -696,7 +696,7 @@
         "description": {"default": "The heat here is sweltering. A massive stone bloomery furnace dominates the room, its chimney rising through the roof. Bellows are attached to the side, and a slag tap is near the bottom. An anvil sits nearby for shingling blooms."},
         "objects": [
             {
-                "name": "a stone bloomery",
+                "name": "a stone blast furnace",
                 "description": "A massive furnace for smelting ore. You can CHARGE it with fuel and ore, BELLOW to heat it, VENT to control air, and TAP to release slag.",
                 "keywords": ["furnace", "bloomery"],
                 "verbs": ["look", "charge", "bellow", "vent", "tap", "extract", "assess"],
