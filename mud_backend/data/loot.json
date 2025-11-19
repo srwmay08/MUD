@@ -14,6 +14,12 @@
         {"item_id": "chrysocolla_gem", "chance": 0.03, "quantity": 1},
         {"item_id": "turquoise_gem", "chance": 0.02, "quantity": 1}
     ],
+    "crushed_copper_ore_loot": [
+        {"item_id": "turquoise_gem", "chance": 0.01, "quantity": 1},
+        {"item_id": "chrysocolla_gem", "chance": 0.015, "quantity": 1},
+        {"item_id": "azurite_gem", "chance": 0.025, "quantity": 1},
+        {"item_id": "malachite_gem", "chance": 0.05, "quantity": 1}
+    ],
     "viridian_leaf_loot": [
         {"item_id": "viridian_leaf", "chance": 1.0, "quantity": [1, 2]}
     ],

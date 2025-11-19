@@ -1,10 +1,13 @@
 # mud_backend/verbs/smelting.py
 import random
 import time
+import math
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.verbs.item_actions import _get_item_data, _find_item_in_hands
 from typing import Dict, Any
+from mud_backend.core import loot_system
+from mud_backend import config
 
 def _find_furnace(room) -> Dict[str, Any] | None:
     for obj in room.objects:
@@ -55,24 +58,36 @@ class Crush(BaseVerb):
         self.player.send_message("You smash the ore with your hammer, reducing it to gravel.")
         self.player.worn_items[ore_slot] = "crushed_copper_ore" # Replace item ID
         
-        # Chance for gems (even lower chance than mining)
-        gem_roll = random.random()
-        gem_found = None
+        # --- Loot Table Logic for Gems ---
+        loot_table_id = "crushed_copper_ore_loot"
         
-        if gem_roll < 0.01: # 1% chance for Turquoise 
-             gem_found = "turquoise_gem"
-        elif gem_roll < 0.025: # 1.5% chance for Chrysocolla 
-             gem_found = "chrysocolla_gem"
-        elif gem_roll < 0.05: # 2.5% chance for Azurite 
-             gem_found = "azurite_gem"
-        elif gem_roll < 0.10: # 5% chance for Malachite 
-             gem_found = "malachite_gem"
+        dropped_items = loot_system.generate_loot_from_table(
+            loot_table_id,
+            self.world.game_loot_tables,
+            self.world.game_items
+        )
+        
+        gem_found = False
+        if dropped_items:
+             for item_id in dropped_items:
+                 gem_data = self.world.game_items.get(item_id)
+                 if gem_data:
+                     self.player.inventory.append(item_id)
+                     self.player.send_message(f"As the ore crumbles, {gem_data['name']} falls out!")
+                     gem_found = True
 
+        # --- XP Calculation ---
+        # Base XP for crushing is small (1/20th scale = ~5 XP)
+        nominal_xp = 5
+        
+        # Bonus XP for finding a gem
         if gem_found:
-             gem_data = self.world.game_items.get(gem_found)
-             if gem_data:
-                 self.player.inventory.append(gem_found)
-                 self.player.send_message(f"As the ore crumbles, a {gem_data['name']} falls out!")
+            nominal_xp += 5
+            self.player.send_message("You feel a surge of excitement from the discovery!")
+
+        if nominal_xp > 0:
+            self.player.send_message(f"You have gained {nominal_xp} experience from crushing ore.")
+            self.player.grant_experience(nominal_xp, source="smithing")
 
         _set_action_roundtime(self.player, 5.0)
 
@@ -102,6 +117,12 @@ class Wash(BaseVerb):
 
         self.player.send_message("You thoroughly wash the dirt and grit from the ore.")
         self.player.worn_items[ore_slot] = "washed_copper_ore"
+        
+        # --- XP Grant ---
+        # Washing is a simple step, grant small XP
+        self.player.send_message("You have gained 5 experience from washing ore.")
+        self.player.grant_experience(5, source="smithing")
+        
         _set_action_roundtime(self.player, 8.0)
 
 class Charge(BaseVerb):
@@ -148,6 +169,11 @@ class Charge(BaseVerb):
 
         # Remove item from hand
         self.player.worn_items[slot] = None
+        
+        # --- XP Grant ---
+        # Loading the furnace is labor, grant very small XP
+        self.player.grant_experience(2, source="smithing")
+        
         _set_action_roundtime(self.player, 4.0)
 
 class Bellow(BaseVerb):
@@ -208,6 +234,11 @@ class Tap(BaseVerb):
         if slag > 0:
             self.player.send_message("You open the tap. Molten slag hisses as it flows out.")
             state["slag"] = 0
+            
+            # --- XP Grant ---
+            # Successful maintenance
+            self.player.send_message("You have gained 5 experience from maintaining the furnace.")
+            self.player.grant_experience(5, source="smithing")
         else:
             self.player.send_message("You open the tap, but nothing comes out.")
             
@@ -249,6 +280,12 @@ class Extract(BaseVerb):
         state["temp"] -= 500 # Heat loss from opening door
         
         self.player.send_message("You tear open the furnace door and drag out a glowing bloom!")
+        
+        # --- XP Grant ---
+        # Successful extraction is a key step
+        self.player.send_message("You have gained 10 experience from extracting the bloom.")
+        self.player.grant_experience(10, source="smithing")
+        
         _set_action_roundtime(self.player, 10.0)
 
 class Shingle(BaseVerb):
@@ -278,15 +315,33 @@ class Shingle(BaseVerb):
             self.player.send_message("You need a hammer to shingle the bloom.")
             return
 
+        # --- Calculate Quality and XP ---
+        bloom_temp = bloom.get("temp", 1000)
+        # Ideal temp for Copper shingling/working ~1100
+        temp_diff = abs(bloom_temp - 1100)
+        
+        quality_str = "standard"
+        xp_gain = 20
+        
+        if temp_diff < 100:
+            quality_str = "superior"
+            xp_gain = 50
+        elif temp_diff < 200:
+            quality_str = "good"
+            xp_gain = 35
+        elif temp_diff >= 400:
+            quality_str = "poor"
+            xp_gain = 10
+            
         # Success: Convert bloom to Ingot (Dynamic Item)
         ingot = {
             "name": "a copper ingot",
-            "description": "A solid bar of copper, still warm.",
+            "description": f"A solid bar of {quality_str} quality copper, still warm.",
             "keywords": ["ingot", "copper"],
             "is_item": True,
             "verbs": ["GET", "LOOK", "TAKE"],
-            "temp": bloom.get("temp", 1000) - 200,
-            "quality": "standard",
+            "temp": bloom_temp - 200,
+            "quality": quality_str,
             "uid": f"ingot_{int(time.time())}"
         }
         
@@ -294,5 +349,10 @@ class Shingle(BaseVerb):
         self.room.objects.append(ingot)
         self.world.save_room(self.room)
         
-        self.player.send_message("You strike the bloom repeatedly, squeezing out the slag and forging it into an ingot.")
+        self.player.send_message(f"You strike the bloom repeatedly, squeezing out the slag and forging it into a {quality_str} ingot.")
+        
+        # --- XP Grant ---
+        self.player.send_message(f"You have gained {xp_gain} experience from forging the ingot.")
+        self.player.grant_experience(xp_gain, source="smithing")
+        
         _set_action_roundtime(self.player, 5.0)
