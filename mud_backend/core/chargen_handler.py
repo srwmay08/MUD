@@ -446,9 +446,12 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.stamina = player.max_stamina
         player.spirit = player.max_spirit
         
-        player.worn_items["back"] = "starter_backpack"
-        player.worn_items["torso"] = "starter_leather_armor"
-        player.inventory.append("starter_dagger") 
+        # --- MODIFIED: Updated item keys ---
+        player.worn_items["back"] = "leather_backpack"
+        player.worn_items["torso"] = "leather_armor"
+        player.inventory.append("iron_dagger") 
+        # --- END MODIFIED ---
+        
         player.wealth["silvers"] = 0 
         
         # --- NEW: Reset Inn Room for Tutorial ---

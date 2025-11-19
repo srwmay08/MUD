@@ -42,15 +42,15 @@
       }
     ]
   },
-  "starter_dagger": {
-    "name": "a simple dagger",
-    "description": "A small, sharp dagger. Good for a quick stab.",
+  "iron_dagger": {
+    "name": "an iron dagger",
+    "description": "A small, sharp iron dagger. Good for a quick stab.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "small_edged",
     "keywords": [
       "dagger",
-      "simple dagger"
+      "iron dagger"
     ],
     "base_value": 50,
     "attacks": [
@@ -66,15 +66,16 @@
       }
     ]
   },
-  "starter_short_sword": {
-    "name": "a basic short sword",
-    "description": "A standard-issue short sword.",
+  "iron_short_sword": {
+    "name": "an iron short sword",
+    "description": "A standard-issue iron short sword.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "edged_weapons",
     "keywords": [
       "sword",
-      "short sword"
+      "short sword",
+      "iron short sword"
     ],
     "base_value": 100,
     "attacks": [
@@ -104,15 +105,16 @@
       "plate": 7
     }
   },
-  "starter_bastard_sword": {
-    "name": "a bastard sword",
-    "description": "A long, heavy sword that can be used with one or two hands.",
+  "iron_bastard_sword": {
+    "name": "an iron bastard sword",
+    "description": "A long, heavy iron sword that can be used with one or two hands.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "two_handed_edged",
     "keywords": [
       "sword",
-      "bastard sword"
+      "bastard sword",
+      "iron bastard sword"
     ],
     "base_value": 150,
     "attacks": [
@@ -128,7 +130,7 @@
       }
     ]
   },
-  "starter_club": {
+  "wooden_club": {
     "name": "a wooden club",
     "description": "A solid piece of wood, heavier at one end.",
     "item_type": "weapon",
@@ -147,15 +149,15 @@
       }
     ]
   },
-  "starter_mace": {
-    "name": "a simple mace",
-    "description": "A basic mace with a flanged head.",
+  "iron_mace": {
+    "name": "an iron mace",
+    "description": "A basic mace with a flanged iron head.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "blunt_weapons",
     "keywords": [
       "mace",
-      "simple mace"
+      "iron mace"
     ],
     "base_value": 90,
     "attacks": [
@@ -185,15 +187,16 @@
       "plate": 18
     }
   },
-  "starter_greatclub": {
-    "name": "a greatclub",
-    "description": "A hefty, two-handed club.",
+  "heavy_greatclub": {
+    "name": "a heavy greatclub",
+    "description": "A hefty, two-handed club reinforced with iron bands.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "two_handed_blunt",
     "keywords": [
       "greatclub",
-      "club"
+      "club",
+      "heavy greatclub"
     ],
     "base_value": 130,
     "attacks": [
@@ -209,15 +212,15 @@
       }
     ]
   },
-  "starter_spear": {
-    "name": "a simple spear",
-    "description": "A long wooden shaft topped with a sharp metal point.",
+  "iron_spear": {
+    "name": "an iron spear",
+    "description": "A long wooden shaft topped with a sharp iron point.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "polearms",
     "keywords": [
       "spear",
-      "simple spear"
+      "iron spear"
     ],
     "base_value": 110,
     "attacks": [
@@ -228,8 +231,8 @@
       }
     ]
   },
-  "starter_bow": {
-    "name": "a short bow",
+  "simple_short_bow": {
+    "name": "a simple short bow",
     "description": "A simple wooden short bow.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
@@ -247,7 +250,7 @@
       }
     ]
   },
-  "starter_crossbow": {
+  "light_crossbow": {
     "name": "a light crossbow",
     "description": "A small, easy-to-load crossbow.",
     "item_type": "weapon",
@@ -266,15 +269,16 @@
       }
     ]
   },
-  "starter_throwing_knife": {
-    "name": "a throwing knife",
-    "description": "A small, balanced knife designed to be thrown.",
+  "iron_throwing_knife": {
+    "name": "an iron throwing knife",
+    "description": "A small, balanced iron knife designed to be thrown.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "small_thrown",
     "keywords": [
       "knife",
-      "throwing knife"
+      "throwing knife",
+      "iron knife"
     ],
     "base_value": 20,
     "attacks": [
@@ -285,14 +289,15 @@
       }
     ]
   },
-  "starter_javelin": {
-    "name": "a javelin",
-    "description": "A light spear designed for throwing.",
+  "iron_javelin": {
+    "name": "an iron javelin",
+    "description": "A light iron-tipped spear designed for throwing.",
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "large_thrown",
     "keywords": [
-      "javelin"
+      "javelin",
+      "iron javelin"
     ],
     "base_value": 40,
     "attacks": [
@@ -303,7 +308,7 @@
       }
     ]
   },
-  "starter_sling": {
+  "leather_sling": {
     "name": "a leather sling",
     "description": "A simple leather sling for hurling stones.",
     "item_type": "weapon",
@@ -322,7 +327,7 @@
       }
     ]
   },
-  "starter_staff": {
+  "wooden_staff": {
     "name": "a wooden staff",
     "description": "A smooth, sturdy wooden staff.",
     "item_type": "weapon",

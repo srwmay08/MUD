@@ -14,17 +14,16 @@
     "armor_rt": 0,
     "armor_ap": 0
   },
-  "starter_leather_armor": {
-    "name": "starter leather armor",
-    "description": "A suit of boiled leather armor. It's better than nothing.",
+  "leather_armor": {
+    "name": "leather armor",
+    "description": "A suit of boiled leather armor. It offers decent protection.",
     "item_type": "armor",
     "armor_type": "leather",
     "wearable_slot": "torso",
     "skill": "armor_use",
     "keywords": [
       "armor",
-      "leather armor",
-      "starter armor"
+      "leather armor"
     ],
     "base_value": 120,
     "armor_rt": 1,
@@ -48,7 +47,7 @@
     "armor_ap": -35,
     "critical_divisor": 11
   },
-  "starter_small_shield": {
+  "small_wooden_shield": {
     "name": "a small wooden shield",
     "description": "A round wooden shield with a simple iron boss.",
     "item_type": "shield",

@@ -103,7 +103,7 @@
         },
         "skills": { "small_blunt": 5 },
         "equipped": {
-            "mainhand": "starter_club"
+            "mainhand": "wooden_club"
         },
         "loot_table_id": "orc_loot"
     },
@@ -145,8 +145,8 @@
         },
         "skills": { "edged_weapons": 60 },
         "equipped": {
-            "mainhand": "starter_short_sword",
-            "torso": "starter_leather_armor"
+            "mainhand": "iron_short_sword",
+            "torso": "leather_armor"
         }
     },
     {
@@ -192,8 +192,8 @@
         },
         "skills": { "polearms": 80, "combat_maneuvers": 80 },
         "equipped": {
-            "mainhand": "starter_spear",
-            "torso": "starter_leather_armor"
+            "mainhand": "iron_spear",
+            "torso": "leather_armor"
         },
         "quest_giver_ids": ["trip_quest_1"],
         "all_quests_done_message": "The warrior nods at you. 'You've got the hang of it. Now go practice on something... uglier.'"

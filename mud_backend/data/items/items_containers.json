@@ -1,13 +1,13 @@
 {
-  "starter_backpack": {
-    "name": "a starter backpack",
+  "leather_backpack": {
+    "name": "a leather backpack",
     "description": "A simple but sturdy leather backpack.",
     "item_type": "container",
     "wearable_slot": "back",
     "is_container": true,
     "keywords": [
       "backpack",
-      "starter backpack",
+      "leather backpack",
       "pack",
       "back"
     ],

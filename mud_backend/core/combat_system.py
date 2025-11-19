@@ -88,7 +88,7 @@ POSTURE_PERCENTAGE = {
     "prone":     0.90
 }
 SHIELD_DATA = {
-    "starter_small_shield": {
+    "small_wooden_shield": {
         "size": "small",
         "factor": 1.0,
         "size_penalty_melee": 0,
@@ -97,7 +97,7 @@ SHIELD_DATA = {
         "size_bonus_ranged": 10
     }
 }
-DEFAULT_SHIELD_DATA = SHIELD_DATA["starter_small_shield"]
+DEFAULT_SHIELD_DATA = SHIELD_DATA["small_wooden_shield"]
 
 
 def get_entity_race(entity: Any) -> str:
@@ -202,7 +202,7 @@ def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defende
     shield_factor = 1.0
     shield_size_penalty = 0
     if shield_data:
-        shield_props = SHIELD_DATA.get("starter_small_shield", DEFAULT_SHIELD_DATA)
+        shield_props = SHIELD_DATA.get("small_wooden_shield", DEFAULT_SHIELD_DATA)
         shield_factor = shield_props["factor"]
         if not is_ranged_attack:
             shield_size_penalty = shield_props["size_penalty_melee"]
@@ -219,7 +219,7 @@ def calculate_block_defense(defender_stats: dict, defender_skills: dict, defende
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
 
     base_value = shield_ranks + math.floor(str_bonus / 4) + math.floor(dex_bonus / 4)
-    shield_props = SHIELD_DATA.get("starter_small_shield", DEFAULT_SHIELD_DATA)
+    shield_props = SHIELD_DATA.get("small_wooden_shield", DEFAULT_SHIELD_DATA)
     size_mod = shield_props["size_mod_ranged"] if is_ranged_attack else shield_props["size_mod_melee"]
     size_bonus = shield_props["size_bonus_ranged"] if is_ranged_attack else 0
 

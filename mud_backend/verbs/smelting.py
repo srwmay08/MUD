@@ -60,9 +60,6 @@ class Crush(BaseVerb):
         gem_found = None
         
         if gem_roll < 0.01: # 1% chance for Turquoise 
-
-[Image of Turquoise Gemstone]
-
              gem_found = "turquoise_gem"
         elif gem_roll < 0.025: # 1.5% chance for Chrysocolla 
              gem_found = "chrysocolla_gem"
