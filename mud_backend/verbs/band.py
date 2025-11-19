@@ -12,11 +12,11 @@ MAX_BAND_MEMBERS = 10
 class Band(BaseVerb):
     """
     Handles all persistent Adventuring Band commands:
-    BAND CREATE, BAND INVITE, BAND LIST, BAND REMOVE, BAND KICK, BAND DELETE
+    BAND CREATE, BAND INVITE, BAND LIST, BAND REMOVE, BAND KICK, BAND DELETE, BAND JOIN
     """
     def execute(self):
         if not self.args:
-            self.player.send_message("Usage: BAND <create|invite|list|remove|kick|delete>")
+            self.player.send_message("Usage: BAND <create|invite|join|list|remove|kick|delete>")
             return
             
         command = self.args[0].lower()
@@ -33,16 +33,66 @@ class Band(BaseVerb):
                 "id": new_band_id,
                 "leader": player_key,
                 "members": [player_key],
-                "pending_invites": {} # { "player_name": "inviter_name" }
+                "pending_invites": {} # { "player_name_lower": "inviter_name_lower" }
             }
             
             self.world.set_band(new_band_id, new_band)
-            db.save_band(new_band) # <-- FIX: Use db.save_band()
+            db.save_band(new_band)
             
             self.player.band_id = new_band_id
+            db.update_player_band(player_key, new_band_id) # Save to player
+            
             self.player.send_message(f"You have created a new adventuring band! (Name: {self.player.name}'s Band)")
             self.player.send_message("Use BAND INVITE <player> to invite members.")
             return
+
+        # ---
+        # --- THIS IS THE FIX: Handle JOIN before checking if player is IN a band
+        # ---
+        if command == "join":
+            if not target_name:
+                self.player.send_message("Usage: BAND JOIN <leader_name>")
+                return
+            
+            if self.player.band_id:
+                self.player.send_message("You are already in an adventuring band. Use BAND REMOVE first.")
+                return
+
+            target_leader_key = target_name.lower()
+            
+            # Find the band invite
+            # This helper checks all bands for an invite for player_key
+            invite_band = self.world.get_band_invite_for_player(player_key)
+            
+            if not invite_band or invite_band["pending_invites"].get(player_key) != target_leader_key:
+                self.player.send_message(f"You have not been invited to a band by '{target_name.capitalize()}'.")
+                return
+            
+            # Found the invite. 'invite_band' is the band object.
+            band_id = invite_band["id"]
+            
+            # Check for max members
+            if len(invite_band["members"]) >= MAX_BAND_MEMBERS:
+                self.player.send_message("That band is now full.")
+                # Clear the (now useless) invite
+                invite_band["pending_invites"].pop(player_key, None)
+                self.world.set_band(band_id, invite_band)
+                db.save_band(invite_band)
+                return
+
+            # Success! Add player to band.
+            invite_band["pending_invites"].pop(player_key, None) # Remove invite
+            invite_band["members"].append(player_key)
+            self.world.set_band(band_id, invite_band)
+            db.save_band(invite_band) # Save to DB
+            
+            self.player.band_id = band_id
+            db.update_player_band(player_key, band_id) # Save player's new band_id
+            
+            self.world.send_message_to_band(band_id, f"{self.player.name.capitalize()} has joined the adventuring band!")
+            return
+        # --- END FIX ---
+
 
         # --- Commands that require you to be in a band ---
         band = self.world.get_band(self.player.band_id)
@@ -66,6 +116,7 @@ class Band(BaseVerb):
         if command == "remove":
             band["members"].remove(player_key)
             self.player.band_id = None
+            db.update_player_band(player_key, None) # Update player in DB
             self.player.send_message("You have left the adventuring band.")
             
             if is_leader:
@@ -74,17 +125,16 @@ class Band(BaseVerb):
                     new_leader_key = band["members"][0]
                     band["leader"] = new_leader_key
                     self.world.set_band(band_id, band)
-                    db.save_band(band) # <-- FIX: Use db.save_band()
+                    db.save_band(band)
                     self.world.send_message_to_band(band_id, f"{self.player.name} has left the band. {new_leader_key.capitalize()} is the new leader.")
                 else:
                     # Band is empty, delete it
                     self.world.remove_band(band_id)
-                    db.delete_band(band_id) # <-- FIX: Use db.delete_band()
-                    # No one to message
+                    db.delete_band(band_id)
             else:
                 # Member left
                 self.world.set_band(band_id, band)
-                db.save_band(band) # <-- FIX: Use db.save_band()
+                db.save_band(band)
                 self.world.send_message_to_band(band_id, f"{self.player.name} has left the adventuring band.")
             return
 
@@ -104,20 +154,27 @@ class Band(BaseVerb):
 
             target_player_key = target_name.lower()
             
+            if target_player_key in band["members"]:
+                self.player.send_message(f"{target_name.capitalize()} is already in your band.")
+                return
+                
+            if target_player_key in band["pending_invites"]:
+                self.player.send_message(f"You have already invited {target_name.capitalize()}.")
+                return
+
             # Check if player exists (in DB, not just online)
-            # FIX: Use db.fetch_player_data directly
             target_player_data = db.fetch_player_data(target_player_key) 
             if not target_player_data:
                 self.player.send_message(f"There is no player named '{target_name}'.")
                 return
                 
             if target_player_data.get("band_id"):
-                self.player.send_message(f"{target_name.capitalize()} is already in an adventuring band.")
+                self.player.send_message(f"{target_name.capitalize()} is already in another adventuring band.")
                 return
 
             band["pending_invites"][target_player_key] = player_key
             self.world.set_band(band_id, band)
-            db.save_band(band) # <-- FIX: Use db.save_band()
+            db.save_band(band)
             
             self.player.send_message(f"You have invited {target_name.capitalize()} to join your band.")
             
@@ -127,32 +184,6 @@ class Band(BaseVerb):
                 f"{self.player.name} has invited you to join their adventuring band. "
                 f"Type '<span class='keyword' data-command='band join {self.player.name}'>BAND JOIN {self.player.name}</span>' to accept."
             )
-            return
-            
-        if command == "join":
-            # This is how a player *accepts* an invite
-            target_leader_name = target_name.lower()
-            if band["pending_invites"].get(player_key) == target_leader_name:
-                # This player (self) was invited by the target leader
-                # But self is ALREADY in a band (this one). This logic is for the *inviter*.
-                # The *invitee* logic is separate.
-                self.player.send_message("You are already in a band. Use BAND REMOVE first.")
-            else:
-                # This is the *invitee* accepting
-                invitee_key = self.player.name.lower()
-                invite = band["pending_invites"].get(invitee_key)
-                
-                if invite and invite == target_leader_name:
-                    # Correct! Player is accepting the invite from the leader of this band
-                    band["pending_invites"].pop(invitee_key, None)
-                    band["members"].append(invitee_key)
-                    self.world.set_band(band_id, band)
-                    db.save_band(band) # <-- FIX: Use db.save_band()
-                    
-                    self.player.band_id = band_id
-                    self.world.send_message_to_band(band_id, f"{self.player.name.capitalize()} has joined the adventuring band!")
-                else:
-                    self.player.send_message("You have not been invited to that band, or the invite is invalid.")
             return
 
         if command == "kick":
@@ -171,12 +202,12 @@ class Band(BaseVerb):
                 
             band["members"].remove(target_player_key)
             self.world.set_band(band_id, band)
-            db.save_band(band) # <-- FIX: Use db.save_band()
+            db.save_band(band)
             
             self.world.send_message_to_band(band_id, f"{target_name.capitalize()} has been kicked from the adventuring band by the leader.")
             
             # Update the kicked player in the DB
-            db.update_player_band(target_player_key, None) # <-- FIX: Use db.update_player_band()
+            db.update_player_band(target_player_key, None)
             
             target_player_obj = self.world.get_player_obj(target_player_key)
             if target_player_obj:
@@ -190,17 +221,17 @@ class Band(BaseVerb):
             
             # Remove band_id from all players
             for member_key in band["members"]:
-                db.update_player_band(member_key, None) # <-- FIX: Use db.update_player_band()
+                db.update_player_band(member_key, None)
                 member_obj = self.world.get_player_obj(member_key)
                 if member_obj:
                     member_obj.band_id = None
             
             # Delete from cache and DB
             self.world.remove_band(band_id)
-            db.delete_band(band_id) # <-- FIX: Use db.delete_band()
+            db.delete_band(band_id)
             return
             
-        self.player.send_message("Usage: BAND <create|invite|list|remove|kick|delete>")
+        self.player.send_message("Usage: BAND <create|invite|join|list|remove|kick|delete>")
 
 
 class BT(BaseVerb):

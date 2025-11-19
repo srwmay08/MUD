@@ -579,7 +579,7 @@ class Player:
                             member_obj.add_field_exp(share, is_band_share=True)
                     else:
                         # Member is offline, update their bank in the DB
-                        self.world.db.update_player_band_xp_bank(member_key, share)
+                        db.update_player_band_xp_bank(member_key, share)
                 
                 return # Stop here, we've handled the XP
         
@@ -626,9 +626,14 @@ class Player:
     # --- END XP METHODS
     # ---
 
-    def absorb_exp_pulse(self, room_type: str = "other") -> bool:
+    def absorb_exp_pulse(self, room_type: str = "other") -> Optional[str]:
+        """
+        Absorbs one pulse of experience.
+        Returns the message string if absorption happened, otherwise None.
+        """
         if self.unabsorbed_exp <= 0:
-            return False
+            return None
+        
         base_rate = 19
         logic_divisor = 7
         if room_type == "on_node":
@@ -637,16 +642,28 @@ class Player:
         elif room_type == "in_town":
             base_rate = 22
             logic_divisor = 5
+            
         logic_bonus = math.floor(self.stats.get("LOG", 0) / logic_divisor)
         pool_bonus = min(10, math.floor(self.unabsorbed_exp / 200.0))
-        group_bonus = 0
+        group_bonus = 0 # TODO: Add group bonus logic
+        
         amount_to_absorb = int(base_rate + logic_bonus + pool_bonus + group_bonus)
         amount_to_absorb = min(self.unabsorbed_exp, amount_to_absorb)
+        
         if amount_to_absorb <= 0:
-            return False
+            return None
+            
         self.unabsorbed_exp -= amount_to_absorb
         self.experience += amount_to_absorb
-        self.send_message(f"You absorb {amount_to_absorb} experience. ({self.unabsorbed_exp} remaining)")
+        
+        # ---
+        # --- THIS IS THE FIX: Set message to None
+        # ---
+        absorption_msg = None
+        # ---
+        # --- END FIX
+        # ---
+
         if self.con_lost > 0:
             self.con_recovery_pool += amount_to_absorb
             points_to_regain = self.con_recovery_pool // 2000
@@ -655,9 +672,17 @@ class Player:
                 self.stats["CON"] = self.stats.get("CON", 50) + regained
                 self.con_lost -= regained
                 self.con_recovery_pool -= (regained * 2000)
-                self.send_message(f"You feel some of your vitality return! (Recovered {regained} CON)")
-        self._check_for_level_up()
-        return True
+                # ---
+                # --- THIS IS THE FIX: Set message, don't append
+                # ---
+                absorption_msg = f"You feel some of your vitality return! (Recovered {regained} CON)"
+                # ---
+                # --- END FIX
+                # ---
+                
+        self._check_for_level_up() # This calls self.send_message, which is fine
+        return absorption_msg
+
 
     def _get_xp_target_for_level(self, level: int) -> int:
         # --- REFACTORED: Get level table from self.world ---
@@ -765,8 +790,13 @@ class Player:
         """
         Handles all logic for moving a player to a new room.
         Stops combat, updates state, and sends messages.
+        
+        --- THIS IS THE FIX ---
+        This function NO LONGER calls show_room_to_player.
+        The function that *calls* move_to_room is responsible for showing the room.
+        --- END FIX ---
         """
-        from mud_backend.core.room_handler import show_room_to_player
+        # from mud_backend.core.room_handler import show_room_to_player # <-- REMOVED
 
         # --- REFACTORED: Use world methods ---
         new_room_data = self.world.get_room(target_room_id)
@@ -776,13 +806,8 @@ class Player:
             self.send_message("You try to move, but find only an endless void. You quickly scramble back.")
             return
 
-        new_room = Room(
-            room_id=new_room_data["room_id"],
-            name=new_room_data["name"],
-            description=new_room_data["description"],
-            db_data=new_room_data
-        )
-
+        # (No need to create a Room object here anymore)
+        
         self._stop_combat()
         self.current_room_id = target_room_id
 
@@ -793,7 +818,7 @@ class Player:
         # --- END NEW ---
 
         self.send_message(move_message)
-        show_room_to_player(self, new_room) # show_room_to_player also needs refactoring
+        # show_room_to_player(self, new_room) # <-- REMOVED
 
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
@@ -862,13 +887,13 @@ class Player:
             # --- END NEW ---
             
             # ---
-            # --- NEW: Save Magic Properties
+            # --- NEW: Magic Properties
             # ---
             "prepared_spell": self.prepared_spell,
             "buffs": self.buffs,
             # --- END NEW ---
             
-            # --- NEW: Save Learned Abilities ---
+            # --- NEW: Learned Abilities ---
             "known_spells": self.known_spells,
             "known_maneuvers": self.known_maneuvers,
             "completed_quests": self.completed_quests,
@@ -890,12 +915,12 @@ class Player:
             # --- END NEW ---
 
             # ---
-            # --- NEW: Save Map Tracking ---
+            # --- NEW: Map Tracking ---
             "visited_rooms": self.visited_rooms,
             # --- END NEW ---
 
             # ---
-            # --- NEW: Save GOTO Flag ---
+            # --- NEW: GOTO Flag ---
             "is_goto_active": self.is_goto_active,
             # --- END NEW ---
 
