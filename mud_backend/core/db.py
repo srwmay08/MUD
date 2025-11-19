@@ -4,24 +4,16 @@ import socket
 import json
 import os
 import uuid
-# --- FIX: Import 'List' and 'glob' ---
 from typing import TYPE_CHECKING, Optional, Any, List, Dict
 import glob
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError 
 from mud_backend import config
-# --- NEW: Import password hashing utilities ---
 from werkzeug.security import generate_password_hash, check_password_hash
-
-# --- REFACTORED: Removed game_state import ---
-# from mud_backend.core import game_state
-# --- END REFACTOR ---
 
 if TYPE_CHECKING:
     from .game_objects import Player, Room
-    # --- REFACTORED: Add World type hint ---
     from .game_state import World
-    # --- END REFACTOR ---
 
 MONGO_URI = config.MONGO_URI
 DATABASE_NAME = config.DATABASE_NAME
@@ -29,9 +21,6 @@ DATABASE_NAME = config.DATABASE_NAME
 client: Optional[MongoClient] = None
 db = None
 
-# ---
-# --- THIS IS THE FIX: Create a static mock room cache
-# ---
 MOCK_ROOMS = {
     "town_square": { 
         "room_id": "town_square", 
@@ -67,9 +56,6 @@ MOCK_ROOMS = {
         "interior_id": "inn"
     }
 }
-# ---
-# --- END FIX
-# ---
 
 def get_db():
     global client, db 
@@ -85,24 +71,17 @@ def get_db():
             db = None
     return db
 
-# ---
-# --- MODIFIED: This function is now recursive for rooms
-# ---
 def ensure_initial_data():
     """Ensures base entities exist from JSON definitions."""
     database = get_db()
     if database is None:
         return
 
-    # --- 1. Load Rooms from JSON (MODIFIED) ---
+    # --- 1. Load Rooms from JSON ---
     print("[DB INIT] Checking initial data from JSON...")
     try:
-        # Find all files matching "rooms_*.json" in the data directory
         data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-        
-        # --- MODIFIED: Use recursive=True and **/ to search subdirectories ---
         json_files = glob.glob(os.path.join(data_dir, '**/rooms_*.json'), recursive=True)
-        # --- END MODIFIED ---
         
         if not json_files:
             print("[DB ERROR] No 'rooms_*.json' files found in data/ directory.")
@@ -113,8 +92,6 @@ def ensure_initial_data():
         total_rooms = 0
 
         for file_path in json_files:
-            file_name = os.path.basename(file_path)
-            # print(f"[DB INIT] Loading zone file: {file_name}")
             with open(file_path, 'r') as f:
                 room_data_list = json.load(f)
             
@@ -147,12 +124,11 @@ def ensure_initial_data():
         print(f"[DB ERROR] An error occurred loading rooms: {e}")
 
     # 2. Test Player 'Alice'
-    # --- MODIFIED: Add account_username to Alice ---
     if database.players.count_documents({"name": "Alice"}) == 0:
         database.players.insert_one(
             {
                 "name": "Alice", 
-                "account_username": "dev", # <-- NEW: Link to an account
+                "account_username": "dev", 
                 "current_room_id": "town_square",
                 "level": 0, "experience": 0, "game_state": "playing", "chargen_step": 99,
                 "stats": {
@@ -177,8 +153,6 @@ def ensure_initial_data():
             "password_hash": generate_password_hash("dev")
         })
         print("[DB INIT] Inserted test account 'dev' (password: dev).")
-
-# --- NEW: Account Functions ---
 
 def fetch_account(username: str) -> Optional[dict]:
     """Fetches an account by username (case-insensitive)."""
@@ -205,15 +179,12 @@ def check_account_password(account_data: dict, password: str) -> bool:
     """Checks a given password against the stored hash."""
     return check_password_hash(account_data.get("password_hash", ""), password)
 
-# --- NEW: Character (Player) Functions ---
-
 def fetch_characters_for_account(account_username: str) -> List[dict]:
     """Fetches all player characters associated with an account."""
     database = get_db()
     if database is None: return []
     
     characters = []
-    # Find all players where 'account_username' matches (case-insensitive)
     cursor = database.players.find({
         "account_username": {"$regex": f"^{account_username}$", "$options": "i"}
     })
@@ -221,39 +192,26 @@ def fetch_characters_for_account(account_username: str) -> List[dict]:
         characters.append(char)
     return characters
 
-# --- MODIFIED: Player & Room Functions ---
-
 def fetch_player_data(player_name: str) -> dict:
     database = get_db()
     if database is None: return {} 
-    # Check for player name (case-insensitive)
     player_data = database.players.find_one({"name": {"$regex": f"^{player_name}$", "$options": "i"}})
     return player_data if player_data else {}
-
 
 def fetch_room_data(room_id: str) -> dict:
     database = get_db()
     if database is None:
-        # --- MOCK DB FALLBACK ---
-        # --- THIS IS THE FIX ---
-        # Return from our static mock cache if it exists
         mock = MOCK_ROOMS.get(room_id)
         if mock:
             return mock
-        # --- END FIX ---
-        return {} # Original fallback
+        return {} 
         
     room_data = database.rooms.find_one({"room_id": room_id})
     if room_data is None:
-        # ---
-        # --- THIS IS THE SECOND FIX ---
-        # If the DB is connected but the query fails, *also* check mock data
-        # This handles race conditions where the cache isn't populated yet
         mock = MOCK_ROOMS.get(room_id)
         if mock:
             print(f"[DB WARN] room_id '{room_id}' not found in DB, serving mock data.")
             return mock
-        # --- END FIX ---
         return {"room_id": "void", "name": "The Void", "description": "Nothing but endless darkness here."}
     return room_data
 
@@ -264,7 +222,6 @@ def save_game_state(player: 'Player'):
         return
         
     player_data = player.to_dict()
-    # Ensure account_username is saved
     player_data["account_username"] = player.account_username 
     
     result = database.players.update_one(
@@ -275,12 +232,6 @@ def save_game_state(player: 'Player'):
     if result.upserted_id:
         player._id = result.upserted_id
         print(f"\n[DB SAVE] Player {player.name} created with ID: {player._id} for account {player.account_username}")
-    else:
-        pass # Standard save
-        
-# ---
-# --- NEW: Band DB Functions
-# ---
 
 def save_band(band_data: Dict[str, Any]):
     """Saves a band's data to the 'bands' collection."""
@@ -345,9 +296,6 @@ def update_player_band_xp_bank(player_name_lower: str, amount_to_add: int):
         {"name": {"$regex": f"^{player_name_lower}$", "$options": "i"}},
         {"$inc": {"band_xp_bank": amount_to_add}}
     )
-    
-# --- END NEW ---
-
 
 def save_room_state(room: 'Room'):
     """Saves the current state of a room object to the database."""
@@ -368,29 +316,21 @@ def save_room_state(room: 'Room'):
     )
     
 def fetch_all_rooms() -> dict:
-    """
-    Fetches all rooms and ensures every monster has a unique runtime ID (uid).
-    (MODIFIED to load from all room files)
-    """
+    """Fetches all rooms."""
     database = get_db()
     if database is None:
         print("[DB WARN] No database connection, cannot fetch all rooms.")
-        # --- NEW: Fallback to mock data if DB is down ---
         print("[DB WARN] Loading MOCK_ROOMS cache.")
         return MOCK_ROOMS
-        # --- END NEW ---
         
     print("[DB INIT] Caching all rooms from database...")
     rooms_dict = {}
     try:
-        # This function is called *after* ensure_initial_data,
-        # so the DB collection "rooms" has all zones.
         for room_data in database.rooms.find():
             room_id = room_data.get("room_id")
             if room_id:
                 if "objects" in room_data:
                     for obj in room_data["objects"]:
-                        # --- MODIFIED: Assign UID to NPCs as well ---
                         if (obj.get("is_monster") or obj.get("is_npc")) and "uid" not in obj:
                             obj["uid"] = uuid.uuid4().hex
                 rooms_dict[room_id] = room_data
@@ -400,7 +340,7 @@ def fetch_all_rooms() -> dict:
         print(f"[DB ERROR] Failed to fetch all rooms: {e}")
         return {}
 
-def _load_json_data(filename: str) -> Any: # Changed to Any
+def _load_json_data(filename: str) -> Any:
     """Helper to load a JSON file from the 'data' directory."""
     try:
         json_path = os.path.join(os.path.dirname(__file__), '..', 'data', filename)
@@ -412,31 +352,23 @@ def _load_json_data(filename: str) -> Any: # Changed to Any
         print(f"[DB ERROR] '{filename}' contains invalid JSON.")
     except Exception as e:
         print(f"[DB ERROR] An error occurred loading '{filename}': {e}")
-    return {} if ".json" in filename else [] # Return list for e.g. leveling.json
+    return {} if ".json" in filename else []
 
-# ---
-# --- MODIFIED: This function is now recursive for monsters
-# ---
 def fetch_all_monsters() -> dict:
-    """
-    Fetches all monsters from all 'monsters*.json' files in the data directory.
-    """
+    """Fetches all monsters from all 'monsters*.json' files."""
     print("[DB INIT] Caching all monsters from monsters*.json files...")
     monster_templates = {}
     try:
         data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-        # --- THIS IS THE FIX: Removed the underscore from the pattern ---
         json_files = glob.glob(os.path.join(data_dir, '**/monsters*.json'), recursive=True)
 
         for file_path in json_files:
-            # print(f"[DB INIT] Loading monster file: {os.path.basename(file_path)}")
             with open(file_path, 'r') as f:
                 monster_list = json.load(f)
             
             if isinstance(monster_list, list):
                 for m in monster_list:
                     if isinstance(m, dict) and m.get("monster_id"):
-                        # This will overwrite monsters with the same ID; last one loaded wins.
                         monster_templates[m["monster_id"]] = m
             else:
                  print(f"[DB WARN] Monster file {file_path} is not a valid list.")
@@ -446,26 +378,19 @@ def fetch_all_monsters() -> dict:
     print(f"[DB INIT] ...Cached {len(monster_templates)} monsters from {len(json_files)} file(s).")
     return monster_templates
 
-# ---
-# --- MODIFIED: This function is now recursive for loot
-# ---
 def fetch_all_loot_tables() -> dict:
-    """
-    Fetches all loot tables from all 'loot*.json' files in the data directory.
-    """
+    """Fetches all loot tables from all 'loot*.json' files."""
     print("[DB INIT] Caching all loot tables from loot*.json files...")
     loot_tables = {}
     try:
         data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-        # --- THIS IS THE FIX: Removed the underscore from the pattern ---
         json_files = glob.glob(os.path.join(data_dir, '**/loot*.json'), recursive=True)
 
         for file_path in json_files:
-            # print(f"[DB INIT] Loading loot file: {os.path.basename(file_path)}")
             with open(file_path, 'r') as f:
                 table_data = json.load(f)
             if isinstance(table_data, dict):
-                loot_tables.update(table_data) # Loot tables are dicts, so we merge them
+                loot_tables.update(table_data)
             else:
                 print(f"[DB WARN] Loot file {file_path} is not a valid dictionary.")
     except Exception as e:
@@ -474,26 +399,19 @@ def fetch_all_loot_tables() -> dict:
     print(f"[DB INIT] ...Cached {len(loot_tables)} loot tables from {len(json_files)} file(s).")
     return loot_tables
 
-# ---
-# --- MODIFIED: This function is now recursive for items
-# ---
 def fetch_all_items() -> dict:
-    """
-    Fetches all items from all 'items*.json' files in the data directory.
-    """
+    """Fetches all items from all 'items*.json' files."""
     print("[DB INIT] Caching all items from items*.json files...")
     items = {}
     try:
         data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-        # --- THIS IS THE FIX: Removed the underscore from the pattern ---
         json_files = glob.glob(os.path.join(data_dir, '**/items*.json'), recursive=True)
 
         for file_path in json_files:
-            # print(f"[DB INIT] Loading item file: {os.path.basename(file_path)}")
             with open(file_path, 'r') as f:
                 item_data = json.load(f)
             if isinstance(item_data, dict):
-                items.update(item_data) # Items are dicts, so we merge them
+                items.update(item_data)
             else:
                  print(f"[DB WARN] Item file {file_path} is not a valid dictionary.")
     except Exception as e:
@@ -522,33 +440,35 @@ def fetch_all_skills() -> dict:
     return skill_templates
 
 def fetch_all_criticals() -> dict:
-    """Loads criticals.json into a dictionary."""
     print("[DB INIT] Caching all criticals from criticals.json...")
     criticals = _load_json_data("criticals.json")
     print(f"[DB INIT] ...Cached {len(criticals)} critical tables.")
     return criticals
 
 def fetch_all_quests() -> dict:
-    """Loads quests.json into a dictionary."""
     print("[DB INIT] Caching all quests from quests.json...")
     quests = _load_json_data("quests.json")
     print(f"[DB INIT] ...Cached {len(quests)} quests.")
     return quests
 
 def fetch_all_nodes() -> dict:
-    """Loads nodes.json into a dictionary."""
     print("[DB INIT] Caching all gathering nodes from nodes.json...")
     nodes = _load_json_data("nodes.json")
     print(f"[DB INIT] ...Cached {len(nodes)} nodes.")
     return nodes
 
-# ---
-# --- NEW: Add fetch_all_factions
-# ---
 def fetch_all_factions() -> dict:
     """Loads faction.json into a dictionary."""
     print("[DB INIT] Caching all factions from faction.json...")
     factions = _load_json_data("faction.json")
     print(f"[DB INIT] ...Cached {len(factions.get('factions', 0))} factions.")
     return factions
+
+# --- NEW: Fetch All Spells ---
+def fetch_all_spells() -> dict:
+    """Loads spells.json into a dictionary."""
+    print("[DB INIT] Caching all spells from spells.json...")
+    spells = _load_json_data("spells.json")
+    print(f"[DB INIT] ...Cached {len(spells)} spells.")
+    return spells
 # --- END NEW ---
