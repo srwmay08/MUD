@@ -60,13 +60,34 @@ class Chop(BaseVerb):
             self.player.send_message(f"You don't see a {target_name} here to chop.")
             return
             
-        # 3. Check depletion (Hybrid Model)
+        # 3. Check depletion (NEW LOGIC)
         player_name = self.player.name
-        if player_name in node_obj.get("players_tapped", []):
-            self.player.send_message(f"You have already chopped {node_obj['name']}.")
+        
+        # Get/initialize the player-specific hit data for this node instance
+        player_hit_data = node_obj.setdefault("player_hits", {})
+        if player_name not in player_hit_data:
+            player_hit_data[player_name] = {
+                "max_hits": random.randint(1, 5), # Roll 1-5 attempts for this player
+                "hits_made": 0
+            }
+        
+        my_data = player_hit_data[player_name]
+
+        # 3a. Check if PLAYER has attempts left
+        if my_data["hits_made"] >= my_data["max_hits"]:
+            self.player.send_message(f"You have already chopped {node_obj['name']}.") # Use old message
             return
             
-        # ... (inside Chop.execute) ...
+        # 3b. Check if NODE has global taps left
+        global_hits_made = node_obj.get("global_hits_made", 0)
+        global_max_taps = node_obj.get("default_taps", 1)
+        
+        if global_hits_made >= global_max_taps:
+            self.player.send_message(f"The {node_obj['name']} is depleted.")
+            if node_obj in self.room.objects:
+                self.room.objects.remove(node_obj)
+                self.world.save_room(self.room)
+            return
 
         # 4. Set Roundtime (based on Forestry skill, not Lumberjacking)
         forestry_skill = self.player.skills.get("forestry", 0) # <-- USE SECONDARY SKILL
@@ -87,7 +108,17 @@ class Chop(BaseVerb):
 
         if roll < skill_dc:
             self.player.send_message(f"You try to chop {node_obj['name']} but fail to get any wood.")
-            node_obj.setdefault("players_tapped", []).append(player_name)
+            
+            # Mark this attempt as used (NEW)
+            my_data["hits_made"] += 1
+            node_obj["global_hits_made"] = node_obj.get("global_hits_made", 0) + 1
+            
+            # Check for node depletion (NEW)
+            if node_obj["global_hits_made"] >= node_obj.get("default_taps", 1):
+                self.player.send_message(f"The {node_obj['name']} is now depleted.")
+                if node_obj in self.room.objects:
+                    self.room.objects.remove(node_obj)
+            
             self.world.save_room(self.room)
             return
         
@@ -114,22 +145,19 @@ class Chop(BaseVerb):
                 self.player.inventory.append(item_id) 
                 self.player.send_message(f"- {item_name}")
         
-        # 7. Mark node as "tapped" for this player
-        node_obj.setdefault("players_tapped", []).append(player_name)
+        # 7. Mark hit as used for this player (NEW)
+        my_data["hits_made"] += 1
         
-        # 8. Deplete the node (if taps run out)
-        taps_left = node_obj.get("default_taps", 1) - len(node_obj.get("players_tapped", []))
-        if taps_left <= 0:
+        # 8. Mark global hit as used (NEW)
+        global_hits_made = node_obj.get("global_hits_made", 0) + 1
+        node_obj["global_hits_made"] = global_hits_made
+        global_max_taps = node_obj.get("default_taps", 1)
+
+        # 9. Deplete the node if global taps run out (NEW)
+        if global_hits_made >= global_max_taps:
             self.player.send_message(f"The {node_obj['name']} is now depleted.")
-            # ---
-            # --- THIS IS THE FIX ---
-            # ---
             if node_obj in self.room.objects:
                 self.room.objects.remove(node_obj)
-            # ---
-            # --- END FIX
-            # ---
-            # (You'll add respawn logic for nodes here later)
             
         self.world.save_room(self.room)
 
