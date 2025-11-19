@@ -54,6 +54,29 @@ class Crush(BaseVerb):
         # Success
         self.player.send_message("You smash the ore with your hammer, reducing it to gravel.")
         self.player.worn_items[ore_slot] = "crushed_copper_ore" # Replace item ID
+        
+        # Chance for gems (even lower chance than mining)
+        gem_roll = random.random()
+        gem_found = None
+        
+        if gem_roll < 0.01: # 1% chance for Turquoise 
+
+[Image of Turquoise Gemstone]
+
+             gem_found = "turquoise_gem"
+        elif gem_roll < 0.025: # 1.5% chance for Chrysocolla 
+             gem_found = "chrysocolla_gem"
+        elif gem_roll < 0.05: # 2.5% chance for Azurite 
+             gem_found = "azurite_gem"
+        elif gem_roll < 0.10: # 5% chance for Malachite 
+             gem_found = "malachite_gem"
+
+        if gem_found:
+             gem_data = self.world.game_items.get(gem_found)
+             if gem_data:
+                 self.player.inventory.append(gem_found)
+                 self.player.send_message(f"As the ore crumbles, a {gem_data['name']} falls out!")
+
         _set_action_roundtime(self.player, 5.0)
 
 class Wash(BaseVerb):
@@ -98,26 +121,27 @@ class Charge(BaseVerb):
             self.player.send_message("There is no furnace here.")
             return
 
-        target_material = self.args[-1].lower() 
+        target_material = self.args[-1].lower() # "ore", "coal", "flux"
         item_ref, slot = _find_item_in_hands(self.player, target_material)
         
         if not item_ref:
             self.player.send_message(f"You aren't holding any {target_material}.")
             return
             
+        # Logic to update furnace state
         state = furnace["state"]
         item_data = _get_item_data(item_ref, self.world.game_items)
         
         if target_material == "coal":
             state["fuel"] = state.get("fuel", 0) + 20
-            self.player.send_message("You shovel coal into the furnace. It hisses as it hits the heat.")
+            self.player.send_message("You shovel coal into the furnace.")
         elif target_material == "flux":
             state["flux"] = state.get("flux", 0) + 10
-            self.player.send_message("You sprinkle flux into the mix. It crackles and sparks.")
+            self.player.send_message("You sprinkle flux into the mix.")
         elif target_material == "ore":
             if item_data.get("name") == "washed copper ore":
                 state["ore"] = state.get("ore", 0) + 10
-                self.player.send_message("You dump the washed ore into the crucible.")
+                self.player.send_message("You charge the furnace with washed ore.")
             else:
                 self.player.send_message("That ore isn't ready for smelting. It must be crushed and washed.")
                 return
@@ -125,6 +149,7 @@ class Charge(BaseVerb):
             self.player.send_message("You can't charge the furnace with that.")
             return
 
+        # Remove item from hand
         self.player.worn_items[slot] = None
         _set_action_roundtime(self.player, 4.0)
 
@@ -138,19 +163,15 @@ class Bellow(BaseVerb):
             self.player.send_message("There is no furnace here.")
             return
             
+        self.player.send_message("You pump the bellows, feeding air to the fire!")
+        
+        # Mechanic: Immediate heat gain, but burns fuel
         state = furnace["state"]
-        fuel = state.get("fuel", 0)
-        temp = state.get("temp", 20)
-
-        if fuel > 0:
+        if state.get("fuel", 0) > 0:
             state["temp"] += 50
             state["fuel"] -= 2
-            if temp > 1000:
-                self.player.send_message("You pump the bellows. A jet of white flame roars upwards!")
-            else:
-                self.player.send_message("You pump the bellows, feeding oxygen to the coals. They brighten instantly.")
         else:
-            self.player.send_message("The bellows wheeze with a hollow sound. The fire is starving for fuel.")
+            self.player.send_message("The bellows wheeze, but there is no fuel to burn.")
             
         _set_action_roundtime(self.player, 3.0)
 
@@ -167,10 +188,10 @@ class Vent(BaseVerb):
         
         if "open" in self.args:
             state["air_flow"] = min(100, current + 25)
-            self.player.send_message("You open the damper. You hear the draft rushing through the chimney.")
+            self.player.send_message("You open the vents to increase airflow.")
         elif "close" in self.args:
             state["air_flow"] = max(0, current - 25)
-            self.player.send_message("You close the damper, stifling the airflow.")
+            self.player.send_message("You close the vents to stifle the fire.")
         else:
             self.player.send_message(f"Vents are currently at {current}%. Usage: VENT OPEN or VENT CLOSE")
         
@@ -187,18 +208,14 @@ class Tap(BaseVerb):
         state = furnace["state"]
         slag = state.get("slag", 0)
         
-        if slag > 10:
-            self.player.send_message("You knock the clay plug loose. A stream of glowing, viscous slag vomits forth onto the floor!")
-            state["slag"] = 0
-        elif slag > 0:
-            self.player.send_message("You open the tap. A small trickle of grey impurities drips out.")
+        if slag > 0:
+            self.player.send_message("You open the tap. Molten slag hisses as it flows out.")
             state["slag"] = 0
         else:
-            self.player.send_message("You open the tap, but only hot air escapes. The melt is clean.")
+            self.player.send_message("You open the tap, but nothing comes out.")
             
         _set_action_roundtime(self.player, 6.0)
 
-# ... (Extract and Shingle remain largely the same, or can be tweaked similarly) ...
 class Extract(BaseVerb):
     """Pulls out the bloom."""
     def execute(self):
@@ -210,12 +227,13 @@ class Extract(BaseVerb):
         metal = state.get("ready_metal", 0)
         
         if metal < 10:
-            self.player.send_message("You peek inside. The ore hasn't reduced to a bloom yet.")
+            self.player.send_message("There isn't enough metal to extract a bloom yet.")
             return
             
+        # Create a Dynamic Item (Dict)
         bloom = {
             "name": "a glowing bloom",
-            "description": "A spongy mass of hot metal and slag, pulsing with heat.",
+            "description": "A spongy mass of hot metal and slag.",
             "keywords": ["bloom", "glowing", "metal"],
             "is_item": True,
             "verbs": ["GET", "LOOK", "SHINGLE"],
@@ -225,13 +243,15 @@ class Extract(BaseVerb):
             "uid": f"bloom_{int(time.time())}"
         }
         
+        # Put in room
         self.room.objects.append(bloom)
         self.world.save_room(self.room)
         
+        # Reset furnace metal
         state["ready_metal"] = 0
-        state["temp"] -= 500 
+        state["temp"] -= 500 # Heat loss from opening door
         
-        self.player.send_message("Shielding your face from the heat, you tear open the door and drag the glowing, spongy bloom onto the floor!")
+        self.player.send_message("You tear open the furnace door and drag out a glowing bloom!")
         _set_action_roundtime(self.player, 10.0)
 
 class Shingle(BaseVerb):
@@ -239,6 +259,7 @@ class Shingle(BaseVerb):
     def execute(self):
         if _check_action_roundtime(self.player, "other"): return
         
+        # 1. Check for bloom in room
         bloom = None
         for obj in self.room.objects:
             if obj.get("name") == "a glowing bloom":
@@ -248,6 +269,7 @@ class Shingle(BaseVerb):
             self.player.send_message("There is no bloom here to shingle.")
             return
             
+        # 2. Check for Hammer
         has_hammer = False
         for slot in ["mainhand", "offhand"]:
             item_ref = self.player.worn_items.get(slot)
@@ -259,10 +281,10 @@ class Shingle(BaseVerb):
             self.player.send_message("You need a hammer to shingle the bloom.")
             return
 
-        # Success
+        # Success: Convert bloom to Ingot (Dynamic Item)
         ingot = {
             "name": "a copper ingot",
-            "description": "A solid bar of copper, radiating warmth.",
+            "description": "A solid bar of copper, still warm.",
             "keywords": ["ingot", "copper"],
             "is_item": True,
             "verbs": ["GET", "LOOK", "TAKE"],
@@ -275,5 +297,5 @@ class Shingle(BaseVerb):
         self.room.objects.append(ingot)
         self.world.save_room(self.room)
         
-        self.player.send_message("Sparks fly as you strike the bloom! Molten slag squirts out as you compact the spongy metal into a solid bar.")
+        self.player.send_message("You strike the bloom repeatedly, squeezing out the slag and forging it into an ingot.")
         _set_action_roundtime(self.player, 5.0)

@@ -561,5 +561,33 @@
         "item_type": "quest",
         "keywords": ["receipt", "final receipt"],
         "base_value": 0
+    },
+    "malachite_gem": {
+        "name": "a polished malachite stone",
+        "description": "A rich, opaque green gemstone with distinctive concentric banding. It feels cool and smooth.",
+        "item_type": "gem",
+        "keywords": ["gem", "malachite", "stone"],
+        "base_value": 50
+    },
+    "azurite_gem": {
+        "name": "a deep blue azurite crystal",
+        "description": "A stunningly deep electric blue crystal. It seems to absorb the light around it.",
+        "item_type": "gem",
+        "keywords": ["gem", "azurite", "crystal"],
+        "base_value": 60
+    },
+    "chrysocolla_gem": {
+        "name": "a cyan chrysocolla stone",
+        "description": "A vibrant blue-green stone with a porcelain-like luster. It is quite hard.",
+        "item_type": "gem",
+        "keywords": ["gem", "chrysocolla", "stone"],
+        "base_value": 75
+    },
+    "turquoise_gem": {
+        "name": "a rough turquoise nugget",
+        "description": "A nugget of sky-blue stone veined with spiderwebs of dark matrix.",
+        "item_type": "gem",
+        "keywords": ["gem", "turquoise", "nugget"],
+        "base_value": 80
     }
 }
