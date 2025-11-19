@@ -1,0 +1,81 @@
+{
+  "pelt_ruined": {
+    "name": "a ruined pelt",
+    "description": "A worthless, ruined pelt.",
+    "item_type": "component",
+    "keywords": [
+      "pelt",
+      "ruined pelt"
+    ],
+    "base_value": 5,
+    "max_value": 12
+  },
+  "monster_claw": {
+    "name": "a monster claw",
+    "description": "A sharp, wicked-looking claw.",
+    "item_type": "component",
+    "keywords": [
+      "claw",
+      "monster claw"
+    ],
+    "base_value": 15,
+    "max_value": 25
+  },
+  "orc_ear": {
+    "name": "an orc ear",
+    "description": "A large, green ear taken off a recently deceased orc.",
+    "item_type": "component",
+    "keywords": [
+      "ear",
+      "orc ear"
+    ],
+    "base_value": 35,
+    "max_value": 57
+  },
+  "orc_tusk": {
+    "name": "an orc tusk",
+    "description": "A large, yellowed tusk from an orc.",
+    "item_type": "component",
+    "keywords": [
+      "tusk",
+      "orc tusk"
+    ],
+    "base_value": 10,
+    "max_value": 18
+  },
+  "tattered_cloth": {
+    "name": "tattered cloth",
+    "description": "A scrap of dirty, tattered cloth.",
+    "item_type": "component",
+    "keywords": [
+      "cloth",
+      "tattered cloth"
+    ],
+    "base_value": 1,
+    "max_value": 3
+  },
+  "ash_wood": {
+    "name": "a log of ash wood",
+    "description": "A sturdy log of ash wood.",
+    "item_type": "component",
+    "keywords": [
+      "wood",
+      "log",
+      "ash",
+      "ash wood"
+    ],
+    "base_value": 15,
+    "max_value": 30
+  },
+  "river_fish": {
+    "name": "a small river fish",
+    "description": "A small, silvery river fish.",
+    "item_type": "component",
+    "keywords": [
+      "fish",
+      "river fish"
+    ],
+    "base_value": 10,
+    "max_value": 20
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "copper_ore": {
+    "name": "a chunk of copper ore",
+    "description": "Raw copper ore. It needs to be crushed and washed before smelting.",
+    "item_type": "ore",
+    "keywords": [
+      "ore",
+      "copper",
+      "chunk"
+    ],
+    "base_value": 20
+  },
+  "crushed_copper_ore": {
+    "name": "crushed copper ore",
+    "description": "Copper ore crushed into gravel-sized pieces.",
+    "item_type": "ore_gravel",
+    "keywords": [
+      "ore",
+      "gravel",
+      "crushed"
+    ],
+    "base_value": 25
+  },
+  "washed_copper_ore": {
+    "name": "washed copper ore",
+    "description": "Clean, crushed copper ore, ready for the furnace.",
+    "item_type": "ore_clean",
+    "keywords": [
+      "ore",
+      "washed"
+    ],
+    "base_value": 30
+  },
+  "coal": {
+    "name": "a lump of coal",
+    "description": "Black, dusty coal. Excellent fuel.",
+    "item_type": "fuel",
+    "fuel_value": 100,
+    "keywords": [
+      "coal",
+      "lump"
+    ],
+    "base_value": 5
+  },
+  "flux_bag": {
+    "name": "a small bag of flux",
+    "description": "A bag of limestone powder used to bind impurities in smelting.",
+    "item_type": "flux",
+    "keywords": [
+      "flux",
+      "bag",
+      "powder"
+    ],
+    "base_value": 10
+  }
+}

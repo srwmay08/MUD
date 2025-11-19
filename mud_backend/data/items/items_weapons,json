@@ -1,0 +1,344 @@
+{
+  "short_sword": {
+    "name": "a short sword",
+    "description": "A simple iron short sword.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "edged_weapons",
+    "keywords": [
+      "sword",
+      "short sword"
+    ],
+    "base_value": 100,
+    "attacks": [
+      {
+        "verb": "slash",
+        "damage_type": "slash",
+        "chance": 0.7
+      },
+      {
+        "verb": "stab",
+        "damage_type": "puncture",
+        "chance": 0.3
+      }
+    ]
+  },
+  "knuckle_dusters": {
+    "name": "a set of knuckle dusters",
+    "description": "A piece of metal shaped to fit around the knuckles.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "brawling",
+    "keywords": [
+      "knuckle dusters",
+      "dusters"
+    ],
+    "base_value": 40,
+    "attacks": [
+      {
+        "verb": "punch",
+        "damage_type": "crush",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_dagger": {
+    "name": "a simple dagger",
+    "description": "A small, sharp dagger. Good for a quick stab.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "small_edged",
+    "keywords": [
+      "dagger",
+      "simple dagger"
+    ],
+    "base_value": 50,
+    "attacks": [
+      {
+        "verb": "stab",
+        "damage_type": "puncture",
+        "chance": 0.8
+      },
+      {
+        "verb": "slash",
+        "damage_type": "slash",
+        "chance": 0.2
+      }
+    ]
+  },
+  "starter_short_sword": {
+    "name": "a basic short sword",
+    "description": "A standard-issue short sword.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "edged_weapons",
+    "keywords": [
+      "sword",
+      "short sword"
+    ],
+    "base_value": 100,
+    "attacks": [
+      {
+        "verb": "slash",
+        "damage_type": "slash",
+        "chance": 0.7
+      },
+      {
+        "verb": "stab",
+        "damage_type": "puncture",
+        "chance": 0.3
+      }
+    ],
+    "damage_factors": {
+      "cloth": 0.35,
+      "leather": 0.24,
+      "scale": 0.2,
+      "chain": 0.15,
+      "plate": 0.125
+    },
+    "avd_modifiers": {
+      "cloth": 40,
+      "leather": 33,
+      "scale": 24,
+      "chain": 13,
+      "plate": 7
+    }
+  },
+  "starter_bastard_sword": {
+    "name": "a bastard sword",
+    "description": "A long, heavy sword that can be used with one or two hands.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "two_handed_edged",
+    "keywords": [
+      "sword",
+      "bastard sword"
+    ],
+    "base_value": 150,
+    "attacks": [
+      {
+        "verb": "slash",
+        "damage_type": "slash",
+        "chance": 0.8
+      },
+      {
+        "verb": "stab",
+        "damage_type": "puncture",
+        "chance": 0.2
+      }
+    ]
+  },
+  "starter_club": {
+    "name": "a wooden club",
+    "description": "A solid piece of wood, heavier at one end.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "small_blunt",
+    "keywords": [
+      "club",
+      "wooden club"
+    ],
+    "base_value": 30,
+    "attacks": [
+      {
+        "verb": "bludgeon",
+        "damage_type": "crush",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_mace": {
+    "name": "a simple mace",
+    "description": "A basic mace with a flanged head.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "blunt_weapons",
+    "keywords": [
+      "mace",
+      "simple mace"
+    ],
+    "base_value": 90,
+    "attacks": [
+      {
+        "verb": "crush",
+        "damage_type": "crush",
+        "chance": 0.7
+      },
+      {
+        "verb": "bash",
+        "damage_type": "impact",
+        "chance": 0.3
+      }
+    ],
+    "damage_factors": {
+      "cloth": 0.4,
+      "leather": 0.3,
+      "scale": 0.225,
+      "chain": 0.25,
+      "plate": 0.175
+    },
+    "avd_modifiers": {
+      "cloth": 31,
+      "leather": 29,
+      "scale": 29,
+      "chain": 30,
+      "plate": 18
+    }
+  },
+  "starter_greatclub": {
+    "name": "a greatclub",
+    "description": "A hefty, two-handed club.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "two_handed_blunt",
+    "keywords": [
+      "greatclub",
+      "club"
+    ],
+    "base_value": 130,
+    "attacks": [
+      {
+        "verb": "smash",
+        "damage_type": "crush",
+        "chance": 0.6
+      },
+      {
+        "verb": "batter",
+        "damage_type": "impact",
+        "chance": 0.4
+      }
+    ]
+  },
+  "starter_spear": {
+    "name": "a simple spear",
+    "description": "A long wooden shaft topped with a sharp metal point.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "polearms",
+    "keywords": [
+      "spear",
+      "simple spear"
+    ],
+    "base_value": 110,
+    "attacks": [
+      {
+        "verb": "stab",
+        "damage_type": "puncture",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_bow": {
+    "name": "a short bow",
+    "description": "A simple wooden short bow.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "bows",
+    "keywords": [
+      "bow",
+      "short bow"
+    ],
+    "base_value": 100,
+    "attacks": [
+      {
+        "verb": "shoot",
+        "damage_type": "ballistic",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_crossbow": {
+    "name": "a light crossbow",
+    "description": "A small, easy-to-load crossbow.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "crossbows",
+    "keywords": [
+      "crossbow",
+      "light crossbow"
+    ],
+    "base_value": 120,
+    "attacks": [
+      {
+        "verb": "fire",
+        "damage_type": "ballistic",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_throwing_knife": {
+    "name": "a throwing knife",
+    "description": "A small, balanced knife designed to be thrown.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "small_thrown",
+    "keywords": [
+      "knife",
+      "throwing knife"
+    ],
+    "base_value": 20,
+    "attacks": [
+      {
+        "verb": "throw",
+        "damage_type": "puncture",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_javelin": {
+    "name": "a javelin",
+    "description": "A light spear designed for throwing.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "large_thrown",
+    "keywords": [
+      "javelin"
+    ],
+    "base_value": 40,
+    "attacks": [
+      {
+        "verb": "hurl",
+        "damage_type": "puncture",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_sling": {
+    "name": "a leather sling",
+    "description": "A simple leather sling for hurling stones.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "slings",
+    "keywords": [
+      "sling",
+      "leather sling"
+    ],
+    "base_value": 15,
+    "attacks": [
+      {
+        "verb": "hurl",
+        "damage_type": "impact",
+        "chance": 1
+      }
+    ]
+  },
+  "starter_staff": {
+    "name": "a wooden staff",
+    "description": "A smooth, sturdy wooden staff.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "staves",
+    "keywords": [
+      "staff",
+      "wooden staff"
+    ],
+    "base_value": 60,
+    "attacks": [
+      {
+        "verb": "whack",
+        "damage_type": "impact",
+        "chance": 1
+      }
+    ]
+  }
+}

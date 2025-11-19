@@ -1,0 +1,104 @@
+{
+  "mining_hammer": {
+    "name": "a mining hammer",
+    "description": "A heavy hammer for crushing rock and working metal.",
+    "item_type": "tool",
+    "tool_type": "hammer",
+    "wearable_slot": "mainhand",
+    "keywords": [
+      "hammer",
+      "mining hammer"
+    ],
+    "base_value": 50
+  },
+  "tongs": {
+    "name": "a pair of iron tongs",
+    "description": "Long iron tongs for handling hot metal.",
+    "item_type": "tool",
+    "tool_type": "tongs",
+    "wearable_slot": "offhand",
+    "keywords": [
+      "tongs"
+    ],
+    "base_value": 40
+  },
+  "pickaxe": {
+    "name": "a pickaxe",
+    "description": "A sturdy pickaxe, good for mining.",
+    "item_type": "tool",
+    "tool_type": "mining",
+    "wearable_slot": "mainhand",
+    "skill": "small_blunt",
+    "keywords": [
+      "pickaxe",
+      "pick"
+    ],
+    "base_value": 150,
+    "attacks": [
+      {
+        "verb": "swing",
+        "damage_type": "puncture",
+        "chance": 1
+      }
+    ]
+  },
+  "wood_axe": {
+    "name": "a wood axe",
+    "description": "A heavy axe, good for chopping wood.",
+    "item_type": "tool",
+    "tool_type": "lumberjacking",
+    "wearable_slot": "mainhand",
+    "skill": "edged_weapons",
+    "keywords": [
+      "axe",
+      "wood axe"
+    ],
+    "base_value": 120,
+    "attacks": [
+      {
+        "verb": "chop",
+        "damage_type": "slash",
+        "chance": 1
+      }
+    ]
+  },
+  "sickle": {
+    "name": "a sickle",
+    "description": "A curved blade, good for harvesting plants.",
+    "item_type": "tool",
+    "tool_type": "herbalism",
+    "wearable_slot": "mainhand",
+    "skill": "small_edged",
+    "keywords": [
+      "sickle",
+      "knife"
+    ],
+    "base_value": 80,
+    "attacks": [
+      {
+        "verb": "slash",
+        "damage_type": "slash",
+        "chance": 1
+      }
+    ]
+  },
+  "fishing_pole": {
+    "name": "a fishing pole",
+    "description": "A simple wooden fishing pole.",
+    "item_type": "tool",
+    "tool_type": "fishing",
+    "wearable_slot": "mainhand",
+    "keywords": [
+      "pole",
+      "fishing pole"
+    ],
+    "base_value": 100,
+    "attacks": [
+      {
+        "verb": "whip",
+        "damage_type": "impact",
+        "chance": 1
+      }
+    ]
+  }
+}

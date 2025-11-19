@@ -1,0 +1,16 @@
+{
+  "starter_backpack": {
+    "name": "a starter backpack",
+    "description": "A simple but sturdy leather backpack.",
+    "item_type": "container",
+    "wearable_slot": "back",
+    "is_container": true,
+    "keywords": [
+      "backpack",
+      "starter backpack",
+      "pack",
+      "back"
+    ],
+    "base_value": 50
+  }
+}

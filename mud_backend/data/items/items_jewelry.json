@@ -1,0 +1,13 @@
+{
+  "gold_ring": {
+    "name": "a gold ring",
+    "description": "A simple gold ring.",
+    "item_type": "jewelry",
+    "wearable_slot": "finger_right",
+    "keywords": [
+      "ring",
+      "gold ring"
+    ],
+    "base_value": 250
+  }
+}
