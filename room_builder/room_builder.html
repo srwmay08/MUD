@@ -3,120 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MUD Visual Architect</title>
+    <title>MUD Visual Architect (Debug Mode)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #1a1a1a; color: #e5e5e5; height: 100vh; overflow: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: #e5e5e5; height: 100vh; overflow: hidden; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #2a2a2a; }
-        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #777; }
+        ::-webkit-scrollbar-track { background: #1e1e1e; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #666; }
+        
         #main-container { display: flex; height: 100vh; }
-        #editor-panel { width: 50%; overflow-y: auto; padding: 1.5rem; border-right: 1px solid #333; background: #222; }
-        #visual-panel { width: 50%; display: flex; flex-direction: column; background: #111; position: relative; }
-        #map-container { flex-grow: 1; overflow: hidden; cursor: grab; position: relative; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 20px 20px; }
+        #editor-panel { width: 450px; flex-shrink: 0; overflow-y: auto; padding: 1.5rem; border-right: 1px solid #333; background: #1e1e1e; display: flex; flex-direction: column; gap: 1.5rem; }
+        #visual-panel { flex-grow: 1; display: flex; flex-direction: column; background: #0a0a0a; position: relative; }
+
+        #map-container { flex-grow: 1; overflow: hidden; cursor: grab; position: relative; 
+                         background-image: radial-gradient(#2a2a2a 1px, transparent 1px); background-size: 20px 20px; }
         #map-container:active { cursor: grabbing; }
-        .map-room rect { fill: #333; stroke: #666; stroke-width: 1; transition: fill 0.2s; cursor: pointer; }
+        
+        .map-room rect { fill: #333; stroke: #555; stroke-width: 1; transition: fill 0.1s; cursor: pointer; }
         .map-room:hover rect { fill: #444; stroke: #888; }
         .map-room.current rect { fill: #f59e0b; stroke: #fff; stroke-width: 2; }
-        .map-room text { font-size: 8px; fill: #aaa; text-anchor: middle; pointer-events: none; font-family: monospace; }
+        .map-room text { font-size: 8px; fill: #888; text-anchor: middle; pointer-events: none; font-family: monospace; user-select: none; }
         .map-room.current text { fill: #000; font-weight: bold; }
-        .map-link { stroke: #555; stroke-width: 1; }
-        .form-section { background: #2a2a2a; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid #333; }
-        .form-section-title { font-size: 1.1rem; font-weight: 700; color: #f59e0b; border-bottom: 1px solid #444; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-        .form-label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 0.2rem; }
-        .form-input, .form-textarea, .form-select { width: 100%; background: #151515; border: 1px solid #444; color: #fff; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.9rem; }
-        .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: #f59e0b; }
-        .dynamic-item { background: #1f1f1f; padding: 0.75rem; border-radius: 0.25rem; border: 1px solid #333; margin-bottom: 0.5rem; }
-        .btn { padding: 0.4rem 0.8rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: opacity 0.2s; }
-        .btn:hover { opacity: 0.9; }
+        .map-link { stroke: #444; stroke-width: 1; pointer-events: none; }
+
+        .form-label { display: block; font-size: 0.75rem; color: #aaa; margin-bottom: 0.2rem; font-weight: 600; text-transform: uppercase; }
+        .form-input, .form-textarea { 
+            width: 100%; background: #121212; border: 1px solid #333; color: #fff; 
+            padding: 0.5rem; border-radius: 0.25rem; font-size: 0.9rem; transition: border-color 0.2s; font-family: monospace;
+        }
+        .form-input:focus, .form-textarea:focus { outline: none; border-color: #f59e0b; }
+        .dynamic-item { background: #252525; padding: 0.5rem; border-radius: 0.25rem; border: 1px solid #333; margin-bottom: 0.5rem; font-size: 0.85rem; }
+        
+        .btn { padding: 0.4rem 0.8rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        .btn:hover { filter: brightness(1.1); }
         .btn-primary { background: #f59e0b; color: #000; }
         .btn-danger { background: #ef4444; color: #fff; }
         .btn-secondary { background: #3b82f6; color: #fff; }
-        .btn-neutral { background: #4b5563; color: #fff; }
+        .btn-neutral { background: #374151; color: #fff; border: 1px solid #4b5563; }
         .btn-success { background: #10b981; color: #fff; }
-        
-        /* Modal Overlay */
-        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 50; align-items: center; justify-content: center; }
-        .modal-box { background: #222; padding: 2rem; border-radius: 0.5rem; border: 1px solid #444; width: 400px; max-width: 90%; }
-        
-        /* Room List Overlay */
+
         #room-list-overlay {
-            position: absolute; top: 10px; right: 10px; width: 200px; max-height: 300px;
-            background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 0.5rem;
-            overflow-y: auto; padding: 0.5rem; z-index: 10; pointer-events: auto;
+            position: absolute; top: 10px; right: 10px; width: 220px; max-height: 400px;
+            background: rgba(20, 20, 20, 0.95); border: 1px solid #333; border-radius: 0.5rem;
+            overflow-y: auto; padding: 0.5rem; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
-        .room-list-item { padding: 4px 8px; cursor: pointer; font-size: 0.85rem; border-radius: 4px; color: #ccc; }
+        .room-list-item { padding: 6px 8px; cursor: pointer; font-size: 0.8rem; border-radius: 4px; color: #ccc; margin-bottom: 2px; }
         .room-list-item:hover { background: #333; color: #fff; }
-        .room-list-item.active { background: #f59e0b; color: #000; }
+        .room-list-item.active { background: #f59e0b; color: #000; font-weight: bold; }
+        
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-box { background: #1e1e1e; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #444; width: 400px; max-width: 95%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
 <div id="main-container">
     <div id="editor-panel">
-        <div class="flex justify-between items-center mb-6 bg-black/20 p-2 rounded">
-            <h1 class="text-xl font-bold text-amber-500">Room Architect</h1>
-            <div class="space-x-2">
-                <button onclick="showLoadModal()" class="btn btn-neutral text-xs">📂 Load Server File</button>
-                <button onclick="showSaveModal()" class="btn btn-success text-xs">💾 Save to Server</button>
-                <button onclick="newZone()" class="btn btn-danger text-xs">Clear</button>
-                <button onclick="createNewRoom()" class="btn btn-secondary text-xs">+ Room</button>
+        <div class="flex flex-col gap-2 mb-4 bg-black/20 p-3 rounded border border-white/5">
+            <div class="flex justify-between items-center">
+                <h1 class="text-lg font-bold text-amber-500">Room Architect</h1>
+                <span id="unsaved-indicator" class="text-xs text-red-400 hidden">● Unsaved</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+                <button onclick="showLoadModal()" class="btn btn-neutral" title="Load">📂</button>
+                <button onclick="showSaveModal()" class="btn btn-neutral" title="Save">💾</button>
+                <button onclick="newZone()" class="btn btn-danger" title="Clear">🗑️</button>
+                <button onclick="createNewRoom()" class="btn btn-secondary" title="New">➕</button>
             </div>
         </div>
 
-        <form id="room-form">
-            <div class="form-section">
-                <h2 class="form-section-title">Core</h2>
-                <div class="grid grid-cols-2 gap-4 mb-2">
-                    <div><label class="form-label">Room ID</label><input type="text" id="room_id" class="form-input font-mono text-amber-500" oninput="updateCurrentRoomState()"></div>
-                    <div><label class="form-label">Name</label><input type="text" id="name" class="form-input" oninput="updateCurrentRoomState()"></div>
+        <form id="room-form" onsubmit="return false;">
+            <div class="bg-black/20 p-3 rounded border border-white/5 mb-4">
+                <div class="flex justify-between items-end mb-2">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase">Identity & Position</h2>
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateCurrentRoomState()">
+                            <span class="text-xs text-gray-400">Outdoor</span>
+                        </label>
+                    </div>
                 </div>
+                
+                <div class="grid grid-cols-1 gap-2 mb-2">
+                    <input type="text" id="room_id" class="form-input text-amber-500 font-bold" placeholder="room_id" oninput="updateCurrentRoomState()">
+                    <input type="text" id="name" class="form-input" placeholder="Room Name" oninput="updateCurrentRoomState()">
+                </div>
+                
                 <div class="grid grid-cols-4 gap-2">
-                    <div><label class="form-label">X</label><input type="number" id="x" class="form-input" oninput="updateCurrentRoomState()"></div>
-                    <div><label class="form-label">Y</label><input type="number" id="y" class="form-input" oninput="updateCurrentRoomState()"></div>
-                    <div><label class="form-label">Z</label><input type="number" id="z" class="form-input" oninput="updateCurrentRoomState()"></div>
-                    <div><label class="form-label">Zone</label><input type="text" id="interior_id" class="form-input" oninput="updateCurrentRoomState()"></div>
-                </div>
-                <div class="mt-3"><label class="flex items-center space-x-2"><input type="checkbox" id="is_outdoor" class="w-4 h-4" onchange="updateCurrentRoomState()"><span class="text-sm text-gray-300">Is Outdoor?</span></label></div>
-            </div>
-
-            <div class="form-section border-blue-900 bg-blue-900/20">
-                <h2 class="form-section-title text-blue-400 text-sm">Quick Build</h2>
-                <div class="grid grid-cols-3 gap-2 text-xs">
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('northwest', -1, 1)">NW</button>
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('north', 0, 1)">N</button>
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('northeast', 1, 1)">NE</button>
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('west', -1, 0)">W</button>
-                    <div class="text-center text-gray-500 flex items-center justify-center">●</div>
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('east', 1, 0)">E</button>
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('southwest', -1, -1)">SW</button>
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('south', 0, -1)">S</button>
-                    <button type="button" class="btn btn-neutral p-1" onclick="quickBuild('southeast', 1, -1)">SE</button>
+                    <div class="col-span-1"><label class="form-label">X</label><input type="number" id="x" class="form-input text-center" oninput="updateCurrentRoomState()"></div>
+                    <div class="col-span-1"><label class="form-label">Y</label><input type="number" id="y" class="form-input text-center" oninput="updateCurrentRoomState()"></div>
+                    <div class="col-span-1"><label class="form-label">Z</label><input type="number" id="z" class="form-input text-center" oninput="updateCurrentRoomState()"></div>
+                    <div class="col-span-1"><label class="form-label">Zone</label><input type="text" id="interior_id" class="form-input text-center text-xs" placeholder="None" oninput="updateCurrentRoomState()"></div>
                 </div>
             </div>
 
-            <div class="form-section">
-                <h2 class="form-section-title">Description</h2>
-                <textarea id="desc_default" class="form-textarea h-24" oninput="updateCurrentRoomState()"></textarea>
+            <div class="bg-blue-900/10 border border-blue-900/30 p-3 rounded mb-4">
+                <h2 class="text-xs font-bold text-blue-400 uppercase mb-2">Quick Build / Move</h2>
+                <div class="grid grid-cols-3 gap-1">
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('northwest', -1, 1)">NW</button>
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('north', 0, 1)">N</button>
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('northeast', 1, 1)">NE</button>
+                    
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('west', -1, 0)">W</button>
+                    <button type="button" class="btn btn-primary h-8 text-xs" onclick="centerMapOnActive()">Find</button>
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('east', 1, 0)">E</button>
+                    
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('southwest', -1, -1)">SW</button>
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('south', 0, -1)">S</button>
+                    <button type="button" class="btn btn-neutral h-8 text-xs" onclick="quickBuild('southeast', 1, -1)">SE</button>
+                </div>
             </div>
 
-            <div class="form-section">
-                <div class="flex justify-between items-center mb-2"><h2 class="form-section-title border-0 m-0">Exits</h2><button type="button" onclick="addExitUI()" class="text-xs text-amber-500">+ Add</button></div>
-                <div id="exits-container"></div>
+            <div class="mb-4">
+                <label class="form-label">Description</label>
+                <textarea id="desc_default" class="form-textarea h-24" placeholder="You see..." oninput="updateCurrentRoomState()"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="form-label">Exits</label>
+                        <button type="button" onclick="addExitUI()" class="text-xs text-amber-500 hover:text-white">+ Add</button>
+                    </div>
+                    <div id="exits-container" class="space-y-1"></div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="form-label">Objects</label>
+                        <button type="button" onclick="addObjectUI()" class="text-xs text-amber-500 hover:text-white">+ Add</button>
+                    </div>
+                    <div id="objects-container" class="space-y-1"></div>
+                </div>
             </div>
             
-            <div class="form-section">
-                <div class="flex justify-between items-center mb-2"><h2 class="form-section-title border-0 m-0">Objects</h2><button type="button" onclick="addObjectUI()" class="text-xs text-amber-500">+ Add</button></div>
-                <div id="objects-container"></div>
+             <div class="flex justify-center mt-8 pb-10">
+                <button type="button" onclick="downloadZoneJSON()" class="btn btn-secondary w-full">Download JSON File</button>
             </div>
         </form>
     </div>
 
     <div id="visual-panel">
+        <div class="absolute top-2 left-2 z-10 flex gap-2">
+            <button onclick="centerMapOnActive()" class="btn btn-neutral text-xs shadow-lg border border-gray-600">🎯 Center Active</button>
+            <button onclick="resetView()" class="btn btn-neutral text-xs shadow-lg border border-gray-600">Create Start Room</button>
+        </div>
+
         <div id="room-list-overlay">
-            <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Zone Rooms</h3>
+            <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Zone Rooms</h3>
+                <span id="list-count" class="text-xs text-gray-500">0</span>
+            </div>
             <div id="room-list-content"></div>
         </div>
 
@@ -126,9 +164,10 @@
                 <g id="map-nodes"></g>
             </svg>
         </div>
+        
         <div class="bg-black p-2 text-xs text-gray-500 flex justify-between border-t border-gray-800">
-            <span id="status-filename">File: Unsaved</span>
-            <span id="status-count">0 Rooms</span>
+            <span id="status-filename" class="font-mono">Unsaved Zone</span>
+            <span id="status-coords" class="font-mono text-amber-500"></span>
         </div>
     </div>
 </div>
@@ -136,7 +175,7 @@
 <div id="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
     <div id="load-modal" class="modal-box hidden">
         <h2 class="text-lg font-bold text-white mb-4">Load Zone from Server</h2>
-        <select id="server-file-list" class="form-select mb-4 text-sm font-mono"></select>
+        <select id="server-file-list" class="form-select mb-4 text-sm font-mono h-64" size="10"></select>
         <div class="flex justify-end space-x-2">
             <button onclick="document.getElementById('modal-overlay').style.display='none'" class="btn btn-neutral">Cancel</button>
             <button onclick="loadFromServer()" class="btn btn-primary">Load</button>
@@ -144,8 +183,8 @@
     </div>
     <div id="save-modal" class="modal-box hidden">
         <h2 class="text-lg font-bold text-white mb-4">Save Zone to Server</h2>
-        <label class="form-label">Filename (relative to mud_backend/data/)</label>
-        <input type="text" id="save-filename" class="form-input mb-4 font-mono" placeholder="my_new_zone.json">
+        <label class="form-label">Filename (relative to data/)</label>
+        <input type="text" id="save-filename" class="form-input mb-4 font-mono text-amber-500" placeholder="new_zone.json">
         <div class="flex justify-end space-x-2">
             <button onclick="document.getElementById('modal-overlay').style.display='none'" class="btn btn-neutral">Cancel</button>
             <button onclick="saveToServer()" class="btn btn-success">Save</button>
@@ -158,25 +197,29 @@
     let zoneRooms = [];
     let activeRoomId = null;
     let currentFilename = "";
-    let scale = 1, panX = 0, panY = 0, isPanning = false, startPanX = 0, startPanY = 0;
+    let scale = 1, panX = 0, panY = 0;
+    let isPanning = false, startPanX = 0, startPanY = 0;
 
+    // --- INIT ---
     window.onload = () => {
         const c = document.getElementById('map-container');
         panX = c.clientWidth / 2; panY = c.clientHeight / 2;
         updateMapTransform();
-        createNewRoom("start", 0, 0, 0);
+        if (zoneRooms.length === 0) createNewRoom("start_room", 0, 0, 0);
     };
-    
-    // --- HELPER: Safe Normalize ---
+
+    // --- DATA NORMALIZATION ---
     function normalizeRoom(r) {
-        // Force numbers. If it's "10" string, parse it. If null, 0.
-        r.x = parseInt(r.x) || 0;
-        r.y = parseInt(r.y) || 0;
-        r.z = parseInt(r.z) || 0;
-        if(!r.description) r.description = { default: "" };
-        if(!r.exits) r.exits = {};
-        if(!r.objects) r.objects = [];
-        if(r.interior_id === undefined || r.interior_id === null) r.interior_id = "";
+        r.x = parseInt(r.x); if(isNaN(r.x)) r.x = 0;
+        r.y = parseInt(r.y); if(isNaN(r.y)) r.y = 0;
+        r.z = parseInt(r.z); if(isNaN(r.z)) r.z = 0;
+        r.room_id = String(r.room_id || `room_${Date.now()}`);
+        r.name = String(r.name || "Unnamed Room");
+        if (!r.description || typeof r.description !== 'object') r.description = { default: "" };
+        if (!r.exits) r.exits = {};
+        if (!r.objects) r.objects = [];
+        if (r.interior_id === undefined || r.interior_id === null) r.interior_id = "";
+        else r.interior_id = String(r.interior_id).trim();
         return r;
     }
 
@@ -185,39 +228,36 @@
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.remove('hidden');
         document.getElementById('save-modal').classList.add('hidden');
-        
-        const res = await fetch('/api/zones');
-        const files = await res.json();
-        const select = document.getElementById('server-file-list');
-        select.innerHTML = '';
-        files.forEach(f => {
-            const opt = document.createElement('option');
-            opt.value = f; opt.innerText = f; select.appendChild(opt);
-        });
+        try {
+            const res = await fetch('/api/zones');
+            const files = await res.json();
+            const select = document.getElementById('server-file-list');
+            select.innerHTML = '';
+            files.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f; opt.innerText = f; select.appendChild(opt);
+            });
+        } catch(e) { console.error(e); }
     }
 
     async function loadFromServer() {
         const filename = document.getElementById('server-file-list').value;
         if (!filename) return;
-        
         try {
             const res = await fetch(`/api/load?file=${encodeURIComponent(filename)}`);
-            if (!res.ok) throw new Error("Failed to load");
+            if (!res.ok) throw new Error("Failed");
             const data = await res.json();
-            
-            // Normalize EVERY room immediately
             zoneRooms = data.map(r => normalizeRoom(r));
-            
             currentFilename = filename;
-            document.getElementById('status-filename').innerText = `File: ${filename}`;
+            document.getElementById('status-filename').innerText = filename;
             document.getElementById('modal-overlay').style.display = 'none';
-
-            if (zoneRooms.length > 0) loadRoomIntoEditor(zoneRooms[0].room_id);
-            renderRoomList();
-            renderMap();
-        } catch (e) {
-            alert("Error loading file: " + e);
-        }
+            if (zoneRooms.length > 0) {
+                loadRoomIntoEditor(zoneRooms[0].room_id);
+                centerMapOnActive();
+            } else {
+                renderMap();
+            }
+        } catch (e) { alert("Error: " + e); }
     }
 
     function showSaveModal() {
@@ -230,38 +270,36 @@
     async function saveToServer() {
         const filename = document.getElementById('save-filename').value;
         if (!filename) return alert("Filename required");
-        
+        const cleanData = zoneRooms.map(r => normalizeRoom(r));
         try {
-            // Ensure all data is clean before saving
-            const cleanRooms = zoneRooms.map(r => normalizeRoom(r));
-            
             const res = await fetch('/api/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: filename, rooms: cleanRooms })
+                body: JSON.stringify({ filename, rooms: cleanData })
             });
             const result = await res.json();
             if (result.success) {
-                alert("Saved successfully!");
                 currentFilename = filename;
-                document.getElementById('status-filename').innerText = `File: ${filename}`;
+                document.getElementById('status-filename').innerText = filename;
                 document.getElementById('modal-overlay').style.display = 'none';
-            } else {
-                alert("Error: " + result.error);
-            }
-        } catch (e) {
-            alert("Save failed: " + e);
-        }
+                document.getElementById('unsaved-indicator').classList.add('hidden');
+                alert("Saved!");
+            } else { alert("Error: " + result.error); }
+        } catch (e) { alert("Save failed: " + e); }
     }
 
-    // --- BUILDER LOGIC ---
+    // --- EDITOR LOGIC ---
     function createNewRoom(id=null, x=0, y=0, z=0) {
         const newId = id || `room_${Date.now()}`;
-        const newRoom = { room_id: newId, name: "New Room", x, y, z, description: { default: "Desc" }, exits: {}, objects: [], interior_id: "" };
+        const newRoom = { room_id: newId, name: "New Room", x, y, z, interior_id: "", description: { default: "" }, exits: {} };
         zoneRooms.push(normalizeRoom(newRoom));
         loadRoomIntoEditor(newId);
-        renderRoomList();
-        renderMap();
+    }
+    
+    function resetView() {
+        zoneRooms = [];
+        createNewRoom("start_room", 0, 0, 0);
+        centerMapOnActive();
     }
 
     function loadRoomIntoEditor(id) {
@@ -274,180 +312,209 @@
         document.getElementById('x').value = r.x;
         document.getElementById('y').value = r.y;
         document.getElementById('z').value = r.z;
-        document.getElementById('interior_id').value = r.interior_id || "";
+        document.getElementById('interior_id').value = r.interior_id;
         document.getElementById('is_outdoor').checked = !!r.is_outdoor;
         document.getElementById('desc_default').value = r.description.default || "";
         
-        const exCont = document.getElementById('exits-container'); exCont.innerHTML = '';
-        if(r.exits) Object.entries(r.exits).forEach(([k,v]) => addExitUI(k,v));
+        const exDiv = document.getElementById('exits-container'); exDiv.innerHTML = '';
+        Object.entries(r.exits).forEach(([k,v]) => addExitUI(k,v));
         
-        const objCont = document.getElementById('objects-container'); objCont.innerHTML = '';
-        if(r.objects) r.objects.forEach(o => addObjectUI(o));
+        const obDiv = document.getElementById('objects-container'); obDiv.innerHTML = '';
+        r.objects.forEach(o => addObjectUI(o));
         
-        updateStatus();
-        renderRoomList(); // Highlight active
+        renderRoomList(); 
         renderMap();
+        updateStatus();
     }
 
     function updateCurrentRoomState() {
+        document.getElementById('unsaved-indicator').classList.remove('hidden');
         if (!activeRoomId) return;
         const r = zoneRooms.find(rm => rm.room_id === activeRoomId);
         if (!r) return;
         
-        const newId = document.getElementById('room_id').value;
-        if (newId !== activeRoomId) { r.room_id = newId; activeRoomId = newId; }
+        const formId = document.getElementById('room_id').value;
+        if (formId && formId !== activeRoomId) { r.room_id = formId; activeRoomId = formId; }
         
         r.name = document.getElementById('name').value;
-        // FORCE INT PARSING
-        r.x = parseInt(document.getElementById('x').value)||0;
-        r.y = parseInt(document.getElementById('y').value)||0;
-        r.z = parseInt(document.getElementById('z').value)||0;
-        r.interior_id = document.getElementById('interior_id').value;
+        r.x = parseInt(document.getElementById('x').value) || 0;
+        r.y = parseInt(document.getElementById('y').value) || 0;
+        r.z = parseInt(document.getElementById('z').value) || 0;
+        r.interior_id = document.getElementById('interior_id').value.trim();
         r.is_outdoor = document.getElementById('is_outdoor').checked;
-        r.description = { default: document.getElementById('desc_default').value };
+        r.description.default = document.getElementById('desc_default').value;
         
         r.exits = {};
         document.querySelectorAll('.exit-item').forEach(el => {
-            const d = el.querySelector('.exit-dir').value;
-            const t = el.querySelector('.exit-target').value;
+            const d = el.querySelector('.exit-dir').value.trim().toLowerCase();
+            const t = el.querySelector('.exit-target').value.trim();
             if(d && t) r.exits[d] = t;
         });
         
         r.objects = [];
         document.querySelectorAll('.object-item').forEach(el => {
             const n = el.querySelector('.obj-name').value;
-            if(n) r.objects.push({ name: n, keywords: el.querySelector('.obj-keys').value.split(',') });
+            if(n) r.objects.push({ name: n, keywords: el.querySelector('.obj-keys').value.split(',').map(s=>s.trim()).filter(s=>s) });
         });
         
         renderMap();
-        renderRoomList();
+        renderRoomList(); 
+        updateStatus();
     }
 
     function quickBuild(dir, dx, dy) {
         if(!activeRoomId) return;
         const cur = zoneRooms.find(r => r.room_id === activeRoomId);
+        const nx = (parseInt(cur.x)||0) + dx;
+        const ny = (parseInt(cur.y)||0) + dy;
+        const nz = (parseInt(cur.z)||0);
+        const zone = cur.interior_id || "";
         
-        // FORCE INT PARSING HERE TOO just in case
-        const curX = parseInt(cur.x)||0;
-        const curY = parseInt(cur.y)||0;
-        const curZ = parseInt(cur.z)||0;
+        const exist = zoneRooms.find(r => r.x===nx && r.y===ny && r.z===nz && (r.interior_id||"")===zone);
+        const backMap = {'north':'south','south':'north','east':'west','west':'east','northeast':'southwest','southwest':'northeast','northwest':'southeast','southeast':'northwest','up':'down','down':'up'};
+        const backDir = backMap[dir.toLowerCase()];
 
-        const nx = curX + dx;
-        const ny = curY + dy;
-        const nz = curZ;
-        
-        // Looser equality check for Interior ID (handle null vs empty string)
-        const exist = zoneRooms.find(r => r.x===nx && r.y===ny && r.z===nz && (r.interior_id||"")===(cur.interior_id||""));
-        
         if(exist) {
             addExitUI(dir, exist.room_id);
             updateCurrentRoomState();
-            const backMap = {'north':'south','south':'north','east':'west','west':'east','northeast':'southwest','southwest':'northeast','northwest':'southeast','southeast':'northwest'};
-            const back = backMap[dir.toLowerCase()];
-            if(back && !exist.exits[back]) exist.exits[back] = cur.room_id;
+            if(backDir && !exist.exits[backDir]) exist.exits[backDir] = cur.room_id;
         } else {
             const nid = `room_${nx}_${ny}_${nz}`;
             addExitUI(dir, nid);
             updateCurrentRoomState();
-            const backMap = {'north':'south','south':'north','east':'west','west':'east','northeast':'southwest','southwest':'northeast','northwest':'southeast','southeast':'northwest'};
-            const back = backMap[dir.toLowerCase()];
-            
-            const newR = { room_id: nid, name: "New Room", x: nx, y: ny, z: nz, interior_id: cur.interior_id||"", description:{default:""}, exits:{}, objects:[] };
-            if(back) newR.exits[back] = cur.room_id;
+            const newR = { room_id: nid, name: "New Room", x: nx, y: ny, z: nz, interior_id: zone, description:{default:""}, exits:{}, objects:[] };
+            if(backDir) newR.exits[backDir] = cur.room_id;
             zoneRooms.push(normalizeRoom(newR));
             loadRoomIntoEditor(nid);
         }
     }
 
-    function newZone() { if(confirm("Clear?")) { zoneRooms=[]; createNewRoom(); } }
-    
-    // --- UI HELPERS ---
-    function addExitUI(d='', t='') {
-        const div = document.createElement('div'); div.className = 'dynamic-item exit-item flex gap-2';
-        div.innerHTML = `<input class="form-input exit-dir w-1/3" value="${d}" placeholder="Dir" oninput="updateCurrentRoomState()"><input class="form-input exit-target w-1/2" value="${t}" placeholder="Target" oninput="updateCurrentRoomState()"><button onclick="this.parentElement.remove();updateCurrentRoomState()" class="text-red-500">x</button>`;
-        document.getElementById('exits-container').appendChild(div);
-    }
-    function addObjectUI(o={}) {
-        const div = document.createElement('div'); div.className = 'dynamic-item object-item mb-2';
-        div.innerHTML = `<div class="flex justify-between text-xs text-gray-400"><span>Obj</span><button onclick="this.closest('.object-item').remove();updateCurrentRoomState()" class="text-red-500">x</button></div><input class="form-input obj-name mb-1" value="${o.name||''}" placeholder="Name" oninput="updateCurrentRoomState()"><input class="form-input obj-keys" value="${(o.keywords||[]).join(',')}" placeholder="Keywords" oninput="updateCurrentRoomState()">`;
-        document.getElementById('objects-container').appendChild(div);
-    }
-    function updateStatus() { document.getElementById('status-count').innerText = zoneRooms.length + " Rooms"; }
-    function renderRoomList() {
-        const c = document.getElementById('room-list-content'); c.innerHTML='';
-        zoneRooms.forEach(r => {
-            const d = document.createElement('div'); d.className=`room-list-item ${r.room_id===activeRoomId?'active':''}`;
-            d.innerText = `${r.room_id} (${r.x},${r.y},${r.z})`;
-            d.onclick = () => loadRoomIntoEditor(r.room_id);
-            c.appendChild(d);
-        });
-    }
-
-    // --- MAP RENDERER ---
+    // --- RENDERER WITH DEBUGGING ---
     function renderMap() {
-        const ng = document.getElementById('map-nodes'), lg = document.getElementById('map-links');
+        console.group("Map Render Debug");
+        const ng = document.getElementById('map-nodes');
+        const lg = document.getElementById('map-links');
         ng.innerHTML = ''; lg.innerHTML = '';
-        const CELL = 30, GAP = 10, UNIT = CELL+GAP, coords = {};
         
+        const CELL = 30, GAP = 15, UNIT = CELL+GAP;
         const active = zoneRooms.find(r => r.room_id === activeRoomId);
-        // SAFE FILTER: Allow if active is missing, or if Z matches. Treat null interior as ""
-        const activeZ = active ? (active.z||0) : 0;
-        const activeInt = active ? (active.interior_id||"") : "";
+        
+        if (!active) { console.warn("No Active Room"); console.groupEnd(); return; }
+
+        const showZ = parseInt(active.z);
+        const showZone = (active.interior_id||"").trim();
+        
+        console.log(`Displaying: Z=${showZ}, Zone='${showZone}'`);
+
+        const roomCoords = {}; 
+        let renderedCount = 0;
 
         zoneRooms.forEach(r => {
-            // Filter by Z and Interior (Zone)
-            if((r.z||0) !== activeZ) return;
-            if((r.interior_id||"") !== activeInt) return;
+            // Force clean data for comparison
+            const rZ = parseInt(r.z);
+            const rZone = (r.interior_id||"").trim();
 
-            try {
-                const rx = (r.x||0)*UNIT, ry = -(r.y||0)*UNIT; // Negate Y for screen coords
-                coords[r.room_id] = {x: rx+CELL/2, y: ry+CELL/2};
-                
-                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                g.setAttribute("class", `map-room ${r.room_id === activeRoomId ? 'current' : ''}`);
-                g.onclick = () => loadRoomIntoEditor(r.room_id);
-                
-                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                rect.setAttribute("x", rx); rect.setAttribute("y", ry);
-                rect.setAttribute("width", CELL); rect.setAttribute("height", CELL);
-                rect.setAttribute("rx", 4);
-                
-                const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                txt.setAttribute("x", rx+CELL/2); txt.setAttribute("y", ry+CELL/2+3);
-                // Safety check for substring
-                const idStr = String(r.room_id || "???");
-                txt.textContent = idStr.substring(0,5);
-                
-                g.appendChild(rect); g.appendChild(txt); ng.appendChild(g);
-            } catch(err) {
-                console.warn("Error rendering room:", r, err);
+            if(rZ !== showZ) return;
+            if(rZone !== showZone) {
+                // Debug mismatch for specific room
+                if (r.room_id === activeRoomId) console.warn(`Active Room Zone Mismatch! Room: '${rZone}', Filter: '${showZone}'`);
+                return; 
             }
+
+            const rx = r.x * UNIT;
+            const ry = -r.y * UNIT; 
+            
+            roomCoords[r.room_id] = { x: rx + CELL/2, y: ry + CELL/2 };
+            renderedCount++;
+            
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("class", `map-room ${r.room_id === activeRoomId ? 'current' : ''}`);
+            g.onclick = () => loadRoomIntoEditor(r.room_id);
+            
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("x", rx); rect.setAttribute("y", ry);
+            rect.setAttribute("width", CELL); rect.setAttribute("height", CELL);
+            rect.setAttribute("rx", 4);
+            
+            const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            txt.setAttribute("x", rx + CELL/2); txt.setAttribute("y", ry + CELL/2 + 3);
+            txt.textContent = r.room_id.length > 6 ? r.room_id.substring(0, 3)+".." : r.room_id;
+            
+            g.appendChild(rect); g.appendChild(txt); ng.appendChild(g);
         });
         
-        // Draw links separately so they are under nodes
+        console.log(`Rendered ${renderedCount} rooms.`);
+        console.groupEnd();
+
         zoneRooms.forEach(r => {
-            const p1 = coords[r.room_id];
-            if(!p1 || !r.exits) return;
-            
-            Object.values(r.exits).forEach(tid => {
-                const p2 = coords[tid];
-                if(p2) {
+            const start = roomCoords[r.room_id];
+            if(!start || !r.exits) return;
+            Object.values(r.exits).forEach(targetId => {
+                const end = roomCoords[targetId];
+                if(end) {
                     const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                    l.setAttribute("x1", p1.x); l.setAttribute("y1", p1.y);
-                    l.setAttribute("x2", p2.x); l.setAttribute("y2", p2.y);
+                    l.setAttribute("x1", start.x); l.setAttribute("y1", start.y);
+                    l.setAttribute("x2", end.x); l.setAttribute("y2", end.y);
                     l.setAttribute("class", "map-link");
                     lg.appendChild(l);
                 }
             });
         });
     }
-    
+
     function updateMapTransform() { document.getElementById('map-svg').style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
-    function handleZoom(e) { e.preventDefault(); scale += e.deltaY * -0.001; scale = Math.min(Math.max(0.1, scale), 4); updateMapTransform(); }
+    function handleZoom(e) { e.preventDefault(); const zs = 0.001; const ns = scale + (e.deltaY * -zs); scale = Math.min(Math.max(0.2, ns), 5); updateMapTransform(); }
     function startPan(e) { isPanning=true; startPanX=e.clientX-panX; startPanY=e.clientY-panY; document.addEventListener('mousemove', doPan); document.addEventListener('mouseup', endPan); }
     function doPan(e) { if(!isPanning) return; panX=e.clientX-startPanX; panY=e.clientY-startPanY; updateMapTransform(); }
     function endPan() { isPanning=false; document.removeEventListener('mousemove', doPan); document.removeEventListener('mouseup', endPan); }
 
+    function centerMapOnActive() {
+        if(!activeRoomId) return;
+        const r = zoneRooms.find(rm => rm.room_id === activeRoomId);
+        if(!r) return;
+        const CELL = 30, GAP = 15, UNIT = CELL+GAP;
+        const rx = r.x * UNIT + (CELL/2);
+        const ry = -r.y * UNIT + (CELL/2);
+        const c = document.getElementById('map-container');
+        panX = (c.clientWidth / 2) - (rx * scale);
+        panY = (c.clientHeight / 2) - (ry * scale);
+        updateMapTransform();
+    }
+
+    function renderRoomList() {
+        const c = document.getElementById('room-list-content'); c.innerHTML = '';
+        document.getElementById('list-count').innerText = zoneRooms.length;
+        zoneRooms.forEach(r => {
+            const div = document.createElement('div');
+            div.className = `room-list-item ${r.room_id===activeRoomId ? 'active' : ''}`;
+            div.innerText = `${r.room_id} (${r.x}, ${r.y})`;
+            div.onclick = () => { loadRoomIntoEditor(r.room_id); centerMapOnActive(); };
+            c.appendChild(div);
+        });
+    }
+    
+    function addExitUI(d='', t='') {
+        const div = document.createElement('div'); div.className = 'dynamic-item exit-item flex gap-1 items-center';
+        div.innerHTML = `<input class="form-input exit-dir w-16" value="${d}" placeholder="Dir" oninput="updateCurrentRoomState()"><input class="form-input exit-target flex-1" value="${t}" placeholder="Target ID" oninput="updateCurrentRoomState()"><button onclick="this.parentElement.remove();updateCurrentRoomState()" class="text-red-500 font-bold px-2">×</button>`;
+        document.getElementById('exits-container').appendChild(div);
+    }
+    
+    function addObjectUI(o={}) {
+        const div = document.createElement('div'); div.className = 'dynamic-item object-item';
+        div.innerHTML = `<div class="flex justify-between text-xs text-gray-500 mb-1"><span>OBJ</span><button onclick="this.closest('.object-item').remove();updateCurrentRoomState()" class="text-red-500">×</button></div><input class="form-input obj-name mb-1" value="${o.name||''}" placeholder="Name" oninput="updateCurrentRoomState()"><input class="form-input obj-keys text-xs" value="${(o.keywords||[]).join(',')}" placeholder="Keywords" oninput="updateCurrentRoomState()">`;
+        document.getElementById('objects-container').appendChild(div);
+    }
+    
+    function updateStatus() {
+        const r = zoneRooms.find(rm => rm.room_id === activeRoomId);
+        if(r) document.getElementById('status-coords').innerText = `X:${r.x} Y:${r.y} Z:${r.z}`;
+    }
+    
+    function downloadZoneJSON() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(zoneRooms.map(r=>normalizeRoom(r)), null, 2));
+        const a = document.createElement('a'); a.href = dataStr; a.download = "zone_export.json";
+        document.body.appendChild(a); a.click(); a.remove();
+    }
 </script>
 </body>
 </html>
