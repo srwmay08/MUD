@@ -78,78 +78,6 @@ def index():
 # --- END FIX
 # ---
 
-# ---
-# --- THIS IS THE FIX: Callback functions are moved to the global scope
-# ---
-def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
-    """
-    Handles broadcasting a message to all relevant players in a room,
-    checking for player flags like AMBIENT and SHOWDEATH.
-    """
-    world_instance = world # Use the global world
-    
-    is_ambient = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay"]
-    is_death = msg_type == "combat_death"
-    
-    sids_to_skip = set()
-    if isinstance(skip_sid, str):
-        sids_to_skip.add(skip_sid)
-    elif isinstance(skip_sid, (list, set)):
-        sids_to_skip.update(skip_sid)
-
-    room_occupants = world_instance.get_all_players_info()
-
-    for p_name, p_data in room_occupants:
-        if p_data.get("current_room_id") == room_id:
-            player_obj = p_data.get("player_obj")
-            player_sid = p_data.get("sid")
-            
-            if not player_obj or not player_sid or player_sid in sids_to_skip:
-                continue
-
-            # Check flags if it's a flag-checked type
-            if is_ambient and player_obj.flags.get("ambient", "on") == "off":
-                continue # Skip this player
-            
-            if is_death and player_obj.flags.get("showdeath", "on") == "off":
-                continue # Skip this player
-                
-            # This player should receive the message
-            socketio.emit(msg_type, message, to=player_sid)
-
-def send_to_player(player_name, message, msg_type):
-    """
-    Sends a message to a specific player, checking for flags.
-    """
-    world_instance = world # Use the global world
-    player_info = world_instance.get_player_info(player_name.lower())
-    if not player_info:
-        return
-
-    player_obj = player_info.get("player_obj")
-    sid = player_info.get("sid")
-    
-    if not player_obj or not sid:
-        return
-
-    # Check flags
-    if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off":
-        return # Skip this message
-    
-    socketio.emit(msg_type, message, to=sid)
-
-def send_vitals_to_player(player_name, vitals_data):
-    """Emits a 'update_vitals' event to a specific player."""
-    world_instance = world # Use the global world
-    player_info = world_instance.get_player_info(player_name.lower())
-    if player_info:
-        sid = player_info.get("sid")
-        if sid:
-            socketio.emit("update_vitals", vitals_data, to=sid)
-# ---
-# --- END FIX
-# ---
-
 
 def game_tick_thread(world_instance: World):
     """
@@ -162,8 +90,111 @@ def game_tick_thread(world_instance: World):
             log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
             log_prefix = f"{log_time} - GAME_TICK"
 
+            # Define callbacks locally to ensure they use the correct context/socketio
+            def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
+                # ---
+                # --- MODIFIED: Check AMBIENT and SHOWDEATH flags
+                # ---
+                is_ambient = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay"]
+                is_death = msg_type == "combat_death"
+
+                if not is_ambient and not is_death:
+                    # Normal broadcast (e.g., combat hits)
+                    if skip_sid:
+                        socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
+                    else:
+                        socketio.emit(msg_type, message, to=room_id)
+                    return
+
+                # Flag-checked broadcast: Iterate over players in the room
+                for p_name, p_data in world_instance.get_all_players_info():
+                    if p_data.get("current_room_id") == room_id:
+                        player_obj = p_data.get("player_obj")
+                        player_sid = p_data.get("sid")
+                        
+                        if not player_obj or not player_sid or player_sid == skip_sid:
+                            continue
+
+                        # Check flags
+                        if is_ambient and player_obj.flags.get("ambient", "on") == "off":
+                            continue # Skip this player
+                        
+                        if is_death and player_obj.flags.get("showdeath", "on") == "off":
+                            continue # Skip this player
+                            
+                        # This player should receive the message
+                        socketio.emit(msg_type, message, to=player_sid)
+                # ---
+                # --- END MODIFIED
+                # ---
+                
+            def send_to_player(player_name, message, msg_type):
+                player_info = world_instance.get_player_info(player_name.lower())
+                if not player_info:
+                    return
+
+                # ---
+                # --- MODIFIED: Check SHOWDEATH flag
+                # ---
+                player_obj = player_info.get("player_obj")
+                sid = player_info.get("sid")
+                
+                if not player_obj or not sid:
+                    return
+
+                # Check flags
+                if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off":
+                    return # Skip this message
+                
+                socketio.emit(msg_type, message, to=sid)
+                # ---
+                # --- END MODIFIED
+                # ---
+
+            def send_vitals_to_player(player_name, vitals_data):
+                """Emits a 'update_vitals' event to a specific player."""
+                player_info = world_instance.get_player_info(player_name.lower())
+                if player_info:
+                    sid = player_info.get("sid")
+                    if sid:
+                        socketio.emit("update_vitals", vitals_data, to=sid)
+
             # ---
-            # --- THIS IS THE FIX: Callbacks are now defined globally
+            # --- NEW: PROCESS PLAYER COMMAND QUEUES ---
+            # ---
+            # We iterate a copy of keys to avoid mutation issues if players disconnect
+            active_player_keys = list(world_instance.active_players.keys())
+            
+            for player_key in active_player_keys:
+                p_info = world_instance.get_player_info(player_key)
+                if not p_info: continue
+                
+                player_obj = p_info.get("player_obj")
+                sid = p_info.get("sid")
+                
+                if player_obj and player_obj.command_queue:
+                    # Check if RT has cleared
+                    combat_state = world_instance.get_combat_state(player_key)
+                    in_rt = False
+                    if combat_state:
+                        if current_time < combat_state.get("next_action_time", 0):
+                            in_rt = True
+                    
+                    if not in_rt:
+                        # RT is clear! Execute the queued command.
+                        cmd_to_run = player_obj.command_queue.pop(0)
+                        
+                        # Execute
+                        result_data = execute_command(world_instance, player_obj.name, cmd_to_run, sid)
+                        
+                        # Emit result to client
+                        socketio.emit("command_response", result_data, to=sid)
+            # ---
+            # --- END QUEUE PROCESSING ---
+            # ---
+
+            # ---
+            # --- THIS IS THE FIX: Callbacks are now defined locally
             # ---
             combat_system.process_combat_tick(
                 world=world_instance,
@@ -294,7 +325,7 @@ def game_tick_thread(world_instance: World):
             # ---
 
             # ---
-            # --- THIS IS THE FIX: Callbacks are now defined globally
+            # --- THIS IS THE FIX: Callbacks are now defined locally
             # ---
             did_global_tick = check_and_run_game_tick(
                 world=world_instance,
@@ -307,7 +338,16 @@ def game_tick_thread(world_instance: World):
             if did_global_tick:
                socketio.emit('tick')
 
-            time.sleep(1.0) 
+            # ---
+            # --- MODIFIED: Faster loop for responsive queuing
+            # ---
+            # Was 1.0, now 0.1. 
+            # This ensures queue checks happen 10 times a second.
+            # Logic relying on seconds (like timestamps) works fine.
+            # Logic relying on "Ticks" (like environment) is safe because
+            # check_and_run_game_tick handles its own time delta check.
+            time.sleep(0.1) 
+            # --- END MODIFIED ---
 
 @socketio.on('connect')
 def handle_connect():
@@ -471,7 +511,14 @@ def handle_command_event(data):
             player_obj = world.get_player_obj(char_name.lower())
             if player_obj:
                 # 1. Check for pending band invites
-                band_with_invite = world.get_band_invite_for_player(player_obj.name.lower())
+                # --- FIX: Need to check all bands ---
+                band_with_invite = None
+                with world.band_lock:
+                    for band in world.active_bands.values():
+                        if player_obj.name.lower() in band.get("pending_invites", {}):
+                            band_with_invite = band
+                            break
+                
                 if band_with_invite:
                     leader_name = band_with_invite["leader"].capitalize()
                     player_obj.send_message(
@@ -516,50 +563,12 @@ def handle_command_event(data):
                 if old_room_id:
                     leave_room(old_room_id, sid=sid)
                     leaves_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> leaves.'
-                    
-                    # ---
-                    # --- THIS IS THE FIX: Skip all followers in the *old* room
-                    # ---
-                    sids_to_skip_leave = {sid}
-                    if player_obj:
-                        group = world.get_group(player_obj.group_id)
-                        if group and group["leader"] == player_name.lower():
-                            for member_key in group["members"]:
-                                if member_key == player_name.lower(): continue
-                                member_info = world.get_player_info(member_key)
-                                # Check if they were in the *old* room (they should be)
-                                if member_info and member_info.get("current_room_id") == old_room_id:
-                                    member_sid = member_info.get("sid")
-                                    if member_sid:
-                                        sids_to_skip_leave.add(member_sid)
-                    
-                    broadcast_to_room(old_room_id, leaves_message, "message", skip_sid=sids_to_skip_leave)
+                    emit("message", leaves_message, to=old_room_id)
                 
                 join_room(new_room_id, sid=sid)
                 arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
-
-                # ---
-                # --- THIS IS THE FIX: Skip all followers in the *new* room
-                # ---
-                sids_to_skip_arrive = {sid}
-                if player_obj:
-                    group = world.get_group(player_obj.group_id)
-                    if group and group["leader"] == player_name.lower():
-                        for member_key in group["members"]:
-                            if member_key == player_name.lower(): continue
-                            member_info = world.get_player_info(member_key)
-                            # Check if they are in the *new* room
-                            if member_info and member_info.get("current_room_id") == new_room_id:
-                                member_sid = member_info.get("sid")
-                                if member_sid:
-                                    sids_to_skip_arrive.add(member_sid)
-
-                # Use the robust broadcast_to_room function defined in the tick thread
-                broadcast_to_room(new_room_id, arrives_message, "message", skip_sid=sids_to_skip_arrive)
-                # ---
-                # --- END FIX
-                # ---
-
+                emit("message", arrives_message, to=new_room_id, skip_sid=sid)
+                
                 socketio.start_background_task(
                     _handle_npc_idle_dialogue, 
                     world, 
