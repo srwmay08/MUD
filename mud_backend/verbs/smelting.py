@@ -12,7 +12,77 @@ def _find_furnace(room) -> Dict[str, Any] | None:
             return obj
     return None
 
-# ... (Crush, Wash, Charge classes remain the same) ...
+class Crush(BaseVerb):
+    """CRUSH ore on a worktable."""
+    def execute(self):
+        if _check_action_roundtime(self.player, "other"): return
+        
+        # 1. Check for hammer
+        has_hammer = False
+        for slot in ["mainhand", "offhand"]:
+            item_ref = self.player.worn_items.get(slot)
+            if item_ref:
+                data = _get_item_data(item_ref, self.world.game_items)
+                if data.get("tool_type") == "hammer":
+                    has_hammer = True
+                    break
+        if not has_hammer:
+            self.player.send_message("You need a hammer to crush ore.")
+            return
+
+        # 2. Check for Ore in other hand
+        ore_ref, ore_slot = _find_item_in_hands(self.player, "ore")
+        if not ore_ref:
+            self.player.send_message("You need to be holding ore to crush it.")
+            return
+        
+        ore_data = _get_item_data(ore_ref, self.world.game_items)
+        if ore_data.get("name") != "a chunk of copper ore":
+            self.player.send_message("You can only crush raw copper ore chunks.")
+            return
+
+        # 3. Check for Table
+        has_table = False
+        for obj in self.room.objects:
+            if "table" in obj.get("keywords", []):
+                has_table = True
+                break
+        if not has_table:
+            self.player.send_message("You need a sturdy table to crush ore on.")
+            return
+
+        # Success
+        self.player.send_message("You smash the ore with your hammer, reducing it to gravel.")
+        self.player.worn_items[ore_slot] = "crushed_copper_ore" # Replace item ID
+        _set_action_roundtime(self.player, 5.0)
+
+class Wash(BaseVerb):
+    """WASH crushed ore in a sink."""
+    def execute(self):
+        if _check_action_roundtime(self.player, "other"): return
+        
+        ore_ref, ore_slot = _find_item_in_hands(self.player, "ore")
+        if not ore_ref:
+            self.player.send_message("You need to be holding crushed ore to wash it.")
+            return
+            
+        ore_data = _get_item_data(ore_ref, self.world.game_items)
+        if ore_data.get("name") != "crushed copper ore":
+            self.player.send_message("That ore doesn't need washing (or hasn't been crushed yet).")
+            return
+
+        has_sink = False
+        for obj in self.room.objects:
+            if "sink" in obj.get("keywords", []):
+                has_sink = True
+                break
+        if not has_sink:
+            self.player.send_message("You need a sink or water source to wash the ore.")
+            return
+
+        self.player.send_message("You thoroughly wash the dirt and grit from the ore.")
+        self.player.worn_items[ore_slot] = "washed_copper_ore"
+        _set_action_roundtime(self.player, 8.0)
 
 class Charge(BaseVerb):
     """CHARGE FURNACE WITH [ORE/COAL/FLUX]"""
