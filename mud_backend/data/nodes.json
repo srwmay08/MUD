@@ -8,6 +8,7 @@
         "is_gathering_node": true,
         "node_type": "mining",
         "skill_dc": 20,
+        "level": 1,
         "loot_table_id": "copper_vein_loot",
         "default_taps": 3
     },
@@ -20,6 +21,7 @@
         "is_gathering_node": true,
         "node_type": "herbalism",
         "skill_dc": 10,
+        "level": 1,
         "loot_table_id": "viridian_leaf_loot",
         "default_taps": 1
     },
@@ -32,6 +34,7 @@
         "is_gathering_node": true,
         "node_type": "lumberjacking",
         "skill_dc": 15,
+        "level": 1,
         "loot_table_id": "ash_wood_loot",
         "default_taps": 2
     }

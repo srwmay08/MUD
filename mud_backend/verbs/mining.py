@@ -1,3 +1,4 @@
+# mud_backend/verbs/mining.py
 import random
 import time
 import math
@@ -8,9 +9,7 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
-# --- NEW: Import show_room_to_player ---
 from mud_backend.core.room_handler import show_room_to_player
-# --- END NEW ---
 
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
     """Helper to find a gathering node by name and type."""
@@ -62,7 +61,7 @@ class Mine(BaseVerb):
             self.player.send_message(f"You don't see a {target_name} here to mine.")
             return
             
-        # 3. Check depletion (NEW LOGIC)
+        # 3. Check depletion
         player_name = self.player.name
         
         # Get/initialize the player-specific hit data for this node instance
@@ -77,7 +76,7 @@ class Mine(BaseVerb):
 
         # 3a. Check if PLAYER has attempts left
         if my_data["hits_made"] >= my_data["max_hits"]:
-            self.player.send_message(f"You have already mined {node_obj['name']}.") # Use old message
+            self.player.send_message(f"You have already mined {node_obj['name']}.") 
             return
             
         # 3b. Check if NODE has global taps left
@@ -112,11 +111,11 @@ class Mine(BaseVerb):
         if roll < skill_dc:
             self.player.send_message(f"You try to mine {node_obj['name']} but fail to get any ore.")
             
-            # Mark this attempt as used (NEW)
+            # Mark this attempt as used
             my_data["hits_made"] += 1
             node_obj["global_hits_made"] = node_obj.get("global_hits_made", 0) + 1
             
-            # Check for node depletion (NEW)
+            # Check for node depletion
             if node_obj["global_hits_made"] >= node_obj.get("default_taps", 1):
                 self.player.send_message(f"The {node_obj['name']} is now depleted.")
                 if node_obj in self.room.objects:
@@ -129,33 +128,66 @@ class Mine(BaseVerb):
         loot_table_id = node_obj.get("loot_table_id")
         if not loot_table_id:
             self.player.send_message("You mine the vein, but it seems to be empty.")
-            return
-            
-        item_ids_to_give = loot_system.generate_loot_from_table(
-            loot_table_id,
-            self.world.game_loot_tables,
-            self.world.game_items
-        )
-
-        if not item_ids_to_give:
-            self.player.send_message("You mine the vein, but it seems to be empty.")
+            # We still consume a tap even if empty to prevent infinite loops on bad data
         else:
-            self.player.send_message(f"You mine {node_obj['name']} and receive:")
-            for item_id in item_ids_to_give:
-                item_data = self.world.game_items.get(item_id, {})
-                item_name = item_data.get("name", "an item")
-                self.player.inventory.append(item_id) # Add directly to inventory
-                self.player.send_message(f"- {item_name}")
+            item_ids_to_give = loot_system.generate_loot_from_table(
+                loot_table_id,
+                self.world.game_loot_tables,
+                self.world.game_items
+            )
+
+            if not item_ids_to_give:
+                self.player.send_message("You mine the vein, but it seems to be empty.")
+            else:
+                self.player.send_message(f"You mine {node_obj['name']} and receive:")
+                for item_id in item_ids_to_give:
+                    item_data = self.world.game_items.get(item_id, {})
+                    item_name = item_data.get("name", "an item")
+                    self.player.inventory.append(item_id) # Add directly to inventory
+                    self.player.send_message(f"- {item_name}")
+
+        # ---
+        # --- NEW: XP Calculation (1/10th Monster Rate + Band Sharing)
+        # ---
+        player_level = self.player.level
+        node_level = node_obj.get("level", 1)
+        level_diff = player_level - node_level 
         
-        # 7. Mark hit as used for this player (NEW)
+        # Base logic: Monster XP formula divided by 10
+        nominal_xp = 0
+        if level_diff >= 10:
+            nominal_xp = 0
+        elif 1 <= level_diff <= 9:
+            # Monster: 100 - (10 * diff)  -> Node: 10 - (1 * diff)
+            nominal_xp = 10 - (1 * level_diff)
+        elif level_diff == 0:
+            # Monster: 100 -> Node: 10
+            nominal_xp = 10
+        elif -4 <= level_diff <= -1:
+            # Monster: 100 + (10 * abs(diff)) -> Node: 10 + (1 * abs(diff))
+            nominal_xp = 10 + (1 * abs(level_diff))
+        elif level_diff <= -5:
+            # Monster: 150 -> Node: 15
+            nominal_xp = 15
+        
+        nominal_xp = max(0, nominal_xp) # Ensure non-negative
+        
+        if nominal_xp > 0:
+            # Grant XP using the central method that handles Band Splitting & Death's Sting
+            self.player.grant_experience(nominal_xp, source="mining")
+        # ---
+        # --- END NEW XP LOGIC
+        # ---
+        
+        # 7. Mark hit as used for this player
         my_data["hits_made"] += 1
         
-        # 8. Mark global hit as used (NEW)
+        # 8. Mark global hit as used
         global_hits_made = node_obj.get("global_hits_made", 0) + 1
         node_obj["global_hits_made"] = global_hits_made
         global_max_taps = node_obj.get("default_taps", 1)
 
-        # 9. Deplete the node if global taps run out (NEW)
+        # 9. Deplete the node if global taps run out
         if global_hits_made >= global_max_taps:
             self.player.send_message(f"The {node_obj['name']} is now depleted.")
             if node_obj in self.room.objects:
@@ -173,23 +205,13 @@ class Prospect(BaseVerb):
             
         geology_skill = self.player.skills.get("geology", 0) # <-- Use geology
         
-        # ---
-        # --- THIS IS THE FIX: Removed tool check
-        # ---
-        # if not _has_tool(self.player, "mining"):
-        #     self.player.send_message("You need to be wielding a pickaxe to prospect.")
-        #     return
-        # ---
-        # --- END FIX
-        # ---
+        # No tool check needed for prospecting
 
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
         self.player.send_message("You scan the area for mineral deposits...") 
         
-        # ---
-        # --- NEW REVEAL LOGIC
-        # ---
+        # --- NEW REVEAL LOGIC ---
         found_nodes_list = []
         refresh_room = False
         
@@ -217,9 +239,6 @@ class Prospect(BaseVerb):
                     refresh_room = True
 
         if refresh_room:
-            # ---
-            # --- THIS IS THE FIX ---
-            # ---
             # 1. Save the room so the node is persistent
             self.world.save_room(self.room)
             
@@ -238,12 +257,5 @@ class Prospect(BaseVerb):
             # 4. Send a simple message *only* to the player
             self.player.send_message(f"You spot {found_nodes_list[0]}!")
             
-            # 5. REMOVED the loop that called show_room_to_player
-            # ---
-            # --- END FIX
-            # ---
         else:
             self.player.send_message("You do not sense any deposits here.")
-        # ---
-        # --- END NEW LOGIC
-        # ---
