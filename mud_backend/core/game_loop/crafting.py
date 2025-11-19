@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 # Smelting Constants
 MAX_TEMP = 2000
 AMBIENT_TEMP = 20
-FUEL_BURN_RATE = 5
+FUEL_BURN_RATE = 5 # 5 Units per tick
 TEMP_GAIN_PER_FUEL = 10
 TEMP_LOSS_RATE = 2 
 
@@ -68,7 +68,13 @@ def _process_furnace_tick(furnace: dict, room_id: str, broadcast_callback):
         flux = state.get("flux", 0)
         ore = state.get("ore", 0)
         
-        conversion_amt = 10
+        # --- MODIFIED: Slowed down conversion ---
+        # 5 Units per tick.
+        # 1 Ore Item (10u) takes 2 ticks.
+        # 2 Ticks consumes ~10 Fuel (1 Coal Item).
+        # Result: 1 Coal per 1 Ore.
+        conversion_amt = 5 
+        
         if ore >= conversion_amt:
             state["ore"] -= conversion_amt
             

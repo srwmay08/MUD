@@ -40,7 +40,7 @@ from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
 # ---
-# --- MODIFIED: VERB ALIASES (Added Group, Band, Whisper)
+# --- MODIFIED: VERB ALIASES (Added Carve)
 # ---
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -98,6 +98,20 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "cut": ("lumberjacking", "Chop"),
     "survey": ("lumberjacking", "Survey"),
     "fish": ("fishing", "Fish"),
+
+    # --- CRAFTING VERBS ---
+    "crush": ("smelting", "Crush"),
+    "wash": ("smelting", "Wash"),
+    "charge": ("smelting", "Charge"),
+    "bellow": ("smelting", "Bellow"),
+    "vent": ("smelting", "Vent"),
+    "tap": ("smelting", "Tap"),
+    "extract": ("smelting", "Extract"),
+    "shingle": ("smelting", "Shingle"),
+    "assess": ("assess", "Assess"),
+    # --- NEW: Carve ---
+    "carve": ("woodworking", "Carve"),
+    # --- END NEW ---
 
     # --- ACTIVITIES ---
     "search": ("harvesting", "Search"),

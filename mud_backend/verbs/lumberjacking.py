@@ -60,7 +60,7 @@ class Chop(BaseVerb):
             self.player.send_message(f"You don't see a {target_name} here to chop.")
             return
             
-        # 3. Check depletion (NEW LOGIC)
+        # 3. Check depletion
         player_name = self.player.name
         
         # Get/initialize the player-specific hit data for this node instance
@@ -75,7 +75,7 @@ class Chop(BaseVerb):
 
         # 3a. Check if PLAYER has attempts left
         if my_data["hits_made"] >= my_data["max_hits"]:
-            self.player.send_message(f"You have already chopped {node_obj['name']}.") # Use old message
+            self.player.send_message(f"You have already chopped {node_obj['name']}.") 
             return
             
         # 3b. Check if NODE has global taps left
@@ -90,7 +90,7 @@ class Chop(BaseVerb):
             return
 
         # 4. Set Roundtime (based on Forestry skill, not Lumberjacking)
-        forestry_skill = self.player.skills.get("forestry", 0) # <-- USE SECONDARY SKILL
+        forestry_skill = self.player.skills.get("forestry", 0) 
         base_rt = 8.0 
         rt_reduction = forestry_skill / 20.0 # 1s off per 20 ranks
         rt = max(2.0, base_rt - rt_reduction) 
@@ -104,16 +104,16 @@ class Chop(BaseVerb):
         attempt_skill_learning(self.player, "lumberjacking") 
 
         # But the success roll uses the *secondary* skill       
-        roll = forestry_skill + random.randint(1, 100) # <-- USE SECONDARY SKILL
+        roll = forestry_skill + random.randint(1, 100) 
 
         if roll < skill_dc:
             self.player.send_message(f"You try to chop {node_obj['name']} but fail to get any wood.")
             
-            # Mark this attempt as used (NEW)
+            # Mark this attempt as used
             my_data["hits_made"] += 1
             node_obj["global_hits_made"] = node_obj.get("global_hits_made", 0) + 1
             
-            # Check for node depletion (NEW)
+            # Check for node depletion
             if node_obj["global_hits_made"] >= node_obj.get("default_taps", 1):
                 self.player.send_message(f"The {node_obj['name']} is now depleted.")
                 if node_obj in self.room.objects:
@@ -127,33 +127,65 @@ class Chop(BaseVerb):
         loot_table_id = node_obj.get("loot_table_id")
         if not loot_table_id:
             self.player.send_message("You chop the tree, but it seems to be empty.") 
-            return
-            
-        item_ids_to_give = loot_system.generate_loot_from_table(
-            loot_table_id,
-            self.world.game_loot_tables,
-            self.world.game_items
-        )
-
-        if not item_ids_to_give:
-            self.player.send_message("You chop the tree, but it yields nothing.") 
+            # Even if empty, we consume a tap to prevent infinite loops
         else:
-            self.player.send_message(f"You chop {node_obj['name']} and receive:") 
-            for item_id in item_ids_to_give:
-                item_data = self.world.game_items.get(item_id, {})
-                item_name = item_data.get("name", "an item")
-                self.player.inventory.append(item_id) 
-                self.player.send_message(f"- {item_name}")
+            item_ids_to_give = loot_system.generate_loot_from_table(
+                loot_table_id,
+                self.world.game_loot_tables,
+                self.world.game_items
+            )
+
+            if not item_ids_to_give:
+                self.player.send_message("You chop the tree, but it yields nothing.") 
+            else:
+                self.player.send_message(f"You chop {node_obj['name']} and receive:") 
+                for item_id in item_ids_to_give:
+                    item_data = self.world.game_items.get(item_id, {})
+                    item_name = item_data.get("name", "an item")
+                    self.player.inventory.append(item_id) 
+                    self.player.send_message(f"- {item_name}")
+
+        # ---
+        # --- NEW: XP Calculation (1/10th Monster Rate + Band Sharing)
+        # ---
+        player_level = self.player.level
+        node_level = node_obj.get("level", 1)
+        level_diff = player_level - node_level 
         
-        # 7. Mark hit as used for this player (NEW)
+        nominal_xp = 0
+        if level_diff >= 10:
+            nominal_xp = 0
+        elif 1 <= level_diff <= 9:
+            # Monster: 100 - (10 * diff)  -> Node: 10 - (1 * diff)
+            nominal_xp = 10 - (1 * level_diff)
+        elif level_diff == 0:
+            # Monster: 100 -> Node: 10
+            nominal_xp = 10
+        elif -4 <= level_diff <= -1:
+            # Monster: 100 + (10 * abs(diff)) -> Node: 10 + (1 * abs(diff))
+            nominal_xp = 10 + (1 * abs(level_diff))
+        elif level_diff <= -5:
+            # Monster: 150 -> Node: 15
+            nominal_xp = 15
+        
+        nominal_xp = max(0, nominal_xp)
+        
+        if nominal_xp > 0:
+            self.player.send_message(f"You have gained {nominal_xp} experience from chopping wood.")
+            self.player.grant_experience(nominal_xp, source="lumberjacking")
+        # ---
+        # --- END NEW XP LOGIC
+        # ---
+        
+        # 7. Mark hit as used for this player
         my_data["hits_made"] += 1
         
-        # 8. Mark global hit as used (NEW)
+        # 8. Mark global hit as used
         global_hits_made = node_obj.get("global_hits_made", 0) + 1
         node_obj["global_hits_made"] = global_hits_made
         global_max_taps = node_obj.get("default_taps", 1)
 
-        # 9. Deplete the node if global taps run out (NEW)
+        # 9. Deplete the node if global taps run out
         if global_hits_made >= global_max_taps:
             self.player.send_message(f"The {node_obj['name']} is now depleted.")
             if node_obj in self.room.objects:
@@ -171,23 +203,11 @@ class Survey(BaseVerb):
             
         forestry_skill = self.player.skills.get("forestry", 0) 
 
-        # ---
-        # --- THIS IS THE FIX: Removed tool check
-        # ---
-        # if not _has_tool(self.player, "lumberjacking"):
-        #     self.player.send_message("You need to be wielding an axe to survey trees.")
-        #     return
-        # ---
-        # --- END FIX
-        # ---
-
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
         
         self.player.send_message("You scan the area for useable trees...") 
 
-        # ---
-        # --- NEW REVEAL LOGIC
-        # ---
+        # --- REVEAL LOGIC ---
         found_nodes_list = []
         refresh_room = False
         
@@ -211,9 +231,6 @@ class Survey(BaseVerb):
                     refresh_room = True
 
         if refresh_room:
-            # ---
-            # --- THIS IS THE FIX ---
-            # ---
             # 1. Save the room so the node is persistent
             self.world.save_room(self.room)
             
@@ -232,12 +249,5 @@ class Survey(BaseVerb):
             # 4. Send a simple message *only* to the player
             self.player.send_message(f"You spot {found_nodes_list[0]}!")
 
-            # 5. REMOVED the loop that called show_room_to_player
-            # ---
-            # --- END FIX
-            # ---
         else:
             self.player.send_message("You do not sense any useable trees here.")
-        # ---
-        # --- END NEW LOGIC
-        # ---

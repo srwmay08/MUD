@@ -39,13 +39,13 @@ class Harvest(BaseVerb):
         if _check_action_roundtime(self.player, action_type="other"):
             return
 
-        # --- NEW: Tool Check ---
+        # --- Tool Check ---
         if not _has_tool(self.player, "herbalism"):
-            # Allow "starter_dagger" as a fallback
+            # Allow "starter_dagger" as a fallback if it counts as small_edged? 
+            # The config check in `_has_tool` needs logic, but for now sticking to simple check:
             if not _has_tool(self.player, "small_edged"): # Check for any small edged weapon
                  self.player.send_message("You need to be wielding a sickle or knife to harvest plants.")
                  return
-        # --- END NEW ---
 
         if not self.args:
             self.player.send_message("Harvest what?")
@@ -60,7 +60,7 @@ class Harvest(BaseVerb):
             self.player.send_message(f"You don't see a {target_name} here to harvest.")
             return
             
-        # 2. Check depletion (NEW LOGIC)
+        # 2. Check depletion
         player_name = self.player.name
         
         # Get/initialize the player-specific hit data for this node instance
@@ -75,7 +75,7 @@ class Harvest(BaseVerb):
 
         # 2a. Check if PLAYER has attempts left
         if my_data["hits_made"] >= my_data["max_hits"]:
-            self.player.send_message(f"You have already harvested {node_obj['name']}.") # Use old message
+            self.player.send_message(f"You have already harvested {node_obj['name']}.")
             return
             
         # 2b. Check if NODE has global taps left
@@ -89,8 +89,8 @@ class Harvest(BaseVerb):
                 self.world.save_room(self.room)
             return
             
-        # 3. Set Roundtime (based on 'survival' skill)
-        botany_skill = self.player.skills.get("botany", 0) # <-- Use botany
+        # 3. Set Roundtime (based on 'botany' skill)
+        botany_skill = self.player.skills.get("botany", 0) 
         base_rt = 5.0 # Faster than mining
         rt_reduction = botany_skill / 20.0 
         rt = max(1.5, base_rt - rt_reduction)
@@ -105,11 +105,11 @@ class Harvest(BaseVerb):
         if roll < skill_dc:
             self.player.send_message(f"You try to harvest {node_obj['name']} but fail to get anything.")
             
-            # Mark this attempt as used (NEW)
+            # Mark this attempt as used
             my_data["hits_made"] += 1
             node_obj["global_hits_made"] = node_obj.get("global_hits_made", 0) + 1
             
-            # Check for node depletion (NEW)
+            # Check for node depletion
             if node_obj["global_hits_made"] >= node_obj.get("default_taps", 1):
                 self.player.send_message(f"The {node_obj['name']} is now depleted.")
                 if node_obj in self.room.objects:
@@ -122,33 +122,65 @@ class Harvest(BaseVerb):
         loot_table_id = node_obj.get("loot_table_id")
         if not loot_table_id:
             self.player.send_message("You harvest the plant, but it yields nothing.")
-            return
-            
-        item_ids_to_give = loot_system.generate_loot_from_table(
-            loot_table_id,
-            self.world.game_loot_tables,
-            self.world.game_items
-        )
-
-        if not item_ids_to_give:
-            self.player.send_message("You harvest the plant, but it yields nothing.")
+            # Even if empty, consume tap
         else:
-            self.player.send_message(f"You harvest {node_obj['name']} and receive:")
-            for item_id in item_ids_to_give:
-                item_data = self.world.game_items.get(item_id, {})
-                item_name = item_data.get("name", "an item")
-                self.player.inventory.append(item_id)
-                self.player.send_message(f"- {item_name}")
+            item_ids_to_give = loot_system.generate_loot_from_table(
+                loot_table_id,
+                self.world.game_loot_tables,
+                self.world.game_items
+            )
+
+            if not item_ids_to_give:
+                self.player.send_message("You harvest the plant, but it yields nothing.")
+            else:
+                self.player.send_message(f"You harvest {node_obj['name']} and receive:")
+                for item_id in item_ids_to_give:
+                    item_data = self.world.game_items.get(item_id, {})
+                    item_name = item_data.get("name", "an item")
+                    self.player.inventory.append(item_id)
+                    self.player.send_message(f"- {item_name}")
         
-        # 6. Mark hit as used for this player (NEW)
+        # ---
+        # --- NEW: XP Calculation (1/10th Monster Rate + Band Sharing)
+        # ---
+        player_level = self.player.level
+        node_level = node_obj.get("level", 1)
+        level_diff = player_level - node_level 
+        
+        nominal_xp = 0
+        if level_diff >= 10:
+            nominal_xp = 0
+        elif 1 <= level_diff <= 9:
+            # Monster: 100 - (10 * diff)  -> Node: 10 - (1 * diff)
+            nominal_xp = 10 - (1 * level_diff)
+        elif level_diff == 0:
+            # Monster: 100 -> Node: 10
+            nominal_xp = 10
+        elif -4 <= level_diff <= -1:
+            # Monster: 100 + (10 * abs(diff)) -> Node: 10 + (1 * abs(diff))
+            nominal_xp = 10 + (1 * abs(level_diff))
+        elif level_diff <= -5:
+            # Monster: 150 -> Node: 15
+            nominal_xp = 15
+        
+        nominal_xp = max(0, nominal_xp)
+        
+        if nominal_xp > 0:
+            self.player.send_message(f"You have gained {nominal_xp} experience from harvesting.")
+            self.player.grant_experience(nominal_xp, source="herbalism")
+        # ---
+        # --- END NEW XP LOGIC
+        # ---
+        
+        # 6. Mark hit as used for this player
         my_data["hits_made"] += 1
         
-        # 7. Mark global hit as used (NEW)
+        # 7. Mark global hit as used
         global_hits_made = node_obj.get("global_hits_made", 0) + 1
         node_obj["global_hits_made"] = global_hits_made
         global_max_taps = node_obj.get("default_taps", 1)
 
-        # 8. Deplete the node if global taps run out (NEW)
+        # 8. Deplete the node if global taps run out
         if global_hits_made >= global_max_taps:
             self.player.send_message(f"The {node_obj['name']} is now depleted.")
             if node_obj in self.room.objects:

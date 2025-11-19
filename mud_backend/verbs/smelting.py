@@ -15,6 +15,24 @@ def _find_furnace(room) -> Dict[str, Any] | None:
             return obj
     return None
 
+# Config for metals
+METAL_PROPERTIES = {
+    "copper": {
+        "melt_temp": 1085,
+        "crush_loot": "crushed_copper_ore_loot",
+        "crushed_id": "crushed_copper_ore",
+        "washed_id": "washed_copper_ore",
+        "xp_mod": 1.0
+    },
+    "iron": {
+        "melt_temp": 1538,
+        "crush_loot": "crushed_iron_ore_loot",
+        "crushed_id": "crushed_iron_ore",
+        "washed_id": "washed_iron_ore",
+        "xp_mod": 1.5
+    }
+}
+
 class Crush(BaseVerb):
     """CRUSH ore on a worktable."""
     def execute(self):
@@ -40,8 +58,10 @@ class Crush(BaseVerb):
             return
         
         ore_data = _get_item_data(ore_ref, self.world.game_items)
-        if ore_data.get("name") != "a chunk of copper ore":
-            self.player.send_message("You can only crush raw copper ore chunks.")
+        material = ore_data.get("material") # e.g., "copper", "iron"
+        
+        if not material or material not in METAL_PROPERTIES or ore_data.get("item_type") != "ore":
+            self.player.send_message("You can only crush raw metal ore chunks (copper, iron).")
             return
 
         # 3. Check for Table
@@ -54,12 +74,14 @@ class Crush(BaseVerb):
             self.player.send_message("You need a sturdy table to crush ore on.")
             return
 
+        metal_props = METAL_PROPERTIES[material]
+
         # Success
-        self.player.send_message("You smash the ore with your hammer, reducing it to gravel.")
-        self.player.worn_items[ore_slot] = "crushed_copper_ore" # Replace item ID
+        self.player.send_message(f"You smash the {material} ore with your hammer, reducing it to gravel.")
+        self.player.worn_items[ore_slot] = metal_props["crushed_id"]
         
         # --- Loot Table Logic for Gems ---
-        loot_table_id = "crushed_copper_ore_loot"
+        loot_table_id = metal_props["crush_loot"]
         
         dropped_items = loot_system.generate_loot_from_table(
             loot_table_id,
@@ -77,10 +99,8 @@ class Crush(BaseVerb):
                      gem_found = True
 
         # --- XP Calculation ---
-        # Base XP for crushing is small (1/20th scale = ~5 XP)
-        nominal_xp = 5
+        nominal_xp = int(5 * metal_props["xp_mod"])
         
-        # Bonus XP for finding a gem
         if gem_found:
             nominal_xp += 5
             self.player.send_message("You feel a surge of excitement from the discovery!")
@@ -102,7 +122,9 @@ class Wash(BaseVerb):
             return
             
         ore_data = _get_item_data(ore_ref, self.world.game_items)
-        if ore_data.get("name") != "crushed copper ore":
+        material = ore_data.get("material")
+        
+        if not material or material not in METAL_PROPERTIES or ore_data.get("item_type") != "ore_gravel":
             self.player.send_message("That ore doesn't need washing (or hasn't been crushed yet).")
             return
 
@@ -115,23 +137,24 @@ class Wash(BaseVerb):
             self.player.send_message("You need a sink or water source to wash the ore.")
             return
 
+        metal_props = METAL_PROPERTIES[material]
         self.player.send_message("You thoroughly wash the dirt and grit from the ore.")
-        self.player.worn_items[ore_slot] = "washed_copper_ore"
+        self.player.worn_items[ore_slot] = metal_props["washed_id"]
         
         # --- XP Grant ---
-        # Washing is a simple step, grant small XP
-        self.player.send_message("You have gained 5 experience from washing ore.")
-        self.player.grant_experience(5, source="smithing")
+        xp = int(5 * metal_props["xp_mod"])
+        self.player.send_message(f"You have gained {xp} experience from washing ore.")
+        self.player.grant_experience(xp, source="smithing")
         
         _set_action_roundtime(self.player, 8.0)
 
 class Charge(BaseVerb):
-    """CHARGE FURNACE WITH [ORE/COAL/FLUX]"""
+    """CHARGE FURNACE WITH [ORE/COAL/FLUX/WEAPON]"""
     def execute(self):
         if _check_action_roundtime(self.player, "other"): return
         
         if len(self.args) < 2:
-            self.player.send_message("Usage: CHARGE FURNACE WITH [ORE|COAL|FLUX]")
+            self.player.send_message("Usage: CHARGE FURNACE WITH [ORE|COAL|FLUX|WEAPON]")
             return
             
         furnace = _find_furnace(self.room)
@@ -139,30 +162,76 @@ class Charge(BaseVerb):
             self.player.send_message("There is no furnace here.")
             return
 
-        target_material = self.args[-1].lower() # "ore", "coal", "flux"
-        item_ref, slot = _find_item_in_hands(self.player, target_material)
+        target_arg = self.args[-1].lower()
         
+        # Find item in hands matching the arg, OR just any holdable if they typed a specific name
+        # We'll assume they target by keyword "ore", "coal", "flux", or the item name
+        item_ref = None
+        slot = None
+        
+        # First try generic categories
+        if target_arg in ["ore", "coal", "flux"]:
+             item_ref, slot = _find_item_in_hands(self.player, target_arg)
+        
+        # If not found, or generic arg wasn't used, try exact name search in hands
         if not item_ref:
-            self.player.send_message(f"You aren't holding any {target_material}.")
+             item_ref, slot = _find_item_in_hands(self.player, target_arg) # This handles specific names like "dagger"
+
+        if not item_ref:
+            self.player.send_message(f"You aren't holding '{target_arg}'.")
             return
             
         # Logic to update furnace state
         state = furnace["state"]
         item_data = _get_item_data(item_ref, self.world.game_items)
+        item_type = item_data.get("item_type")
+        item_material = item_data.get("material")
         
-        if target_material == "coal":
-            state["fuel"] = state.get("fuel", 0) + 20
+        current_metal_type = state.get("metal_type")
+
+        # --- FUEL ---
+        if "coal" in item_data.get("keywords", []):
+            state["fuel"] = state.get("fuel", 0) + 10
             self.player.send_message("You shovel coal into the furnace.")
-        elif target_material == "flux":
-            state["flux"] = state.get("flux", 0) + 10
+            
+        # --- FLUX ---
+        elif item_type == "flux":
+            state["flux"] = state.get("flux", 0) + 5
             self.player.send_message("You sprinkle flux into the mix.")
-        elif target_material == "ore":
-            if item_data.get("name") == "washed copper ore":
-                state["ore"] = state.get("ore", 0) + 10
-                self.player.send_message("You charge the furnace with washed ore.")
-            else:
-                self.player.send_message("That ore isn't ready for smelting. It must be crushed and washed.")
+            
+        # --- ORE ---
+        elif item_type == "ore_clean":
+            # Check metal compatibility
+            if current_metal_type and current_metal_type != item_material and state.get("ready_metal", 0) > 0:
+                self.player.send_message(f"The furnace currently contains {current_metal_type}. You cannot mix {item_material} in!")
                 return
+            
+            # Set metal type if empty
+            if state.get("ready_metal", 0) == 0:
+                state["metal_type"] = item_material
+            
+            state["ore"] = state.get("ore", 0) + 10
+            self.player.send_message(f"You charge the furnace with washed {item_material} ore.")
+        
+        # --- WEAPONS (Recycling) ---
+        elif item_type == "weapon" and item_material in METAL_PROPERTIES:
+             # Check metal compatibility
+            if current_metal_type and current_metal_type != item_material and state.get("ready_metal", 0) > 0:
+                self.player.send_message(f"The furnace currently contains {current_metal_type}. You cannot mix {item_material} in!")
+                return
+            
+            # Set metal type if empty
+            if state.get("ready_metal", 0) == 0:
+                state["metal_type"] = item_material
+            
+            # Calculate yield (e.g. 5 units per weapon, half an ingot)
+            metal_yield = 5
+            state["ready_metal"] = state.get("ready_metal", 0) + metal_yield
+            # Add slag (impurities from recycling)
+            state["slag"] = state.get("slag", 0) + 5
+            
+            self.player.send_message(f"You toss the {item_data['name']} into the furnace to melt it down.")
+            
         else:
             self.player.send_message("You can't charge the furnace with that.")
             return
@@ -171,7 +240,6 @@ class Charge(BaseVerb):
         self.player.worn_items[slot] = None
         
         # --- XP Grant ---
-        # Loading the furnace is labor, grant very small XP
         self.player.grant_experience(2, source="smithing")
         
         _set_action_roundtime(self.player, 4.0)
@@ -188,7 +256,6 @@ class Bellow(BaseVerb):
             
         self.player.send_message("You pump the bellows, feeding air to the fire!")
         
-        # Mechanic: Immediate heat gain, but burns fuel
         state = furnace["state"]
         if state.get("fuel", 0) > 0:
             state["temp"] += 50
@@ -236,7 +303,6 @@ class Tap(BaseVerb):
             state["slag"] = 0
             
             # --- XP Grant ---
-            # Successful maintenance
             self.player.send_message("You have gained 5 experience from maintaining the furnace.")
             self.player.grant_experience(5, source="smithing")
         else:
@@ -253,21 +319,31 @@ class Extract(BaseVerb):
         
         state = furnace["state"]
         metal = state.get("ready_metal", 0)
+        metal_type = state.get("metal_type", "copper")
         
-        if metal < 10:
-            self.player.send_message("There isn't enough metal to extract a bloom yet.")
+        props = METAL_PROPERTIES.get(metal_type, METAL_PROPERTIES["copper"])
+        melt_temp = props["melt_temp"]
+        current_temp = state.get("temp", 0)
+        
+        if current_temp < melt_temp:
+             self.player.send_message(f"The {metal_type} hasn't melted yet! (Current: {current_temp}, Needed: {melt_temp})")
+             return
+
+        if metal < 50:
+            self.player.send_message("There isn't enough metal (50 units needed) to extract a bloom yet.")
             return
             
         # Create a Dynamic Item (Dict)
         bloom = {
-            "name": "a glowing bloom",
-            "description": "A spongy mass of hot metal and slag.",
-            "keywords": ["bloom", "glowing", "metal"],
+            "name": f"a glowing {metal_type} bloom",
+            "description": f"A spongy mass of hot {metal_type} and slag.",
+            "keywords": ["bloom", "glowing", "metal", metal_type],
             "is_item": True,
             "verbs": ["GET", "LOOK", "SHINGLE"],
             "temp": state["temp"],
-            "mass": metal,
+            "mass": 50,
             "quality": "rough",
+            "material": metal_type,
             "uid": f"bloom_{int(time.time())}"
         }
         
@@ -276,15 +352,20 @@ class Extract(BaseVerb):
         self.world.save_room(self.room)
         
         # Reset furnace metal
-        state["ready_metal"] = 0
+        state["ready_metal"] -= 50
         state["temp"] -= 500 # Heat loss from opening door
         
-        self.player.send_message("You tear open the furnace door and drag out a glowing bloom!")
+        # If empty, clear type
+        if state["ready_metal"] <= 0:
+            state["metal_type"] = None
+            state["ready_metal"] = 0
+        
+        self.player.send_message(f"You tear open the furnace door and drag out a glowing {metal_type} bloom!")
         
         # --- XP Grant ---
-        # Successful extraction is a key step
-        self.player.send_message("You have gained 10 experience from extracting the bloom.")
-        self.player.grant_experience(10, source="smithing")
+        xp = int(10 * props["xp_mod"])
+        self.player.send_message(f"You have gained {xp} experience from extracting the bloom.")
+        self.player.grant_experience(xp, source="smithing")
         
         _set_action_roundtime(self.player, 10.0)
 
@@ -296,7 +377,7 @@ class Shingle(BaseVerb):
         # 1. Check for bloom in room
         bloom = None
         for obj in self.room.objects:
-            if obj.get("name") == "a glowing bloom":
+            if "bloom" in obj.get("keywords", []):
                 bloom = obj
                 break
         if not bloom:
@@ -315,33 +396,39 @@ class Shingle(BaseVerb):
             self.player.send_message("You need a hammer to shingle the bloom.")
             return
 
-        # --- Calculate Quality and XP ---
+        material = bloom.get("material", "copper")
+        props = METAL_PROPERTIES.get(material, METAL_PROPERTIES["copper"])
+        target_temp = props["melt_temp"] 
+        
+        # Calculate Quality
         bloom_temp = bloom.get("temp", 1000)
-        # Ideal temp for Copper shingling/working ~1100
-        temp_diff = abs(bloom_temp - 1100)
+        temp_diff = abs(bloom_temp - target_temp)
         
         quality_str = "standard"
-        xp_gain = 20
+        base_xp = 10
         
         if temp_diff < 100:
             quality_str = "superior"
-            xp_gain = 50
+            base_xp = 25
         elif temp_diff < 200:
             quality_str = "good"
-            xp_gain = 35
+            base_xp = 15
         elif temp_diff >= 400:
             quality_str = "poor"
-            xp_gain = 10
+            base_xp = 5
             
         # Success: Convert bloom to Ingot (Dynamic Item)
+        # Ingots are usually standard items, so we can check if a specific ID exists or make dynamic
+        # For now, dynamic allows quality tracking
         ingot = {
-            "name": "a copper ingot",
-            "description": f"A solid bar of {quality_str} quality copper, still warm.",
-            "keywords": ["ingot", "copper"],
+            "name": f"an {material} ingot",
+            "description": f"A solid bar of {quality_str} quality {material}, still warm.",
+            "keywords": ["ingot", material],
             "is_item": True,
             "verbs": ["GET", "LOOK", "TAKE"],
             "temp": bloom_temp - 200,
             "quality": quality_str,
+            "material": material,
             "uid": f"ingot_{int(time.time())}"
         }
         
@@ -349,10 +436,11 @@ class Shingle(BaseVerb):
         self.room.objects.append(ingot)
         self.world.save_room(self.room)
         
-        self.player.send_message(f"You strike the bloom repeatedly, squeezing out the slag and forging it into a {quality_str} ingot.")
+        self.player.send_message(f"You strike the bloom repeatedly, squeezing out the slag and forging it into a {quality_str} {material} ingot.")
         
         # --- XP Grant ---
-        self.player.send_message(f"You have gained {xp_gain} experience from forging the ingot.")
-        self.player.grant_experience(xp_gain, source="smithing")
+        final_xp = int(base_xp * props["xp_mod"])
+        self.player.send_message(f"You have gained {final_xp} experience from forging the ingot.")
+        self.player.grant_experience(final_xp, source="smithing")
         
         _set_action_roundtime(self.player, 5.0)

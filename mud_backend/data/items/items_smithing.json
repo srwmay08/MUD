@@ -3,54 +3,71 @@
     "name": "a chunk of copper ore",
     "description": "Raw copper ore. It needs to be crushed and washed before smelting.",
     "item_type": "ore",
-    "keywords": [
-      "ore",
-      "copper",
-      "chunk"
-    ],
+    "material": "copper",
+    "keywords": ["ore", "copper", "chunk"],
     "base_value": 20
   },
   "crushed_copper_ore": {
     "name": "crushed copper ore",
     "description": "Copper ore crushed into gravel-sized pieces.",
     "item_type": "ore_gravel",
-    "keywords": [
-      "ore",
-      "gravel",
-      "crushed"
-    ],
+    "material": "copper",
+    "keywords": ["ore", "gravel", "crushed"],
     "base_value": 25
   },
   "washed_copper_ore": {
     "name": "washed copper ore",
     "description": "Clean, crushed copper ore, ready for the furnace.",
     "item_type": "ore_clean",
-    "keywords": [
-      "ore",
-      "washed"
-    ],
+    "material": "copper",
+    "keywords": ["ore", "washed"],
     "base_value": 30
+  },
+  "iron_ore": {
+    "name": "a chunk of iron ore",
+    "description": "Raw iron ore. It needs to be crushed and washed before smelting.",
+    "item_type": "ore",
+    "material": "iron",
+    "keywords": ["ore", "iron", "chunk"],
+    "base_value": 30
+  },
+  "crushed_iron_ore": {
+    "name": "crushed iron ore",
+    "description": "Iron ore crushed into gravel-sized pieces.",
+    "item_type": "ore_gravel",
+    "material": "iron",
+    "keywords": ["ore", "gravel", "crushed", "iron"],
+    "base_value": 35
+  },
+  "washed_iron_ore": {
+    "name": "washed iron ore",
+    "description": "Clean, crushed iron ore, ready for the furnace.",
+    "item_type": "ore_clean",
+    "material": "iron",
+    "keywords": ["ore", "washed", "iron"],
+    "base_value": 40
+  },
+  "iron_ingot": {
+    "name": "an iron ingot",
+    "description": "A heavy bar of iron.",
+    "item_type": "ingot",
+    "material": "iron",
+    "keywords": ["ingot", "iron"],
+    "base_value": 100
   },
   "coal": {
     "name": "a lump of coal",
     "description": "Black, dusty coal. Excellent fuel.",
     "item_type": "fuel",
     "fuel_value": 100,
-    "keywords": [
-      "coal",
-      "lump"
-    ],
+    "keywords": ["coal", "lump"],
     "base_value": 5
   },
   "flux_bag": {
     "name": "a small bag of flux",
     "description": "A bag of limestone powder used to bind impurities in smelting.",
     "item_type": "flux",
-    "keywords": [
-      "flux",
-      "bag",
-      "powder"
-    ],
+    "keywords": ["flux", "bag", "powder"],
     "base_value": 10
   }
 }
