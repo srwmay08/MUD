@@ -1,7 +1,7 @@
 # mud_backend/verbs/observation.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.db import fetch_player_data
-from mud_backend.core.chargen_handler import format_player_description
+from mud_backend.core.chargen_handler.py import format_player_description
 from mud_backend.core.room_handler import show_room_to_player
 import math
 import random 
@@ -208,24 +208,23 @@ class Look(BaseVerb):
                     verb_list = ", ".join([f'<span class="keyword">{v}</span>' for v in obj['verbs']])
                     self.player.send_message(f"You could try: {verb_list}")
                 
-                # ---
-                # --- THIS IS THE FIX ---
-                # ---
+                # --- THIS IS THE FIX: Check if Looking At Note ---
                 item_id = obj.get("item_id")
-                if (item_id == "inn_note" and
-                    "intro_lookatnote" in self.player.completed_quests and
-                    "intro_leave_room_tasks" not in self.player.completed_quests):
+                if item_id == "inn_note":
+                    # 1. Mark look-at-note as done (if not already)
+                    if "intro_lookatnote" not in self.player.completed_quests:
+                        self.player.completed_quests.append("intro_lookatnote")
                     
-                    self.player.send_message(
-                        "\nAs you read the note, you think about paying the bill for your room. "
-                        "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have, "
-                        "or check your <span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying. "
-                        "\nWhen you're ready, you should <span class='keyword' data-command='out'>OUT</span> to leave the room and <span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
-                    )
-                    self.player.completed_quests.append("intro_leave_room_tasks")
-                # ---
-                # --- END FIX
-                # ---
+                    # 2. Trigger next step (if not already done)
+                    if "intro_leave_room_tasks" not in self.player.completed_quests:
+                        self.player.send_message(
+                            "\nAs you read the note, you think about paying the bill for your room. "
+                            "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have, "
+                            "or check your <span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying. "
+                            "\nWhen you're ready, you should <span class='keyword' data-command='out'>OUT</span> to leave the room and <span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
+                        )
+                        self.player.completed_quests.append("intro_leave_room_tasks")
+                # --- END FIX ---
 
                 return 
 
@@ -236,31 +235,37 @@ class Look(BaseVerb):
             self.player.send_message(item_data.get('description', 'It is a nondescript object.'))
 
             # ---
-            # --- THIS IS THE FIX ---
+            # --- THIS IS THE FIX: Find real item ID and check tutorial ---
             # ---
             real_item_id = None
             if location == "worn":
                 for slot, i_id in self.player.worn_items.items():
-                    if i_id and (target_name in self.world.game_items.get(i_id, {}).get("keywords", []) or target_name == self.world.game_items.get(i_id, {}).get("name", "").lower()):
-                        real_item_id = i_id
-                        break
+                    if i_id:
+                        d = self.world.game_items.get(i_id, {})
+                        if (target_name in d.get("keywords", []) or target_name == d.get("name", "").lower()):
+                            real_item_id = i_id
+                            break
             elif location == "inventory":
                  for i_id in self.player.inventory:
-                    if i_id and (target_name in self.world.game_items.get(i_id, {}).get("keywords", []) or target_name == self.world.game_items.get(i_id, {}).get("name", "").lower()):
+                    d = self.world.game_items.get(i_id, {})
+                    if (target_name in d.get("keywords", []) or target_name == d.get("name", "").lower()):
                         real_item_id = i_id
                         break
             
-            if (real_item_id == "inn_note" and
-                "intro_lookatnote" in self.player.completed_quests and
-                "intro_leave_room_tasks" not in self.player.completed_quests):
-                
-                self.player.send_message(
-                    "\nAs you read the note, you think about paying the bill for your room. "
-                    "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have, "
-                    "or check your <span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying. "
-                    "\nWhen you're ready, you should <span class='keyword' data-command='out'>OUT</span> to leave the room and <span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
-                )
-                self.player.completed_quests.append("intro_leave_room_tasks")
+            if real_item_id == "inn_note":
+                # 1. Mark look-at-note as done
+                if "intro_lookatnote" not in self.player.completed_quests:
+                    self.player.completed_quests.append("intro_lookatnote")
+
+                # 2. Trigger next step
+                if "intro_leave_room_tasks" not in self.player.completed_quests:
+                    self.player.send_message(
+                        "\nAs you read the note, you think about paying the bill for your room. "
+                        "You can check your <span class='keyword' data-command='wealth'>WEALTH</span> to see how much money you have, "
+                        "or check your <span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying. "
+                        "\nWhen you're ready, you should <span class='keyword' data-command='out'>OUT</span> to leave the room and <span class='keyword' data-command='talk to innkeeper'>TALK</span> to the innkeeper. <span class='keyword' data-command='help talk'>[Help: TALK]</span>"
+                    )
+                    self.player.completed_quests.append("intro_leave_room_tasks")
             # ---
             # --- END FIX
             # ---
