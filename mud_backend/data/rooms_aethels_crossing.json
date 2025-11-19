@@ -673,8 +673,70 @@
             }
         ],
         "exits": {
-            "out": "ts_northwest"
+            "out": "ts_northwest", "north": "armory_workshop"
         }
+    },
+    {
+        "room_id": "armory_workshop",
+        "name": "Armory Workshop",
+        "x": -2, "y": 2, "z": 0,
+        "interior_id": "armory",
+        "description": {"default": "A cluttered workshop smelling of oil and iron. A large stone worktable sits in the center, and a deep stone sink is set against the wall. The heat from the north is intense."},
+        "objects": [
+            {"name": "stone worktable", "description": "A heavy table scarred by heavy tools. It looks perfect for crushing ore.", "verbs": ["look", "crush"], "keywords": ["table", "worktable"]},
+            {"name": "stone sink", "description": "A deep sink filled with murky water, used for washing ore.", "verbs": ["look", "wash"], "keywords": ["sink", "basin"]}
+        ],
+        "exits": {"south": "armory_shop", "north": "armory_furnace_room"}
+    },
+    {
+        "room_id": "armory_furnace_room",
+        "name": "The Furnace Room",
+        "x": -2, "y": 3, "z": 0,
+        "interior_id": "armory",
+        "description": {"default": "The heat here is sweltering. A massive stone bloomery furnace dominates the room, its chimney rising through the roof. Bellows are attached to the side, and a slag tap is near the bottom. An anvil sits nearby for shingling blooms."},
+        "objects": [
+            {
+                "name": "a stone bloomery",
+                "description": "A massive furnace for smelting ore. You can CHARGE it with fuel and ore, BELLOW to heat it, VENT to control air, and TAP to release slag.",
+                "keywords": ["furnace", "bloomery"],
+                "verbs": ["look", "charge", "bellow", "vent", "tap", "extract", "assess"],
+                "state": {"temp": 20, "fuel": 0, "ore": 0, "flux": 0, "slag": 0, "air_flow": 50, "contents": []}
+            },
+            {"name": "heavy anvil", "description": "A large iron anvil used for hammering hot metal.", "verbs": ["look", "shingle"], "keywords": ["anvil"]}
+        ],
+        "exits": {"south": "armory_workshop", "out": "armory_exterior_backyard"}
+    },
+    {
+        "room_id": "armory_exterior_backyard",
+        "name": "Armory Backyard",
+        "x": 1, "y": 2, "z": 0,
+        "is_outdoor": true,
+        "description": {"default": "A quiet clearing. You see a copper vein here."},
+        "objects": [
+            {"node_id": "copper_vein", "node_type": "mining"},
+            {"name": "a mining hammer", "item_id": "mining_hammer", "is_item": true, "keywords": ["hammer"], "verbs": ["get"]},
+            {"name": "iron tongs", "item_id": "tongs", "is_item": true, "keywords": ["tongs"], "verbs": ["get"]},
+            {"name": "a bag of flux", "item_id": "flux_bag", "is_item": true, "keywords": ["flux"], "verbs": ["get"]},
+            {"name": "a lump of coal", "item_id": "coal", "is_item": true, "keywords": ["coal"], "verbs": ["get"]},
+            {
+                "name": "door",
+                "description": "A heavy oak door with a sigil of an anvil and hammer. This is the town armory.",
+                "verbs": [
+                    "ENTER",
+                    "look",
+                    "examine"
+                ],
+                "target_room": "armory_furnace_room",
+                "perception_dc": 0,
+                "keywords": [
+                    "door",
+                    "oak door",
+                    "armory"
+                ]
+              }
+            
+        ],
+        "exits": {}
     },
     {
         "room_id": "temple_of_light",
