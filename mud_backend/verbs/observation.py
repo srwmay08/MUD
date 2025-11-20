@@ -147,7 +147,13 @@ class Look(BaseVerb):
                 self.player.send_message(f"You look in your {container_data['name']}:")
                 for item_id in self.player.inventory:
                     item_data = self.world.game_items.get(item_id)
-                    self.player.send_message(f"- {item_data.get('name', 'an item')}")
+                    # --- THIS IS THE FIX ---
+                    # Check if item_data exists before trying to access it
+                    if item_data:
+                        self.player.send_message(f"- {item_data.get('name', 'an item')}")
+                    else:
+                        self.player.send_message(f"- Unknown Item ({item_id})")
+                    # --- END FIX ---
                 
                 # ---
                 # --- MODIFIED: Tutorial Hook (Step 5: Stow)

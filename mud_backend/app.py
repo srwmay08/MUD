@@ -267,13 +267,19 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
         player_obj = new_player_info.get("player_obj") if new_player_info else None
         
         if new_room_id and old_room_id and old_room_id != new_room_id:
-            leave_room(old_room_id, sid=sid)
+            # --- FIX: Use world.socketio.server to avoid request context issues ---
+            world.socketio.server.leave_room(sid, old_room_id)
+            
             leaves_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> leaves.'
             world.broadcast_to_room(old_room_id, leaves_message, "message") 
             
-            join_room(new_room_id, sid=sid)
+            # Note: python-socketio uses enter_room, flask-socketio uses join_room. 
+            # Since we are accessing .server (python-socketio), we use enter_room.
+            world.socketio.server.enter_room(sid, new_room_id)
+            
             arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
             world.broadcast_to_room(new_room_id, arrives_message, "message", skip_sid=sid)
+            # --- END FIX ---
             
             socketio.start_background_task(
                 _handle_npc_idle_dialogue, 
