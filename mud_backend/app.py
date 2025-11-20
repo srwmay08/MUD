@@ -173,7 +173,8 @@ def game_loop_thread(world_instance: World):
                     world_instance.remove_pending_group_invite(invitee_name)
             
             # --- Buff/Spellup Expiration ---
-            for player_name_lower, player_data in active_player_keys:
+            # FIX: active_player_keys is a list of strings, so we iterate properly now.
+            for player_name_lower in active_player_keys:
                  p_info = world_instance.get_player_info(player_name_lower)
                  if not p_info: continue
                  player_obj = p_info.get("player_obj")

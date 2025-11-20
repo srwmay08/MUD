@@ -5,9 +5,9 @@ import copy
 import uuid
 from mud_backend import config
 from typing import Dict, Any, Optional, List, Tuple, Set
-from mud_backend.core import db
+# REMOVED top-level db import to prevent circular loops
 from mud_backend.core.game_objects import Player, Room
-from mud_backend.core.asset_manager import AssetManager # <-- New Import
+from mud_backend.core.asset_manager import AssetManager 
 
 class World:
     """
@@ -19,7 +19,7 @@ class World:
         self.app = None 
         
         # --- Sub-Systems ---
-        self.assets = AssetManager() # <-- Static Data Handler
+        self.assets = AssetManager() 
         
         # --- Mutable Runtime State ---
         self.active_rooms: Dict[str, Room] = {} 
@@ -58,8 +58,15 @@ class World:
         self.band_lock = threading.RLock()
         self.index_lock = threading.RLock()
 
-    # --- BACKWARD COMPATIBILITY PROPERTIES ---
-    # These ensure existing code (combat, verbs) works without modification.
+    # --- PROPERTIES (Compatibility & Shortcuts) ---
+    @property
+    def game_rooms(self):
+        """
+        Backwards compatibility: returns a dict of all rooms (Active + Templates).
+        WARNING: This returns a COPY. Modifying this dict does not change the world.
+        """
+        return self.get_all_rooms()
+
     @property
     def game_items(self): return self.assets.items
     @property
@@ -89,13 +96,11 @@ class World:
             print("[WORLD ERROR] Database is None. Cannot load data.")
             return
             
-        # 1. Load Static Assets
         self.assets.load_all_assets()
         
-        # 2. Load Dynamic State (Persistent Runtime Data)
+        from mud_backend.core import db 
         print("[WORLD INIT] Loading active adventuring bands...")
         self.active_bands = db.fetch_all_bands(database)
-        
         print("[WORLD INIT] Initialization complete.")
 
     # --- Index Management ---
@@ -145,7 +150,6 @@ class World:
             
     def remove_player(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         player_obj = self.get_player_obj(player_name_lower)
-        
         if player_obj:
             self.remove_player_from_room_index(player_name_lower, player_obj.current_room_id)
 
@@ -156,9 +160,7 @@ class World:
                 player_obj.group_id = None
                 if player_name_lower in group["members"]:
                     group["members"].remove(player_name_lower)
-                
                 self.send_message_to_group(group_id, f"{player_obj.name} has left the group (disconnected).")
-                
                 if group["leader"] == player_name_lower:
                     if group["members"]:
                         new_leader_key = group["members"][0]
@@ -186,37 +188,25 @@ class World:
 
     # --- Room Factory / Hydration ---
     def get_room(self, room_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Returns a DICT representing the room. 
-        Instantiates ActiveRoom from AssetManager template if needed.
-        """
         with self.room_lock:
-            # 1. Check Active Rooms (Cache)
             if room_id in self.active_rooms:
                 return self.active_rooms[room_id].to_dict()
             
-            # 2. Fetch Template via AssetManager (handles lazy loading)
             template = self.assets.get_room_template(room_id)
             
             if template:
-                # 3. Hydrate / Instantiate Active Room
                 active_objects = []
                 for obj_stub in template.get("objects", []):
-                    
                     node_id = obj_stub.get("node_id")
                     monster_id = obj_stub.get("monster_id")
-                    
                     merged_obj = copy.deepcopy(obj_stub)
                     
-                    # A. Hydrate Nodes
                     if node_id:
-                        node_template = self.game_nodes.get(node_id) # Uses property -> assets.nodes
+                        node_template = self.game_nodes.get(node_id)
                         if node_template:
                             full_node = copy.deepcopy(node_template)
                             full_node.update(merged_obj)
                             merged_obj = full_node
-                    
-                    # B. Hydrate Monsters
                     elif monster_id:
                         uid = merged_obj.get("uid")
                         if not uid:
@@ -226,15 +216,12 @@ class World:
                         if self.get_defeated_monster(uid):
                             continue 
                             
-                        mob_template = self.game_monster_templates.get(monster_id) # Uses property
+                        mob_template = self.game_monster_templates.get(monster_id)
                         if mob_template:
                             full_mob = copy.deepcopy(mob_template)
                             full_mob.update(merged_obj)
                             merged_obj = full_mob
-                            
                             self.register_mob(uid, room_id)
-                            
-                    # C. NPC UIDs
                     elif merged_obj.get("is_npc") and not merged_obj.get("uid"):
                          uid = uuid.uuid4().hex
                          merged_obj["uid"] = uid
@@ -242,7 +229,6 @@ class World:
 
                     active_objects.append(merged_obj)
                 
-                # Create ActiveRoom
                 new_active_room = Room(
                     room_id=template["room_id"],
                     name=template["name"],
@@ -250,17 +236,12 @@ class World:
                     db_data=template
                 )
                 new_active_room.objects = active_objects 
-                
                 self.active_rooms[room_id] = new_active_room
-                
                 return new_active_room.to_dict()
 
         return None
 
     def get_all_rooms(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Returns a dict of ALL rooms (Active overlaying Templates).
-        """
         with self.room_lock:
             all_rooms = copy.deepcopy(self.assets.room_templates)
             for rid, room_obj in self.active_rooms.items():
@@ -274,6 +255,7 @@ class World:
                 room_obj.objects = room_data.get("objects", [])
 
     def save_room(self, room_obj):
+        from mud_backend.core import db
         with self.room_lock:
             self.active_rooms[room_obj.room_id] = room_obj
         db.save_room_state(room_obj) 
@@ -282,7 +264,6 @@ class World:
         with self.room_lock:
             source_data = self.get_room(from_room_id)
             dest_data = self.get_room(to_room_id)
-            
             if not source_data or not dest_data: return False
             
             source_room = self.active_rooms[from_room_id]
@@ -299,30 +280,25 @@ class World:
                     found_index = i
                     break
             
-            if found_index == -1:
-                return False
+            if found_index == -1: return False
 
             real_obj = source_room.objects.pop(found_index)
             dest_room.objects.append(real_obj)
             
             return True
 
-    # --- Combat, Trade, Groups (State) ---
+    # --- Combat/States (Truncated for brevity as unchanged from Phase 3) ---
     def get_combat_state(self, combatant_id: str) -> Optional[Dict[str, Any]]:
-        with self.combat_lock:
-            return self.combat_state.get(combatant_id)
+        with self.combat_lock: return self.combat_state.get(combatant_id)
 
     def set_combat_state(self, combatant_id: str, data: Dict[str, Any]):
-        with self.combat_lock:
-            self.combat_state[combatant_id] = data
+        with self.combat_lock: self.combat_state[combatant_id] = data
             
     def remove_combat_state(self, combatant_id: str) -> Optional[Dict[str, Any]]:
-        with self.combat_lock:
-            return self.combat_state.pop(combatant_id, None)
+        with self.combat_lock: return self.combat_state.pop(combatant_id, None)
 
     def get_all_combat_states(self) -> List[Tuple[str, Dict[str, Any]]]:
-        with self.combat_lock:
-            return list(self.combat_state.items())
+        with self.combat_lock: return list(self.combat_state.items())
             
     def stop_combat_for_all(self, combatant_id_1: str, combatant_id_2: str):
         with self.combat_lock:
@@ -330,64 +306,50 @@ class World:
             self.combat_state.pop(combatant_id_2, None)
 
     def get_monster_hp(self, monster_uid: str) -> Optional[int]:
-        with self.monster_hp_lock:
-            return self.runtime_monster_hp.get(monster_uid)
+        with self.monster_hp_lock: return self.runtime_monster_hp.get(monster_uid)
 
     def set_monster_hp(self, monster_uid: str, hp: int):
-        with self.monster_hp_lock:
-            self.runtime_monster_hp[monster_uid] = hp
+        with self.monster_hp_lock: self.runtime_monster_hp[monster_uid] = hp
             
     def modify_monster_hp(self, monster_uid: str, max_hp: int, damage: int) -> int:
         with self.monster_hp_lock:
-            if monster_uid not in self.runtime_monster_hp:
-                self.runtime_monster_hp[monster_uid] = max_hp
+            if monster_uid not in self.runtime_monster_hp: self.runtime_monster_hp[monster_uid] = max_hp
             self.runtime_monster_hp[monster_uid] -= damage
             return self.runtime_monster_hp[monster_uid]
 
     def remove_monster_hp(self, monster_uid: str):
-        with self.monster_hp_lock:
-            self.runtime_monster_hp.pop(monster_uid, None)
+        with self.monster_hp_lock: self.runtime_monster_hp.pop(monster_uid, None)
     
     def get_defeated_monster(self, monster_uid: str) -> Optional[Dict[str, Any]]:
-        with self.defeated_lock:
-            return self.defeated_monsters.get(monster_uid)
+        with self.defeated_lock: return self.defeated_monsters.get(monster_uid)
 
     def set_defeated_monster(self, monster_uid: str, data: Dict[str, Any]):
-        with self.defeated_lock:
-            self.defeated_monsters[monster_uid] = data
+        with self.defeated_lock: self.defeated_monsters[monster_uid] = data
             
     def remove_defeated_monster(self, monster_uid: str) -> Optional[Dict[str, Any]]:
-        with self.defeated_lock:
-            return self.defeated_monsters.pop(monster_uid, None)
+        with self.defeated_lock: return self.defeated_monsters.pop(monster_uid, None)
 
     def get_all_defeated_monsters(self) -> List[Tuple[str, Dict[str, Any]]]:
-        with self.defeated_lock:
-            return list(self.defeated_monsters.items())
+        with self.defeated_lock: return list(self.defeated_monsters.items())
     
     def get_pending_trade(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
-        with self.trade_lock:
-            return self.pending_trades.get(player_name_lower)
+        with self.trade_lock: return self.pending_trades.get(player_name_lower)
             
     def set_pending_trade(self, player_name_lower: str, data: Dict[str, Any]):
-        with self.trade_lock:
-            self.pending_trades[player_name_lower] = data
+        with self.trade_lock: self.pending_trades[player_name_lower] = data
 
     def remove_pending_trade(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
-        with self.trade_lock:
-            return self.pending_trades.pop(player_name_lower, None)
+        with self.trade_lock: return self.pending_trades.pop(player_name_lower, None)
     
     def get_group(self, group_id: Optional[str]) -> Optional[Dict[str, Any]]:
         if not group_id: return None
-        with self.group_lock:
-            return self.active_groups.get(group_id)
+        with self.group_lock: return self.active_groups.get(group_id)
 
     def set_group(self, group_id: str, data: Dict[str, Any]):
-        with self.group_lock:
-            self.active_groups[group_id] = data
+        with self.group_lock: self.active_groups[group_id] = data
             
     def remove_group(self, group_id: str) -> Optional[Dict[str, Any]]:
-        with self.group_lock:
-            return self.active_groups.pop(group_id, None)
+        with self.group_lock: return self.active_groups.pop(group_id, None)
             
     def get_pending_group_invite(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         with self.group_lock:
@@ -398,25 +360,20 @@ class World:
             return invite
     
     def set_pending_group_invite(self, player_name_lower: str, data: Dict[str, Any]):
-        with self.group_lock:
-            self.pending_group_invites[player_name_lower] = data
+        with self.group_lock: self.pending_group_invites[player_name_lower] = data
 
     def remove_pending_group_invite(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
-        with self.group_lock:
-            return self.pending_group_invites.pop(player_name_lower, None)
+        with self.group_lock: return self.pending_group_invites.pop(player_name_lower, None)
     
     def get_band(self, band_id: Optional[str]) -> Optional[Dict[str, Any]]:
         if not band_id: return None
-        with self.band_lock:
-            return self.active_bands.get(band_id)
+        with self.band_lock: return self.active_bands.get(band_id)
 
     def set_band(self, band_id: str, data: Dict[str, Any]):
-        with self.band_lock:
-            self.active_bands[band_id] = data
+        with self.band_lock: self.active_bands[band_id] = data
             
     def remove_band(self, band_id: str) -> Optional[Dict[str, Any]]:
-        with self.band_lock:
-            return self.active_bands.pop(band_id, None)
+        with self.band_lock: return self.active_bands.pop(band_id, None)
             
     def get_band_invite_for_player(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         with self.band_lock:
@@ -426,34 +383,19 @@ class World:
         return None
 
     def send_message_to_player(self, player_name_lower: str, message: str, msg_type: str = "message"):
-        if not self.socketio:
-            if config.DEBUG_MODE:
-                print(f"[WORLD/SOCKET-WARN] No socketio object. Cannot send message to {player_name_lower}: {message}")
-            return
-
+        if not self.socketio: return
         player_info = self.get_player_info(player_name_lower)
         if player_info:
             sid = player_info.get("sid")
-            if sid:
-                self.socketio.emit(msg_type, message, to=sid)
-            elif config.DEBUG_MODE:
-                    print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} has no SID. Cannot send: {message}")
-        elif config.DEBUG_MODE:
-                print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} not active. Cannot send: {message}")
+            if sid: self.socketio.emit(msg_type, message, to=sid)
     
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
-        if not self.socketio:
-            if config.DEBUG_MODE:
-                print(f"[WORLD/BROADCAST-WARN] No socketio object. Cannot broadcast to {room_id}: {message}")
-            return
-        
+        if not self.socketio: return
         is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
         
         if not is_flag_checked:
-            if skip_sid:
-                self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
-            else:
-                self.socketio.emit(msg_type, message, to=room_id)
+            if skip_sid: self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
+            else: self.socketio.emit(msg_type, message, to=room_id)
             return
 
         with self.index_lock:
@@ -462,35 +404,21 @@ class World:
         for player_name in players_in_room:
             player_info = self.get_player_info(player_name)
             if not player_info: continue
-            
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
-            
-            if not player_obj or not sid or sid == skip_sid:
-                continue
-
-            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off":
-                continue 
-            
-            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off":
-                continue 
-                
+            if not player_obj or not sid or sid == skip_sid: continue
+            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
+            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
             self.socketio.emit(msg_type, message, to=sid)
     
     def send_message_to_group(self, group_id: str, message: str, msg_type: str = "message", skip_player_key: Optional[str] = None):
         group = self.get_group(group_id)
-        if not group:
-            return
-            
+        if not group: return
         for member_key in group["members"]:
-            if member_key != skip_player_key:
-                self.send_message_to_player(member_key, message, msg_type)
+            if member_key != skip_player_key: self.send_message_to_player(member_key, message, msg_type)
 
     def send_message_to_band(self, band_id: str, message: str, msg_type: str = "message", skip_player_key: Optional[str] = None):
         band = self.get_band(band_id)
-        if not band:
-            return
-            
+        if not band: return
         for member_key in band["members"]:
-            if member_key != skip_player_key:
-                self.send_message_to_player(member_key, message, msg_type)
+            if member_key != skip_player_key: self.send_message_to_player(member_key, message, msg_type)

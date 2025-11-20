@@ -2,28 +2,22 @@
 import importlib.util
 import os
 import time 
-import datetime 
-import copy 
-import uuid
 from typing import List, Tuple, Dict, Any, Optional 
-
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
 from mud_backend.core.game_objects import Player, Room
-from mud_backend.core.db import fetch_player_data, fetch_room_data, save_game_state
+from mud_backend.core.db import fetch_player_data, save_game_state
 from mud_backend.core.chargen_handler import (
     handle_chargen_input, 
-    get_chargen_prompt, 
     do_initial_stat_roll,
     send_stat_roll_prompt,
-    send_assignment_prompt 
+    send_assignment_prompt,
+    get_chargen_prompt
 )
-from mud_backend.core.room_handler import show_room_to_player, _get_map_data
-from mud_backend.core.skill_handler import show_skill_list 
-from mud_backend.core.game_loop import environment
-from mud_backend.core.game_loop import monster_respawn
+from mud_backend.core.room_handler import _get_map_data
 from mud_backend import config
 
 CRITICAL_COMMANDS = {
@@ -32,7 +26,6 @@ CRITICAL_COMMANDS = {
 }
 
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
-    # Movement
     "move": ("movement", "Move"), "go": ("movement", "Move"),
     "n": ("movement", "Move"), "north": ("movement", "Move"),
     "s": ("movement", "Move"), "south": ("movement", "Move"),
@@ -45,8 +38,6 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "enter": ("movement", "Enter"), "climb": ("movement", "Climb"),
     "exit": ("movement", "Exit"), "out": ("movement", "Exit"),
     "goto": ("movement", "GOTO"), 
-    
-    # Interaction & Items
     "get": ("item_actions", "Get"), "take": ("item_actions", "Take"),
     "drop": ("item_actions", "Drop"), "put": ("item_actions", "Put"),
     "stow": ("item_actions", "Put"), "pour": ("item_actions", "Pour"),
@@ -55,12 +46,8 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "inventory": ("inventory", "Inventory"), "inv": ("inventory", "Inventory"),
     "wealth": ("inventory", "Wealth"),
     "swap": ("inventory", "Swap"),
-
-    # Observation
     "look": ("observation", "Look"), "examine": ("observation", "Examine"),
     "investigate": ("observation", "Investigate"),
-
-    # Combat & Status
     "attack": ("attack", "Attack"),
     "stance": ("stance", "Stance"), 
     "sit": ("posture", "Posture"), 
@@ -74,62 +61,29 @@ VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     "stat": ("stats", "Stats"), "stats": ("stats", "Stats"),
     "skill": ("skills", "Skills"), "skills": ("skills", "Skills"),
     "experience": ("experience", "Experience"), "exp": ("experience", "Experience"),
-
-    # --- GATHERING VERBS ---
-    "skin": ("harvesting", "Skin"),
-    "butcher": ("harvesting", "Skin"),
-    "forage": ("foraging", "Forage"),
-    "harvest": ("herbalism", "Harvest"),
-    "mine": ("mining", "Mine"),
-    "prospect": ("mining", "Prospect"),
-    "chop": ("lumberjacking", "Chop"),
-    "cut": ("lumberjacking", "Chop"),
-    "survey": ("lumberjacking", "Survey"),
-    "fish": ("fishing", "Fish"),
-
-    # --- CRAFTING VERBS ---
-    "crush": ("smelting", "Crush"),
-    "wash": ("smelting", "Wash"),
-    "charge": ("smelting", "Charge"),
-    "bellow": ("smelting", "Bellow"),
-    "vent": ("smelting", "Vent"),
-    "tap": ("smelting", "Tap"),
-    "extract": ("smelting", "Extract"),
-    "shingle": ("smelting", "Shingle"),
-    "assess": ("assess", "Assess"),
-    "carve": ("woodworking", "Carve"),
-
-    # --- ACTIVITIES ---
-    "search": ("harvesting", "Search"),
-    "eat": ("foraging", "Eat"), 
+    "skin": ("harvesting", "Skin"), "butcher": ("harvesting", "Skin"),
+    "forage": ("foraging", "Forage"), "harvest": ("herbalism", "Harvest"),
+    "mine": ("mining", "Mine"), "prospect": ("mining", "Prospect"),
+    "chop": ("lumberjacking", "Chop"), "cut": ("lumberjacking", "Chop"),
+    "survey": ("lumberjacking", "Survey"), "fish": ("fishing", "Fish"),
+    "crush": ("smelting", "Crush"), "wash": ("smelting", "Wash"),
+    "charge": ("smelting", "Charge"), "bellow": ("smelting", "Bellow"),
+    "vent": ("smelting", "Vent"), "tap": ("smelting", "Tap"),
+    "extract": ("smelting", "Extract"), "shingle": ("smelting", "Shingle"),
+    "assess": ("assess", "Assess"), "carve": ("woodworking", "Carve"),
+    "search": ("harvesting", "Search"), "eat": ("foraging", "Eat"), 
     "drink": ("foraging", "Drink"),
-    
-    # --- Communication ---
-    "say": ("say", "Say"),
-    "talk": ("talk", "Talk"), 
-    "whisper": ("whisper", "Whisper"),
+    "say": ("say", "Say"), "talk": ("talk", "Talk"), "whisper": ("whisper", "Whisper"),
     "bt": ("band", "BT"),
-
-    # --- Trading & Shops ---
     "give": ("trading", "Give"), "accept": ("trading", "Accept"),
     "decline": ("trading", "Decline"), "cancel": ("trading", "Cancel"),
     "exchange": ("trading", "Exchange"),
     "list": ("shop", "List"), "buy": ("shop", "Buy"),
     "sell": ("shop", "Sell"), "appraise": ("shop", "Appraise"),
-    
-    # --- Grouping & Bands ---
-    "group": ("group", "Group"),
-    "hold": ("group", "Hold"),
-    "join": ("group", "Join"),
-    "leave": ("group", "Leave"),
-    "disband": ("group", "Disband"),
-    "band": ("band", "Band"),
-    
-    # --- Systems ---
-    "help": ("help", "Help"),
-    "flag": ("flags", "Flag"), "flags": ("flags", "Flag"),
-
-    # Training
+    "group": ("group", "Group"), "hold": ("group", "Hold"),
+    "join": ("group", "Join"), "leave": ("group", "Leave"),
+    "disband": ("group", "Disband"), "band": ("band", "Band"),
+    "help": ("help", "Help"), "flag": ("flags", "Flag"), "flags": ("flags", "Flag"),
     "check": ("training", "CheckIn"), "checkin": ("training", "CheckIn"),
     "train": ("training", "Train"), "done": ("training", "Done"),
 }
@@ -161,10 +115,9 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         player = player_info["player_obj"]
         player.messages.clear()
     else:
-        # Player wasn't active (Login or Chargen)
         player_db_data = fetch_player_data(player_name)
         if not player_db_data:
-            # --- NEW CHARACTER ---
+            # New Character
             if not account_username:
                 print(f"[EXEC-ERROR] New player {player_name} has no account_username!")
                 return {"messages": ["Critical error: Account not found."], "game_state": "error"}
@@ -188,84 +141,36 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                 player.visited_rooms.append(start_room_id)
             
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
-            
-            # --- NEW: Add to Spatial Index ---
-            # Note: If in chargen, they might not really be "in" the room for broadcast purposes, 
-            # but it's safer to add them.
             world.add_player_to_room_index(player.name.lower(), start_room_id)
-            # ---------------------------------
 
         else:
-            # --- LOADING CHARACTER ---
+            # Loading Character
             player = Player(world, player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             
             if player.current_room_id not in player.visited_rooms:
                 player.visited_rooms.append(player.current_room_id)
             
             player.group_id = world.get_player_group_id_on_load(player.name.lower())
-
-            # --- NEW: Add to Spatial Index ---
             world.add_player_to_room_index(player.name.lower(), player.current_room_id)
-            # ---------------------------------
 
     if player.game_state == "playing" and command_line.lower() != "ping":
         if player.is_goto_active:
             player.is_goto_active = False 
             
-    room_db_data = world.get_room(player.current_room_id)
-    room = Room(room_db_data.get("room_id", "void"), room_db_data.get("name", "The Void"), room_db_data.get("description", "..."), db_data=room_db_data)
-
-    live_room_objects = []
-    all_objects_stubs = room_db_data.get("objects", []) 
+    # --- PHASE 2 FIX: Use get_room to ensure hydration, then grab ActiveRoom object ---
+    # This guarantees room data is loaded and entities are instantiated.
+    world.get_room(player.current_room_id) 
+    room = world.active_rooms.get(player.current_room_id)
     
-    room_data_in_cache = world.game_rooms.get(room.room_id, {})
-    all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
-    cache_stubs_by_content = {str(s): s for s in all_objects_stubs_in_cache}
-    
-    if all_objects_stubs:
-        for obj_stub in all_objects_stubs: 
-            node_id = obj_stub.get("node_id")
-            monster_id = obj_stub.get("monster_id")
-            obj_stub_in_cache = cache_stubs_by_content.get(str(obj_stub))
-
-            if node_id:
-                template = world.game_nodes.get(node_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub) 
-                    if "uid" not in merged_obj:
-                         merged_obj["uid"] = uuid.uuid4().hex
-                         if obj_stub_in_cache:
-                            obj_stub_in_cache["uid"] = merged_obj["uid"] 
-                    live_room_objects.append(merged_obj)
-            
-            elif monster_id:
-                uid = obj_stub.get("uid")
-                if not uid:
-                    uid = uuid.uuid4().hex
-                    if obj_stub_in_cache:
-                        obj_stub_in_cache["uid"] = uid 
-                
-                if uid and world.get_defeated_monster(uid) is not None:
-                    continue 
-                
-                template = world.game_monster_templates.get(monster_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub) 
-                    merged_obj["uid"] = uid 
-                    live_room_objects.append(merged_obj)
-
-            else:
-                if obj_stub.get("is_npc") and "uid" not in obj_stub:
-                    uid = uuid.uuid4().hex
-                    obj_stub["uid"] = uid
-                    if obj_stub_in_cache:
-                        obj_stub_in_cache["uid"] = uid
-                    
-                live_room_objects.append(obj_stub)
-            
-    room.objects = live_room_objects
+    # Failsafe for void/error
+    if not room:
+        fallback_data = world.get_room("void")
+        # If even void is missing, construct manually
+        if not fallback_data:
+             room = Room("void", "The Void", "Nothing is here.")
+        else:
+             room = world.active_rooms.get("void", Room("void", "The Void", "Nothing is here."))
+    # ---------------------------------------------------------------------------------
 
     parts = command_line.strip().split()
     command = parts[0].lower() if parts else ""
@@ -351,10 +256,8 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         "last_seen": time.time(), "player_obj": player 
     })
     
-    # --- MODIFIED: Save only on Critical Events ---
     if command in CRITICAL_COMMANDS:
         save_game_state(player)
-    # --- END MODIFIED ---
     
     vitals_data = player.get_vitals()
     map_data = _get_map_data(player, world)
