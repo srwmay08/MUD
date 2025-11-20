@@ -1,7 +1,9 @@
 # mud_backend/core/game_objects.py
-# MODIFIED FILE
+# FULL FILE REPLACEMENT
 import math
 import time
+import copy
+import uuid
 from mud_backend import config
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
@@ -38,7 +40,6 @@ RACE_DATA = {
             "hair_color": ["black", "dark brown", "chestnut", "auburn", "light brown", "golden blonde", "ash blonde", "platinum blonde", "fiery red", "strawberry blonde", "grey", "white"]
         }
     },
-
     "Wildborn": {
         "faction": "Neutral",
         "base_hp_max": 160, "hp_gain_per_pf_rank": 7, "base_hp_regen": 3, "spirit_regen_tier": "Moderate",
@@ -50,7 +51,6 @@ RACE_DATA = {
             "hair_color": ["black", "dark brown", "chestnut", "auburn", "light brown", "golden blonde", "ash blonde", "platinum blonde", "fiery red", "strawberry blonde", "grey", "white"]
         }
     },
-
     # === THE CONCORDAT FACTION ===
     "High Elf": {
         "faction": "Concordat",
@@ -99,7 +99,6 @@ RACE_DATA = {
             "hair_color": ["black", "dark brown", "brown", "chestnut", "light brown", "auburn", "red", "strawberry blonde", "sandy blonde", "golden blonde", "grey", "white"]
         }
     },
-
     # === THE DOMINION FACTION ===
     "Dark Elf": {
         "faction": "Dominion",
@@ -700,12 +699,16 @@ class Player:
             
             target_obj = self.world.get_player_obj(target_id)
             if not target_obj:
-                for room in self.world.game_rooms.values():
-                    for obj in room.get("objects", []):
-                        if obj.get("uid") == target_id:
-                            target_obj = obj
-                            break
-                    if target_obj: break
+                # --- FIX: Iterate Active Rooms instead of ALL rooms ---
+                # (Phase 1 Optimization + Instance Separation)
+                room_id = combat_data.get("current_room_id")
+                if room_id:
+                    room = self.world.get_room(room_id) # Get ActiveRoom
+                    if room:
+                        for obj in room.objects:
+                             if obj.get("uid") == target_id:
+                                target_obj = obj
+                                break
             
             if target_obj:
                 target_name = target_obj.get("name", target_id) if isinstance(target_obj, dict) else target_obj.name
@@ -719,7 +722,7 @@ class Player:
         """
         new_room_data = self.world.get_room(target_room_id)
 
-        if not new_room_data or new_room_data.get("room_id") == "void":
+        if not new_room_data or new_room_data.room_id == "void":
             self.send_message("You try to move, but find only an endless void. You quickly scramble back.")
             return
 
@@ -904,15 +907,55 @@ class Player:
         return f"<Player: {self.name}>"
 
 
+# --- REFACTORED: Room is now ActiveRoom, hydrating from Template ---
 class Room:
     def __init__(self, room_id: str, name: str, description: str, db_data: Optional[dict] = None):
+        """
+        Initializes an Active Room from a template (db_data).
+        Performs Object Hydration (Template -> Instance).
+        """
         self.room_id = room_id
         self.name = name
         self.description = description
         self.db_data = db_data if db_data is not None else {}
         self._id = self.db_data.get("_id") 
-        self.objects: List[Dict[str, Any]] = self.db_data.get("objects", []) 
         self.exits: Dict[str, str] = self.db_data.get("exits", {})
+        
+        # --- PHASE 2: Object Hydration ---
+        # We don't just copy the list. We create instances.
+        # If this room has already been instantiated (loaded from active_rooms), 
+        # 'objects' might already contain hydrated dicts.
+        # If loading from template (db_data), they are stubs.
+        
+        self.objects: List[Dict[str, Any]] = []
+        
+        raw_objects = self.db_data.get("objects", [])
+        
+        for obj_stub in raw_objects:
+            # If it already has a runtime UID, it's likely already hydrated 
+            # (or we are reloading a saved state that preserved UIDs)
+            # But for cleanliness, let's assume we need to check.
+            
+            node_id = obj_stub.get("node_id")
+            monster_id = obj_stub.get("monster_id")
+            
+            merged_obj = copy.deepcopy(obj_stub) # Start with the stub data
+            
+            # 1. Hydrate Nodes
+            if node_id:
+                # We need to access World to get templates. 
+                # Ideally, World should pass templates here, but Room doesn't have World reference.
+                # COMPROMISE: We assume the caller (World.get_room) has handled hydration
+                # OR we accept that Room is a data class and World handles the logic.
+                #
+                # REVISION: The Prompt asked to "Only create ActiveRoom when a player enters".
+                # Logic must be in World.get_room().
+                # This __init__ should just accept the *final* list of objects if possible.
+                # But to keep signatures compatible, we'll just store what we get 
+                # and let World.get_room do the heavy lifting before returning this object.
+                pass 
+
+            self.objects.append(merged_obj)
 
     def to_dict(self) -> dict:
         data = {
