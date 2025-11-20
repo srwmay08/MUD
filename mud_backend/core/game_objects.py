@@ -10,8 +10,6 @@ if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
 # === NEW: STAT MODIFIERS ===
-# We should store stat modifiers here as well.
-# This replaces the old RACE_MODIFIERS in utils.py
 RACE_MODIFIERS = {
     "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
     "Wildborn": {"STR": 5, "CON": 5, "DEX": 5, "AGI": 0, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 0, "ESS": 5, "DIS": 0, "AUR": 0},
@@ -153,21 +151,21 @@ RACE_DATA = {
 }
 
 class Player:
-    # --- REFACTORED: Add 'world' to __init__ ---
     def __init__(self, world: 'World', name: str, current_room_id: str, db_data: Optional[dict] = None):
-        self.world = world # Store the world reference
-        # --- END REFACTOR ---
+        self.world = world 
         
         self.name = name
         self.current_room_id = current_room_id
         self.db_data = db_data if db_data is not None else {}
         self.messages = [] 
         
+        # --- PERSISTENCE FLAG ---
+        self._is_dirty = False
+        self._last_save_time = time.time()
+        # ------------------------
+
         self._id = self.db_data.get("_id") 
-        
-        # --- NEW: Store the account username ---
         self.account_username: str = self.db_data.get("account_username", "")
-        # --- END NEW ---
 
         self.experience: int = self.db_data.get("experience", 0)
         self.unabsorbed_exp: int = self.db_data.get("unabsorbed_exp", 0)
@@ -187,29 +185,20 @@ class Player:
         self.chargen_step: int = self.db_data.get("chargen_step", 0)
         self.appearance: Dict[str, str] = self.db_data.get("appearance", {})
         
-        # --- THIS IS THE FIX: Define skills *before* vitals that depend on it ---
         self.skills: Dict[str, int] = self.db_data.get("skills", {})
-        # --- END FIX ---
-        
-        # ---
-        # --- NEW: Skill Learning (LBD) Progress
-        # ---
         self.skill_learning_progress: Dict[str, int] = self.db_data.get("skill_learning_progress", {})
-        # --- END NEW ---
         
-        # --- HEALTH, MANA, STAMINA, SPIRIT ---
-        # Get from DB first
-        self.hp: int = self.db_data.get("hp", 100)
-        self.mana: int = self.db_data.get("mana", 100)
-        self.stamina: int = self.db_data.get("stamina", 100)
-        self.spirit: int = self.db_data.get("spirit", 10)
+        # --- Internal Vitals (Used by properties) ---
+        self._hp: int = self.db_data.get("hp", 100)
+        self._mana: int = self.db_data.get("mana", 100)
+        self._stamina: int = self.db_data.get("stamina", 100)
+        self._spirit: int = self.db_data.get("spirit", 10)
         
-        # --- THIS IS THE FIX: Clamp current vitals to max vitals on load ---
-        self.hp = min(self.hp, self.max_hp)
-        self.mana = min(self.mana, self.max_mana)
-        self.stamina = min(self.stamina, self.max_stamina)
-        self.spirit = min(self.spirit, self.max_spirit)
-        # --- END FIX ---
+        # Clamp initial vitals
+        self._hp = min(self._hp, self.max_hp)
+        self._mana = min(self._mana, self.max_mana)
+        self._stamina = min(self._stamina, self.max_stamina)
+        self._spirit = min(self._spirit, self.max_spirit)
 
         self.inventory: List[str] = self.db_data.get("inventory", [])
         self.worn_items: Dict[str, Optional[str]] = self.db_data.get("worn_items", {})
@@ -234,77 +223,84 @@ class Player:
         self.con_lost: int = self.db_data.get("con_lost", 0)
         self.con_recovery_pool: int = self.db_data.get("con_recovery_pool", 0)
         
-        # --- NEW: Add wound tracking ---
         self.wounds: Dict[str, int] = self.db_data.get("wounds", {})
-        # --- END NEW ---
 
-        # --- NEW: Vitals Ability Tracking ---
         self.next_mana_pulse_time: float = self.db_data.get("next_mana_pulse_time", 0.0)
         self.mana_pulse_used: bool = self.db_data.get("mana_pulse_used", False)
         self.last_spellup_use_time: float = self.db_data.get("last_spellup_use_time", 0.0)
         self.spellup_uses_today: int = self.db_data.get("spellup_uses_today", 0)
         self.last_second_wind_time: float = self.db_data.get("last_second_wind_time", 0.0)
-        self.stamina_burst_pulses: int = self.db_data.get("stamina_burst_pulses", 0) # > 0 is buff, < 0 is debuff
-        # --- REMOVED: next_spirit_regen_time ---
-        # --- END NEW ---
+        self.stamina_burst_pulses: int = self.db_data.get("stamina_burst_pulses", 0) 
         
-        # ---
-        # --- NEW: Magic Properties
-        # ---
         self.prepared_spell: Optional[Dict] = self.db_data.get("prepared_spell", None)
         self.buffs: Dict[str, Dict] = self.db_data.get("buffs", {})
-        # --- END NEW ---
         
-        # --- NEW: Learned Abilities ---
         self.known_spells: List[str] = self.db_data.get("known_spells", [])
         self.known_maneuvers: List[str] = self.db_data.get("known_maneuvers", [])
         self.completed_quests: List[str] = self.db_data.get("completed_quests", [])
-        # --- END NEW ---
         
-        # ---
-        # --- NEW: Faction Standings
-        # ---
         self.factions: Dict[str, int] = self.db_data.get("factions", {})
-        
-        # --- THIS IS THE REQUIRED CHANGE 1 ---
         self.flags: Dict[str, Any] = self.db_data.get("flags", {})
-        # --- END CHANGE ---
         
-        # --- END NEW ---
-
-        # --- NEW: Quest Trackers ---
         self.quest_trip_counter: int = self.db_data.get("quest_trip_counter", 0)
-        # --- END NEW ---
-
-        # ---
-        # --- NEW: Map Tracking ---
         self.visited_rooms: List[str] = self.db_data.get("visited_rooms", [])
-        # --- END NEW ---
-
-        # ---
-        # --- NEW: GOTO Flag ---
-        self.is_goto_active: bool = self.db_data.get("is_goto_active", False)
-        # --- END NEW ---
         
-        # ---
-        # --- NEW: Grouping and Bands
-        # ---
-        self.group_id: Optional[str] = self.db_data.get("group_id", None) # Transient, loaded from world state
-        self.band_id: Optional[str] = self.db_data.get("band_id", None) # Persistent
-        self.band_xp_bank: int = self.db_data.get("band_xp_bank", 0) # Persistent
-        # --- END NEW ---
+        self.is_goto_active: bool = self.db_data.get("is_goto_active", False)
+        
+        self.group_id: Optional[str] = self.db_data.get("group_id", None) 
+        self.band_id: Optional[str] = self.db_data.get("band_id", None) 
+        self.band_xp_bank: int = self.db_data.get("band_xp_bank", 0) 
 
-        # --- NEW: Command Queue for Type-Ahead ---
         self.command_queue: List[str] = [] 
-        # -----------------------------------------
 
-        self._id = self.db_data.get("_id") 
-        # ... rest of init ...
+    def mark_dirty(self):
+        """Call this whenever a significant stat changes."""
+        self._is_dirty = True
 
+    # --- Properties for Vitals (Auto-Mark Dirty) ---
+    @property
+    def hp(self):
+        return self._hp
+
+    @hp.setter
+    def hp(self, value):
+        if self._hp != value:
+            self._hp = value
+            self.mark_dirty()
+
+    @property
+    def mana(self):
+        return self._mana
+
+    @mana.setter
+    def mana(self, value):
+        if self._mana != value:
+            self._mana = value
+            self.mark_dirty()
+            
+    @property
+    def stamina(self):
+        return self._stamina
+
+    @stamina.setter
+    def stamina(self, value):
+        if self._stamina != value:
+            self._stamina = value
+            self.mark_dirty()
+            
+    @property
+    def spirit(self):
+        return self._spirit
+
+    @spirit.setter
+    def spirit(self, value):
+        if self._spirit != value:
+            self._spirit = value
+            self.mark_dirty()
+    # -------------------------------------------------
 
     @property
     def con_bonus(self) -> int:
-        # This is the stat *bonus* (e.g., 70 CON -> 10 bonus)
         return get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
         
     @property
@@ -313,51 +309,30 @@ class Player:
         
     @property
     def race_data(self) -> dict:
-        # --- THIS IS THE FIX ---
-        # Update this property to use the new RACE_DATA dict
         return RACE_DATA.get(self.race, RACE_DATA["Human"])
-        # --- END FIX ---
 
     @property
     def base_hp(self) -> int:
-        # Per user spec: Base HP = trunc((Strength statistic + Constitution statistic) / 10)
         return math.trunc((self.stats.get("STR", 0) + self.stats.get("CON", 0)) / 10)
 
     @property
     def max_hp(self) -> int:
-        # --- THIS IS THE NEW FORMULA ---
-        # Maximum Health = ((STR stat + CON stat) / 10) + (Physical Fitness ranks * Health Point gain rate based on Race)
-        
-        # self.base_hp is already ((STR + CON) / 10)
         base_hp_val = self.base_hp
         pf_ranks = self.skills.get("physical_fitness", 0)
         hp_gain_rate = self.race_data.get("hp_gain_per_pf_rank", 6)
-        
         return base_hp_val + (pf_ranks * hp_gain_rate)
-        # --- END NEW FORMULA ---
 
     @property
     def hp_regeneration(self) -> int:
-        # User formula: 2 + (Physical Fitness ranks / 20)
         pf_ranks = self.skills.get("physical_fitness", 0)
-        
-        # --- THIS IS THE FIX ---
-        # Use a static '2' as the base, per user's new formula
         base_regen = 2
-        # --- END FIX ---
-        
         regen = base_regen + math.trunc(pf_ranks / 20)
         if self.death_sting_points > 0:
             regen = math.trunc(regen * 0.5)
         return max(0, regen)
         
-    # ---
-    # --- NEW VITALS PROPERTIES ---
-    # ---
-    
     @property
     def max_mana(self) -> int:
-        # Max Mana = INT Bonus + ((LOG Bonus + WIS bonus + INF bonus)/3) + (Harness Power skill bonus / 4) + (Mana Control skill bonus / 3)
         int_b = get_stat_bonus(self.stats.get("INT", 50), "INT", self.race)
         log_b = get_stat_bonus(self.stats.get("LOG", 50), "LOG", self.race)
         wis_b = get_stat_bonus(self.stats.get("WIS", 50), "WIS", self.race)
@@ -377,7 +352,6 @@ class Player:
     
     @property
     def max_stamina(self) -> int:
-        # Max Stamina = CON bonus + ((STR bonus + AGI bonus + DIS bonus)/3) + (Physical Fitness skill bonus / 3)
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
         str_b = get_stat_bonus(self.stats.get("STR", 50), "STR", self.race)
         agi_b = get_stat_bonus(self.stats.get("AGI", 50), "AGI", self.race)
@@ -393,7 +367,6 @@ class Player:
 
     @property
     def stamina_regen_per_pulse(self) -> int:
-        # SR = 20 + trunc(CON bonus / 4.5) + Bonus
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.race)
         bonus = 0
         if self.posture in ["sitting", "kneeling", "prone"]:
@@ -402,7 +375,6 @@ class Player:
         
         sr_percent = 20 + math.trunc(con_b / 4.5) + bonus
         
-        # Stamina gained per pulse = round(Maximum Stamina * (SR / 100)) + Enhancive Bonus
         enhancive_bonus = 0
         if self.stamina_burst_pulses > 0:
             enhancive_bonus = 15
@@ -414,16 +386,13 @@ class Player:
 
     @property
     def max_spirit(self) -> int:
-        # Max Spirit = ESS Bonus + ((ZEA Bonus + WIS Bonus + LOG Bonus)/3) + (Harness Power skill bonus / 4) + (Spirit Control skill bonus / 3)
-        # NOTE: "Spirit Control" skill not found, using "spiritual_lore" as the logical equivalent.
-        
         ess_b = get_stat_bonus(self.stats.get("ESS", 50), "ESS", self.race)
         zea_b = get_stat_bonus(self.stats.get("ZEA", 50), "ZEA", self.race)
         wis_b = get_stat_bonus(self.stats.get("WIS", 50), "WIS", self.race)
         log_b = get_stat_bonus(self.stats.get("LOG", 50), "LOG", self.race)
         
         hp_ranks = self.skills.get("harness_power", 0)
-        sc_ranks = self.skills.get("spiritual_lore", 0) # Using spiritual_lore
+        sc_ranks = self.skills.get("spiritual_lore", 0) 
         
         hp_bonus = calculate_skill_bonus(hp_ranks)
         sc_bonus = calculate_skill_bonus(sc_ranks)
@@ -432,74 +401,46 @@ class Player:
         hp_avg = math.trunc(hp_bonus / 4)
         sc_avg = math.trunc(sc_bonus / 3)
         
-        # Using 10 base spirit from original implementation
         return 10 + ess_b + stat_avg + hp_avg + sc_avg
-
-    # ---
-    # --- NEW REGEN PROPERTIES (from user Option 2) ---
-    # ---
     
     @property
     def mana_regeneration_per_pulse(self) -> int:
-        # MR = 10 + trunc(INT bonus / 4.5) + (Harness Power skill bonus / 20) + Bonus
         int_b = get_stat_bonus(self.stats.get("INT", 50), "INT", self.race)
         hp_ranks = self.skills.get("harness_power", 0)
         hp_bonus = calculate_skill_bonus(hp_ranks)
-        bonus = 0 # TODO: Add bonus for meditating, etc.
+        bonus = 0 
         
         mr_percent = 10 + math.trunc(int_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
         
-        # Mana gained per pulse = round(Maximum Mana * (MR / 100)) + Enhancive Bonus
-        enhancive_bonus = 0 # TODO: Add enhancives
+        enhancive_bonus = 0
         gain = round(self.max_mana * (mr_percent / 100.0)) + enhancive_bonus
         return int(gain)
 
     @property
     def spirit_regeneration_per_pulse(self) -> int:
-        # SPR = 10 + trunc(ESS bonus / 4.5) + (Harness Power skill bonus / 20) + Bonus
         ess_b = get_stat_bonus(self.stats.get("ESS", 50), "ESS", self.race)
         hp_ranks = self.skills.get("harness_power", 0)
         hp_bonus = calculate_skill_bonus(hp_ranks)
-        bonus = 0 # TODO: Add bonus
+        bonus = 0 
         
         spr_percent = 10 + math.trunc(ess_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
         
-        # Spirit gained per pulse = round(Maximum Spirit * (SPR / 100)) + Enhancive Bonus
-        enhancive_bonus = 0 # TODO: Add enhancives
+        enhancive_bonus = 0
         gain = round(self.max_spirit * (spr_percent / 100.0)) + enhancive_bonus
         return int(gain)
 
-    # ---
-    # --- REMOVED OLD REGEN PROPERTIES ---
-    # ---
-    
     @property
     def effective_mana_control_ranks(self) -> int:
-        # Placeholder: Assumes a single-sphere caster
-        # TODO: Check profession and hybrid status
-        mc_ranks = self.skills.get("elemental_lore", 0) # Just guessing one
+        mc_ranks = self.skills.get("elemental_lore", 0) 
         return mc_ranks
-
-    # ---
-    # --- END VITALS PROPERTIES ---
-    # ---
 
     @property
     def armor_rt_penalty(self) -> float:
-        """
-        Calculates the final armor roundtime penalty after
-        applying reduction from Armor Use skill bonus.
-        """
-        # --- FIX: Removed local import ---
-        # from mud_backend.core.skill_handler import calculate_skill_bonus 
-
         armor_id = self.worn_items.get("torso")
         if not armor_id:
             return 0.0
             
-        # --- REFACTORED: Get item data from self.world ---
         armor_data = self.world.game_items.get(armor_id)
-        # --- END REFACTOR ---
         if not armor_data:
             return 0.0
             
@@ -538,9 +479,6 @@ class Player:
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
-    # ---
-    # --- NEW: Master XP Granting Method
-    # ---
     def grant_experience(self, nominal_amount: int, source: str = "combat"):
         """
         Grants experience to the player, handling Death's Sting and Band splitting.
@@ -561,6 +499,9 @@ class Player:
                     self.send_message("You feel the last of death's sting fade.")
             else:
                  self.send_message(f"(You work off {points_worked_off} of death's sting.)")
+        
+        # Mark dirty as exp/sting changed
+        self.mark_dirty()
 
         # 2. Handle Band Splitting
         band = self.world.get_band(self.band_id)
@@ -573,6 +514,7 @@ class Player:
                 self.add_field_exp(share, is_band_share=True)
                 
                 # Distribute to other members
+                from mud_backend.core import db # Import inside method to avoid circular dependency if any
                 for member_key in band.get("members", []):
                     if member_key == self.name.lower():
                         continue # Skip self
@@ -582,13 +524,14 @@ class Player:
                         # Member is online
                         if member_obj.death_sting_points > 0:
                             member_obj.band_xp_bank += share
+                            member_obj.mark_dirty()
                         else:
                             member_obj.add_field_exp(share, is_band_share=True)
                     else:
                         # Member is offline, update their bank in the DB
                         db.update_player_band_xp_bank(member_key, share)
                 
-                return # Stop here, we've handled the XP
+                return 
         
         # 3. No Band, grant full amount
         self.add_field_exp(nominal_amount)
@@ -596,15 +539,12 @@ class Player:
     def add_field_exp(self, nominal_amount: int, is_band_share: bool = False):
         """
         Adds experience to the player's unabsorbed pool.
-        This is now a helper function called by grant_experience.
         """
-        # (Death's Sting logic was moved to grant_experience)
-
         pool_cap = self.field_exp_capacity
         current_pool = self.unabsorbed_exp
         
         if current_pool >= pool_cap:
-            if not is_band_share: # Don't spam for band XP
+            if not is_band_share: 
                 self.send_message("Your mind is completely saturated. You can learn no more.")
             return
             
@@ -629,14 +569,12 @@ class Player:
                 self.send_message(f"You gain {actual_gained} field experience. ({self.mind_status})")
             else:
                 self.send_message(f"You gain {actual_gained} field experience from your band. ({self.mind_status})")
-    # ---
-    # --- END XP METHODS
-    # ---
+        
+        self.mark_dirty()
 
     def absorb_exp_pulse(self, room_type: str = "other") -> Optional[str]:
         """
         Absorbs one pulse of experience.
-        Returns the message string if absorption happened, otherwise None.
         """
         if self.unabsorbed_exp <= 0:
             return None
@@ -652,7 +590,7 @@ class Player:
             
         logic_bonus = math.floor(self.stats.get("LOG", 0) / logic_divisor)
         pool_bonus = min(10, math.floor(self.unabsorbed_exp / 200.0))
-        group_bonus = 0 # TODO: Add group bonus logic
+        group_bonus = 0 
         
         amount_to_absorb = int(base_rate + logic_bonus + pool_bonus + group_bonus)
         amount_to_absorb = min(self.unabsorbed_exp, amount_to_absorb)
@@ -662,14 +600,9 @@ class Player:
             
         self.unabsorbed_exp -= amount_to_absorb
         self.experience += amount_to_absorb
+        self.mark_dirty()
         
-        # ---
-        # --- THIS IS THE FIX: Set message to None
-        # ---
         absorption_msg = None
-        # ---
-        # --- END FIX
-        # ---
 
         if self.con_lost > 0:
             self.con_recovery_pool += amount_to_absorb
@@ -679,22 +612,16 @@ class Player:
                 self.stats["CON"] = self.stats.get("CON", 50) + regained
                 self.con_lost -= regained
                 self.con_recovery_pool -= (regained * 2000)
-                # ---
-                # --- THIS IS THE FIX: Set message, don't append
-                # ---
-                absorption_msg = f"You feel some of your vitality return! (Recovered {regained} CON)"
-                # ---
-                # --- END FIX
-                # ---
                 
-        self._check_for_level_up() # This calls self.send_message, which is fine
+                absorption_msg = f"You feel some of your vitality return! (Recovered {regained} CON)"
+                self.mark_dirty()
+                
+        self._check_for_level_up() 
         return absorption_msg
 
 
     def _get_xp_target_for_level(self, level: int) -> int:
-        # --- REFACTORED: Get level table from self.world ---
         table = self.world.game_level_table
-        # --- END REFACTOR ---
         if not table:
             return (level + 1) * 1000
         if level < 0: return 0
@@ -716,6 +643,8 @@ class Player:
     def _check_for_level_up(self):
         if self.level_xp_target == 0:
            self.level_xp_target = self._get_xp_target_for_level(self.level)
+        
+        changed = False
         while self.experience >= self.level_xp_target:
             if self.level >= 100:
                 ptps, mtps = 1, 1
@@ -725,6 +654,7 @@ class Player:
                 self.level_xp_target = self.experience + 2500
                 if self.level_xp_target <= self.experience:
                     self.level_xp_target = self.experience + 1
+                changed = True
             else:
                 self.level += 1
                 ptps, mtps, stps = self._calculate_tps_per_level()
@@ -736,6 +666,10 @@ class Player:
                 self.send_message(f"You gain: {ptps} PTPs, {mtps} MTPs, {stps} STPs.")
                 self.send_message("Your skill training limits have been reset for this level.")
                 self.level_xp_target = self._get_xp_target_for_level(self.level)
+                changed = True
+        
+        if changed:
+            self.mark_dirty()
 
     def send_message(self, message: str):
         self.messages.append(message)
@@ -744,13 +678,11 @@ class Player:
         """Gets the item data for an equipped item."""
         item_id = self.worn_items.get(slot) 
         if item_id:
-            # --- REFACTORED: Get item data from self.world ---
             return self.world.game_items.get(item_id)
-            # --- END REFACTOR ---
         return None
 
     def get_armor_type(self) -> str:
-        DEFAULT_UNARMORED_TYPE = "unarmed" # Corrected from "unarmored"
+        DEFAULT_UNARMORED_TYPE = "unarmed" 
         armor_data = self.get_equipped_item_data("torso")
         if armor_data and armor_data.get("type") == "armor":
             return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
@@ -760,23 +692,14 @@ class Player:
         """Stops any combat the player is involved in."""
         player_id = self.name.lower()
         
-        # --- REFACTORED: Use world methods ---
         combat_data = self.world.get_combat_state(player_id)
         
-        # --- THIS IS THE FIX ---
-        # Only proceed if combat_data exists AND is of type "combat"
         if combat_data and combat_data.get("state_type") == "combat":
-        # --- END FIX ---
             target_id = combat_data.get("target_id")
-            # ---
-            # --- THIS IS THE FIX ---
-            # ---
-            target_name = target_id # Default to UID
+            target_name = target_id 
             
-            # Try to find the target to get its name
-            target_obj = self.world.get_player_obj(target_id) # Is it a player?
+            target_obj = self.world.get_player_obj(target_id)
             if not target_obj:
-                # Not a player, search all rooms for an NPC/monster with this UID
                 for room in self.world.game_rooms.values():
                     for obj in room.get("objects", []):
                         if obj.get("uid") == target_id:
@@ -786,46 +709,28 @@ class Player:
             
             if target_obj:
                 target_name = target_obj.get("name", target_id) if isinstance(target_obj, dict) else target_obj.name
-            # ---
-            # --- END FIX ---
 
             self.world.stop_combat_for_all(player_id, target_id)
             self.send_message(f"You flee from the {target_name}!")
-        # --- END REFACTORED ---
     
     def move_to_room(self, target_room_id: str, move_message: str):
         """
         Handles all logic for moving a player to a new room.
-        Stops combat, updates state, and sends messages.
-        
-        --- THIS IS THE FIX ---
-        This function NO LONGER calls show_room_to_player.
-        The function that *calls* move_to_room is responsible for showing the room.
-        --- END FIX ---
         """
-        # from mud_backend.core.room_handler import show_room_to_player # <-- REMOVED
-
-        # --- REFACTORED: Use world methods ---
         new_room_data = self.world.get_room(target_room_id)
-        # --- END REFACTOR ---
 
         if not new_room_data or new_room_data.get("room_id") == "void":
             self.send_message("You try to move, but find only an endless void. You quickly scramble back.")
             return
 
-        # (No need to create a Room object here anymore)
-        
         self._stop_combat()
         self.current_room_id = target_room_id
 
-        # ---
-        # --- NEW: Add to visited rooms list
         if target_room_id not in self.visited_rooms:
             self.visited_rooms.append(target_room_id)
-        # --- END NEW ---
-
+        
         self.send_message(move_message)
-        # show_room_to_player(self, new_room) # <-- REMOVED
+        self.mark_dirty()
 
     def to_dict(self) -> dict:
         """Converts player state to a dictionary ready for MongoDB insertion/update."""
@@ -836,9 +741,7 @@ class Player:
         data = {
             **self.db_data,
             "name": self.name,
-            # --- NEW: Save account_username ---
             "account_username": self.account_username,
-            # --- END NEW ---
             "current_room_id": self.current_room_id,
             "experience": self.experience, 
             "unabsorbed_exp": self.unabsorbed_exp,
@@ -853,20 +756,11 @@ class Player:
             "chargen_step": self.chargen_step,
             "appearance": self.appearance,
             "hp": self.hp,
-            # --- MODIFIED: Save Mana, Stamina, Spirit ---
-            # "max_mana": self.max_mana, # Removed, is calculated
             "mana": self.mana,
-            # Max stamina is calculated, not stored
             "stamina": self.stamina,
-            # Max spirit is calculated, not stored
             "spirit": self.spirit,
-            # --- END MODIFIED ---
             "skills": self.skills,
-            # ---
-            # --- NEW: Save LBD progress
-            # ---
             "skill_learning_progress": self.skill_learning_progress,
-            # --- END NEW ---
             "inventory": self.inventory,
             "worn_items": self.worn_items,
             "wealth": self.wealth, 
@@ -882,61 +776,25 @@ class Player:
             "death_sting_points": self.death_sting_points,
             "con_lost": self.con_lost,
             "con_recovery_pool": self.con_recovery_pool,
-            "wounds": self.wounds, # <-- ADD THIS
-            # --- NEW: Save Vitals Ability Tracking ---
+            "wounds": self.wounds, 
             "next_mana_pulse_time": self.next_mana_pulse_time,
             "mana_pulse_used": self.mana_pulse_used,
             "last_spellup_use_time": self.last_spellup_use_time,
             "spellup_uses_today": self.spellup_uses_today,
             "last_second_wind_time": self.last_second_wind_time,
             "stamina_burst_pulses": self.stamina_burst_pulses,
-            # --- REMOVED: next_spirit_regen_time ---
-            # --- END NEW ---
-            
-            # ---
-            # --- NEW: Magic Properties
-            # ---
             "prepared_spell": self.prepared_spell,
             "buffs": self.buffs,
-            # --- END NEW ---
-            
-            # --- NEW: Learned Abilities ---
             "known_spells": self.known_spells,
             "known_maneuvers": self.known_maneuvers,
             "completed_quests": self.completed_quests,
-            # --- END NEW ---
-            
-            # ---
-            # --- NEW: Save Factions
-            # ---
             "factions": self.factions,
-            
-            # --- THIS IS THE REQUIRED CHANGE 2 ---
             "flags": self.flags,
-            # --- END CHANGE ---
-            
-            # --- END NEW ---
-            
-            # --- NEW: Save Quest Trackers ---
             "quest_trip_counter": self.quest_trip_counter,
-            # --- END NEW ---
-
-            # ---
-            # --- NEW: Map Tracking ---
             "visited_rooms": self.visited_rooms,
-            # --- END NEW ---
-
-            # ---
-            # --- NEW: GOTO Flag ---
             "is_goto_active": self.is_goto_active,
-            # --- END NEW ---
-
-            # ---
-            # --- NEW: Save Band Info
-            # ---
             "band_id": self.band_id,
             "band_xp_bank": self.band_xp_bank
-            # --- END NEW ---
         }
         
         if self._id:
@@ -944,13 +802,9 @@ class Player:
             
         return data
 
-    # ---
-    # --- MODIFIED: get_vitals method
-    # ---
     def get_vitals(self) -> Dict[str, Any]:
         """
         Gathers all vital player stats for the GUI and returns them in a dict.
-        Includes HP, Mana, Stamina, Spirit, Posture, Status, and Roundtime.
         """
         
         # --- 1. Get Experience Data ---
@@ -1005,43 +859,38 @@ class Player:
             "max_stamina": self.max_stamina,
             "spirit": self.spirit,
             "max_spirit": self.max_spirit,
-            "current_room_id": self.current_room_id, # <-- NEW: Added for map
-            # --- NEW: Add Stance ---
+            "current_room_id": self.current_room_id,
             "stance": self.stance,
-            # --- NEW: Add Wounds ---
             "wounds": self.wounds,
-            # --- NEW: Add Experience ---
             "exp_to_next": exp_to_next,
             "exp_label": exp_label,
             "exp_percent": exp_percent,
-            # --- NEW: Add Worn Items ---
             "worn_items": worn_data
         }
 
         # 4. Get Posture and Status Effects
         vitals["posture"] = self.posture.capitalize()
-        vitals["status_effects"] = self.status_effects # This is a list
+        vitals["status_effects"] = self.status_effects 
 
         # 5. Get Roundtime
-        rt_data = self.world.get_combat_state(self.name.lower()) # Use self.world
+        rt_data = self.world.get_combat_state(self.name.lower()) 
         rt_end_time_ms = 0
         rt_duration_ms = 0
-        rt_type = "hard" # Default to hard
+        rt_type = "hard" 
         
         if rt_data:
             rt_end_time_sec = rt_data.get("next_action_time", 0)
-            rt_type = rt_data.get("rt_type", "hard") # <-- NEW
-            current_time = time.time() # Need current time
+            rt_type = rt_data.get("rt_type", "hard") 
+            current_time = time.time() 
             if rt_end_time_sec > current_time:
                 rt_end_time_ms = int(rt_end_time_sec * 1000)
                 rt_duration_ms = int((rt_end_time_sec - current_time) * 1000)
 
         vitals["rt_end_time_ms"] = rt_end_time_ms
         vitals["rt_duration_ms"] = rt_duration_ms
-        vitals["rt_type"] = rt_type # <-- NEW
+        vitals["rt_type"] = rt_type
 
         return vitals
-    # --- END NEW METHOD ---
 
     def __repr__(self):
         return f"<Player: {self.name}>"

@@ -23,24 +23,9 @@ from mud_backend import config
 
 from mud_backend.core.quest_handler import get_active_quest_for_npc
 from mud_backend.core.game_objects import Player
-# --- NEW: Import faction handler ---
 from mud_backend.core import faction_handler
-# --- END NEW ---
-# ---
-# --- THIS IS THE FIX: Import the moved function
-# ---
 from mud_backend.core.room_handler import _handle_npc_idle_dialogue
-# ---
-# --- END FIX
-# ---
 
-# ---
-# --- THIS IS THE FIX: This function is now in game_loop_handler
-# ---
-# (def _get_absorption_room_type... has been REMOVED)
-# ---
-# --- END FIX
-# ---
 
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'static'))
@@ -53,13 +38,8 @@ database = db.get_db()
 print("[SERVER START] Creating World instance...")
 world = World()
 world.socketio = socketio 
-# ---
-# --- THIS IS THE FIX
-# ---
-world.app = app # Give the world access to the Flask app context
-# ---
-# --- END FIX
-# ---
+world.app = app 
+
 if database is not None:
     world.load_all_data(database)
 else:
@@ -70,13 +50,29 @@ else:
 def index():
     return render_template("index.html")
 
-# ---
-# --- THIS IS THE FIX: The function is now defined in room_handler.py
-# ---
-# (The local definition of _handle_npc_idle_dialogue has been removed)
-# ---
-# --- END FIX
-# ---
+
+def persistence_thread(world_instance: World):
+    """Saves dirty players to DB every 60 seconds."""
+    print("[SERVER] Persistence thread started.")
+    while True:
+        time.sleep(60) # Save interval
+        count = 0
+        
+        # We iterate a copy of keys to be thread-safe
+        active_names = list(world_instance.active_players.keys())
+        
+        for name in active_names:
+            p_info = world_instance.get_player_info(name)
+            if not p_info: continue
+            
+            player = p_info.get("player_obj")
+            if player and player._is_dirty:
+                db.save_game_state(player)
+                player._is_dirty = False
+                count += 1
+        
+        if count > 0:
+            print(f"[PERSISTENCE] Saved {count} players to database.")
 
 
 def game_tick_thread(world_instance: World):
@@ -92,9 +88,6 @@ def game_tick_thread(world_instance: World):
 
             # Define callbacks locally to ensure they use the correct context/socketio
             def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
-                # ---
-                # --- MODIFIED: Check AMBIENT and SHOWDEATH flags
-                # ---
                 is_ambient = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay"]
                 is_death = msg_type == "combat_death"
 
@@ -124,18 +117,12 @@ def game_tick_thread(world_instance: World):
                             
                         # This player should receive the message
                         socketio.emit(msg_type, message, to=player_sid)
-                # ---
-                # --- END MODIFIED
-                # ---
                 
             def send_to_player(player_name, message, msg_type):
                 player_info = world_instance.get_player_info(player_name.lower())
                 if not player_info:
                     return
 
-                # ---
-                # --- MODIFIED: Check SHOWDEATH flag
-                # ---
                 player_obj = player_info.get("player_obj")
                 sid = player_info.get("sid")
                 
@@ -147,9 +134,6 @@ def game_tick_thread(world_instance: World):
                     return # Skip this message
                 
                 socketio.emit(msg_type, message, to=sid)
-                # ---
-                # --- END MODIFIED
-                # ---
 
             def send_vitals_to_player(player_name, vitals_data):
                 """Emits a 'update_vitals' event to a specific player."""
@@ -159,10 +143,7 @@ def game_tick_thread(world_instance: World):
                     if sid:
                         socketio.emit("update_vitals", vitals_data, to=sid)
 
-            # ---
-            # --- NEW: PROCESS PLAYER COMMAND QUEUES ---
-            # ---
-            # We iterate a copy of keys to avoid mutation issues if players disconnect
+            # --- PROCESS PLAYER COMMAND QUEUES ---
             active_player_keys = list(world_instance.active_players.keys())
             
             for player_key in active_player_keys:
@@ -189,20 +170,13 @@ def game_tick_thread(world_instance: World):
                         
                         # Emit result to client
                         socketio.emit("command_response", result_data, to=sid)
-            # ---
-            # --- END QUEUE PROCESSING ---
-            # ---
 
-            # ---
-            # --- THIS IS THE FIX: Callbacks are now defined locally
-            # ---
             combat_system.process_combat_tick(
                 world=world_instance,
                 broadcast_callback=broadcast_to_room,
                 send_to_player_callback=send_to_player,
                 send_vitals_callback=send_vitals_to_player
             )
-            # --- END FIX ---
             
             if world_instance.pending_trades:
                 expired_trades = []
@@ -218,8 +192,7 @@ def game_tick_thread(world_instance: World):
                     
                     giver_name = offer_data.get("from_player_name")
                     item_name = offer_data.get("item_name", "their offer")
-                    trade_type = offer_data.get("trade_type", "give")
-
+                    
                     receiver_obj = world_instance.get_player_obj(receiver_name)
                     if receiver_obj:
                         receiver_obj.send_message(f"The offer from {giver_name} for {item_name} has expired.")
@@ -228,9 +201,6 @@ def game_tick_thread(world_instance: World):
                     if giver_obj:
                         giver_obj.send_message(f"Your offer to {receiver_name} for {item_name} has expired.")
 
-            # ---
-            # --- NEW: CHECK PENDING GROUP INVITES
-            # ---
             if world_instance.pending_group_invites:
                 expired_invites = []
                 with world_instance.group_lock:
@@ -245,7 +215,7 @@ def game_tick_thread(world_instance: World):
                     
                     inviter_name = invite_data.get("from_player_name", "Someone")
                     
-                    # Notify the invitee (who declined by timing out)
+                    # Notify the invitee
                     invitee_obj = world_instance.get_player_obj(invitee_name)
                     if invitee_obj:
                         invitee_obj.send_message(f"The group invitation from {inviter_name} has expired.")
@@ -254,9 +224,6 @@ def game_tick_thread(world_instance: World):
                     inviter_obj = world_instance.get_player_obj(inviter_name.lower())
                     if inviter_obj:
                         inviter_obj.send_message(f"Your group invitation to {invitee_name.capitalize()} has expired.")
-            # ---
-            # --- END NEW LOGIC
-            # ---
             
             active_players_list = world_instance.get_all_players_info()
             for player_name_lower, player_data in active_players_list:
@@ -293,11 +260,9 @@ def game_tick_thread(world_instance: World):
                     broadcast_callback=broadcast_to_room
                 )
 
-            # ---
-            # --- NEW: Band XP Payout Tick (Every 5 minutes)
-            # ---
+            # Band XP Payout Tick
             time_since_last_band_payout = current_time - world_instance.last_band_payout_time
-            if time_since_last_band_payout >= 300: # 300 seconds = 5 minutes
+            if time_since_last_band_payout >= 300: 
                 world_instance.last_band_payout_time = current_time
                 
                 if config.DEBUG_MODE:
@@ -310,44 +275,23 @@ def game_tick_thread(world_instance: World):
                             if player_obj and player_obj.band_xp_bank > 0 and player_obj.death_sting_points == 0:
                                 amount = player_obj.band_xp_bank
                                 player_obj.band_xp_bank = 0
-                                
-                                # Use add_field_exp directly, as this is a *payout*
-                                # not a new *gain*. grant_experience is for new XP.
                                 player_obj.add_field_exp(amount, is_band_share=True)
-                                
-                                # Save the player's new state (bank emptied)
                                 db.save_game_state(player_obj)
                                 
                 except Exception as e:
                     print(f"[ERROR] Failed during Band XP Payout: {e}")
-            # ---
-            # --- END NEW
-            # ---
 
-            # ---
-            # --- THIS IS THE FIX: Callbacks are now defined locally
-            # ---
             did_global_tick = check_and_run_game_tick(
                 world=world_instance,
                 broadcast_callback=broadcast_to_room,
                 send_to_player_callback=send_to_player,
                 send_vitals_callback=send_vitals_to_player
             )
-            # --- END FIX ---
 
             if did_global_tick:
                socketio.emit('tick')
 
-            # ---
-            # --- MODIFIED: Faster loop for responsive queuing
-            # ---
-            # Was 1.0, now 0.1. 
-            # This ensures queue checks happen 10 times a second.
-            # Logic relying on seconds (like timestamps) works fine.
-            # Logic relying on "Ticks" (like environment) is safe because
-            # check_and_run_game_tick handles its own time delta check.
             time.sleep(0.1) 
-            # --- END MODIFIED ---
 
 @socketio.on('connect')
 def handle_connect():
@@ -363,11 +307,8 @@ def handle_disconnect():
     player_info = None
     
     if player_name_to_remove:
-        # ---
-        # --- MODIFIED: Get player object *before* removing
-        # ---
         player_obj = world.get_player_obj(player_name_to_remove.lower())
-        player_info = world.remove_player(player_name_to_remove.lower()) # This handles group leave
+        player_info = world.remove_player(player_name_to_remove.lower()) 
             
     if player_name_to_remove and player_info:
         room_id = player_info["current_room_id"]
@@ -375,10 +316,9 @@ def handle_disconnect():
         disappears_message = f'<span class="keyword" data-name="{player_name_to_remove}" data-verbs="look">{player_name_to_remove}</span> disappears.'
         emit("message", disappears_message, to=room_id)
         
-        # --- NEW: Save player on disconnect ---
+        # --- Save player on disconnect ---
         if player_obj:
             db.save_game_state(player_obj)
-        # --- END NEW ---
     else:
         print(f"[CONNECTION] Unauthenticated client disconnected: {sid}")
 
@@ -420,25 +360,18 @@ def handle_command_event(data):
                 chars = db.fetch_characters_for_account(username)
                 if not chars:
                     session['state'] = 'char_create_name'
-                    # --- THIS IS THE FIX ---
-                    # Send the message from the server only in this specific case
                     emit("message", "No characters found on this account.", to=sid)
-                    # --- END FIX ---
                     emit("prompt_create_character", to=sid)
                 else:
                     session['characters'] = [c['name'] for c in chars]
                     session['state'] = 'char_select'
                     emit("show_char_list", {"chars": session['characters']}, to=sid)
             
-            # ---
-            # --- NEW: Handle bad password
-            # ---
             else:
                 print(f"[AUTH] Failed login for: {username}")
                 emit("login_failed", "Invalid password.", to=sid)
                 session['state'] = 'auth_user'
                 emit("prompt_username", to=sid)
-            # --- END NEW ---
         
         elif state == 'char_create_name':
             new_char_name = command.capitalize()
@@ -505,13 +438,8 @@ def handle_command_event(data):
             
             emit("command_response", result_data, to=sid)
             
-            # ---
-            # --- NEW: Send Band join/pending messages on login
-            # ---
             player_obj = world.get_player_obj(char_name.lower())
             if player_obj:
-                # 1. Check for pending band invites
-                # --- FIX: Need to check all bands ---
                 band_with_invite = None
                 with world.band_lock:
                     for band in world.active_bands.values():
@@ -526,20 +454,14 @@ def handle_command_event(data):
                         f"Type '<span class='keyword' data-command='band join {leader_name}'>BAND JOIN {leader_name}</span>' to accept."
                     )
                 
-                # 2. Check for banked XP
                 if player_obj.band_xp_bank > 0:
                     if player_obj.death_sting_points > 0:
                         player_obj.send_message(f"You have {player_obj.band_xp_bank} banked experience from your band, but you must work off your Death's Sting to receive it.")
                     else:
-                        # Grant it immediately
                         amount = player_obj.band_xp_bank
                         player_obj.band_xp_bank = 0
                         player_obj.add_field_exp(amount, is_band_share=True)
-                        db.save_game_state(player_obj) # Save change
-            # ---
-            # --- END NEW
-            # ---
-
+                        db.save_game_state(player_obj) 
 
         elif state == 'in_game':
             player_name = session.get('player_name')
@@ -578,9 +500,6 @@ def handle_command_event(data):
                 
             emit("command_response", result_data, to=sid)
 
-            # ---
-            # --- NEW: AGGRO CHECKS (Player and NPC)
-            # ---
             if player_obj and new_room_id:
                 player_id = player_name.lower()
                 player_state = world.get_combat_state(player_id)
@@ -588,11 +507,9 @@ def handle_command_event(data):
                 
                 room_data = world.get_room(new_room_id)
                 if room_data:
-                    # Use a copy to iterate over while checking for combat
                     room_objects_copy = list(room_data.get("objects", []))
                     
                     for obj in room_objects_copy:
-                        # --- Check 1: Should this object aggro the player? ---
                         if not player_in_combat and (obj.get("is_monster") or obj.get("is_npc")):
                             monster_uid = obj.get("uid")
                             if not monster_uid: continue
@@ -616,15 +533,10 @@ def handle_command_event(data):
                                 if world.get_monster_hp(monster_uid) is None:
                                     world.set_monster_hp(monster_uid, obj.get("max_hp", 50))
                                 
-                                player_in_combat = True # Player is now in combat, skip other aggro checks
+                                player_in_combat = True 
                         
-                        # --- Check 2: Should this object aggro another NPC? ---
                         if obj.get("is_monster") or obj.get("is_npc"):
-                            # This helper checks if the NPC is in combat and finds a KOS target
                             monster_ai._check_and_start_npc_combat(world, obj, new_room_id)
-            # ---
-            # --- END AGGRO CHECKS
-            # ---
 
     except Exception as e:
         print(f"!!! CRITICAL ERROR in handle_command_event (state: {state}) !!!")
@@ -638,6 +550,8 @@ def handle_command_event(data):
 
 if __name__ == "__main__":
     threading.Thread(target=game_tick_thread, args=(world,), daemon=True).start()
+    # --- START PERSISTENCE THREAD ---
+    threading.Thread(target=persistence_thread, args=(world,), daemon=True).start()
     
     print("[SERVER START] Running SocketIO server on http://127.0.0.1:8024")
     socketio.run(app, host='0.0.0.0', port=8024, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
