@@ -16,55 +16,11 @@ from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend import config
 
 from mud_backend.core.utils import get_stat_bonus, RACE_MODIFIERS, DEFAULT_RACE_MODS
-# --- NEW: Import faction handler ---
 from mud_backend.core import faction_handler
-# ---
-# --- MODIFICATION: Import LBD skill handler ---
-# ---
 from mud_backend.core.skill_handler import attempt_skill_learning
-# ---
-# --- END MODIFICATION
-# ---
 
 
-# ---
-# --- NEW HELPER FUNCTION: _get_weighted_attack
-# ---
-def _get_weighted_attack(attack_list: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """
-    Selects a random attack from a list based on weighted chances.
-    
-    Example list:
-    [
-        { "verb": "slash", "damage_type": "slash", "chance": 0.7 },
-        { "verb": "stab", "damage_type": "puncture", "chance": 0.3 }
-    ]
-    """
-    if not attack_list:
-        return None
-
-    # Calculate total weight
-    total_weight = sum(attack.get("chance", 0) for attack in attack_list)
-    if total_weight == 0:
-        # Failsafe: if no chances are defined, pick one at random
-        return random.choice(attack_list)
-    
-    # Get a random number between 0 and total_weight
-    roll = random.uniform(0, total_weight)
-    
-    # Find which attack this roll corresponds to
-    upto = 0
-    for attack in attack_list:
-        chance = attack.get("chance", 0)
-        if upto + chance >= roll:
-            return attack
-        upto += chance
-    
-    # Failsafe (shouldn't be reached, but good to have)
-    return random.choice(attack_list)
-# ---
-# --- END NEW HELPER
-# ---
+# --- CONSTANTS & DATA ---
 
 STANCE_MODIFIERS = {
     "offensive": {"as_mod": 1.15, "ds_mod": 0.70},
@@ -75,18 +31,21 @@ STANCE_MODIFIERS = {
     "defensive": {"as_mod": 0.75, "ds_mod": 1.25},
     "creature":  {"as_mod": 1.00, "ds_mod": 1.00}
 }
+
 POSTURE_MODIFIERS = {
     "standing":  {"as_mod": 1.0, "ds_mod": 1.0},
     "sitting":   {"as_mod": 0.5, "ds_mod": 0.5},
     "kneeling":  {"as_mod": 0.75, "ds_mod": 0.75},
     "prone":     {"as_mod": 0.3, "ds_mod": 0.9}
 }
+
 POSTURE_PERCENTAGE = {
     "standing":  1.00,
     "sitting":   0.50,
     "kneeling":  0.75,
     "prone":     0.90
 }
+
 SHIELD_DATA = {
     "small_wooden_shield": {
         "size": "small",
@@ -99,6 +58,118 @@ SHIELD_DATA = {
 }
 DEFAULT_SHIELD_DATA = SHIELD_DATA["small_wooden_shield"]
 
+HIT_LOCATIONS = [
+    "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
+    "right_leg", "left_leg", "right_arm", "left_arm", "right_hand", "left_hand"
+]
+
+
+# --- COMBAT LOG BUILDER ---
+
+class CombatLogBuilder:
+    """
+    Handles the generation of combat messages for different perspectives
+    (Attacker, Defender, Room/Observer).
+    """
+    
+    PLAYER_MISS_MESSAGES = [
+        "   A clean miss.",
+        "   You miss {defender} completely.",
+        "   {defender} avoids the attack!",
+        "   An awkward miss.",
+        "   Your attack goes wide."
+    ]
+    
+    MONSTER_MISS_MESSAGES = [
+        "   A clean miss.",
+        "   {attacker} misses {defender} completely.",
+        "   {defender} avoids the attack!",
+        "   An awkward miss.",
+        "   The attack goes wide."
+    ]
+
+    def __init__(self, attacker_name: str, defender_name: str, weapon_name: str, verb: str):
+        self.attacker = attacker_name
+        self.defender = defender_name
+        self.weapon = weapon_name
+        self.verb = verb
+        self.verb_npc = self._conjugate(verb)
+
+    def _conjugate(self, verb: str) -> str:
+        """Conjugates a verb for 3rd person (e.g., slash -> slashes)."""
+        if verb.endswith(('s', 'sh', 'ch', 'x', 'o')):
+            return verb + "es"
+        return verb + "s"
+
+    def get_attempt_message(self, perspective: str) -> str:
+        """
+        Returns the 'X attacks Y' message based on who is viewing it.
+        perspective: 'attacker' (You...), 'defender' (He...), 'room' (Bob...)
+        """
+        if perspective == 'attacker':
+            return f"You {self.verb} {self.weapon} at {self.defender}!"
+        elif perspective == 'defender':
+            return f"{self.attacker} {self.verb_npc} {self.weapon} at you!"
+        else: # room/observer
+            return f"{self.attacker} {self.verb_npc} {self.weapon} at {self.defender}!"
+
+    def get_hit_result_message(self, total_damage: int) -> str:
+        """Returns the specific damage string appended to the attempt."""
+        return f"   ... and hits for {total_damage} points of damage!"
+
+    def get_broadcast_hit_message(self, perspective: str, total_damage: int) -> str:
+        """Returns the full sentence hit message for the room/logs."""
+        if perspective == 'attacker':
+            return f"You hit {self.defender} for {total_damage} points of damage!"
+        else: # room/defender view of attacker
+            return f"{self.attacker} hits {self.defender} for {total_damage} points of damage!"
+
+    def get_miss_message(self, perspective: str) -> str:
+        """Returns a randomized miss message."""
+        if perspective == 'attacker':
+            return random.choice(self.PLAYER_MISS_MESSAGES).format(defender=self.defender)
+        elif perspective == 'defender':
+            # Swap names for the perspective of the defender reading "Attacker misses You"
+            # But the template usually says "{attacker} misses {defender}"
+            # We need to ensure the template makes sense.
+            # Current templates: "{attacker} misses {defender} completely."
+            # If perspective is defender, we want: "Goblin misses You completely."
+            msg = random.choice(self.MONSTER_MISS_MESSAGES)
+            return msg.format(attacker=self.attacker, defender="you")
+        else: # room
+            msg = random.choice(self.MONSTER_MISS_MESSAGES)
+            return msg.format(attacker=self.attacker, defender=self.defender)
+
+    def get_broadcast_miss_message(self, perspective: str) -> str:
+        """Returns the simple broadcast miss string."""
+        if perspective == 'attacker':
+            return f"You miss {self.defender}."
+        else:
+            return f"{self.attacker} misses {self.defender}."
+
+
+# --- HELPER FUNCTIONS ---
+
+def _get_weighted_attack(attack_list: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    Selects a random attack from a list based on weighted chances.
+    """
+    if not attack_list:
+        return None
+
+    total_weight = sum(attack.get("chance", 0) for attack in attack_list)
+    if total_weight == 0:
+        return random.choice(attack_list)
+    
+    roll = random.uniform(0, total_weight)
+    upto = 0
+    for attack in attack_list:
+        chance = attack.get("chance", 0)
+        if upto + chance >= roll:
+            return attack
+        upto += chance
+    
+    return random.choice(attack_list)
 
 def get_entity_race(entity: Any) -> str:
     if isinstance(entity, Player):
@@ -139,44 +210,107 @@ def _get_armor_hindrance(armor_item_data: dict | None, defender_skills: dict) ->
     effective_ap = base_ap if skill_bonus <= threshold else base_ap / 2
     return max(0.0, 1.0 + (effective_ap / 200.0))
 
+def _get_random_hit_location() -> str:
+    return random.choice(HIT_LOCATIONS)
+
+def _get_entity_critical_divisor(entity: Any, armor_data: Optional[Dict]) -> int:
+    if armor_data:
+        return armor_data.get("critical_divisor", 11) 
+    if isinstance(entity, dict):
+        return entity.get("critical_divisor", 5) 
+    return 5 
+
+def _get_randomized_crit_rank(base_rank: int) -> int:
+    if base_rank <= 0: return 0
+    if base_rank == 1: return 1
+    if base_rank == 2: return random.choice([1, 2])
+    if base_rank == 3: return random.choice([2, 3])
+    if base_rank == 4: return random.choice([2, 3, 4])
+    if base_rank == 5: return random.choice([3, 4, 5])
+    if base_rank == 6: return random.choice([3, 4, 5, 6])
+    if base_rank == 7: return random.choice([4, 5, 6, 7])
+    if base_rank == 8: return random.choice([4, 5, 6, 7, 8])
+    return random.choice([5, 6, 7, 8, 9])
+
+def _find_combatant(world: 'World', entity_id: str) -> Optional[Any]:
+    """
+    Finds a player object or a MERGED monster/NPC dictionary.
+    """
+    player_info = world.get_player_info(entity_id.lower())
+    if player_info: return player_info.get("player_obj")
+
+    for room in world.game_rooms.values():
+        for obj_stub in room.get("objects", []):
+            if obj_stub.get("uid") == entity_id:
+                monster_id = obj_stub.get("monster_id")
+                if monster_id:
+                    template = world.game_monster_templates.get(monster_id)
+                    if template:
+                        merged_obj = copy.deepcopy(template)
+                        merged_obj.update(obj_stub)
+                        return merged_obj
+                    else:
+                        return obj_stub
+                elif obj_stub.get("is_npc"):
+                    return obj_stub
+                else:
+                    return None 
+    return None
+
+def _get_critical_result(world: 'World', damage_type: str, location: str, rank: int) -> Dict[str, Any]:
+    if rank <= 0:
+        return {"message": "", "extra_damage": 0, "wound_rank": 0}
+
+    if damage_type not in world.game_criticals:
+        damage_type = "slash"
+        
+    crit_table = world.game_criticals[damage_type]
+    
+    if location not in crit_table:
+        available_locations = list(crit_table.keys())
+        if available_locations:
+            location = available_locations[0] 
+        else:
+            return {"message": "A solid hit!", "extra_damage": 1, "wound_rank": 1}
+            
+    location_table = crit_table[location]
+    rank_str = str(min(rank, max(int(k) for k in location_table.keys())))
+    result = location_table.get(rank_str, {"message": "A solid hit!", "extra_damage": 1, "wound_rank": 1})
+    result.setdefault("stun", False)
+    result.setdefault("fatal", False)
+    return result
+
+
+# --- CALCULATION LOGIC ---
+
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict,
                               weapon_item_data: dict | None, target_armor_type: str,
                               attacker_posture: str, attacker_stance: str, attacker_race: str) -> int:
     as_val = 0
-    as_components_log = []
-    weapon_name_display = "Barehanded"
-
     strength_stat = attacker_stats.get("STR", 50)
     str_bonus = get_stat_bonus(strength_stat, "STR", attacker_race)
     as_val += str_bonus
-    as_components_log.append(f"Str({str_bonus})")
 
     if not weapon_item_data or weapon_item_data.get("item_type") != "weapon": 
         brawling_skill_rank = attacker_skills.get("brawling", 0)
         brawling_bonus = calculate_skill_bonus(brawling_skill_rank)
         as_val += brawling_bonus
-        as_components_log.append(f"Brawl({brawling_bonus})")
         base_barehanded_as = getattr(config, 'BAREHANDED_BASE_AS', 0)
         as_val += base_barehanded_as
-        if base_barehanded_as != 0: as_components_log.append(f"BaseAS({base_barehanded_as})")
     else:
-        weapon_name_display = weapon_item_data.get("name", "Unknown Weapon")
         weapon_skill_name = weapon_item_data.get("skill")
         if weapon_skill_name:
             skill_rank = attacker_skills.get(weapon_skill_name, 0)
             skill_bonus = calculate_skill_bonus(skill_rank)
             as_val += skill_bonus
-            as_components_log.append(f"Skill({skill_bonus})")
 
         avd_mods = weapon_item_data.get("avd_modifiers", {})
         avd_bonus = avd_mods.get(target_armor_type, avd_mods.get(config.DEFAULT_UNARMORED_TYPE, 0))
         as_val += avd_bonus
-        if avd_bonus != 0: as_components_log.append(f"ItemAvD({avd_bonus})")
 
     cman_ranks = attacker_skills.get("combat_maneuvers", 0)
     cman_bonus = math.floor(cman_ranks / 2)
     as_val += cman_bonus
-    if cman_bonus != 0: as_components_log.append(f"CMan({cman_bonus})")
 
     posture_mod = POSTURE_MODIFIERS.get(attacker_posture, POSTURE_MODIFIERS["standing"])["as_mod"]
     as_val = int(as_val * posture_mod)
@@ -185,8 +319,6 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     stance_mod = stance_data["as_mod"]
     final_as = int(as_val * stance_mod)
 
-    if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG AS CALC for {attacker_name} (Wpn: {weapon_name_display}, Pos: {attacker_posture}, Stance: {attacker_stance}): Raw={as_val} * Stance({stance_mod}) = {final_as} [{' + '.join(as_components_log)}]")
     return final_as
 
 def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defender_race: str,
@@ -276,107 +408,13 @@ def calculate_defense_strength(defender: Any,
     stance_mod = stance_data["ds_mod"]
     final_ds = int(base_ds * stance_mod)
 
-    if config.DEBUG_MODE and getattr(config, 'DEBUG_COMBAT_ROLLS', False):
-        print(f"DEBUG DS CALC for {name} (Pos: {posture}({posture_percent}), Stance: {defender_stance}({stance_mod})): Base={base_ds} (E:{evade_ds}+B:{block_ds}+P:{parry_ds}+Buff:{buff_bonus}) -> Final={final_ds}")
-
     return final_ds
 
-
-# ---
-# --- MODIFICATION: Removed HIT_MESSAGES and get_flavor_message
-# ---
-
-# ---
-# --- NEW: Added lists for randomized miss messages
-# ---
-PLAYER_MISS_MESSAGES = [
-    "   A clean miss.",
-    "   You miss {defender} completely.",
-    "   {defender} avoids the attack!",
-    "   An awkward miss.",
-    "   Your attack goes wide."
-]
-MONSTER_MISS_MESSAGES = [
-    "   A clean miss.",
-    "   {attacker} misses {defender} completely.",
-    "   {defender} avoids the attack!",
-    "   An awkward miss.",
-    "   The attack goes wide."
-]
-# --- END NEW ---
+def calculate_roundtime(agility: int) -> float:
+    return max(3.0, 5.0 - ((agility - 50) / 25))
 
 
-HIT_LOCATIONS = [
-    "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
-    "right_leg", "left_leg", "right_arm", "left_arm", "right_hand", "left_hand"
-]
-
-def _get_random_hit_location() -> str:
-    return random.choice(HIT_LOCATIONS)
-
-def _get_entity_critical_divisor(entity: Any, armor_data: Optional[Dict]) -> int:
-    if armor_data:
-        return armor_data.get("critical_divisor", 11) 
-    
-    if isinstance(entity, dict):
-        return entity.get("critical_divisor", 5) 
-        
-    return 5 
-
-def _get_randomized_crit_rank(base_rank: int) -> int:
-    if base_rank <= 0: return 0
-    if base_rank == 1: return 1
-    if base_rank == 2: return random.choice([1, 2])
-    if base_rank == 3: return random.choice([2, 3])
-    if base_rank == 4: return random.choice([2, 3, 4])
-    if base_rank == 5: return random.choice([3, 4, 5])
-    if base_rank == 6: return random.choice([3, 4, 5, 6])
-    if base_rank == 7: return random.choice([4, 5, 6, 7])
-    if base_rank == 8: return random.choice([4, 5, 6, 7, 8])
-    return random.choice([5, 6, 7, 8, 9])
-
-def _get_critical_result(
-    world: 'World', 
-    damage_type: str, 
-    location: str, 
-    rank: int
-) -> Dict[str, Any]:
-    if rank <= 0:
-        return {"message": "", "extra_damage": 0, "wound_rank": 0}
-
-    # --- THIS IS THE FIX: Check for the damage type ---
-    if damage_type not in world.game_criticals:
-        # Failsafe: if the type doesn't exist (e.g., "Acid"), default to "slash"
-        # This allows you to add new damage types without crashing the server
-        # before you've written their crit tables.
-        damage_type = "slash"
-    # --- END FIX ---
-        
-    crit_table = world.game_criticals[damage_type]
-    
-    # ---
-    # --- THIS IS THE FIX ---
-    #
-    if location not in crit_table:
-        # Fallback: Use the first available location for this damage type
-        available_locations = list(crit_table.keys())
-        if available_locations:
-            location = available_locations[0] # e.g., for "slash", this will default to "head"
-        else:
-            # Failsafe if the crit table is empty (should not happen)
-            return {"message": "A solid hit!", "extra_damage": 1, "wound_rank": 1}
-    # ---
-    # --- END FIX ---
-            
-    location_table = crit_table[location]
-    
-    rank_str = str(min(rank, max(int(k) for k in location_table.keys())))
-    
-    result = location_table.get(rank_str, {"message": "A solid hit!", "extra_damage": 1, "wound_rank": 1})
-    result.setdefault("stun", False)
-    result.setdefault("fatal", False)
-    return result
-
+# --- MAIN COMBAT RESOLUTION ---
 
 def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_global: dict) -> dict:
     is_attacker_player = isinstance(attacker, Player)
@@ -391,24 +429,11 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     defender_name = defender.name if is_defender_player else defender.get("name", "Creature")
     defender_stance = defender.stance if is_defender_player else defender.get("stance", "creature")
     
-    # ---
-    # --- MODIFICATION: Make defender name possessive
-    # ---
-    defender_name_possessive = f"{defender_name}'s"
-    if defender_name.endswith('s'):
-        defender_name_possessive = f"{defender_name}'"
-    # --- END MODIFICATION ---
+    # --- Possessive Names ---
+    attacker_name_possessive = f"{attacker_name}'s" if not attacker_name.endswith('s') else f"{attacker_name}'"
+    defender_name_possessive = f"{defender_name}'s" if not defender_name.endswith('s') else f"{defender_name}'"
 
-    # ---
-    # --- THIS IS THE FIX: Define attacker_name_possessive
-    # ---
-    attacker_name_possessive = f"{attacker_name}'s"
-    if attacker_name.endswith('s'):
-        attacker_name_possessive = f"{attacker_name}'"
-    # ---
-    # --- END FIX
-    # ---
-
+    # --- Gear Check ---
     if is_defender_player:
         defender_armor_data = defender.get_equipped_item_data("torso")
         defender_shield_data = defender.get_equipped_item_data("offhand")
@@ -430,105 +455,61 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     if defender_offhand_data and defender_offhand_data.get("item_type") == "shield": 
         defender_offhand_data = None
         
-    # ---
-    # --- THIS IS THE REFACTORED ATTACK SELECTION LOGIC
-    # ---
-    
+    # --- Attack Selection & Data Gathering ---
     selected_attack: Optional[Dict[str, Any]] = None
     attack_list: List[Dict[str, Any]] = []
     attacker_weapon_data: Optional[Dict[str, Any]] = None
     
     if is_attacker_player:
-        # ---
-        # --- MODIFICATION: LBD BUG FIX
-        # ---
-        # We replace the `add_field_exp(1)` call with LBD logic
+        # LBD Skill Gain
         attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
         weapon_skill_to_learn = "brawling"
         if attacker_weapon_data:
             weapon_skill_to_learn = attacker_weapon_data.get("skill", "brawling")
-        
-        # Grant LBD for the weapon skill
         attempt_skill_learning(attacker, weapon_skill_to_learn)
-        # ---
-        # --- END MODIFICATION
-        # ---
         
         if attacker_weapon_data:
-            # Player is using a weapon, get attacks from the item
             attack_list = attacker_weapon_data.get("attacks", [])
         else:
-            # Player is brawling
-            # --- MODIFICATION: Use base verb "punch" ---
             attack_list = [{ "verb": "punch", "damage_type": "crush", "weapon_name": "your fist", "chance": 1.0 }]
     else:
-        # Attacker is an NPC/Monster
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
         attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
         if attacker_weapon_data:
-            # Monster is using an equipped weapon, get attacks from the item
             attack_list = attacker_weapon_data.get("attacks", [])
         else:
-            # Monster is using natural attacks, get attacks from monster data
             attack_list = attacker.get("attacks", [])
         
-    # Failsafe for misconfigured monsters/items
     if not attack_list:
-        # --- MODIFICATION: Use base verb "attack" ---
         attack_list = [{ "verb": "attack", "damage_type": "crush", "weapon_name": "something", "chance": 1.0 }]
 
-    # Select the attack
     selected_attack = _get_weighted_attack(attack_list)
     if not selected_attack:
-        # This should never happen if the failsafe above works
         selected_attack = attack_list[0]
 
-    # Now, determine verb, damage type, and weapon name from the *selected* attack
-    # --- MODIFICATION: Get base verb ---
-    attack_verb = selected_attack.get("verb", "attack") # e.g., "stab", "slash", "pinch"
+    attack_verb = selected_attack.get("verb", "attack")
     weapon_damage_type = selected_attack.get("damage_type", "crush")
     
-    # Get damage factors and weapon display name
     weapon_damage_factor = 0.100
-    weapon_display = ""
-    # ---
-    # --- MODIFICATION: Get broadcast weapon display name
-    # ---
-    broadcast_weapon_display = "" # e.g., "his fist" or "a sword"
-    # --- END MODIFICATION ---
+    broadcast_weapon_display = "" 
 
     if attacker_weapon_data:
-        # Player or NPC is using a weapon ITEM
-        # Get factors from the weapon item itself
         weapon_damage_factor = attacker_weapon_data.get("damage_factors", {}).get(defender_armor_type_str, 0.100)
-        weapon_display = attacker_weapon_data.get("name", "their weapon")
-        
-        # --- MODIFICATION ---
         if is_attacker_player:
             broadcast_weapon_display = f"your {attacker_weapon_data.get('name', 'weapon')}"
         else:
             broadcast_weapon_display = f"{attacker_name_possessive} {attacker_weapon_data.get('name', 'weapon')}"
-        # --- END MODIFICATION ---
     else:
-        # Player brawling or Monster natural attack
-        # Get weapon name from the selected attack
-        weapon_display = selected_attack.get("weapon_name", "their fist")
-        
-        # --- MODIFICATION ---
+        # Natural / Unarmed
         if is_attacker_player:
              broadcast_weapon_display = "your fist"
         else:
-             # e.g., "its claw"
              broadcast_weapon_display = selected_attack.get("weapon_name", f"{attacker_name_possessive} fist")
-        # --- END MODIFICATION ---
         
         damage_factors = attacker.get("damage_factors", {}) if not is_attacker_player else {}
         weapon_damage_factor = damage_factors.get(defender_armor_type_str, 0.100)
 
-    # ---
-    # --- END REFACTORED LOGIC
-    # ---
-
+    # --- Roll Calculation ---
     attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
     is_ranged_attack = attacker_weapon_type in ["bow"]
 
@@ -555,51 +536,31 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         f"+ ADV: +{combat_advantage} + d100: +{d100_roll} = +{combat_roll_result}"
     )
     
-    # ---
-    # --- NEW: Build all message parts
-    # ---
-    msg_vars = {
-        "attacker": attacker_name, 
-        "defender": defender_name, 
-        "weapon_display": weapon_display, 
-        "verb": attack_verb
-    }
-    
+    # --- Initialize CombatLogBuilder ---
+    log_builder = CombatLogBuilder(attacker_name, defender_name, broadcast_weapon_display, attack_verb)
+
     results = {
         'hit': False, 'damage': 0, 
-        'attempt_msg': "",          # For the attacker
-        'defender_attempt_msg': "", # For the defender
-        'broadcast_attempt_msg': "",# For the room
-        'roll_string': roll_string, # For attacker/defender
-        'result_msg': "",           # For attacker/defender
-        'broadcast_result_msg': "", # For the room
-        'critical_msg': "",         # For everyone
+        'attempt_msg': "",          # Message sent to the entity executing the logic (Attacker if Player)
+        'defender_attempt_msg': "", # Message sent to the target (Defender if Player)
+        'broadcast_attempt_msg': "",# Message sent to room
+        'roll_string': roll_string, 
+        'result_msg': "",           
+        'broadcast_result_msg': "", 
+        'critical_msg': "",         
         'is_fatal': False
     }
 
-    # ---
-    # --- MODIFICATION: GRAMMAR FIX
-    # ---
-    # Conjugate for 3rd person
-    attack_verb_npc = attack_verb + "s"
-    if attack_verb.endswith('s') or attack_verb.endswith('sh') or attack_verb.endswith('ch') or attack_verb.endswith('x') or attack_verb.endswith('o'):
-        attack_verb_npc = attack_verb + "es" # e.g., slash -> slashes, punch -> punches, bash -> bashes
-
-    # Build the "Attempt" messages
+    # --- Generate Attempt Messages ---
     if is_attacker_player:
-        results['attempt_msg'] = f"You {attack_verb} {weapon_display} at {defender_name}!"
-        results['defender_attempt_msg'] = "" # Not used in this path
-        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb_npc} {weapon_display} at {defender_name}!"
+        results['attempt_msg'] = log_builder.get_attempt_message('attacker')
+        results['broadcast_attempt_msg'] = log_builder.get_attempt_message('room')
     else:
-        # Attacker is monster
-        results['attempt_msg'] = f"{attacker_name} {attack_verb_npc} {weapon_display} at you!" # This is for the player (defender)
-        results['defender_attempt_msg'] = "" # Not used in this path
-        results['broadcast_attempt_msg'] = f"{attacker_name} {attack_verb_npc} {weapon_display} at {defender_name}!"
-    # ---
-    # --- END GRAMMAR FIX
-    # ---
+        # If attacker is monster, 'attempt_msg' is what the Player (defender) sees
+        results['attempt_msg'] = log_builder.get_attempt_message('defender')
+        results['broadcast_attempt_msg'] = log_builder.get_attempt_message('room')
 
-    # Build the "Result" messages
+    # --- Resolve Hit/Miss ---
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
         
@@ -624,88 +585,39 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
             if wound_rank > existing_wound:
                 defender.wounds[hit_location] = wound_rank
         
-        # Create result message
-        results['result_msg'] = f"   ... and hits for {total_damage} points of damage!"
+        # --- Generate Hit Messages ---
+        results['result_msg'] = log_builder.get_hit_result_message(total_damage)
         
-        # Create broadcast result (simpler)
         if is_attacker_player:
-            results['broadcast_result_msg'] = f"You hit {defender_name} for {total_damage} points of damage!"
+            results['broadcast_result_msg'] = log_builder.get_broadcast_hit_message('attacker', total_damage)
         else:
-            results['broadcast_result_msg'] = f"{attacker_name} hits {defender_name} for {total_damage} points of damage!"
+            results['broadcast_result_msg'] = log_builder.get_broadcast_hit_message('room', total_damage)
         
-        # Create critical message (if any)
         crit_msg = crit_result.get("message", "").format(defender=defender_name)
         if crit_msg:
             results['critical_msg'] = f"   {crit_msg}"
         
     else:
-        # It's a miss
+        # --- Generate Miss Messages ---
         results['hit'] = False
         if is_attacker_player:
-            results['result_msg'] = random.choice(PLAYER_MISS_MESSAGES).format(**msg_vars)
-            results['broadcast_result_msg'] = f"You miss {defender_name}."
+            results['result_msg'] = log_builder.get_miss_message('attacker')
+            results['broadcast_result_msg'] = log_builder.get_broadcast_miss_message('attacker')
         else:
-            # Attacker is monster, defender is player
-            # We must swap 'attacker' and 'defender' for the player's view
-            defender_pov_vars = {
-                "attacker": "You", 
-                "defender": attacker_name, 
-                "weapon_display": weapon_display, 
-                "verb": attack_verb
-            }
-            results['result_msg'] = random.choice(PLAYER_MISS_MESSAGES).format(**defender_pov_vars)
-            results['broadcast_result_msg'] = f"{attacker_name} misses {defender_name}."
+            # Attacker is monster, so 'result_msg' is for the defender (Player)
+            results['result_msg'] = log_builder.get_miss_message('defender')
+            results['broadcast_result_msg'] = log_builder.get_broadcast_miss_message('room')
 
     return results
-    # ---
-    # --- END NEW MESSAGE LOGIC
-    # ---
-
-
-def calculate_roundtime(agility: int) -> float:
-    return max(3.0, 5.0 - ((agility - 50) / 25))
-
-# ---
-# --- THIS IS THE FIX (Problem 1: Monster Name)
-# ---
-def _find_combatant(world: 'World', entity_id: str) -> Optional[Any]:
-    """
-    Finds a player object or a MERGED monster/NPC dictionary.
-    """
-    player_info = world.get_player_info(entity_id.lower())
-    if player_info: return player_info.get("player_obj")
-
-    # Not a player, search all rooms for the entity UID
-    for room in world.game_rooms.values():
-        for obj_stub in room.get("objects", []):
-            if obj_stub.get("uid") == entity_id:
-                # Found the stub, now merge it
-                monster_id = obj_stub.get("monster_id")
-                if monster_id:
-                    template = world.game_monster_templates.get(monster_id)
-                    if template:
-                        merged_obj = copy.deepcopy(template)
-                        merged_obj.update(obj_stub)
-                        return merged_obj
-                    else:
-                        # Return stub as a fallback if template is missing
-                        return obj_stub
-                elif obj_stub.get("is_npc"):
-                    # It's a non-monster NPC (e.g., innkeeper), stub is the full data
-                    return obj_stub
-                else:
-                    # This was a UID for something else (e.g., a corpse?)
-                    return None # Not a valid combatant
-    
-    return None # Not found anywhere
-# ---
-# --- END FIX
-# ---
 
 def stop_combat(world: 'World', combatant_id: str, target_id: str):
     world.stop_combat_for_all(combatant_id, target_id)
 
 def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callback, send_vitals_callback):
+    """
+    Main automated combat loop.
+    Typically handles Monsters attacking Players/NPCs, as Players attack via Commands.
+    """
     current_time = time.time()
     combatant_list = world.get_all_combat_states()
 
@@ -720,13 +632,13 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
         attacker = _find_combatant(world, combatant_id)
         defender = _find_combatant(world, state["target_id"])
         
-        # --- MODIFIED: Get attacker room from state ---
         attacker_room_id = state.get("current_room_id")
 
         if not attacker or not defender or not attacker_room_id:
             world.stop_combat_for_all(combatant_id, state["target_id"])
             continue
 
+        # Skip if attacker is a player (players rely on input commands)
         if isinstance(attacker, Player): continue 
 
         is_defender_player = isinstance(defender, Player)
@@ -735,20 +647,16 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
         if is_defender_player:
             defender_room_id = defender.current_room_id
         else:
-            # --- MODIFIED: Get defender's room from their state ---
             defender_state = world.get_combat_state(state["target_id"])
             if defender_state:
                 defender_room_id = defender_state.get("current_room_id")
             else:
-                # Defender isn't in combat, find them in the world
                 for room_id, room in world.game_rooms.items():
                     for obj in room.get("objects", []):
                         if obj.get("uid") == state["target_id"]:
                             defender_room_id = room_id
                             break
                     if defender_room_id: break
-            # --- END MODIFIED ---
-
 
         if attacker_room_id != defender_room_id:
             world.remove_combat_state(combatant_id) 
@@ -758,33 +666,26 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
 
         sid_to_skip = None
         if is_defender_player:
-            # ---
-            # --- THIS IS THE FIX (Multi-line messages for defender)
-            # ---
+            # Send detailed attempt/roll/result to the defender (Player)
             send_to_player_callback(defender.name, attack_results['attempt_msg'], "message")
             send_to_player_callback(defender.name, attack_results['roll_string'], "message")
             send_to_player_callback(defender.name, attack_results['result_msg'], "message")
             if attack_results['hit'] and attack_results['critical_msg']:
                  send_to_player_callback(defender.name, attack_results['critical_msg'], "message")
-            # ---
-            # --- END FIX
-            # ---
+            
             defender_info = world.get_player_info(defender.name.lower())
             if defender_info: sid_to_skip = defender_info.get("sid")
         
-        # --- MODIFIED: Send simple broadcast message ---
+        # Broadcast to room (skipping the defender if they are a player, as they got detailed msgs)
         broadcast_msg = attack_results['broadcast_attempt_msg']
         if attack_results['hit']:
             broadcast_msg = attack_results['broadcast_result_msg']
             if attack_results['critical_msg']:
                 broadcast_msg += f"\n{attack_results['critical_msg']}"
         else:
-            # The broadcast_attempt_msg already said they attacked,
-            # so just append the simple miss result.
             broadcast_msg += f"\n{attack_results['broadcast_result_msg']}"
         
         broadcast_callback(attacker_room_id, broadcast_msg, "combat_broadcast", skip_sid=sid_to_skip)
-        # --- END MODIFIED ---
         
 
         if attack_results['hit']:
@@ -802,11 +703,9 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     vitals_data = defender.get_vitals()
                     send_vitals_callback(defender.name, vitals_data)
                     
-                    # --- NEW: Consequence Message ---
                     consequence_msg = f"**{defender.name} has been DEFEATED!**"
                     send_to_player_callback(defender.name, consequence_msg, "combat_death")
                     broadcast_callback(attacker_room_id, consequence_msg, "combat_death", skip_sid=sid_to_skip)
-                    # --- END NEW ---
                     
                     defender.move_to_room(
                         config.PLAYER_DEATH_ROOM_ID, 
@@ -825,7 +724,6 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     defender.posture = "prone"
                     
                     save_game_state(defender)
-                    # stop_combat is handled by move_to_room
                     continue
                 else:
                     vitals_data = defender.get_vitals()
@@ -833,10 +731,8 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
                     save_game_state(defender)
             
-            # ---
-            # --- NEW: Handle NPC defender death
-            # ---
             else: 
+                # NPC Defender
                 defender_uid = defender.get("uid")
                 new_hp = world.modify_monster_hp(
                     defender_uid,
@@ -845,12 +741,9 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                 )
                 
                 if new_hp <= 0 or is_fatal:
-                    # --- NEW: Consequence Message ---
                     consequence_msg = f"**The {defender['name']} has been DEFEATED!**"
                     broadcast_callback(attacker_room_id, consequence_msg, "combat_death", skip_sid=sid_to_skip)
-                    # --- END NEW ---
                     
-                    # Create corpse
                     corpse_data = loot_system.create_corpse_object_data(
                         defeated_entity_template=defender, 
                         defeated_entity_runtime_id=defender_uid, 
@@ -859,7 +752,6 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                         game_equipment_tables_data={} 
                     )
                     
-                    # Add corpse and remove NPC from room
                     with world.room_lock:
                         room_data = world.game_rooms.get(attacker_room_id)
                         if room_data:
@@ -869,8 +761,7 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     
                     broadcast_callback(attacker_room_id, f"The {corpse_data['name']} falls to the ground.", "ambient")
                     
-                    # Set respawn timer
-                    respawn_time = defender.get("respawn_time_seconds", 300) # 5 min default for NPCs
+                    respawn_time = defender.get("respawn_time_seconds", 300)
                     respawn_chance = defender.get(
                         "respawn_chance_per_tick", 
                         getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2)
@@ -878,7 +769,7 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     
                     world.set_defeated_monster(defender_uid, {
                         "room_id": attacker_room_id,
-                        "template_key": defender.get("monster_id"), # Will be None for NPCs, that's OK
+                        "template_key": defender.get("monster_id"), 
                         "type": "npc" if defender.get("is_npc") else "monster",
                         "eligible_at": current_time + respawn_time,
                         "chance": respawn_chance,
@@ -886,8 +777,7 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     })
                     
                     world.stop_combat_for_all(combatant_id, state["target_id"])
-                    continue # Combat is over
-            # --- END NEW ---
+                    continue 
 
         rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
         with world.combat_lock:
