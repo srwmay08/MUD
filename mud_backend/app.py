@@ -6,7 +6,7 @@ import datetime
 import threading 
 import math
 import random
-import queue # <-- NEW IMPORT
+import queue 
 from flask import Flask, request, jsonify, render_template, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
@@ -17,6 +17,7 @@ from mud_backend.core.game_loop_handler import check_and_run_game_tick
 
 from mud_backend.core.game_state import World
 from mud_backend.core import db
+from mud_backend.core import scripting
 
 from mud_backend.core import combat_system 
 from mud_backend.core.game_loop import monster_ai
@@ -35,7 +36,6 @@ app.config['SECRET_KEY'] = 'your-very-secret-key-please-change-me!'
 socketio = SocketIO(app)
 
 # --- PHASE 2: EVENT QUEUE ---
-# Queue items: (func, args_dict)
 game_event_queue = queue.Queue()
 # ----------------------------
 
@@ -101,11 +101,9 @@ def game_loop_thread(world_instance: World):
             # 2. Run Game Logic (Ticks)
             current_time = time.time()
             log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
-            log_prefix = f"{log_time} - GAME_TICK"
-
+            
             # -- Callbacks (Local) --
             def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
-                # Delegate to World's new spatial method
                 world_instance.broadcast_to_room(room_id, message, msg_type, skip_sid)
 
             def send_to_player(player_name, message, msg_type):
@@ -135,7 +133,6 @@ def game_loop_thread(world_instance: World):
                     
                     if not in_rt:
                         cmd_to_run = player_obj.command_queue.pop(0)
-                        # Run immediately in this thread
                         result_data = execute_command(world_instance, player_obj.name, cmd_to_run, sid)
                         socketio.emit("command_response", result_data, to=sid)
 
@@ -174,11 +171,9 @@ def game_loop_thread(world_instance: World):
                         expired_invites.append((invitee_name, invite_data))
                 for invitee_name, invite_data in expired_invites:
                     world_instance.remove_pending_group_invite(invitee_name)
-                    # Notify (logic omitted for brevity, same as before)
             
             # --- Buff/Spellup Expiration ---
             for player_name_lower, player_data in active_player_keys:
-                 # (Re-fetch to be safe)
                  p_info = world_instance.get_player_info(player_name_lower)
                  if not p_info: continue
                  player_obj = p_info.get("player_obj")
@@ -224,7 +219,6 @@ def game_loop_thread(world_instance: World):
             if did_global_tick:
                socketio.emit('tick')
 
-            # High frequency loop for responsiveness
             time.sleep(0.05) 
 
 @socketio.on('connect')
@@ -260,8 +254,7 @@ def handle_disconnect():
 def process_command_worker(player_name, command, sid, old_room_id=None):
     """
     The actual logic to run inside the thread.
-    This wraps execute_command and handles the post-command logic 
-    (SocketIO room switching, Aggro checks).
+    Includes Phase 3 Script Triggering on Room Entry.
     """
     try:
         # Execute Logic
@@ -275,11 +268,10 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
         if new_room_id and old_room_id and old_room_id != new_room_id:
             leave_room(old_room_id, sid=sid)
             leaves_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> leaves.'
-            world.broadcast_to_room(old_room_id, leaves_message, "message") # Use World broadcast
+            world.broadcast_to_room(old_room_id, leaves_message, "message") 
             
             join_room(new_room_id, sid=sid)
             arrives_message = f'<span class="keyword" data-name="{player_name}" data-verbs="look">{player_name}</span> arrives.'
-            # Skip self for arrival message
             world.broadcast_to_room(new_room_id, arrives_message, "message", skip_sid=sid)
             
             socketio.start_background_task(
@@ -289,9 +281,23 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
                 new_room_id
             )
             
+            # --- PHASE 3: TRIGGER CHECK ("on_enter") ---
+            # Optimization: World.active_rooms holds the actual objects.
+            # We access the active room dictionary directly to get the object.
+            real_active_room = world.active_rooms.get(new_room_id)
+            
+            if real_active_room and real_active_room.triggers:
+                on_enter_script = real_active_room.triggers.get("on_enter")
+                if on_enter_script:
+                    # Execute Script
+                    if config.DEBUG_MODE:
+                        print(f"[SCRIPT] Triggering on_enter for {new_room_id}: {on_enter_script}")
+                    scripting.execute_script(world, player_obj, real_active_room, on_enter_script)
+            # -------------------------------------------
+            
         socketio.emit("command_response", result_data, to=sid)
 
-        # Aggro Checks (Moved from handle_command_event)
+        # Aggro Checks
         if player_obj and new_room_id:
             player_id = player_name.lower()
             player_state = world.get_combat_state(player_id)
@@ -299,8 +305,6 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
             
             room_data = world.get_room(new_room_id)
             if room_data:
-                # Use Room.objects (ActiveRoom)
-                # Note: room_data here is a DICT from get_room()
                 objects = room_data.get("objects", [])
                 
                 for obj in objects:
@@ -345,13 +349,7 @@ def handle_command_event(data):
     state = session.get('state', 'auth_user')
 
     try:
-        # --- Auth Flow (Synchronous) ---
         if state in ['auth_user', 'auth_pass', 'char_create_name', 'char_select']:
-            # ... (Keep existing auth logic here, omitted for brevity in this snippet) ...
-            # ... (For 'char_create_name' and 'char_select' calls to execute_command: ) ...
-            # Since these are "Login" events, we can run them synchronously to ensure
-            # the player is set up before the client loads the UI.
-            
             if state == 'auth_user':
                 username = command
                 if not username:
@@ -401,7 +399,6 @@ def handle_command_event(data):
                 
                 session['player_name'] = new_char_name
                 session['state'] = 'in_game'
-                # EXECUTE SYNC (Login)
                 result_data = execute_command(world, new_char_name, "look", sid, account_username=username)
                 emit("command_response", result_data, to=sid)
                 
@@ -417,7 +414,6 @@ def handle_command_event(data):
                 
                 session['player_name'] = char_name
                 session['state'] = 'in_game'
-                # EXECUTE SYNC (Login)
                 result_data = execute_command(world, char_name, "look", sid)
                 
                 player_info = world.get_player_info(char_name.lower())
@@ -429,7 +425,6 @@ def handle_command_event(data):
                 
                 emit("command_response", result_data, to=sid)
 
-        # --- In Game (Async Queue) ---
         elif state == 'in_game':
             player_name = session.get('player_name')
             if not player_name:
@@ -440,7 +435,6 @@ def handle_command_event(data):
             old_player_info = world.get_player_info(player_name.lower())
             old_room_id = old_player_info.get("current_room_id") if old_player_info else None
 
-            # Push to Queue
             game_event_queue.put((
                 process_command_worker, 
                 {
@@ -460,7 +454,6 @@ def handle_command_event(data):
 
 
 if __name__ == "__main__":
-    # Start Threads
     threading.Thread(target=game_loop_thread, args=(world,), daemon=True).start()
     threading.Thread(target=persistence_thread, args=(world,), daemon=True).start()
     
