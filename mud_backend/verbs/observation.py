@@ -1,7 +1,9 @@
 # mud_backend/verbs/observation.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.db import fetch_player_data
-from mud_backend.core.chargen_handler.py import format_player_description
+# --- FIX: Removed .py extension from import ---
+from mud_backend.core.chargen_handler import format_player_description
+# --- END FIX ---
 from mud_backend.core.room_handler import show_room_to_player
 import math
 import random 

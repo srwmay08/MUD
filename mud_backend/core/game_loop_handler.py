@@ -206,10 +206,10 @@ def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_t
     # 4. Monster AI is now independent (handled in app.py loop)
 
     # 5. Process Corpse Decay
-    decay_messages_by_room = loot_system.process_corpse_decay(
-        game_rooms_dict=world.game_rooms, # Pass world's room dict
-        log_time_prefix=log_prefix
-    )
+    # --- FIXED: Use correct signature (only pass world) ---
+    decay_messages_by_room = loot_system.process_corpse_decay(world)
+    # --- END FIX ---
+    
     for room_id, messages in decay_messages_by_room.items():
         for msg in messages:
             broadcast_callback(room_id, msg, "ambient_decay")
