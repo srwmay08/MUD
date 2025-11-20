@@ -26,12 +26,10 @@ from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
 from mud_backend import config
 
-# --- CRITICAL COMMANDS FOR IMMEDIATE SAVE ---
 CRITICAL_COMMANDS = {
     'quit', 'logout', 'save', 
     'trade', 'exchange', 'give', 'accept', 'buy', 'sell'
 }
-# --------------------------------------------
 
 VERB_ALIASES: Dict[str, Tuple[str, str]] = {
     # Movement
@@ -163,9 +161,10 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         player = player_info["player_obj"]
         player.messages.clear()
     else:
+        # Player wasn't active (Login or Chargen)
         player_db_data = fetch_player_data(player_name)
         if not player_db_data:
-            # --- THIS IS A NEW CHARACTER ---
+            # --- NEW CHARACTER ---
             if not account_username:
                 print(f"[EXEC-ERROR] New player {player_name} has no account_username!")
                 return {"messages": ["Critical error: Account not found."], "game_state": "error"}
@@ -189,14 +188,25 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                 player.visited_rooms.append(start_room_id)
             
             player.send_message(f"Welcome, **{player.name}**! You awaken from a hazy dream...")
+            
+            # --- NEW: Add to Spatial Index ---
+            # Note: If in chargen, they might not really be "in" the room for broadcast purposes, 
+            # but it's safer to add them.
+            world.add_player_to_room_index(player.name.lower(), start_room_id)
+            # ---------------------------------
+
         else:
-            # --- THIS IS A LOADING CHARACTER ---
+            # --- LOADING CHARACTER ---
             player = Player(world, player_db_data["name"], player_db_data["current_room_id"], player_db_data)
             
             if player.current_room_id not in player.visited_rooms:
                 player.visited_rooms.append(player.current_room_id)
             
             player.group_id = world.get_player_group_id_on_load(player.name.lower())
+
+            # --- NEW: Add to Spatial Index ---
+            world.add_player_to_room_index(player.name.lower(), player.current_room_id)
+            # ---------------------------------
 
     if player.game_state == "playing" and command_line.lower() != "ping":
         if player.is_goto_active:

@@ -1,71 +1,50 @@
 # mud_backend/core/game_loop/monster_ai.py
 import random
 import copy
-import time # <-- NEW IMPORT
+import time 
 from typing import Callable, Tuple, List, Dict, TYPE_CHECKING
 from mud_backend import config
-# --- NEW: Import faction handler ---
 from mud_backend.core import faction_handler
 from mud_backend.core import combat_system
-# --- END NEW ---
 
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
-# ---
-# --- NEW: Helper for NPC vs NPC combat
-# ---
 def _check_and_start_npc_combat(world: 'World', npc: Dict, room_id: str):
     """
     Checks if the given NPC should attack another NPC in the room
     based on KOS faction rules.
     """
     npc_faction = npc.get("faction")
-    if not npc_faction:
-        return # This NPC has no faction, it won't start fights
+    if not npc_faction: return 
 
     npc_uid = npc.get("uid")
-    if not npc_uid:
-        return # Should not happen, but safety check
+    if not npc_uid: return 
 
-    # Check if NPC is already in combat
-    if world.get_combat_state(npc_uid):
-        return
+    if world.get_combat_state(npc_uid): return
         
-    # Get a fresh copy of the room data
     room_data = world.get_room(room_id)
-    if not room_data:
-        return
+    if not room_data: return
 
     for other_obj in room_data.get("objects", []):
-        if other_obj.get("uid") == npc_uid:
-            continue # Don't fight self
-
-        # --- MODIFIED: Check for monster OR npc ---
-        if not (other_obj.get("is_monster") or other_obj.get("is_npc")):
-            continue # Target is not an entity
-        # --- END MODIFIED ---
+        if other_obj.get("uid") == npc_uid: continue 
+        if not (other_obj.get("is_monster") or other_obj.get("is_npc")): continue 
             
         other_faction = other_obj.get("faction")
-        if not other_faction:
-            continue # Target has no faction
+        if not other_faction: continue 
 
-        # --- The KOS Check ---
         if faction_handler.are_factions_kos(world, npc_faction, other_faction):
             other_uid = other_obj.get("uid")
             
-            # Check if target is already in combat or defeated
             if world.get_combat_state(other_uid) or world.get_defeated_monster(other_uid):
                 continue
 
-            # --- Start Combat! ---
             current_time = time.time()
             npc_name = npc.get("name", "A creature")
             other_name = other_obj.get("name", "another creature")
             
             world.broadcast_to_room(room_id, f"The {npc_name} attacks the {other_name}!", "combat_broadcast", skip_sid=None)
             
-            # Set attacker's state
             attacker_rt = combat_system.calculate_roundtime(npc.get("stats", {}).get("AGI", 50))
             world.set_combat_state(npc_uid, {
                 "state_type": "combat",
@@ -76,58 +55,84 @@ def _check_and_start_npc_combat(world: 'World', npc: Dict, room_id: str):
             if world.get_monster_hp(npc_uid) is None:
                 world.set_monster_hp(npc_uid, npc.get("max_hp", 50))
 
-            # Set defender's state
             defender_rt = combat_system.calculate_roundtime(other_obj.get("stats", {}).get("AGI", 50))
             world.set_combat_state(other_uid, {
                 "state_type": "combat",
                 "target_id": npc_uid,
-                "next_action_time": current_time + (defender_rt / 2), # Defender gets a faster first swing
+                "next_action_time": current_time + (defender_rt / 2), 
                 "current_room_id": room_id
             })
             if world.get_monster_hp(other_uid) is None:
                 world.set_monster_hp(other_uid, other_obj.get("max_hp", 50))
             
-            return # The NPC has found its target
-# ---
-# --- END NEW HELPER
-# ---
+            return 
 
 def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
     """
     Processes AI for all active monsters.
-    Currently handles:
-    - Passive wandering (based on 'movement_rules')
+    Refactored to use active_mob_uids and sleep logic.
     """
     
     potential_movers: List[Tuple[Dict, str]] = []
 
-    with world.room_lock:
-        for room_id, room_data in world.game_rooms.items():
+    # --- NEW: Iterate Active UIDs instead of Rooms (O(1) efficiency) ---
+    # Make a copy of UIDs to safely iterate
+    with world.index_lock:
+        active_uids = list(world.active_mob_uids)
+        
+    for uid in active_uids:
+        # 1. Get Location from Index
+        room_id = world.mob_locations.get(uid)
+        if not room_id:
+            # Orphaned UID? Cleanup
+            world.unregister_mob(uid)
+            continue
+            
+        # 2. Sleep Check (Spatial Index)
+        # Check if any players are in this room. If not, skip AI to save CPU.
+        with world.index_lock:
+            players_in_room = world.room_players.get(room_id)
+            
+        if not players_in_room:
+            continue # Sleep mode: Do nothing for mobs in empty rooms
+            
+        # 3. Get Mob Data
+        # We have to fetch the room to get the mob object
+        with world.room_lock:
+            room_data = world.game_rooms.get(room_id)
             if not room_data or "objects" not in room_data:
                 continue
-                
+            
+            # Find the specific mob object in the room list
+            monster_obj = None
             for obj in room_data["objects"]:
-                # --- MODIFIED: Include NPCs in this check ---
-                if obj.get("is_monster") or obj.get("is_npc"):
-                # --- END MODIFIED ---
-                    monster_id = obj.get("monster_id") # This is fine, NPCs won't have it
-                    
-                    if monster_id and "movement_rules" not in obj:
-                         template = world.game_monster_templates.get(monster_id)
-                         if template:
-                             obj.update(copy.deepcopy(template))
+                if obj.get("uid") == uid:
+                    monster_obj = obj
+                    break
+            
+            if not monster_obj:
+                # Mob listed in index but not in room? Desync. Cleanup.
+                world.unregister_mob(uid)
+                continue
 
-                    if obj.get("movement_rules"):
-                        in_combat = False
-                        monster_uid = obj.get("uid")
-                        if monster_uid:
-                             with world.combat_lock:
-                                 if world.combat_state.get(monster_uid, {}).get("state_type") == "combat":
-                                     in_combat = True
-                        
-                        if not in_combat:
-                            potential_movers.append((obj, room_id))
+            # 4. Hydrate if needed (Phase 2 fixes this properly)
+            monster_id = monster_obj.get("monster_id")
+            if monster_id and "movement_rules" not in monster_obj:
+                 template = world.game_monster_templates.get(monster_id)
+                 if template:
+                     monster_obj.update(copy.deepcopy(template))
 
+            # 5. AI Logic (Movement Decision)
+            if monster_obj.get("movement_rules"):
+                in_combat = False
+                with world.combat_lock:
+                     if world.combat_state.get(uid, {}).get("state_type") == "combat":
+                         in_combat = True
+                
+                if not in_combat:
+                    potential_movers.append((monster_obj, room_id))
+
+    # Process moves
     moved_monster_uids = set()
 
     for monster, current_room_id in potential_movers:
@@ -160,95 +165,63 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                     break
             
             if chosen_exit and destination_room_id:
+                # Perform Move
                 with world.room_lock:
-                    source_room = world.game_rooms.get(current_room_id)
-                    dest_room = world.game_rooms.get(destination_room_id)
+                    success = world.move_object_between_rooms(monster, current_room_id, destination_room_id)
                     
-                    if source_room and dest_room and "objects" in source_room and monster in source_room["objects"]:
-                        source_room["objects"].remove(monster)
-                        if "objects" not in dest_room: 
-                            dest_room["objects"] = []
-                        dest_room["objects"].append(monster)
+                    if success:
                         if monster_uid:
                             moved_monster_uids.add(monster_uid)
+                            # --- NEW: Update Location Index ---
+                            world.update_mob_location(monster_uid, destination_room_id)
+                            # ----------------------------------
                         
                         monster_name = monster.get("name", "something")
                         
-                        # ---
-                        # --- THIS IS THE FIX ---
-                        #
-                        # 1. Read the custom departure message from the monster template
-                        departure_msg_template = monster.get("spawn_message_departure", "The {name} slinks off towards the {exit}.")
-                        # Format it, replacing {name} and {exit}
-                        departure_msg = departure_msg_template.format(name=monster_name, exit=chosen_exit)
+                        departure_msg = monster.get("spawn_message_departure", "The {name} slinks off towards the {exit}.").format(name=monster_name, exit=chosen_exit)
                         broadcast_callback(current_room_id, departure_msg, "ambient_move")
                         
-                        # 2. Read the custom arrival message
-                        arrival_msg_template = monster.get("spawn_message_arrival", "A {name} slinks in.")
-                        # Format it, replacing {name}
-                        arrival_msg = arrival_msg_template.format(name=monster_name)
+                        arrival_msg = monster.get("spawn_message_arrival", "A {name} slinks in.").format(name=monster_name)
                         broadcast_callback(destination_room_id, arrival_msg, "ambient_move")
-                        #
-                        # --- END FIX ---
                         
-                        # ---
-                        # --- NEW: Check for NPC-NPC combat on arrival
-                        # ---
                         _check_and_start_npc_combat(world, monster, destination_room_id)
-                        # --- END NEW ---
                         
                         if config.DEBUG_MODE:
                             print(f"{log_time_prefix} - MONSTER_AI: {monster_name} moved {current_room_id} -> {destination_room_id} ({chosen_exit}).")
-                    elif config.DEBUG_MODE:
-                        print(f"{log_time_prefix} - MONSTER_AI: {monster.get('name')} move failed (room state changed).")
 
 
-# ---
-# --- NEW FUNCTION FOR AMBIENT MESSAGES
-# ---
 def process_monster_ambient_messages(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
     """
-    Processes ambient, non-combat messages for all active monsters in rooms with players.
+    Processes ambient, non-combat messages for active monsters.
+    Optimization: Only checks rooms that currently contain players.
     """
     
-    # Get all rooms (this is a copy)
-    all_rooms = world.get_all_rooms()
-    # Get all player locations
-    player_locations = set()
-    for p_name, p_data in world.get_all_players_info():
-        player_locations.add(p_data.get("current_room_id"))
+    # --- NEW: Iterate ONLY active rooms via Spatial Index ---
+    with world.index_lock:
+        # Get list of room_ids that have at least 1 player
+        active_rooms = [rid for rid, players in world.room_players.items() if players]
+    
+    for room_id in active_rooms:
+        with world.room_lock:
+            room_data = world.game_rooms.get(room_id)
+            if not room_data or "objects" not in room_data:
+                continue
 
-    for room_id in player_locations:
-        room_data = all_rooms.get(room_id)
-        if not room_data or "objects" not in room_data:
-            continue
-
-        # Room is active (has players), check monsters
-        for obj in room_data.get("objects", []):
-            if obj.get("is_monster"):
-                monster_uid = obj.get("uid")
-                
-                # Skip if in combat
-                if not monster_uid or world.get_combat_state(monster_uid):
-                    continue
-                
-                # Check for ambient messages
-                ambient_chance = obj.get("ambient_message_chance", 0.0)
-                ambient_messages = obj.get("ambient_messages", [])
-                
-                if ambient_messages and random.random() < ambient_chance:
-                    # Pick and send a message
-                    message_text = random.choice(ambient_messages)
-                    monster_name = obj.get("name", "A creature")
+            # Check monsters in this active room
+            for obj in room_data["objects"]:
+                if obj.get("is_monster"):
+                    monster_uid = obj.get("uid")
                     
-                    # Format the broadcast. The messages are written from the monster's
-                    # perspective (e.g., "snaps its heavy pincers..."), so we just prepend the name.
-                    broadcast_msg = f"The {monster_name} {message_text}"
+                    if not monster_uid or world.get_combat_state(monster_uid):
+                        continue
                     
-                    broadcast_callback(room_id, broadcast_msg, "ambient")
+                    ambient_chance = obj.get("ambient_message_chance", 0.0)
+                    ambient_messages = obj.get("ambient_messages", [])
                     
-                    # Only one ambient message per room per tick to avoid spam
-                    break
-# ---
-# --- END NEW FUNCTION
-# ---
+                    if ambient_messages and random.random() < ambient_chance:
+                        message_text = random.choice(ambient_messages)
+                        monster_name = obj.get("name", "A creature")
+                        broadcast_msg = f"The {monster_name} {message_text}"
+                        
+                        broadcast_callback(room_id, broadcast_msg, "ambient")
+                        break

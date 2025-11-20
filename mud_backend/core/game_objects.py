@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
-# === NEW: STAT MODIFIERS ===
+# === STAT MODIFIERS ===
 RACE_MODIFIERS = {
     "Human": {"STR": 5, "CON": 0, "DEX": 0, "AGI": 0, "LOG": 5, "INT": 5, "WIS": 0, "INF": 0, "ZEA": 5, "ESS": 0, "DIS": 0, "AUR": 0},
     "Wildborn": {"STR": 5, "CON": 5, "DEX": 5, "AGI": 0, "LOG": 5, "INT": 0, "WIS": 0, "INF": -5, "ZEA": 0, "ESS": 5, "DIS": 0, "AUR": 0},
@@ -724,7 +724,15 @@ class Player:
             return
 
         self._stop_combat()
+        
+        # --- NEW: Update Spatial Index ---
+        old_room = self.current_room_id
         self.current_room_id = target_room_id
+        
+        # These calls are thread-safe due to index_lock in World
+        self.world.remove_player_from_room_index(self.name.lower(), old_room)
+        self.world.add_player_to_room_index(self.name.lower(), target_room_id)
+        # ---------------------------------
 
         if target_room_id not in self.visited_rooms:
             self.visited_rooms.append(target_room_id)

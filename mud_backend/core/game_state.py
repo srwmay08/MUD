@@ -1,10 +1,9 @@
 # mud_backend/core/game_state.py
-# MODIFIED FILE
 import time
 import threading
 import copy
 from mud_backend import config
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, Set
 from mud_backend.core import db
 from mud_backend.core.game_objects import Player
 
@@ -28,6 +27,17 @@ class World:
         self.pending_group_invites: Dict[str, Dict[str, Any]] = {}
         self.active_bands: Dict[str, Dict[str, Any]] = {}
 
+        # --- NEW: Spatial & AI Indices (Phase 1 Optimization) ---
+        # room_id -> Set of player_names (lower case)
+        self.room_players: Dict[str, Set[str]] = {}
+        
+        # Set of UIDs for all active monsters/NPCs (for O(1) iteration)
+        self.active_mob_uids: Set[str] = set()
+        
+        # UID -> room_id mapping for quick lookup of mob location
+        self.mob_locations: Dict[str, str] = {}
+        # --------------------------------------------------------
+
         # --- Global Data Caches (Read-only after load) ---
         self.game_monster_templates: Dict[str, Dict] = {}
         self.game_loot_tables: Dict[str, List] = {}
@@ -38,9 +48,7 @@ class World:
         self.game_quests: Dict[str, Any] = {}
         self.game_nodes: Dict[str, Any] = {} 
         self.game_factions: Dict[str, Any] = {}
-        # --- NEW: Spells Cache ---
         self.game_spells: Dict[str, Any] = {}
-        # --- END NEW ---
 
         # --- Game Loop Timers ---
         self.last_game_tick_time: float = time.time()
@@ -59,6 +67,7 @@ class World:
         self.defeated_lock = threading.RLock()
         self.group_lock = threading.RLock()
         self.band_lock = threading.RLock()
+        self.index_lock = threading.RLock() # Lock for Spatial/AI indices
 
     # --- Data Loading ---
     
@@ -73,6 +82,20 @@ class World:
             
         print("[WORLD INIT] Loading all rooms into game state cache...")
         self.game_rooms = db.fetch_all_rooms()
+        
+        # --- NEW: Populate Mob Indices from initial room data ---
+        print("[WORLD INIT] Indexing initial mobs...")
+        with self.index_lock:
+            for room_id, room_data in self.game_rooms.items():
+                for obj in room_data.get("objects", []):
+                    # Index anything that acts like a mob/npc
+                    if obj.get("is_monster") or obj.get("is_npc"):
+                        uid = obj.get("uid")
+                        if uid:
+                            self.active_mob_uids.add(uid)
+                            self.mob_locations[uid] = room_id
+        # --------------------------------------------------------
+
         print("[WORLD INIT] Loading all monster templates...")
         self.game_monster_templates = db.fetch_all_monsters()
         print("[WORLD INIT] Loading all loot tables...")
@@ -91,16 +114,50 @@ class World:
         self.game_nodes = db.fetch_all_nodes()
         print("[WORLD INIT] Loading all factions...")
         self.game_factions = db.fetch_all_factions()
-        # --- NEW: Load Spells ---
         print("[WORLD INIT] Loading all spells...")
         self.game_spells = db.fetch_all_spells()
-        # --- END NEW ---
         print("[WORLD INIT] Loading all adventuring bands...")
         self.active_bands = db.fetch_all_bands(database)
         print("[WORLD INIT] Data loaded.")
 
-    # ... (Rest of the file is unchanged) ...
-    
+    # --- NEW: Mob Index Management ---
+    def register_mob(self, uid: str, room_id: str):
+        """Adds a mob to the active indices."""
+        with self.index_lock:
+            self.active_mob_uids.add(uid)
+            self.mob_locations[uid] = room_id
+
+    def unregister_mob(self, uid: str):
+        """Removes a mob from indices (e.g. on death)."""
+        with self.index_lock:
+            self.active_mob_uids.discard(uid)
+            self.mob_locations.pop(uid, None)
+
+    def update_mob_location(self, uid: str, new_room_id: str):
+        """Updates a mob's location in the index."""
+        with self.index_lock:
+            if uid in self.active_mob_uids:
+                self.mob_locations[uid] = new_room_id
+    # --------------------------------
+
+    # --- NEW: Player Spatial Index Management ---
+    def add_player_to_room_index(self, player_name_lower: str, room_id: str):
+        """Adds a player to a room's player list."""
+        with self.index_lock:
+            if room_id not in self.room_players:
+                self.room_players[room_id] = set()
+            self.room_players[room_id].add(player_name_lower)
+
+    def remove_player_from_room_index(self, player_name_lower: str, room_id: str):
+        """Removes a player from a room's player list."""
+        with self.index_lock:
+            if room_id in self.room_players:
+                self.room_players[room_id].discard(player_name_lower)
+                # Clean up empty set to keep dict size small
+                if not self.room_players[room_id]:
+                    del self.room_players[room_id]
+    # --------------------------------------------
+
     def get_player_info(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         with self.player_lock:
             return self.active_players.get(player_name_lower)
@@ -118,6 +175,12 @@ class World:
             
     def remove_player(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         player_obj = self.get_player_obj(player_name_lower)
+        
+        # --- NEW: Clean up spatial index on remove ---
+        if player_obj:
+            self.remove_player_from_room_index(player_name_lower, player_obj.current_room_id)
+        # ---------------------------------------------
+
         if player_obj and player_obj.group_id:
             group = self.get_group(player_obj.group_id)
             if group:
@@ -343,16 +406,51 @@ class World:
         elif config.DEBUG_MODE:
                 print(f"[WORLD/SOCKET-WARN] Player {player_name_lower} not active. Cannot send: {message}")
     
+    # --- MODIFIED: Uses Spatial Index for O(1) broadcasting ---
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
+        """
+        Sends a message to all players currently in the specified room.
+        Uses O(1) lookup via self.room_players to avoid iterating all players.
+        """
         if not self.socketio:
             if config.DEBUG_MODE:
                 print(f"[WORLD/BROADCAST-WARN] No socketio object. Cannot broadcast to {room_id}: {message}")
             return
         
-        if skip_sid:
-            self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
-        else:
-            self.socketio.emit(msg_type, message, to=room_id)
+        # 1. If sending to room channel directly (for non-flag-checked messages)
+        is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
+        
+        if not is_flag_checked:
+            if skip_sid:
+                self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
+            else:
+                self.socketio.emit(msg_type, message, to=room_id)
+            return
+
+        # 2. If we need to check flags, iterate only players known to be in this room
+        with self.index_lock:
+            # Use .copy() to avoid issues if a player moves/disconnects during iteration
+            players_in_room = self.room_players.get(room_id, set()).copy()
+        
+        for player_name in players_in_room:
+            player_info = self.get_player_info(player_name)
+            if not player_info: continue
+            
+            player_obj = player_info.get("player_obj")
+            sid = player_info.get("sid")
+            
+            if not player_obj or not sid or sid == skip_sid:
+                continue
+
+            # Check flags
+            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off":
+                continue 
+            
+            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off":
+                continue 
+                
+            self.socketio.emit(msg_type, message, to=sid)
+    # ------------------------------------
     
     def send_message_to_group(self, group_id: str, message: str, msg_type: str = "message", skip_player_key: Optional[str] = None):
         group = self.get_group(group_id)

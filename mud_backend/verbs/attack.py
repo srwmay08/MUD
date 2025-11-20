@@ -1,18 +1,14 @@
 # mud_backend/verbs/attack.py
 import time
 import copy 
-# --- NEW: Import math ---
 import math
-# --- END NEW ---
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend import config 
 from mud_backend.core import combat_system
 from mud_backend.core import loot_system
 from mud_backend.core import db 
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-# --- NEW: Import faction handler ---
 from mud_backend.core import faction_handler
-# --- END NEW ---
 
 class Attack(BaseVerb):
     """
@@ -35,31 +31,13 @@ class Attack(BaseVerb):
             "messages": [] 
         }
         
-        # ---
-        # --- THIS IS THE FIX (Multi-line message handling) ---
-        # ---
-        # 1. Show the attempt
         resolve_data["messages"].append(attack_results['attempt_msg'])
-        
-        # 2. Show the roll string
         resolve_data["messages"].append(attack_results['roll_string'])
-        
-        # 3. Show the result (hit or miss)
         resolve_data["messages"].append(attack_results['result_msg'])
-        # ---
-        # --- END FIX
-        # ---
         
         if attack_results['hit']:
-            # ---
-            # --- THIS IS THE FIX (Critical message) ---
-            # ---
-            # 4. Show the critical message (if any)
             if attack_results['critical_msg']:
                 resolve_data["messages"].append(attack_results['critical_msg'])
-            # ---
-            # --- END FIX
-            # ---
             
             damage = attack_results['damage']
             is_fatal = attack_results['is_fatal']
@@ -76,23 +54,13 @@ class Attack(BaseVerb):
             )
 
             if new_hp <= 0 or is_fatal:
-                # ---
-                # --- THIS IS THE FIX (Consequence message) ---
-                # ---
-                # 5. Show the consequence (death)
                 consequence_msg = f"**The {target_monster_data['name']} has been DEFEATED!**"
                 resolve_data["messages"].append(consequence_msg)
-                # ---
-                # --- END FIX
-                # ---
                 resolve_data["combat_continues"] = False 
                 
-                # ---
-                # --- NEW: XP Calculation based on Level Difference
-                # ---
                 player_level = self.player.level
                 monster_level = target_monster_data.get("level", 1)
-                level_diff = player_level - monster_level # (e.g., PL 10, ML 8 = +2)
+                level_diff = player_level - monster_level
                 
                 nominal_xp = 0
                 if level_diff >= 10:
@@ -106,27 +74,12 @@ class Attack(BaseVerb):
                 elif level_diff <= -5:
                     nominal_xp = 150
                 
-                nominal_xp = max(0, nominal_xp) # Ensure it's not negative
+                nominal_xp = max(0, nominal_xp) 
                 
-                # Add the gain message
                 if nominal_xp > 0:
                     resolve_data["messages"].append(f"You have gained {nominal_xp} experience from the kill.")
-                # ---
-                # --- END NEW XP CALC
-                # ---
-                
-                # ---
-                # --- MODIFIED: Use grant_experience for Band splitting
-                # ---
-                if nominal_xp > 0:
                     self.player.grant_experience(nominal_xp, source="combat")
-                # ---
-                # --- END MODIFIED
-                # ---
                 
-                # ---
-                # --- NEW: Apply Faction Adjustments
-                # ---
                 monster_faction = target_monster_data.get("faction")
                 if monster_faction:
                     adjustments = faction_handler.get_faction_adjustments_on_kill(
@@ -134,7 +87,6 @@ class Attack(BaseVerb):
                     )
                     for fac_id, amount in adjustments.items():
                         faction_handler.adjust_player_faction(self.player, fac_id, amount)
-                # --- END NEW ---
                 
                 corpse_data = loot_system.create_corpse_object_data(
                     defeated_entity_template=target_monster_data, 
@@ -145,10 +97,15 @@ class Attack(BaseVerb):
                 )
                 self.room.objects.append(corpse_data)
                 
+                # Remove monster from room
                 if target_monster_data in self.room.objects:
                     self.room.objects.remove(target_monster_data)
                 
                 self.world.save_room(self.room)
+                
+                # --- NEW: Unregister from AI Index ---
+                self.world.unregister_mob(monster_uid)
+                # -------------------------------------
                 
                 resolve_data["messages"].append(f"The {corpse_data['name']} falls to the ground.")
                 
@@ -164,9 +121,7 @@ class Attack(BaseVerb):
                     "type": "monster",
                     "eligible_at": time.time() + respawn_time,
                     "chance": respawn_chance,
-                    # --- NEW: Add faction for respawn aggro checks ---
                     "faction": monster_faction
-                    # --- END NEW ---
                 })
                 self.world.stop_combat_for_all(self.player.name.lower(), monster_uid)
         
@@ -181,13 +136,10 @@ class Attack(BaseVerb):
         target_name = " ".join(self.args).lower()
         player_id = self.player.name.lower()
         
-        # 1. Find the target
         target_monster_data = None
         
         for obj in self.room.objects:
-            # --- MODIFIED: Check for monster OR npc ---
             if obj.get("is_monster") or obj.get("is_npc"):
-            # --- END MODIFIED ---
                 uid = obj.get("uid")
                 is_defeated = False
                 if uid:
@@ -200,17 +152,9 @@ class Attack(BaseVerb):
                         break
 
         if not target_monster_data:
-            # ---
-            # --- THIS IS THE FIX (Error message)
-            # ---
             self.player.send_message(f"You don't see a '{target_name}' here to attack.")
-            # ---
-            # --- END FIX
-            # ---
             return
 
-        # Get both template ID and Unique ID
-        monster_id = target_monster_data.get("monster_id") # May be None for NPCs
         monster_uid = target_monster_data.get("uid")
 
         if not monster_uid:
@@ -233,17 +177,8 @@ class Attack(BaseVerb):
                                       monster_state.get("state_type") == "combat" and 
                                       monster_state.get("target_id") == player_id)
 
-        if combat_info and combat_info.get("target_id") and combat_info.get("target_id") != monster_uid:
-            pass 
-
-        # ---
-        # --- THIS IS THE FIX (Don't show "You attack..." if already fighting)
-        # ---
         if not monster_is_fighting_player:
              self.player.send_message(f"You attack the **{target_monster_data['name']}**!")
-        # ---
-        # --- END FIX
-        # ---
         
         resolve_data = self._resolve_and_handle_attack(target_monster_data)
         
@@ -276,7 +211,5 @@ class Attack(BaseVerb):
                     "next_action_time": current_time + (monster_rt / 2),
                     "current_room_id": room_id
                 })
-                # --- MODIFIED: Use max_hp for NPCs too ---
                 if self.world.get_monster_hp(monster_uid) is None:
                      self.world.set_monster_hp(monster_uid, target_monster_data.get("max_hp", 50))
-                # --- END MODIFIED ---

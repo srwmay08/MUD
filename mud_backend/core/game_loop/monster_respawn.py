@@ -12,9 +12,7 @@ if TYPE_CHECKING:
 
 from mud_backend import config
 from mud_backend.core import combat_system
-# --- NEW: Import faction handler ---
 from mud_backend.core import faction_handler
-# --- END NEW ---
 
 
 def _re_equip_entity_from_template(entity_runtime_data, entity_template, game_equipment_tables, game_items):
@@ -45,10 +43,6 @@ def process_respawns(world: 'World',
                      game_equipment_tables_global, 
                      game_items_global             
                      ):
-    """
-    Processes all respawns.
-    This function now reads its state from the passed 'world' object.
-    """
     
     current_time_float = time.time()
     tracked_defeated_entities_dict = world.defeated_monsters
@@ -87,18 +81,13 @@ def process_respawns(world: 'World',
                         base_template_data = None
                         if entity_type == "monster":
                             base_template_data = game_monster_templates_dict.get(entity_template_key)
-                        # --- NEW: Handle NPC respawn ---
                         elif entity_type == "npc":
-                            # We need to find the NPC template from its original room
-                            # This is a simple implementation; a better one would store the template
-                            # in the defeated_monsters dict.
                             for room in world.game_rooms.values():
                                 for obj in room.get("objects", []):
                                     if obj.get("uid") == runtime_uid:
                                         base_template_data = obj
                                         break
                                 if base_template_data: break
-                        # --- END NEW ---
 
                         if not base_template_data:
                             continue
@@ -108,7 +97,6 @@ def process_respawns(world: 'World',
                         can_respawn_this_template_into_room = True
                         if is_template_unique: 
                             current_room_objects = room_data.get("objects", [])
-                            # --- MODIFIED: Check by template_key for monsters, uid for NPCs ---
                             id_key_to_check = "monster_id" if entity_type == "monster" else "uid"
                             id_val_to_check = entity_template_key if entity_type == "monster" else runtime_uid
                             
@@ -125,19 +113,20 @@ def process_respawns(world: 'World',
                                 new_entity["uid"] = new_monster_uid
                                 monster_id_to_check = new_monster_uid 
                             else: # NPC
-                                new_entity["uid"] = runtime_uid # Restore original UID
+                                new_entity["uid"] = runtime_uid 
                                 monster_id_to_check = runtime_uid
-                                # --- NEW: Restore NPC health ---
                                 new_entity["hp"] = new_entity.get("max_hp", 50)
-                                # --- END NEW ---
 
                             room_data["objects"].append(new_entity)
+
+                            # --- NEW: Register in Spatial/AI Index ---
+                            world.register_mob(monster_id_to_check, room_id_to_respawn_in)
+                            # -----------------------------------------
 
                             broadcast_callback(room_id_to_respawn_in, f"The {entity_display_name} appears.", "ambient_spawn")
                             world.remove_monster_hp(runtime_uid)
                             
-                            # --- AGGRO CHECK ON RESPAWN ---
-                            # --- MODIFIED: Check for monster OR npc ---
+                            # --- AGGRO CHECK ---
                             is_aggressive = base_template_data.get("is_aggressive", False)
                             
                             with world.player_lock:
@@ -147,16 +136,12 @@ def process_respawns(world: 'World',
                                         if not player_obj: continue
                                         player_id = player_obj.name.lower()
                                         
-                                        # --- NEW: Faction KOS check ---
                                         is_kos = faction_handler.is_player_kos_to_entity(player_obj, base_template_data)
-                                        # --- END NEW ---
                                         
                                         player_state = world.get_combat_state(player_id)
                                         player_in_combat = player_state and player_state.get("state_type") == "combat"
 
-                                        # --- MODIFIED: Check is_aggressive OR is_kos ---
                                         if (is_aggressive or is_kos) and not player_in_combat:
-                                        # --- END MODIFIED ---
                                             send_to_player_callback(player_obj.name, f"The **{entity_display_name}** notices you and attacks!", "combat_other")
                                             monster_rt = combat_system.calculate_roundtime(base_template_data.get("stats", {}).get("AGI", 50))
                                             
@@ -167,8 +152,7 @@ def process_respawns(world: 'World',
                                                 "current_room_id": room_id_to_respawn_in
                                             })
                                             world.set_monster_hp(monster_id_to_check, base_template_data.get("max_hp", 1))
-                                            break # Monster attacks first player it sees
-                            # --- END AGGRO CHECK ---
+                                            break 
 
                             respawned_entity_runtime_ids_to_remove.append(runtime_uid)
                     
