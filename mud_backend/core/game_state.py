@@ -1,5 +1,4 @@
 # mud_backend/core/game_state.py
-# FULL FILE REPLACEMENT
 import time
 import threading
 import copy
@@ -8,51 +7,37 @@ from mud_backend import config
 from typing import Dict, Any, Optional, List, Tuple, Set
 from mud_backend.core import db
 from mud_backend.core.game_objects import Player, Room
+from mud_backend.core.asset_manager import AssetManager # <-- New Import
 
 class World:
     """
-    Holds all mutable game state and provides thread-safe
-    methods for accessing and modifying it.
+    Holds all mutable game state (Players, Active Rooms, Combat).
+    Delegates static data storage to AssetManager.
     """
     def __init__(self):
         self.socketio = None
         self.app = None 
         
-        # --- State Dictionaries ---
+        # --- Sub-Systems ---
+        self.assets = AssetManager() # <-- Static Data Handler
+        
+        # --- Mutable Runtime State ---
+        self.active_rooms: Dict[str, Room] = {} 
+        self.active_players: Dict[str, Dict[str, Any]] = {}
+        
         self.runtime_monster_hp: Dict[str, int] = {}
         self.defeated_monsters: Dict[str, Dict[str, Any]] = {}
-        
-        # --- PHASE 2: Instance Separation ---
-        # active_rooms: Holds instantiated Room objects (Active state)
-        self.active_rooms: Dict[str, Room] = {} 
-        
-        # room_templates: Holds static JSON dicts (Templates)
-        self.room_templates: Dict[str, Dict[str, Any]] = {}
-        # ------------------------------------
-
-        self.active_players: Dict[str, Dict[str, Any]] = {}
         self.combat_state: Dict[str, Dict[str, Any]] = {}
         self.pending_trades: Dict[str, Dict[str, Any]] = {}
+        
         self.active_groups: Dict[str, Dict[str, Any]] = {}
         self.pending_group_invites: Dict[str, Dict[str, Any]] = {}
         self.active_bands: Dict[str, Dict[str, Any]] = {}
 
-        # --- Phase 1: Spatial & AI Indices ---
+        # --- Spatial & AI Indices ---
         self.room_players: Dict[str, Set[str]] = {}
         self.active_mob_uids: Set[str] = set()
         self.mob_locations: Dict[str, str] = {}
-
-        # --- Global Data Caches ---
-        self.game_monster_templates: Dict[str, Dict] = {}
-        self.game_loot_tables: Dict[str, List] = {}
-        self.game_items: Dict[str, Dict] = {}
-        self.game_level_table: List[int] = []
-        self.game_skills: Dict[str, Dict] = {}
-        self.game_criticals: Dict[str, Any] = {}
-        self.game_quests: Dict[str, Any] = {}
-        self.game_nodes: Dict[str, Any] = {} 
-        self.game_factions: Dict[str, Any] = {}
-        self.game_spells: Dict[str, Any] = {}
 
         # --- Timers ---
         self.last_game_tick_time: float = time.time()
@@ -73,38 +58,45 @@ class World:
         self.band_lock = threading.RLock()
         self.index_lock = threading.RLock()
 
+    # --- BACKWARD COMPATIBILITY PROPERTIES ---
+    # These ensure existing code (combat, verbs) works without modification.
+    @property
+    def game_items(self): return self.assets.items
+    @property
+    def game_monster_templates(self): return self.assets.monster_templates
+    @property
+    def game_loot_tables(self): return self.assets.loot_tables
+    @property
+    def game_level_table(self): return self.assets.level_table
+    @property
+    def game_skills(self): return self.assets.skills
+    @property
+    def game_criticals(self): return self.assets.criticals
+    @property
+    def game_quests(self): return self.assets.quests
+    @property
+    def game_nodes(self): return self.assets.nodes
+    @property
+    def game_factions(self): return self.assets.factions
+    @property
+    def game_spells(self): return self.assets.spells
+    @property
+    def room_templates(self): return self.assets.room_templates
+    # -----------------------------------------
+
     def load_all_data(self, database):
         if database is None:
             print("[WORLD ERROR] Database is None. Cannot load data.")
             return
             
-        print("[WORLD INIT] Loading all room templates...")
-        # Load into templates, NOT active rooms
-        self.room_templates = db.fetch_all_rooms()
+        # 1. Load Static Assets
+        self.assets.load_all_assets()
         
-        print("[WORLD INIT] Loading all monster templates...")
-        self.game_monster_templates = db.fetch_all_monsters()
-        print("[WORLD INIT] Loading all loot tables...")
-        self.game_loot_tables = db.fetch_all_loot_tables()
-        print("[WORLD INIT] Loading all items...")
-        self.game_items = db.fetch_all_items()
-        print("[WORLD INIT] Loading level table...")
-        self.game_level_table = db.fetch_all_levels()
-        print("[WORLD INIT] Loading all skills...")
-        self.game_skills = db.fetch_all_skills()
-        print("[WORLD INIT] Loading all criticals...")
-        self.game_criticals = db.fetch_all_criticals()
-        print("[WORLD INIT] Loading all quests...")
-        self.game_quests = db.fetch_all_quests()
-        print("[WORLD INIT] Loading all nodes...")
-        self.game_nodes = db.fetch_all_nodes()
-        print("[WORLD INIT] Loading all factions...")
-        self.game_factions = db.fetch_all_factions()
-        print("[WORLD INIT] Loading all spells...")
-        self.game_spells = db.fetch_all_spells()
-        print("[WORLD INIT] Loading all adventuring bands...")
+        # 2. Load Dynamic State (Persistent Runtime Data)
+        print("[WORLD INIT] Loading active adventuring bands...")
         self.active_bands = db.fetch_all_bands(database)
-        print("[WORLD INIT] Data loaded.")
+        
+        print("[WORLD INIT] Initialization complete.")
 
     # --- Index Management ---
     def register_mob(self, uid: str, room_id: str):
@@ -192,31 +184,22 @@ class World:
                     return group_id
         return None
 
-    # ---
-    # --- PHASE 2: Room Factory / Hydration ---
-    # ---
+    # --- Room Factory / Hydration ---
     def get_room(self, room_id: str) -> Optional[Dict[str, Any]]:
         """
         Returns a DICT representing the room. 
-        If it's an ActiveRoom, returns its current state.
-        If not active, instantiates it from Template.
+        Instantiates ActiveRoom from AssetManager template if needed.
         """
         with self.room_lock:
             # 1. Check Active Rooms (Cache)
             if room_id in self.active_rooms:
                 return self.active_rooms[room_id].to_dict()
             
-            # 2. Check Templates
-            template = self.room_templates.get(room_id)
-            if not template:
-                # Fallback: Lazy Load from DB
-                template = db.fetch_room_data(room_id)
-                if template and template.get("room_id") != "void":
-                    self.room_templates[room_id] = template
+            # 2. Fetch Template via AssetManager (handles lazy loading)
+            template = self.assets.get_room_template(room_id)
             
             if template:
                 # 3. Hydrate / Instantiate Active Room
-                # Deep copy the objects list so we don't mutate the template
                 active_objects = []
                 for obj_stub in template.get("objects", []):
                     
@@ -227,35 +210,31 @@ class World:
                     
                     # A. Hydrate Nodes
                     if node_id:
-                        node_template = self.game_nodes.get(node_id)
+                        node_template = self.game_nodes.get(node_id) # Uses property -> assets.nodes
                         if node_template:
-                            # Merge: template first, then stub overrides (like state)
                             full_node = copy.deepcopy(node_template)
                             full_node.update(merged_obj)
                             merged_obj = full_node
                     
-                    # B. Hydrate Monsters/NPCs
+                    # B. Hydrate Monsters
                     elif monster_id:
-                        # Check if this specific UID is dead
                         uid = merged_obj.get("uid")
                         if not uid:
-                            # Generate persistent UID for this instance if missing
                             uid = uuid.uuid4().hex
                             merged_obj["uid"] = uid
                             
                         if self.get_defeated_monster(uid):
-                            continue # Skip dead mobs
+                            continue 
                             
-                        mob_template = self.game_monster_templates.get(monster_id)
+                        mob_template = self.game_monster_templates.get(monster_id) # Uses property
                         if mob_template:
                             full_mob = copy.deepcopy(mob_template)
                             full_mob.update(merged_obj)
                             merged_obj = full_mob
                             
-                            # Register in AI Index
                             self.register_mob(uid, room_id)
                             
-                    # C. Ensure NPC UIDs
+                    # C. NPC UIDs
                     elif merged_obj.get("is_npc") and not merged_obj.get("uid"):
                          uid = uuid.uuid4().hex
                          merged_obj["uid"] = uid
@@ -263,14 +242,14 @@ class World:
 
                     active_objects.append(merged_obj)
                 
-                # Create the ActiveRoom Object
+                # Create ActiveRoom
                 new_active_room = Room(
                     room_id=template["room_id"],
                     name=template["name"],
                     description=template.get("description", ""),
                     db_data=template
                 )
-                new_active_room.objects = active_objects # Assign hydrated objects
+                new_active_room.objects = active_objects 
                 
                 self.active_rooms[room_id] = new_active_room
                 
@@ -280,36 +259,27 @@ class World:
 
     def get_all_rooms(self) -> Dict[str, Dict[str, Any]]:
         """
-        Returns a dict of ALL rooms (Active + Templates).
-        Used for global iterations (like AI checks).
+        Returns a dict of ALL rooms (Active overlaying Templates).
         """
         with self.room_lock:
-            # Start with templates
-            all_rooms = copy.deepcopy(self.room_templates)
-            # Overlay active rooms
+            all_rooms = copy.deepcopy(self.assets.room_templates)
             for rid, room_obj in self.active_rooms.items():
                 all_rooms[rid] = room_obj.to_dict()
             return all_rooms
             
     def update_room_cache(self, room_id: str, room_data: Dict[str, Any]):
-        # Phase 2: We update the ActiveRoom object
         with self.room_lock:
             if room_id in self.active_rooms:
                 room_obj = self.active_rooms[room_id]
-                # Update fields
                 room_obj.objects = room_data.get("objects", [])
-                # (Add other fields if needed)
 
     def save_room(self, room_obj):
-        # Update the ActiveRoom in memory
         with self.room_lock:
             self.active_rooms[room_obj.room_id] = room_obj
-        # Save to DB (Persistent World)
         db.save_room_state(room_obj) 
 
     def move_object_between_rooms(self, obj_to_move: Dict, from_room_id: str, to_room_id: str) -> bool:
         with self.room_lock:
-            # Force hydration of both rooms
             source_data = self.get_room(from_room_id)
             dest_data = self.get_room(to_room_id)
             
@@ -318,12 +288,11 @@ class World:
             source_room = self.active_rooms[from_room_id]
             dest_room = self.active_rooms[to_room_id]
 
-            # Find object in source
             found_index = -1
             uid = obj_to_move.get("uid")
             
             for i, obj in enumerate(source_room.objects):
-                if obj is obj_to_move: # Identity check
+                if obj is obj_to_move: 
                     found_index = i
                     break
                 if uid and obj.get("uid") == uid:
@@ -333,13 +302,12 @@ class World:
             if found_index == -1:
                 return False
 
-            # Move
             real_obj = source_room.objects.pop(found_index)
             dest_room.objects.append(real_obj)
             
             return True
 
-    # --- Combat, Trade, Groups (Unchanged) ---
+    # --- Combat, Trade, Groups (State) ---
     def get_combat_state(self, combatant_id: str) -> Optional[Dict[str, Any]]:
         with self.combat_lock:
             return self.combat_state.get(combatant_id)
@@ -479,7 +447,6 @@ class World:
                 print(f"[WORLD/BROADCAST-WARN] No socketio object. Cannot broadcast to {room_id}: {message}")
             return
         
-        # Flag Check
         is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
         
         if not is_flag_checked:
@@ -489,7 +456,6 @@ class World:
                 self.socketio.emit(msg_type, message, to=room_id)
             return
 
-        # Spatial Index Check
         with self.index_lock:
             players_in_room = self.room_players.get(room_id, set()).copy()
         
