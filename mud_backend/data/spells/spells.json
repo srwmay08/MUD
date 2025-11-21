@@ -1,0 +1,54 @@
+{
+    "heal_1": {
+        "name": "Minor Heal",
+        "school": "spiritual",
+        "spirit_cost": 8,
+        "mana_cost": 0,
+        "effect": "heal",
+        "base_power": 10,
+        "skill": "spiritual_lore",
+        "cast_message_self": "A warm, restorative light washes over you.",
+        "cast_message_room": "{caster} glows with a warm, restorative light."
+    },
+    "shock_1": {
+        "name": "Minor Shock",
+        "school": "elemental",
+        "spirit_cost": 0,
+        "mana_cost": 10,
+        "effect": "attack",
+        "damage_type": "electricity",
+        "base_damage_factor": 0.25,
+        "skill": "elemental_lore",
+        "bonus_as": 0,
+        "bonus_crit_rank": 0,
+        "cast_message_target": "You hurl a small surge of electricity at {target}!",
+        "cast_message_room": "{caster} hurls a small surge of electricity at {target}!"
+    },
+    "shock_2": {
+        "name": "Shock",
+        "school": "elemental",
+        "spirit_cost": 0,
+        "mana_cost": 20,
+        "effect": "attack",
+        "damage_type": "electricity",
+        "base_damage_factor": 0.35,
+        "skill": "elemental_lore",
+        "bonus_as": 20,
+        "bonus_crit_rank": 1,
+        "cast_message_target": "You unleash a powerful bolt of electricity at {target}!",
+        "cast_message_room": "{caster} unleashes a powerful bolt of electricity at {target}!"
+    },
+    "spirit_shield": {
+        "name": "Spirit Shield",
+        "school": "spiritual",
+        "spirit_cost": 15,
+        "mana_cost": 0,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 10,
+        "skill": "spiritual_lore",
+        "duration_per_rank": 10,
+        "cast_message_self": "A dim aura surrounds you.",
+        "cast_message_room": "A dim aura surrounds {caster}."
+    }
+}
