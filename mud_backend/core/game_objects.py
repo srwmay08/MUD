@@ -25,8 +25,6 @@ class Player(GameEntity):
         self.current_room_id = current_room_id
         self.account_username: str = self.data.get("account_username", "")
         
-        # Admin Flag (In a real app, fetch this from the Account collection, not just Player data)
-        # For now, we will trust the player DB object, but ideally, this is loaded from the Account.
         self.is_admin: bool = self.data.get("is_admin", False)
         
         self.messages = [] 
@@ -101,9 +99,7 @@ class Player(GameEntity):
         self.band_id = self.data.get("band_id", None) 
         self.band_xp_bank = self.data.get("band_xp_bank", 0) 
         
-        # --- NEW: Transient field for movement messages ---
         self.temp_leave_message = None
-        # --------------------------------------------------
         
         self.level_xp_target = self._get_xp_target_for_level(self.level)
 
@@ -115,7 +111,6 @@ class Player(GameEntity):
 
     @property
     def race_data(self) -> dict:
-        # Dynamically fetch from world assets
         return self.world.game_races.get(self.race, self.world.game_races.get("Human", {}))
 
     @property
@@ -438,13 +433,11 @@ class Player(GameEntity):
         return DEFAULT_UNARMORED_TYPE
     
     def move_to_room(self, target_room_id: str, move_message: str):
-        # Using world's public stop method
         self.world.stop_combat_for_all(self.name.lower(), "any") 
         
         old_room = self.current_room_id
         self.current_room_id = target_room_id
         
-        # Update Spatial Index via World Proxy
         self.world.remove_player_from_room_index(self.name.lower(), old_room)
         self.world.add_player_to_room_index(self.name.lower(), target_room_id)
         
@@ -457,7 +450,7 @@ class Player(GameEntity):
         # Base Entity Data + Player Specifics
         data = super().to_dict() if hasattr(super(), 'to_dict') else self.data.copy()
         
-        # Override with current state
+        # Override with current state (ENSURE ALL MUTABLE FIELDS ARE HERE)
         data.update({
             "name": self.name,
             "current_room_id": self.current_room_id,
@@ -469,15 +462,45 @@ class Player(GameEntity):
             "skills": self.skills,
             "inventory": self.inventory,
             "worn_items": self.worn_items,
-            # ... Add all other tracked fields here ...
             "wealth": self.wealth,
             "flags": self.flags,
-            "completed_quests": self.completed_quests
+            "completed_quests": self.completed_quests,
+            # --- FIXED: Added missing persistence fields ---
+            "level": self.level,
+            "experience": self.experience,
+            "unabsorbed_exp": self.unabsorbed_exp,
+            "ptps": self.ptps,
+            "mtps": self.mtps,
+            "stps": self.stps,
+            "game_state": self.game_state,
+            "chargen_step": self.chargen_step,
+            "appearance": self.appearance,
+            "skill_learning_progress": self.skill_learning_progress,
+            "ranks_trained_this_level": self.ranks_trained_this_level,
+            "deaths_recent": self.deaths_recent,
+            "death_sting_points": self.death_sting_points,
+            "con_lost": self.con_lost,
+            "con_recovery_pool": self.con_recovery_pool,
+            "wounds": self.wounds,
+            "next_mana_pulse_time": self.next_mana_pulse_time,
+            "mana_pulse_used": self.mana_pulse_used,
+            "last_spellup_use_time": self.last_spellup_use_time,
+            "spellup_uses_today": self.spellup_uses_today,
+            "stamina_burst_pulses": self.stamina_burst_pulses,
+            "prepared_spell": self.prepared_spell,
+            "buffs": self.buffs,
+            "known_spells": self.known_spells,
+            "known_maneuvers": self.known_maneuvers,
+            "visited_rooms": self.visited_rooms,
+            "is_goto_active": self.is_goto_active,
+            "group_id": self.group_id,
+            "band_id": self.band_id,
+            "band_xp_bank": self.band_xp_bank,
+            "is_admin": self.is_admin
         })
         return data
 
     def get_vitals(self) -> Dict[str, Any]:
-        # Placeholder Logic:
         worn_data = {}
         for slot_id, slot_name in config.EQUIPMENT_SLOTS.items():
             item_id = self.worn_items.get(slot_id)
@@ -502,7 +525,7 @@ class Player(GameEntity):
             "posture": self.posture,
             "status_effects": self.status_effects,
             "rt_end_time_ms": self.next_action_time * 1000,
-            "rt_type": "hard" # You might want to store this in player state if it varies
+            "rt_type": "hard"
         }
 
 class Room(GameEntity):
@@ -510,10 +533,7 @@ class Room(GameEntity):
         super().__init__(uid=room_id, name=name, data=db_data)
         self.room_id = room_id 
         self.is_room = True
-        
-        # Assign to self.data, as self.description is a read-only property
         self.data["description"] = description
-        
         self.exits: Dict[str, str] = self.data.get("exits", {})
         self.triggers: Dict[str, str] = self.data.get("triggers", {})
         self.objects: List[Dict[str, Any]] = []
@@ -530,7 +550,7 @@ class Room(GameEntity):
                 **self.data,
                 "room_id": self.room_id,
                 "name": self.name,
-                "description": self.description, # Reads from self.data["description"]
+                "description": self.description,
                 "objects": self.objects,
                 "exits": self.exits,
                 "triggers": self.triggers

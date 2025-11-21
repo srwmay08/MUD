@@ -39,7 +39,7 @@ class Summon(BaseVerb):
         target_player = self.world.get_player_obj(target_name)
         
         if not target_player:
-            self.player.send_message("Player not active.")
+            self.player.send_message("Player not found.")
             return
             
         target_player.move_to_room(self.player.current_room_id, "You are magically summoned!")
@@ -52,6 +52,7 @@ class Wiz(BaseVerb):
         if current == "off":
             self.player.flags["invisible"] = "on"
             self.player.send_message("You fade from sight (Admin Invisibility ON).")
+            # Broadcast disappearance
             self.world.broadcast_to_room(self.room.room_id, f"{self.player.name} fades into thin air.", "ambient")
         else:
             self.player.flags["invisible"] = "off"
@@ -67,7 +68,7 @@ class Restore(BaseVerb):
             found = self.world.get_player_obj(name)
             if found: target = found
             else: 
-                self.player.send_message("Player not active.")
+                self.player.send_message("Player not found.")
                 return
 
         target.hp = target.max_hp
@@ -82,9 +83,6 @@ class Restore(BaseVerb):
         target.send_message("You feel a divine energy fully restore you.")
         if target != self.player:
             self.player.send_message(f"You restored {target.name}.")
-            
-        # Push update to client
-        target.mark_dirty()
 
 @VerbRegistry.register(["force"], admin_only=True)
 class Force(BaseVerb):
@@ -98,7 +96,7 @@ class Force(BaseVerb):
         
         target_player = self.world.get_player_obj(target_name)
         if not target_player:
-            self.player.send_message("Player not active.")
+            self.player.send_message("Player not found.")
             return
             
         self.player.send_message(f"Forcing {target_player.name} to: {command_str}")
@@ -107,13 +105,12 @@ class Force(BaseVerb):
 @VerbRegistry.register(["kick"], admin_only=True)
 class Kick(BaseVerb):
     def execute(self):
-        if not self.args: 
-            self.player.send_message("Kick who?")
-            return
+        if not self.args: return
         target_name = self.args[0].lower()
         target_player = self.world.get_player_obj(target_name)
         
         if target_player:
+            # Get SID
             p_info = self.world.get_player_info(target_name)
             if p_info and p_info.get("sid"):
                 self.world.socketio.disconnect(p_info["sid"])
@@ -140,8 +137,6 @@ class Freeze(BaseVerb):
                 target_player.flags["frozen"] = "off"
                 self.player.send_message(f"{target_player.name} is thawed.")
                 target_player.send_message("You can move again.")
-        else:
-            self.player.send_message("Player not found.")
 
 @VerbRegistry.register(["advance", "givexp", "level"], admin_only=True)
 class Advance(BaseVerb):
@@ -161,15 +156,28 @@ class Advance(BaseVerb):
             
         target = self.world.get_player_obj(target_name)
         if not target:
-            self.player.send_message("Player not active.")
+            self.player.send_message("Player not found.")
             return
             
         if adv_type == "xp":
             target.experience += amount
             target.send_message(f"An admin granted you {amount} XP.")
         elif adv_type == "level":
+            old_level = target.level
             target.level = max(0, target.level + amount)
-            target.send_message(f"You have been adjusted to level {target.level}.")
+            
+            # --- FIX: Calculate TPs for gained levels ---
+            if target.level > old_level:
+                levels_gained = target.level - old_level
+                ptps, mtps, stps = target._calculate_tps_per_level()
+                target.ptps += ptps * levels_gained
+                target.mtps += mtps * levels_gained
+                target.stps += stps * levels_gained
+                target.send_message(f"You have been adjusted to level {target.level}. (Gained TPs for {levels_gained} levels)")
+            else:
+                target.send_message(f"You have been adjusted to level {target.level}.")
+            # --------------------------------------------
+            
         elif adv_type == "ptp":
             target.ptps += amount
         elif adv_type == "mtp":
@@ -186,11 +194,12 @@ class Advance(BaseVerb):
 class Snoop(BaseVerb):
     def execute(self):
         if not self.args:
-            self.player.send_message("Snoop who? (Or SNOOP OFF)")
+            self.player.send_message("Snoop who?")
             return
         
         target_name = self.args[0].lower()
         if target_name == "off":
+            # Find who we are snooping
             targets = []
             for p_name, info in self.world.get_all_players_info():
                 p = info.get("player_obj")
@@ -202,13 +211,11 @@ class Snoop(BaseVerb):
 
         target = self.world.get_player_obj(target_name)
         if not target:
-            self.player.send_message("Player not active.")
+            self.player.send_message("Player not found.")
             return
             
+        # Initialize snoop list if needed
         if "snooped_by" not in target.flags: target.flags["snooped_by"] = []
         
-        if self.player.name.lower() not in target.flags["snooped_by"]:
-            target.flags["snooped_by"].append(self.player.name.lower())
-            self.player.send_message(f"You are now snooping {target.name}.")
-        else:
-            self.player.send_message(f"You are already snooping {target.name}.")
+        target.flags["snooped_by"].append(self.player.name.lower())
+        self.player.send_message(f"You are now snooping {target.name}.")

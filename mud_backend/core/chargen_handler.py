@@ -449,6 +449,13 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.stamina = player.max_stamina
         player.spirit = player.max_spirit
         
+        # --- NEW: Recalculate Training Points based on assigned stats ---
+        ptps, mtps, stps = player._calculate_tps_per_level()
+        player.ptps = ptps
+        player.mtps = mtps
+        player.stps = stps
+        # ---------------------------------------------------------------
+        
         player.worn_items["back"] = "leather_backpack"
         player.worn_items["torso"] = "leather_armor"
         player.inventory.append("iron_dagger") 
