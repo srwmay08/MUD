@@ -42,6 +42,14 @@ GOTO_MAP = {
     "innkeeper": "inn_front_desk"
 }
 
+def _clean_name(name: str) -> str:
+    """Helper to strip articles for better message formatting."""
+    lower_name = name.lower()
+    if lower_name.startswith("a "): return name[2:]
+    if lower_name.startswith("an "): return name[3:]
+    if lower_name.startswith("the "): return name[4:]
+    return name
+
 def _check_toll_gate(player, target_room_id: str) -> bool:
     if player.current_room_id == "north_gate_outside" and target_room_id == "north_gate_inside":
         if "gate_pass" not in player.inventory:
@@ -94,7 +102,8 @@ def _handle_group_move(
     target_room_id: str,
     move_msg: str, 
     move_verb: str, 
-    skill_dc: int = 0
+    skill_dc: int = 0,
+    leave_msg_suffix: str = "leaves." # New parameter
 ):
     group = world.get_group(leader_player.group_id)
     if not group or group["leader"] != leader_player.name.lower():
@@ -173,7 +182,10 @@ def _handle_group_move(
                 if leader_sid:
                     sids_to_skip_for_leave.add(leader_sid)
 
-                leaves_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> leaves.'
+                # --- FIX: Use the passed suffix so followers also look like they are moving specifically ---
+                leaves_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> {leave_msg_suffix}'
+                # -----------------------------------------------------------------------------------------
+                
                 world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sids_to_skip_for_leave)
                 
                 world.socketio.server.enter_room(sid, target_room_id)
@@ -259,12 +271,14 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         move_msg = ""
         move_verb = move_direction
         skill_dc = 0
-        leave_msg = "leaves." # Default
+        
+        # Default message
+        leave_msg_suffix = "leaves." 
         
         if move_direction in current_room_data.get("exits", {}):
             target_room_id_step = current_room_data.get("exits", {}).get(move_direction)
             move_msg = f"You move {move_direction}..."
-            leave_msg = f"heads {move_direction}."
+            leave_msg_suffix = f"heads {move_direction}."
         else:
             enter_obj = next((obj for obj in current_room_data.get("objects", []) 
                               if ((move_direction in obj.get("keywords", []) or 
@@ -274,15 +288,16 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             
             if enter_obj:
                 target_room_id_step = enter_obj.get("target_room")
+                clean_obj_name = _clean_name(enter_obj.get('name', 'something'))
                 if "CLIMB" in enter_obj.get("verbs", []):
                     move_verb = "climb"
                     skill_dc = 20 
                     move_msg = f"You climb the {enter_obj.get('name')}..."
-                    leave_msg = f"climbs the {enter_obj.get('name')}."
+                    leave_msg_suffix = f"climbs the {clean_obj_name}."
                 else: 
                     move_verb = "enter"
                     move_msg = f"You enter the {enter_obj.get('name')}..."
-                    leave_msg = f"enters the {enter_obj.get('name')}."
+                    leave_msg_suffix = f"enters the {clean_obj_name}."
             else:
                 player_obj.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
                 world.socketio.emit('command_response', 
@@ -311,7 +326,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         _handle_group_move(
             world, player_obj, original_room_id, target_room_id_step,
-            move_msg, move_verb, skill_dc
+            move_msg, move_verb, skill_dc, leave_msg_suffix
         )
         
         new_room_data = world.get_room(target_room_id_step)
@@ -337,9 +352,9 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         if original_room_id and target_room_id_step != original_room_id:
             world.socketio.server.leave_room(sid, original_room_id)
             
-            # --- FIX: Use dynamic leave message ---
-            leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> {leave_msg}'
-            # --------------------------------------
+            # --- FIX: Use dynamic leave message for GOTO ---
+            leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> {leave_msg_suffix}'
+            # -----------------------------------------------
             
             sids_to_skip_leave = {sid}
             if group and is_leader:
@@ -422,16 +437,21 @@ class Enter(BaseVerb):
         obj_keywords = enterable_object.get("keywords", [])
         is_door_or_gate = "door" in obj_keywords or "gate" in obj_keywords
         
+        obj_clean_name = _clean_name(enterable_object.get('name', target_name))
+        leave_suffix = ""
+
         if current_posture == "standing":
             move_msg = f"You enter the {enterable_object.get('name', target_name)}..."
-            # --- FIX: Set temp message ---
-            self.player.temp_leave_message = f"enters the {enterable_object.get('name', target_name)}."
-            # -----------------------------
+            # --- FIX: Set specific leave message ---
+            leave_suffix = f"enters the {obj_clean_name}."
+            self.player.temp_leave_message = leave_suffix
+            # ---------------------------------------
             if not is_door_or_gate:
                 rt = 3.0
         elif current_posture == "prone":
             move_msg = f"You crawl through the {enterable_object.get('name', target_name)}..."
-            self.player.temp_leave_message = f"crawls through the {enterable_object.get('name', target_name)}."
+            leave_suffix = f"crawls through the {obj_clean_name}."
+            self.player.temp_leave_message = leave_suffix
             if not is_door_or_gate:
                 rt = 8.0
         else: 
@@ -451,7 +471,7 @@ class Enter(BaseVerb):
         
         _handle_group_move(
             self.world, self.player, original_room_id, target_room_id,
-            move_msg, "enter", skill_dc=0
+            move_msg, "enter", skill_dc=0, leave_msg_suffix=leave_suffix
         )
 
         new_room_data = self.world.get_room(target_room_id)
@@ -516,6 +536,7 @@ class Climb(BaseVerb):
         
         rt = 3.0
         move_msg = ""
+        leave_suffix = ""
         
         if success_margin < 0:
             rt = max(3.0, 10.0 - (climbing_skill / 10.0))
@@ -525,9 +546,12 @@ class Climb(BaseVerb):
         else:
             rt = max(1.0, 5.0 - (success_margin / 20.0))
             move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
-            # --- FIX: Set temp message ---
-            self.player.temp_leave_message = f"climbs the {target_name}."
-            # -----------------------------
+            
+            # --- FIX: Set specific leave message ---
+            obj_clean_name = _clean_name(climbable_object.get('name', target_name))
+            leave_suffix = f"climbs the {obj_clean_name}."
+            self.player.temp_leave_message = leave_suffix
+            # ---------------------------------------
             
         if _check_toll_gate(self.player, target_room_id):
             return
@@ -542,7 +566,7 @@ class Climb(BaseVerb):
         
         _handle_group_move(
             self.world, self.player, original_room_id, target_room_id,
-            move_msg, "climb", skill_dc=dc
+            move_msg, "climb", skill_dc=dc, leave_msg_suffix=leave_suffix
         )
 
         new_room_data = self.world.get_room(target_room_id)
@@ -580,16 +604,19 @@ class Move(BaseVerb):
         if target_room_id:
             current_posture = self.player.posture
             move_msg = ""
+            leave_suffix = ""
             rt = 0.0 
             
             if current_posture == "standing":
                 move_msg = f"You move {normalized_direction}..."
-                # --- FIX: Set temp message ---
-                self.player.temp_leave_message = f"heads {normalized_direction}."
-                # -----------------------------
+                # --- FIX: Set specific leave message ---
+                leave_suffix = f"heads {normalized_direction}."
+                self.player.temp_leave_message = leave_suffix
+                # ---------------------------------------
             elif current_posture == "prone":
                 move_msg = f"You crawl {normalized_direction}..."
-                self.player.temp_leave_message = f"crawls {normalized_direction}."
+                leave_suffix = f"crawls {normalized_direction}."
+                self.player.temp_leave_message = leave_suffix
             else:
                 self.player.send_message("You must stand up first.")
                 return
@@ -607,7 +634,7 @@ class Move(BaseVerb):
             
             _handle_group_move(
                 self.world, self.player, original_room_id, target_room_id,
-                move_msg, normalized_direction, skill_dc=0
+                move_msg, normalized_direction, skill_dc=0, leave_msg_suffix=leave_suffix
             )
 
             new_room_data = self.world.get_room(target_room_id)
@@ -659,16 +686,19 @@ class Exit(BaseVerb):
             if target_room_id:
                 current_posture = self.player.posture
                 move_msg = ""
+                leave_suffix = ""
                 rt = 0.0 
                 
                 if current_posture == "standing":
                     move_msg = "You head out..."
-                    # --- FIX: Set temp message ---
-                    self.player.temp_leave_message = "heads out."
-                    # -----------------------------
+                    # --- FIX: Set specific leave message ---
+                    leave_suffix = "heads out."
+                    self.player.temp_leave_message = leave_suffix
+                    # ---------------------------------------
                 elif current_posture == "prone":
                     move_msg = "You crawl out..."
-                    self.player.temp_leave_message = "crawls out."
+                    leave_suffix = "crawls out."
+                    self.player.temp_leave_message = leave_suffix
                 else: 
                     self.player.send_message("You must stand up first.")
                     return
@@ -686,7 +716,7 @@ class Exit(BaseVerb):
                 
                 _handle_group_move(
                     self.world, self.player, original_room_id, target_room_id,
-                    move_msg, "out", skill_dc=0
+                    move_msg, "out", skill_dc=0, leave_msg_suffix=leave_suffix
                 )
 
                 new_room_data = self.world.get_room(target_room_id)
