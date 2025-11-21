@@ -9,6 +9,8 @@ from mud_backend.core.room_handler import show_room_to_player
 if TYPE_CHECKING:
     from mud_backend.core.game_objects import Player
 
+@VerbRegistry.register(["forage"])
+
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Finds the first item_id in a player's hands that matches.

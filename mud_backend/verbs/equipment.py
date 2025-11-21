@@ -7,6 +7,8 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 import time
 # --- END NEW ---
 
+@VerbRegistry.register(["wear", "wield"]) @VerbRegistry.register(["remove"])
+
 def _find_item_in_inventory(player, target_name: str) -> str | None:
     """Finds the first item_id in a player's inventory that matches."""
     for item_id in player.inventory:

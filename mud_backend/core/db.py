@@ -283,8 +283,29 @@ def fetch_all_nodes() -> dict:
 def fetch_all_factions() -> dict:
     return _load_json_data("faction.json")
 
+def _load_json_data(filename: str) -> Any:
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', filename)
+        with open(json_path, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"[DB ERROR] Could not find '{filename}' at: {json_path}")
+    except json.JSONDecodeError:
+        print(f"[DB ERROR] '{filename}' contains invalid JSON.")
+    return {}
+
+def fetch_all_races() -> dict:
+    return _load_json_data("races.json")
+
 def fetch_all_spells() -> dict:
-    return _load_json_data(os.path.join("spells", "spells.json"))
+    # Support nested folder structure if needed, or just flat
+    # You likely have mud_backend/data/spells/spells.json
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'spells', 'spells.json')
+        with open(json_path, 'r') as f:
+            return json.load(f)
+    except:
+        return _load_json_data("spells.json")
 
 def fetch_combat_rules() -> dict:
     return _load_json_data("combat_rules.json")

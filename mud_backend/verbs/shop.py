@@ -6,6 +6,11 @@ import math
 import random 
 from typing import Tuple, Optional, Dict, Any
 
+@VerbRegistry.register(["list"]) 
+@VerbRegistry.register(["buy", "order"]) 
+@VerbRegistry.register(["sell"]) 
+@VerbRegistry.register(["appraise"])
+
 # --- REFACTORED: Pass game_items_data ---
 def _find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """

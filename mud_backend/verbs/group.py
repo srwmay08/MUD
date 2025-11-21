@@ -6,15 +6,14 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from typing import Optional, Dict, Any
 import uuid
 
-# ---
-# --- NEW: Max group size constant
-# ---
 MAX_GROUP_MEMBERS = 10
-# ---
-# --- END NEW
-# ---
 
-# --- Group Management ---
+VerbRegistry.register(["group"]) 
+@VerbRegistry.register(["hold"]) 
+@VerbRegistry.register(["join"]) 
+@VerbRegistry.register(["leave"]) 
+@VerbRegistry.register(["disband"])
+
 
 class Group(BaseVerb):
     """

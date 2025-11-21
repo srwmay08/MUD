@@ -3,6 +3,7 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 
+@VerbRegistry.register(["whisper"])
 class Whisper(BaseVerb):
     """
     Handles the 'whisper' command for private and group chat.

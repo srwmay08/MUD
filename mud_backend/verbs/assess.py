@@ -1,6 +1,8 @@
 # mud_backend/verbs/assess.py
 from mud_backend.verbs.base_verb import BaseVerb
 
+@VerbRegistry.register(["assess"])
+
 class Assess(BaseVerb):
     """
     ASSESS <item|furnace>

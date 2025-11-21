@@ -1,6 +1,8 @@
 # mud_backend/verbs/stance.py
 from mud_backend.verbs.base_verb import BaseVerb
 
+@VerbRegistry.register(["stance"])
+
 class Stance(BaseVerb):
     """
     Handles the 'stance' command.

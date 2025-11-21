@@ -2,6 +2,8 @@
 # FIX: Change to absolute import using the top package name
 from mud_backend.verbs.base_verb import BaseVerb
 
+@VerbRegistry.register(["say"])
+
 class Say(BaseVerb):
     """Handles the 'say' command."""
     

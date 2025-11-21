@@ -19,6 +19,7 @@ class AssetManager:
         self.factions: Dict[str, Any] = {}
         self.spells: Dict[str, Any] = {}
         self.combat_rules: Dict[str, Any] = {} # <--- NEW
+        self.races: Dict[str, Any] = {} # <--- NEW
         
         # Room templates
         self.room_templates: Dict[str, Dict[str, Any]] = {}
@@ -70,6 +71,9 @@ class AssetManager:
 
         print("[ASSETS] Loading combat rules...")
         self.combat_rules = data_source.fetch_combat_rules()
+
+        print("[ASSETS] Loading all races...")
+        self.races = data_source.fetch_all_races() # <--- NEW
         
         print("[ASSETS] Data loaded.")
 

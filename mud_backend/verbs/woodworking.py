@@ -18,6 +18,7 @@ RECIPES = {
     ]
 }
 
+@VerbRegistry.register(["carve"])
 class Carve(BaseVerb):
     """
     CARVE <wood> INTO <item>

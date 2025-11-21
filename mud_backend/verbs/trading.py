@@ -12,6 +12,12 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.core.quest_handler import get_active_quest_for_npc
 # --- END NEW ---
 
+@VerbRegistry.register(["give"]) 
+@VerbRegistry.register(["accept"]) 
+@VerbRegistry.register(["decline"]) 
+@VerbRegistry.register(["cancel"]) 
+@VerbRegistry.register(["exchange"])
+
 # --- NEW: Helper functions copied from equipment.py ---
 def _find_item_in_inventory(player, target_name: str) -> str | None:
     """Finds the first item_id in a player's inventory that matches."""

@@ -2,6 +2,8 @@
 from mud_backend.verbs.base_verb import BaseVerb
 import math
 
+@VerbRegistry.register(["experience", "exp"])
+
 class Experience(BaseVerb):
     """
     Handles the 'experience' (and 'exp') command.

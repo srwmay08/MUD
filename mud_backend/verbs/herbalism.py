@@ -8,6 +8,8 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
 
+@VerbRegistry.register(["harvest"])
+
 # This helper is copied from the new mining.py
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
     """Helper to find a gathering node by name and type."""

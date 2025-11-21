@@ -9,6 +9,8 @@ from mud_backend.core.utils import get_stat_bonus, calculate_skill_bonus
 # Skills that can be used for tripping
 TRIP_WEAPON_SKILLS = ["polearms", "staves", "two_handed_blunt"]
 
+@VerbRegistry.register(["trip"])
+
 class Trip(BaseVerb):
     """
     Handles the 'trip' command.

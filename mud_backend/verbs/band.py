@@ -9,6 +9,8 @@ from mud_backend.core import db # <-- FIX: Import db module directly
 
 MAX_BAND_MEMBERS = 10
 
+@VerbRegistry.register(["band", "bt"])
+
 class Band(BaseVerb):
     """
     Handles all persistent Adventuring Band commands:

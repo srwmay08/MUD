@@ -2,6 +2,8 @@
 from mud_backend.verbs.base_verb import BaseVerb
 import re
 
+@VerbRegistry.register(["flag", "flags"])
+
 # ---
 # --- MODIFIED: Added groupinvites
 # ---

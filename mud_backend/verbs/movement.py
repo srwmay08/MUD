@@ -27,6 +27,8 @@ if TYPE_CHECKING:
     from mud_backend.core.game_objects import Player
 
 
+@VerbRegistry.register(["move", "go", "n", "north", "s", "south", "e", "east", "w", "west", "ne", "northeast", "nw", "northwest", "se", "southeast", "sw", "southwest"])
+
 # ---
 # --- NEW: GOTO Target Map
 # ---

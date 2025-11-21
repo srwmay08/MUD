@@ -11,6 +11,9 @@ from mud_backend import config
 from typing import Dict, Any
 from mud_backend.core.room_handler import show_room_to_player
 
+@VerbRegistry.register(["mine"]) 
+@VerbRegistry.register(["prospect"])
+
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
     """Helper to find a gathering node by name and type."""
     # This helper only needs to search room.objects,

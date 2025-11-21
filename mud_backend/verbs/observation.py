@@ -12,6 +12,9 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend.core.game_loop import environment
 
+@VerbRegistry.register(["look", "l"]) 
+@VerbRegistry.register(["examine", "x"]) 
+@VerbRegistry.register(["investigate"])
 
 class Examine(BaseVerb):
     """

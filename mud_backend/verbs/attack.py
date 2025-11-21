@@ -10,6 +10,8 @@ from mud_backend.core import db
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core import faction_handler
 
+@VerbRegistry.register(["attack"])
+
 class Attack(BaseVerb):
     """
     Handles the 'attack' command.

@@ -28,6 +28,10 @@ SKILL_TO_WEAPON_MAP = {
 }
 # --- END NEW ---
 
+@VerbRegistry.register(["check", "checkin"]) 
+@VerbRegistry.register(["train"]) 
+@VerbRegistry.register(["done"]) 
+@VerbRegistry.register(["train_list"])
 
 class CheckIn(BaseVerb):
     """

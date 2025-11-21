@@ -3,6 +3,8 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.quest_handler import get_active_quest_for_npc
 from typing import Dict, Any, Optional
 
+@VerbRegistry.register(["talk"])
+
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     """Finds an NPC object in the room by name or keyword."""
     for obj in room.objects:

@@ -8,6 +8,8 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
 
+@VerbRegistry.register(["fish"])
+
 def _has_tool(player, required_tool_type: str) -> bool:
     """Checks if the player is wielding a tool of the required type."""
     for slot in ["mainhand", "offhand"]:

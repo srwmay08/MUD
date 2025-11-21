@@ -5,6 +5,12 @@ from typing import Dict, Any, Union
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
 
+@VerbRegistry.register(["get"]) 
+@VerbRegistry.register(["take"]) 
+@VerbRegistry.register(["drop"]) 
+@VerbRegistry.register(["put", "stow"]) 
+@VerbRegistry.register(["pour"])
+
 def _get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Resolves an item reference (string ID or dynamic dict) to its data dictionary.
