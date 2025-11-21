@@ -2,7 +2,7 @@
 import threading
 import copy
 import uuid
-from typing import Dict, Any, Optional, Set, TYPE_CHECKING
+from typing import Dict, Any, Optional, Set, List, Union, TYPE_CHECKING
 from mud_backend.core.game_objects import Room, Player
 
 if TYPE_CHECKING:
@@ -21,15 +21,27 @@ class ConnectionManager:
             sid = player_info.get("sid")
             if sid: self.socketio.emit(msg_type, message, to=sid)
 
-    def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
+    def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         if not self.socketio: return
+        
+        # Normalize skip_sid to a set for efficient lookup/handling
+        skip_sids_set = set()
+        if skip_sid:
+            if isinstance(skip_sid, str):
+                skip_sids_set.add(skip_sid)
+            elif isinstance(skip_sid, (list, set, tuple)):
+                skip_sids_set.update(skip_sid)
         
         # Flag check logic (ambient/combat toggles)
         is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
         
         if not is_flag_checked:
-            if skip_sid: self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_sid)
-            else: self.socketio.emit(msg_type, message, to=room_id)
+            # Convert to list for Flask-SocketIO which expects list or str
+            skip_list = list(skip_sids_set)
+            if skip_list: 
+                self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_list)
+            else: 
+                self.socketio.emit(msg_type, message, to=room_id)
             return
 
         # If checking flags, iterate players in room
@@ -41,7 +53,9 @@ class ConnectionManager:
             
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
-            if not player_obj or not sid or sid == skip_sid: continue
+            
+            # Check against the set
+            if not player_obj or not sid or sid in skip_sids_set: continue
             
             if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
             if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
