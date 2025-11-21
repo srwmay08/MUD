@@ -18,7 +18,11 @@ from mud_backend import config
 from mud_backend.core.utils import get_stat_bonus
 from mud_backend.core.skill_handler import attempt_skill_learning
 
+# --- CONSTANTS REMOVED ---
+# STANCE_MODIFIERS, POSTURE_MODIFIERS, etc. are now loaded from DB/JSON.
+
 class CombatLogBuilder:
+    # (Unchanged from previous version)
     PLAYER_MISS_MESSAGES = [
         "   A clean miss.",
         "   You miss {defender} completely.",
@@ -158,22 +162,26 @@ def _get_critical_result(world: 'World', damage_type: str, location: str, rank: 
     result.setdefault("fatal", False)
     return result
 
+# --- NEW: Helper to get stat modifiers safely ---
 def _get_stat_modifiers(entity: Any) -> Dict[str, int]:
     if isinstance(entity, Player):
         return entity.stat_modifiers
     elif isinstance(entity, dict):
+        # Monsters use raw stats usually, so no extra racial mods needed on top
         return {}
     return {}
+# -------------------------------------------------
 
-# --- CALCULATION FUNCTIONS ---
+# --- CALCULATION FUNCTIONS (Inject rules) ---
 
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict,
                               weapon_item_data: dict | None, target_armor_type: str,
                               attacker_posture: str, attacker_stance: str, 
-                              attacker_modifiers: dict, 
+                              attacker_modifiers: dict, # <-- CHANGED from race string to dict
                               combat_rules: dict) -> int:
     as_val = 0
     strength_stat = attacker_stats.get("STR", 50)
+    # --- FIX: Pass dict ---
     str_bonus = get_stat_bonus(strength_stat, "STR", attacker_modifiers)
     as_val += str_bonus
     
@@ -205,15 +213,17 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     stance_data = stance_mods.get(attacker_stance, stance_mods.get("creature", {"as_mod": 1.0}))
     final_as = int(as_val * stance_data.get("as_mod", 1.0))
     
-    return final_as
+    # --- FIX: Clamp to 0 ---
+    return max(0, final_as)
 
 def calculate_evade_defense(defender_stats: dict, defender_skills: dict, 
-                            defender_modifiers: dict, 
+                            defender_modifiers: dict, # <-- CHANGED
                             armor_data: dict | None, shield_data: dict | None,
                             posture_percent: float, is_ranged_attack: bool,
                             combat_rules: dict) -> int:
     dodging_ranks = defender_skills.get("dodging", 0)
     
+    # --- FIX: Pass dict ---
     agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_modifiers)
     int_bonus = get_stat_bonus(defender_stats.get("INT", 50), "INT", defender_modifiers)
     
@@ -236,12 +246,13 @@ def calculate_evade_defense(defender_stats: dict, defender_skills: dict,
     return math.floor(ds)
 
 def calculate_block_defense(defender_stats: dict, defender_skills: dict, 
-                            defender_modifiers: dict, 
+                            defender_modifiers: dict, # <-- CHANGED
                             shield_data: dict | None, posture_percent: float, is_ranged_attack: bool,
                             combat_rules: dict) -> int:
     if not shield_data: return 0
     shield_ranks = defender_skills.get("shield_use", 0)
     
+    # --- FIX: Pass dict ---
     str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_modifiers)
     
@@ -258,13 +269,14 @@ def calculate_block_defense(defender_stats: dict, defender_skills: dict,
     return math.floor(ds)
 
 def calculate_parry_defense(defender_stats: dict, defender_skills: dict, 
-                            defender_modifiers: dict, 
+                            defender_modifiers: dict, # <-- CHANGED
                             weapon_data: dict | None, offhand_data: dict | None, defender_level: int,
                             posture_percent: float, is_ranged_attack: bool) -> int:
     if is_ranged_attack: return 0
     weapon_skill = weapon_data.get("skill", "brawling") if weapon_data else "brawling"
     weapon_ranks = defender_skills.get(weapon_skill, 0)
     
+    # --- FIX: Pass dict ---
     str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_modifiers)
     
@@ -278,7 +290,7 @@ def calculate_defense_strength(defender: Any,
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                weapon_item_data: dict | None, offhand_item_data: dict | None,
                                is_ranged_attack: bool, defender_stance: str,
-                               defender_modifiers: dict,
+                               defender_modifiers: dict, # <-- CHANGED
                                combat_rules: dict) -> int:
     if isinstance(defender, Player):
         stats, skills, posture, level = defender.stats, defender.skills, defender.posture, defender.level
@@ -291,8 +303,8 @@ def calculate_defense_strength(defender: Any,
     posture_pcts = combat_rules.get("posture_percentage", {})
     posture_percent = posture_pcts.get(posture, 1.0)
     
-    # --- FIX: Changed armor_data to armor_item_data ---
-    evade_ds = calculate_evade_defense(stats, skills, defender_modifiers, armor_item_data, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
+    # --- Pass dicts down ---
+    evade_ds = calculate_evade_defense(stats, skills, defender_modifiers, armor_data, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
     block_ds = calculate_block_defense(stats, skills, defender_modifiers, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
     parry_ds = calculate_parry_defense(stats, skills, defender_modifiers, weapon_item_data, offhand_item_data, level, posture_percent, is_ranged_attack)
     
@@ -310,7 +322,9 @@ def calculate_defense_strength(defender: Any,
     stance_data = stance_mods.get(defender_stance, stance_mods.get("creature", {"ds_mod": 1.0}))
     
     final_ds = int(base_ds * stance_data.get("ds_mod", 1.0))
-    return final_ds
+    
+    # --- FIX: Clamp to 0 ---
+    return max(0, final_ds)
 
 def calculate_roundtime(agility: int) -> float: return max(3.0, 5.0 - ((agility - 50) / 25))
 
@@ -328,12 +342,14 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     attacker_posture = attacker.posture if is_attacker_player else attacker.get("posture", "standing")
     attacker_stance = attacker.stance if is_attacker_player else attacker.get("stance", "creature")
     
+    # --- FIX: Get Modifiers ---
     attacker_modifiers = _get_stat_modifiers(attacker)
 
     is_defender_player = isinstance(defender, Player)
     defender_name = defender.name if is_defender_player else defender.get("name", "Creature")
     defender_stance = defender.stance if is_defender_player else defender.get("stance", "creature")
     
+    # --- FIX: Get Modifiers ---
     defender_modifiers = _get_stat_modifiers(defender)
     
     attacker_name_possessive = f"{attacker_name}'s" if not attacker_name.endswith('s') else f"{attacker_name}'"
@@ -396,11 +412,12 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
     is_ranged_attack = attacker_weapon_type in ["bow"]
 
+    # --- PASS RULES DOWN ---
     attacker_as = calculate_attack_strength(
         attacker_name, attacker_stats, attacker_skills, 
         attacker_weapon_data, defender_armor_type_str, 
         attacker_posture, attacker_stance, 
-        attacker_modifiers,
+        attacker_modifiers, # <-- Passed
         combat_rules
     )
     
@@ -408,7 +425,7 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         defender, defender_armor_data, defender_shield_data, 
         defender_weapon_data, defender_offhand_data, 
         is_ranged_attack, defender_stance, 
-        defender_modifiers,
+        defender_modifiers, # <-- Passed
         combat_rules
     )
 
@@ -471,6 +488,8 @@ def stop_combat(world: 'World', combatant_id: str, target_id: str):
     world.stop_combat_for_all(combatant_id, target_id)
 
 def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callback, send_vitals_callback):
+    # (Unchanged from previous version, except ensure World imports are clean)
+    # Re-implementing to ensure scope consistency:
     current_time = time.time()
     combatant_list = world.get_all_combat_states()
 

@@ -517,6 +517,17 @@ class Player(GameEntity):
                         "name": item_data.get("name", "an item"),
                         "slot_display": slot_name
                     }
+
+        # --- FIX: Fetch real RT from world state ---
+        combat_state = self.world.get_combat_state(self.name.lower())
+        real_next_action = 0.0
+        real_rt_type = "hard"
+        
+        if combat_state:
+            real_next_action = combat_state.get("next_action_time", 0.0)
+            real_rt_type = combat_state.get("rt_type", "hard")
+        # -------------------------------------------
+
         return {
             "health": self.hp, "max_health": self.max_hp,
             "mana": self.mana, "max_mana": self.max_mana,
@@ -530,8 +541,8 @@ class Player(GameEntity):
             "exp_percent": (self.experience / self.level_xp_target) * 100,
             "posture": self.posture,
             "status_effects": self.status_effects,
-            "rt_end_time_ms": self.next_action_time * 1000,
-            "rt_type": "hard"
+            "rt_end_time_ms": real_next_action * 1000, # Use fetched time
+            "rt_type": real_rt_type
         }
 
 class Room(GameEntity):
