@@ -19,7 +19,20 @@ class ConnectionManager:
         player_info = self.world.get_player_info(player_name_lower)
         if player_info:
             sid = player_info.get("sid")
-            if sid: self.socketio.emit(msg_type, message, to=sid)
+            if sid: 
+                self.socketio.emit(msg_type, message, to=sid)
+            
+            # --- NEW: Handle Snooping ---
+            player_obj = player_info.get("player_obj")
+            if player_obj:
+                snoopers = player_obj.flags.get("snooped_by", [])
+                if snoopers:
+                    snoop_msg = f"[SNOOP-{player_obj.name}]: {message}"
+                    for snooper_name in snoopers:
+                        snooper_info = self.world.get_player_info(snooper_name)
+                        if snooper_info and snooper_info.get("sid"):
+                            self.socketio.emit("message", snoop_msg, to=snooper_info["sid"])
+            # ----------------------------
 
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         if not self.socketio: return

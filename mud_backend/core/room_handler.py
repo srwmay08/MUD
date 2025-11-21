@@ -101,7 +101,6 @@ def show_room_to_player(player: Player, room: Room):
     world = player.world
     merged_objects = []
     
-    # --- FIX: Use room.data instead of room.db_data ---
     all_objects_stubs = room.data.get("objects", []) 
     
     room_data_in_cache = world.game_rooms.get(room.room_id, {})
@@ -173,7 +172,20 @@ def show_room_to_player(player: Player, room: Room):
     other_players_in_room = []
     for sid, data in player.world.get_all_players_info():
         player_name_in_room = data["player_name"] 
+        target_player_obj = data.get("player_obj")
+        
         if player_name_in_room.lower() == player.name.lower(): continue
+        
+        # --- NEW: Invisibility Check ---
+        if target_player_obj:
+            is_invis = target_player_obj.flags.get("invisible", "off") == "on"
+            # If invisible, check if observer is admin
+            if is_invis:
+                # Use getattr to be safe if you haven't updated Player class yet
+                if not getattr(player, "is_admin", False):
+                    continue
+        # -------------------------------
+
         if data["current_room_id"] == room.room_id:
             other_players_in_room.append(
                 f'<span class="keyword" data-name="{player_name_in_room}" data-verbs="look">{player_name_in_room}</span>'
@@ -256,7 +268,6 @@ def _handle_npc_idle_dialogue(world: 'World', player_name: str, room_id: str):
                 if idle_prompt:
                     is_just_receiver = (give_target and give_target == npc.get("name", "").lower())
                     
-                    # --- NEW CHECK: Don't say idle prompt if player already has the grant item ---
                     has_grant_item = False
                     if grant_item:
                         if grant_item in player_obj.inventory:
@@ -275,7 +286,7 @@ def _handle_npc_idle_dialogue(world: 'World', player_name: str, room_id: str):
                                 f"The {npc_name} says, \"{idle_prompt}\"",
                                 "message"
                             )
-                            return # Only one idle prompt per room
+                            return 
                         
     except Exception as e:
         print(f"[IDLE_DIALOGUE_ERROR] Error in _handle_npc_idle_dialogue: {e}")

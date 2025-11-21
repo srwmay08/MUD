@@ -32,8 +32,6 @@ ALWAYS_ALLOWED_COMMANDS = {
     'look', 'l', 'inventory', 'inv', 'help', 'say', 'quit'
 }
 
-# --- DIRECTION_MAP WAS HERE, NOW MOVED TO CONFIG.PY ---
-
 def _load_verbs():
     """
     Dynamically discovers and imports all modules in the verbs directory.
@@ -95,6 +93,24 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             
             player.group_id = world.get_player_group_id_on_load(player.name.lower())
             world.add_player_to_room_index(player.name.lower(), player.current_room_id)
+
+    # --- NEW: Check Freeze ---
+    if player.flags.get("frozen", "off") == "on":
+        # Allow 'quit' or 'help' potentially, but usually freeze blocks everything
+        if command_line.strip().lower() not in ['quit', 'help']:
+            player.send_message("You are frozen solid and cannot act.")
+            
+            # Need to return state so UI doesn't break
+            vitals_data = player.get_vitals()
+            map_data = _get_map_data(player, world)
+            return {
+                "messages": player.messages, 
+                "game_state": player.game_state,
+                "vitals": vitals_data,
+                "map_data": map_data,
+                "leave_message": None 
+            }
+    # -------------------------
 
     # 2. State Management Updates
     if player.game_state == "playing" and command_line.lower() != "ping":
@@ -172,21 +188,29 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
         "game_state": player.game_state,
         "vitals": vitals_data,
         "map_data": map_data,
-        "leave_message": leave_msg # <-- Added to result
+        "leave_message": leave_msg 
     }
 
 def _run_verb(world: 'World', player: Player, room: Room, command: str, args: List[str]) -> bool:
-    # Get Class AND Flag
+    """
+    Instantiates and executes the verb class found in the registry.
+    Returns True if a verb was found and executed, False otherwise.
+    """
+    # --- NEW: Use get_verb_info to check Admin privileges ---
+    # Requires Registry update to support tuples
     verb_info = VerbRegistry.get_verb_info(command)
     
     if verb_info:
         VerbClass, admin_only = verb_info
         
         # SECURITY CHECK
-        if admin_only and not player.is_admin:
+        # Use getattr incase Player object isn't fully migrated yet
+        is_admin = getattr(player, "is_admin", False)
+        if admin_only and not is_admin:
             return False # Pretend command doesn't exist
             
         try:
+            # Instantiate and execute
             verb_instance = VerbClass(world=world, player=player, room=room, args=args, command=command)
             verb_instance.execute()
             return True
@@ -195,6 +219,6 @@ def _run_verb(world: 'World', player: Player, room: Room, command: str, args: Li
             print(f"Error running command '{command}': {e}")
             import traceback
             traceback.print_exc()
-            return True 
+            return True # It was found, just errored
             
     return False
