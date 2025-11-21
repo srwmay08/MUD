@@ -112,6 +112,10 @@ class World:
     def game_spells(self): return self.assets.spells
     @property
     def room_templates(self): return self.assets.room_templates
+    @property
+    def game_spells(self): return self.assets.spells
+    @property
+    def game_rules(self): return self.assets.combat_rules # <--- NEW
 
     # --- REFACTORED: Use Dependency Injection ---
     def load_all_data(self, data_source):

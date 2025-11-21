@@ -15,58 +15,14 @@ from mud_backend.core import loot_system
 from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend import config
 
-from mud_backend.core.utils import get_stat_bonus, RACE_MODIFIERS, DEFAULT_RACE_MODS
-from mud_backend.core import faction_handler
+from mud_backend.core.utils import get_stat_bonus
 from mud_backend.core.skill_handler import attempt_skill_learning
 
-# ... (CONSTANTS, CombatLogBuilder, HELPER FUNCTIONS are unchanged) ...
-# ... [Assume STANCE_MODIFIERS, POSTURE_MODIFIERS, etc. are here] ...
-
-# [Paste the constants and helpers from the original file here if needed, 
-# but focusing on the World interaction logic below]
-
-STANCE_MODIFIERS = {
-    "offensive": {"as_mod": 1.15, "ds_mod": 0.70},
-    "advance":   {"as_mod": 1.10, "ds_mod": 0.80},
-    "forward":   {"as_mod": 1.05, "ds_mod": 0.90},
-    "neutral":   {"as_mod": 1.00, "ds_mod": 1.00},
-    "guarded":   {"as_mod": 0.90, "ds_mod": 1.10},
-    "defensive": {"as_mod": 0.75, "ds_mod": 1.25},
-    "creature":  {"as_mod": 1.00, "ds_mod": 1.00}
-}
-
-POSTURE_MODIFIERS = {
-    "standing":  {"as_mod": 1.0, "ds_mod": 1.0},
-    "sitting":   {"as_mod": 0.5, "ds_mod": 0.5},
-    "kneeling":  {"as_mod": 0.75, "ds_mod": 0.75},
-    "prone":     {"as_mod": 0.3, "ds_mod": 0.9}
-}
-
-POSTURE_PERCENTAGE = {
-    "standing":  1.00,
-    "sitting":   0.50,
-    "kneeling":  0.75,
-    "prone":     0.90
-}
-
-SHIELD_DATA = {
-    "small_wooden_shield": {
-        "size": "small",
-        "factor": 1.0,
-        "size_penalty_melee": 0,
-        "size_mod_melee": 1.0,
-        "size_mod_ranged": 1.2,
-        "size_bonus_ranged": 10
-    }
-}
-DEFAULT_SHIELD_DATA = SHIELD_DATA["small_wooden_shield"]
-
-HIT_LOCATIONS = [
-    "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
-    "right_leg", "left_leg", "right_arm", "left_arm", "right_hand", "left_hand"
-]
+# --- CONSTANTS REMOVED ---
+# STANCE_MODIFIERS, POSTURE_MODIFIERS, etc. are now loaded from DB/JSON.
 
 class CombatLogBuilder:
+    # (Unchanged from previous version)
     PLAYER_MISS_MESSAGES = [
         "   A clean miss.",
         "   You miss {defender} completely.",
@@ -110,6 +66,8 @@ class CombatLogBuilder:
     def get_broadcast_miss_message(self, perspective: str) -> str:
         if perspective == 'attacker': return f"You miss {self.defender}."
         else: return f"{self.attacker} misses {self.defender}."
+
+# --- HELPER FUNCTIONS ---
 
 def _get_weighted_attack(attack_list: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not attack_list: return None
@@ -159,7 +117,10 @@ def _get_armor_hindrance(armor_item_data: dict | None, defender_skills: dict) ->
     effective_ap = base_ap if skill_bonus <= threshold else base_ap / 2
     return max(0.0, 1.0 + (effective_ap / 200.0))
 
-def _get_random_hit_location() -> str: return random.choice(HIT_LOCATIONS)
+# --- UPDATED: Use rules dict ---
+def _get_random_hit_location(combat_rules: dict) -> str: 
+    locations = combat_rules.get("hit_locations", ["chest"])
+    return random.choice(locations)
 
 def _get_entity_critical_divisor(entity: Any, armor_data: Optional[Dict]) -> int:
     if armor_data: return armor_data.get("critical_divisor", 11) 
@@ -179,25 +140,17 @@ def _get_randomized_crit_rank(base_rank: int) -> int:
     return random.choice([5, 6, 7, 8, 9])
 
 def _find_combatant(world: 'World', entity_id: str) -> Optional[Any]:
-    # --- FIX: Use Thread-Safe Lookups ---
     player_info = world.get_player_info(entity_id.lower())
     if player_info: return player_info.get("player_obj")
 
-    # For monsters/NPCs, we need to find them in the world.
-    # This can be expensive. We optimize by assuming the combat state has the room_id.
-    # But this helper doesn't take room_id. 
-    # We fall back to using the Mob Index if available or scanning active rooms.
-    
-    # Optimization: Check index
     room_id = world.mob_locations.get(entity_id)
     if room_id:
         room = world.get_active_room_safe(room_id)
         if room:
-            # Need lock for object iteration
             with room.lock:
                 for obj in room.objects:
                     if obj.get("uid") == entity_id:
-                        return obj # Returns the live object (dict) from the room
+                        return obj 
     return None
 
 def _get_critical_result(world: 'World', damage_type: str, location: str, rank: int) -> Dict[str, Any]:
@@ -215,14 +168,17 @@ def _get_critical_result(world: 'World', damage_type: str, location: str, rank: 
     result.setdefault("fatal", False)
     return result
 
-# ... (Calculation Logic unchanged) ...
+# --- CALCULATION FUNCTIONS (Inject rules) ---
+
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict,
                               weapon_item_data: dict | None, target_armor_type: str,
-                              attacker_posture: str, attacker_stance: str, attacker_race: str) -> int:
+                              attacker_posture: str, attacker_stance: str, attacker_race: str,
+                              combat_rules: dict) -> int:
     as_val = 0
     strength_stat = attacker_stats.get("STR", 50)
     str_bonus = get_stat_bonus(strength_stat, "STR", attacker_race)
     as_val += str_bonus
+    
     if not weapon_item_data or weapon_item_data.get("item_type") != "weapon": 
         brawling_skill_rank = attacker_skills.get("brawling", 0)
         brawling_bonus = calculate_skill_bonus(brawling_skill_rank)
@@ -238,44 +194,66 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
         avd_mods = weapon_item_data.get("avd_modifiers", {})
         avd_bonus = avd_mods.get(target_armor_type, avd_mods.get(config.DEFAULT_UNARMORED_TYPE, 0))
         as_val += avd_bonus
+        
     cman_ranks = attacker_skills.get("combat_maneuvers", 0)
     cman_bonus = math.floor(cman_ranks / 2)
     as_val += cman_bonus
-    posture_mod = POSTURE_MODIFIERS.get(attacker_posture, POSTURE_MODIFIERS["standing"])["as_mod"]
-    as_val = int(as_val * posture_mod)
-    stance_data = STANCE_MODIFIERS.get(attacker_stance, STANCE_MODIFIERS["creature"])
-    stance_mod = stance_data["as_mod"]
-    final_as = int(as_val * stance_mod)
+    
+    # --- UPDATED: Use Rules ---
+    posture_mods = combat_rules.get("posture_modifiers", {})
+    posture_data = posture_mods.get(attacker_posture, posture_mods.get("standing", {"as_mod": 1.0}))
+    as_val = int(as_val * posture_data.get("as_mod", 1.0))
+    
+    stance_mods = combat_rules.get("stance_modifiers", {})
+    stance_data = stance_mods.get(attacker_stance, stance_mods.get("creature", {"as_mod": 1.0}))
+    final_as = int(as_val * stance_data.get("as_mod", 1.0))
+    
     return final_as
 
 def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defender_race: str,
                             armor_data: dict | None, shield_data: dict | None,
-                            posture_percent: float, is_ranged_attack: bool) -> int:
+                            posture_percent: float, is_ranged_attack: bool,
+                            combat_rules: dict) -> int:
     dodging_ranks = defender_skills.get("dodging", 0)
     agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_race)
     int_bonus = get_stat_bonus(defender_stats.get("INT", 50), "INT", defender_race)
     base_value = agi_bonus + math.floor(int_bonus / 4) + dodging_ranks
+    
     armor_hindrance = _get_armor_hindrance(armor_data, defender_skills)
+    
     shield_factor = 1.0
     shield_size_penalty = 0
     if shield_data:
-        shield_props = SHIELD_DATA.get("small_wooden_shield", DEFAULT_SHIELD_DATA)
-        shield_factor = shield_props["factor"]
-        if not is_ranged_attack: shield_size_penalty = shield_props["size_penalty_melee"]
+        # --- UPDATED: Use Rules ---
+        shield_rules = combat_rules.get("shield_data", {})
+        # Default fallback
+        fallback = {"factor": 1.0, "size_penalty_melee": 0}
+        shield_props = shield_rules.get("small_wooden_shield", fallback)
+        
+        shield_factor = shield_props.get("factor", 1.0)
+        if not is_ranged_attack: shield_size_penalty = shield_props.get("size_penalty_melee", 0)
+        
     ds = (base_value * armor_hindrance * shield_factor - shield_size_penalty) * posture_percent
     if is_ranged_attack: ds *= 1.5
     return math.floor(ds)
 
 def calculate_block_defense(defender_stats: dict, defender_skills: dict, defender_race: str,
-                            shield_data: dict | None, posture_percent: float, is_ranged_attack: bool) -> int:
+                            shield_data: dict | None, posture_percent: float, is_ranged_attack: bool,
+                            combat_rules: dict) -> int:
     if not shield_data: return 0
     shield_ranks = defender_skills.get("shield_use", 0)
     str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
     dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
     base_value = shield_ranks + math.floor(str_bonus / 4) + math.floor(dex_bonus / 4)
-    shield_props = SHIELD_DATA.get("small_wooden_shield", DEFAULT_SHIELD_DATA)
-    size_mod = shield_props["size_mod_ranged"] if is_ranged_attack else shield_props["size_mod_melee"]
-    size_bonus = shield_props["size_bonus_ranged"] if is_ranged_attack else 0
+    
+    # --- UPDATED: Use Rules ---
+    shield_rules = combat_rules.get("shield_data", {})
+    fallback = {"size_mod_melee": 1.0, "size_mod_ranged": 1.2, "size_bonus_ranged": 10}
+    shield_props = shield_rules.get("small_wooden_shield", fallback)
+    
+    size_mod = shield_props.get("size_mod_ranged", 1.2) if is_ranged_attack else shield_props.get("size_mod_melee", 1.0)
+    size_bonus = shield_props.get("size_bonus_ranged", 10) if is_ranged_attack else 0
+    
     ds = (base_value * size_mod + size_bonus) * posture_percent * (2/3) + 20
     return math.floor(ds)
 
@@ -296,7 +274,8 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
 def calculate_defense_strength(defender: Any,
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                weapon_item_data: dict | None, offhand_item_data: dict | None,
-                               is_ranged_attack: bool, defender_stance: str) -> int:
+                               is_ranged_attack: bool, defender_stance: str,
+                               combat_rules: dict) -> int:
     if isinstance(defender, Player):
         stats, skills, race, posture, level = defender.stats, defender.skills, defender.race, defender.posture, defender.level
         name = defender.name
@@ -304,10 +283,15 @@ def calculate_defense_strength(defender: Any,
         stats, skills, race, posture, level = defender.get("stats",{}), defender.get("skills",{}), defender.get("race","Human"), defender.get("posture","standing"), defender.get("level",1)
         name = defender.get("name", "Creature")
     else: return 0
-    posture_percent = POSTURE_PERCENTAGE.get(posture, 1.0)
-    evade_ds = calculate_evade_defense(stats, skills, race, armor_item_data, shield_item_data, posture_percent, is_ranged_attack)
-    block_ds = calculate_block_defense(stats, skills, race, shield_item_data, posture_percent, is_ranged_attack)
+    
+    # --- UPDATED: Use Rules ---
+    posture_pcts = combat_rules.get("posture_percentage", {})
+    posture_percent = posture_pcts.get(posture, 1.0)
+    
+    evade_ds = calculate_evade_defense(stats, skills, race, armor_item_data, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
+    block_ds = calculate_block_defense(stats, skills, race, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
     parry_ds = calculate_parry_defense(stats, skills, race, weapon_item_data, offhand_item_data, level, posture_percent, is_ranged_attack)
+    
     buff_bonus = 0
     if isinstance(defender, Player):
         if "spirit_shield" in defender.buffs:
@@ -315,20 +299,29 @@ def calculate_defense_strength(defender: Any,
             if time.time() < buff_data.get("expires_at", 0):
                 buff_bonus = buff_data.get("ds_bonus", 0)
             else: defender.buffs.pop("spirit_shield", None) 
+            
     base_ds = evade_ds + block_ds + parry_ds + buff_bonus
-    stance_data = STANCE_MODIFIERS.get(defender_stance, STANCE_MODIFIERS["creature"])
-    stance_mod = stance_data["ds_mod"]
-    final_ds = int(base_ds * stance_mod)
+    
+    # --- UPDATED: Use Rules ---
+    stance_mods = combat_rules.get("stance_modifiers", {})
+    stance_data = stance_mods.get(defender_stance, stance_mods.get("creature", {"ds_mod": 1.0}))
+    
+    final_ds = int(base_ds * stance_data.get("ds_mod", 1.0))
     return final_ds
 
 def calculate_roundtime(agility: int) -> float: return max(3.0, 5.0 - ((agility - 50) / 25))
 
+# --- MAIN RESOLVE FUNCTION ---
+
 def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_global: dict) -> dict:
-    # ... (Implementation identical to previous upload) ...
-    # I'm re-implementing just the shell here to save space if it's unchanged, 
-    # but the logic inside handles the math.
-    # The key is this function is pure logic, no locks.
-    
+    # --- NEW: Fetch Combat Rules from World ---
+    combat_rules = getattr(world, 'game_rules', {})
+    if not combat_rules:
+        # Fallback if world.game_rules isn't populated yet (shouldn't happen if DB loaded)
+        print("[COMBAT ERROR] Combat Rules missing! Using defaults implies risk of failure.")
+        # (In a real scenario, you might load defaults here or raise an error)
+    # ------------------------------------------
+
     is_attacker_player = isinstance(attacker, Player)
     attacker_name = attacker.name if is_attacker_player else attacker.get("name", "Creature")
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
@@ -401,8 +394,9 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
     is_ranged_attack = attacker_weapon_type in ["bow"]
 
-    attacker_as = calculate_attack_strength(attacker_name, attacker_stats, attacker_skills, attacker_weapon_data, defender_armor_type_str, attacker_posture, attacker_stance, attacker_race)
-    defender_ds = calculate_defense_strength(defender, defender_armor_data, defender_shield_data, defender_weapon_data, defender_offhand_data, is_ranged_attack, defender_stance)
+    # --- PASS RULES DOWN ---
+    attacker_as = calculate_attack_strength(attacker_name, attacker_stats, attacker_skills, attacker_weapon_data, defender_armor_type_str, attacker_posture, attacker_stance, attacker_race, combat_rules)
+    defender_ds = calculate_defense_strength(defender, defender_armor_data, defender_shield_data, defender_weapon_data, defender_offhand_data, is_ranged_attack, defender_stance, combat_rules)
 
     d100_roll = random.randint(1, 100)
     combat_advantage = getattr(config, 'COMBAT_ADVANTAGE_FACTOR', 40)
@@ -429,7 +423,9 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         critical_divisor = _get_entity_critical_divisor(defender, defender_armor_data)
         base_crit_rank = math.trunc(raw_damage / critical_divisor)
         final_crit_rank = _get_randomized_crit_rank(base_crit_rank)
-        hit_location = _get_random_hit_location()
+        
+        # --- UPDATED: Use Rules for Hit Location ---
+        hit_location = _get_random_hit_location(combat_rules)
         
         crit_result = _get_critical_result(world, weapon_damage_type, hit_location, final_crit_rank)
         extra_damage = crit_result["extra_damage"]
@@ -462,21 +458,18 @@ def stop_combat(world: 'World', combatant_id: str, target_id: str):
     world.stop_combat_for_all(combatant_id, target_id)
 
 def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callback, send_vitals_callback):
+    # (Unchanged from previous version, except ensure World imports are clean)
+    # Re-implementing to ensure scope consistency:
     current_time = time.time()
-    # --- FIX: Use Sharded Store accessor ---
     combatant_list = world.get_all_combat_states()
 
     for combatant_id, state in combatant_list:
         if state.get("state_type") != "combat": continue
-        
-        # Double check existence atomically via shard lock, or just trust the snapshot
         if not world.get_combat_state(combatant_id): continue
-        
         if current_time < state["next_action_time"]: continue
 
         attacker = _find_combatant(world, combatant_id)
         defender = _find_combatant(world, state["target_id"])
-        
         attacker_room_id = state.get("current_room_id")
 
         if not attacker or not defender or not attacker_room_id:
@@ -486,16 +479,13 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
         if isinstance(attacker, Player): continue 
 
         is_defender_player = isinstance(defender, Player)
-        
         defender_room_id = None
         if is_defender_player:
             defender_room_id = defender.current_room_id
         else:
             defender_state = world.get_combat_state(state["target_id"])
-            if defender_state:
-                defender_room_id = defender_state.get("current_room_id")
-            else:
-                # Fallback scan - optimization: use index
+            if defender_state: defender_room_id = defender_state.get("current_room_id")
+            else: 
                 loc = world.mob_locations.get(state["target_id"])
                 if loc: defender_room_id = loc
 
@@ -512,7 +502,6 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             send_to_player_callback(defender.name, attack_results['result_msg'], "message")
             if attack_results['hit'] and attack_results['critical_msg']:
                  send_to_player_callback(defender.name, attack_results['critical_msg'], "message")
-            
             defender_info = world.get_player_info(defender.name.lower())
             if defender_info: sid_to_skip = defender_info.get("sid")
         
@@ -536,13 +525,10 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     defender.hp = 0
                     vitals_data = defender.get_vitals()
                     send_vitals_callback(defender.name, vitals_data)
-                    
                     consequence_msg = f"**{defender.name} has been DEFEATED!**"
                     send_to_player_callback(defender.name, consequence_msg, "combat_death")
                     broadcast_callback(attacker_room_id, consequence_msg, "combat_death", skip_sid=sid_to_skip)
-                    
                     defender.move_to_room(config.PLAYER_DEATH_ROOM_ID, "You have been slain... You awaken on a cold stone altar, feeling weak.")
-                    
                     defender.deaths_recent = min(5, defender.deaths_recent + 1)
                     con_loss = min(3 + defender.deaths_recent, 25 - defender.con_lost)
                     if con_loss > 0:
@@ -562,32 +548,19 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             else: 
                 defender_uid = defender.get("uid")
                 new_hp = world.modify_monster_hp(defender_uid, defender.get("max_hp", 1), damage)
-                
                 if new_hp <= 0 or is_fatal:
                     consequence_msg = f"**The {defender['name']} has been DEFEATED!**"
                     broadcast_callback(attacker_room_id, consequence_msg, "combat_death", skip_sid=sid_to_skip)
-                    
                     corpse_data = loot_system.create_corpse_object_data(defender, defender_uid, world.game_items, world.game_loot_tables, {})
-                    
-                    # --- FIX: Add corpse to room safely ---
                     active_room = world.get_active_room_safe(attacker_room_id)
                     if active_room:
                         with active_room.lock:
                             active_room.objects.append(corpse_data)
-                            # Need to find the exact object reference to remove it from the list
-                            # The 'defender' variable is a dict copy from _find_combatant?
-                            # If it is a copy, we must find by UID.
-                            # _find_combatant returns the object from the list directly in my implementation
-                            # so basic removal might work, but safer to filter by UID.
                             active_room.objects = [obj for obj in active_room.objects if obj.get("uid") != defender_uid]
-                        
                         world.save_room(active_room)
-
                     broadcast_callback(attacker_room_id, f"The {corpse_data['name']} falls to the ground.", "ambient")
-                    
                     respawn_time = defender.get("respawn_time_seconds", 300)
                     respawn_chance = defender.get("respawn_chance_per_tick", getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2))
-                    
                     world.set_defeated_monster(defender_uid, {
                         "room_id": attacker_room_id,
                         "template_key": defender.get("monster_id"), 
@@ -600,8 +573,6 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     continue 
 
         rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
-        
-        # Update RT safely
         data = world.get_combat_state(combatant_id)
         if data:
             data["next_action_time"] = current_time + rt_seconds

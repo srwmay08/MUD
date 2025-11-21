@@ -285,3 +285,6 @@ def fetch_all_factions() -> dict:
 
 def fetch_all_spells() -> dict:
     return _load_json_data(os.path.join("spells", "spells.json"))
+
+def fetch_combat_rules() -> dict:
+    return _load_json_data("combat_rules.json")

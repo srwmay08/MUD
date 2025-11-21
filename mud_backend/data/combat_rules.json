@@ -1,0 +1,37 @@
+{
+    "stance_modifiers": {
+        "offensive": {"as_mod": 1.15, "ds_mod": 0.70},
+        "advance":   {"as_mod": 1.10, "ds_mod": 0.80},
+        "forward":   {"as_mod": 1.05, "ds_mod": 0.90},
+        "neutral":   {"as_mod": 1.00, "ds_mod": 1.00},
+        "guarded":   {"as_mod": 0.90, "ds_mod": 1.10},
+        "defensive": {"as_mod": 0.75, "ds_mod": 1.25},
+        "creature":  {"as_mod": 1.00, "ds_mod": 1.00}
+    },
+    "posture_modifiers": {
+        "standing":  {"as_mod": 1.0, "ds_mod": 1.0},
+        "sitting":   {"as_mod": 0.5, "ds_mod": 0.5},
+        "kneeling":  {"as_mod": 0.75, "ds_mod": 0.75},
+        "prone":     {"as_mod": 0.3, "ds_mod": 0.9}
+    },
+    "posture_percentage": {
+        "standing":  1.00,
+        "sitting":   0.50,
+        "kneeling":  0.75,
+        "prone":     0.90
+    },
+    "shield_data": {
+        "small_wooden_shield": {
+            "size": "small",
+            "factor": 1.0,
+            "size_penalty_melee": 0,
+            "size_mod_melee": 1.0,
+            "size_mod_ranged": 1.2,
+            "size_bonus_ranged": 10
+        }
+    },
+    "hit_locations": [
+        "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
+        "right_leg", "left_leg", "right_arm", "left_arm", "right_hand", "left_hand"
+    ]
+}

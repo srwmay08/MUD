@@ -3,9 +3,7 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-# --- MODIFIED: Import new helpers ---
 from mud_backend.core.utils import get_stat_bonus, calculate_skill_bonus
-from mud_backend.core.combat_system import STANCE_MODIFIERS
 # --- END MODIFIED ---
 
 # Skills that can be used for tripping
