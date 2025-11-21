@@ -466,8 +466,7 @@ def _perform_conversion_and_train(player: Player, pending_data: Dict):
     player.send_message(f"You train **{skill_name}** to rank **{new_rank}**!")
     
     # 4. Clean up pending state
-    # --- FIX: Use player.data instead of player.db_data ---
-    player.data.pop('_pending_training', None)
+    player.db_data.pop('_pending_training', None)
 
     # 5. Show the menus
     # --- FIX: Removed the "All Skills" title ---
@@ -534,8 +533,7 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
         if conversion_data:
             # 6. CONVERSION POSSIBLE: Set pending state
             pending_data["conversion_data"] = conversion_data
-            # --- FIX: Use player.data instead of player.db_data ---
-            player.data['_pending_training'] = pending_data
+            player.db_data['_pending_training'] = pending_data
             
             # Send confirmation prompt
             player.send_message(conversion_data['msg'])
@@ -594,9 +592,13 @@ def attempt_skill_learning(player: Player, skill_id: str):
         return
 
     # 2. Define Learning Rate (Stat-Based)
-    log_bonus = get_stat_bonus(player.stats.get("LOG", 50), "LOG", player.race)
-    int_bonus = get_stat_bonus(player.stats.get("INT", 50), "INT", player.race)
-    wis_bonus = get_stat_bonus(player.stats.get("WIS", 50), "WIS", player.race)
+    # --- FIX: Use player.stat_modifiers, not player.race ---
+    race_modifiers = player.stat_modifiers 
+    
+    log_bonus = get_stat_bonus(player.stats.get("LOG", 50), "LOG", race_modifiers)
+    int_bonus = get_stat_bonus(player.stats.get("INT", 50), "INT", race_modifiers)
+    wis_bonus = get_stat_bonus(player.stats.get("WIS", 50), "WIS", race_modifiers)
+    # --- END FIX ---
     
     learning_stat_bonus = 0
     skill_category = skill_data.get("category", "General Skills")

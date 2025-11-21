@@ -81,11 +81,6 @@ def _get_weighted_attack(attack_list: List[Dict[str, Any]]) -> Optional[Dict[str
         upto += chance
     return random.choice(attack_list)
 
-def get_entity_race(entity: Any) -> str:
-    if isinstance(entity, Player): return entity.appearance.get("race", "Human")
-    elif isinstance(entity, dict): return entity.get("race", "Human")
-    return "Human"
-
 def get_entity_armor_type(entity, game_items_global: dict) -> str:
     if hasattr(entity, 'get_armor_type'): return entity.get_armor_type() 
     elif isinstance(entity, dict):
@@ -117,7 +112,6 @@ def _get_armor_hindrance(armor_item_data: dict | None, defender_skills: dict) ->
     effective_ap = base_ap if skill_bonus <= threshold else base_ap / 2
     return max(0.0, 1.0 + (effective_ap / 200.0))
 
-# --- UPDATED: Use rules dict ---
 def _get_random_hit_location(combat_rules: dict) -> str: 
     locations = combat_rules.get("hit_locations", ["chest"])
     return random.choice(locations)
@@ -168,15 +162,27 @@ def _get_critical_result(world: 'World', damage_type: str, location: str, rank: 
     result.setdefault("fatal", False)
     return result
 
+# --- NEW: Helper to get stat modifiers safely ---
+def _get_stat_modifiers(entity: Any) -> Dict[str, int]:
+    if isinstance(entity, Player):
+        return entity.stat_modifiers
+    elif isinstance(entity, dict):
+        # Monsters use raw stats usually, so no extra racial mods needed on top
+        return {}
+    return {}
+# -------------------------------------------------
+
 # --- CALCULATION FUNCTIONS (Inject rules) ---
 
 def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker_skills: dict,
                               weapon_item_data: dict | None, target_armor_type: str,
-                              attacker_posture: str, attacker_stance: str, attacker_race: str,
+                              attacker_posture: str, attacker_stance: str, 
+                              attacker_modifiers: dict, # <-- CHANGED from race string to dict
                               combat_rules: dict) -> int:
     as_val = 0
     strength_stat = attacker_stats.get("STR", 50)
-    str_bonus = get_stat_bonus(strength_stat, "STR", attacker_race)
+    # --- FIX: Pass dict ---
+    str_bonus = get_stat_bonus(strength_stat, "STR", attacker_modifiers)
     as_val += str_bonus
     
     if not weapon_item_data or weapon_item_data.get("item_type") != "weapon": 
@@ -199,7 +205,6 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     cman_bonus = math.floor(cman_ranks / 2)
     as_val += cman_bonus
     
-    # --- UPDATED: Use Rules ---
     posture_mods = combat_rules.get("posture_modifiers", {})
     posture_data = posture_mods.get(attacker_posture, posture_mods.get("standing", {"as_mod": 1.0}))
     as_val = int(as_val * posture_data.get("as_mod", 1.0))
@@ -210,13 +215,17 @@ def calculate_attack_strength(attacker_name: str, attacker_stats: dict, attacker
     
     return final_as
 
-def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defender_race: str,
+def calculate_evade_defense(defender_stats: dict, defender_skills: dict, 
+                            defender_modifiers: dict, # <-- CHANGED
                             armor_data: dict | None, shield_data: dict | None,
                             posture_percent: float, is_ranged_attack: bool,
                             combat_rules: dict) -> int:
     dodging_ranks = defender_skills.get("dodging", 0)
-    agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_race)
-    int_bonus = get_stat_bonus(defender_stats.get("INT", 50), "INT", defender_race)
+    
+    # --- FIX: Pass dict ---
+    agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_modifiers)
+    int_bonus = get_stat_bonus(defender_stats.get("INT", 50), "INT", defender_modifiers)
+    
     base_value = agi_bonus + math.floor(int_bonus / 4) + dodging_ranks
     
     armor_hindrance = _get_armor_hindrance(armor_data, defender_skills)
@@ -224,9 +233,7 @@ def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defende
     shield_factor = 1.0
     shield_size_penalty = 0
     if shield_data:
-        # --- UPDATED: Use Rules ---
         shield_rules = combat_rules.get("shield_data", {})
-        # Default fallback
         fallback = {"factor": 1.0, "size_penalty_melee": 0}
         shield_props = shield_rules.get("small_wooden_shield", fallback)
         
@@ -237,16 +244,19 @@ def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defende
     if is_ranged_attack: ds *= 1.5
     return math.floor(ds)
 
-def calculate_block_defense(defender_stats: dict, defender_skills: dict, defender_race: str,
+def calculate_block_defense(defender_stats: dict, defender_skills: dict, 
+                            defender_modifiers: dict, # <-- CHANGED
                             shield_data: dict | None, posture_percent: float, is_ranged_attack: bool,
                             combat_rules: dict) -> int:
     if not shield_data: return 0
     shield_ranks = defender_skills.get("shield_use", 0)
-    str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
-    dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
+    
+    # --- FIX: Pass dict ---
+    str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
+    dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_modifiers)
+    
     base_value = shield_ranks + math.floor(str_bonus / 4) + math.floor(dex_bonus / 4)
     
-    # --- UPDATED: Use Rules ---
     shield_rules = combat_rules.get("shield_data", {})
     fallback = {"size_mod_melee": 1.0, "size_mod_ranged": 1.2, "size_bonus_ranged": 10}
     shield_props = shield_rules.get("small_wooden_shield", fallback)
@@ -257,14 +267,18 @@ def calculate_block_defense(defender_stats: dict, defender_skills: dict, defende
     ds = (base_value * size_mod + size_bonus) * posture_percent * (2/3) + 20
     return math.floor(ds)
 
-def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defender_race: str,
+def calculate_parry_defense(defender_stats: dict, defender_skills: dict, 
+                            defender_modifiers: dict, # <-- CHANGED
                             weapon_data: dict | None, offhand_data: dict | None, defender_level: int,
                             posture_percent: float, is_ranged_attack: bool) -> int:
     if is_ranged_attack: return 0
     weapon_skill = weapon_data.get("skill", "brawling") if weapon_data else "brawling"
     weapon_ranks = defender_skills.get(weapon_skill, 0)
-    str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
-    dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
+    
+    # --- FIX: Pass dict ---
+    str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
+    dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_modifiers)
+    
     base_value = weapon_ranks + math.floor(str_bonus / 4) + math.floor(dex_bonus / 4)
     weapon_type = _get_weapon_type(weapon_data)
     handedness_mod = 1.5 if weapon_type == "2H" else 1.0
@@ -275,22 +289,23 @@ def calculate_defense_strength(defender: Any,
                                armor_item_data: dict | None, shield_item_data: dict | None,
                                weapon_item_data: dict | None, offhand_item_data: dict | None,
                                is_ranged_attack: bool, defender_stance: str,
+                               defender_modifiers: dict, # <-- CHANGED
                                combat_rules: dict) -> int:
     if isinstance(defender, Player):
-        stats, skills, race, posture, level = defender.stats, defender.skills, defender.race, defender.posture, defender.level
+        stats, skills, posture, level = defender.stats, defender.skills, defender.posture, defender.level
         name = defender.name
     elif isinstance(defender, dict):
-        stats, skills, race, posture, level = defender.get("stats",{}), defender.get("skills",{}), defender.get("race","Human"), defender.get("posture","standing"), defender.get("level",1)
+        stats, skills, posture, level = defender.get("stats",{}), defender.get("skills",{}), defender.get("posture","standing"), defender.get("level",1)
         name = defender.get("name", "Creature")
     else: return 0
     
-    # --- UPDATED: Use Rules ---
     posture_pcts = combat_rules.get("posture_percentage", {})
     posture_percent = posture_pcts.get(posture, 1.0)
     
-    evade_ds = calculate_evade_defense(stats, skills, race, armor_item_data, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
-    block_ds = calculate_block_defense(stats, skills, race, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
-    parry_ds = calculate_parry_defense(stats, skills, race, weapon_item_data, offhand_item_data, level, posture_percent, is_ranged_attack)
+    # --- Pass dicts down ---
+    evade_ds = calculate_evade_defense(stats, skills, defender_modifiers, armor_data, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
+    block_ds = calculate_block_defense(stats, skills, defender_modifiers, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
+    parry_ds = calculate_parry_defense(stats, skills, defender_modifiers, weapon_item_data, offhand_item_data, level, posture_percent, is_ranged_attack)
     
     buff_bonus = 0
     if isinstance(defender, Player):
@@ -302,7 +317,6 @@ def calculate_defense_strength(defender: Any,
             
     base_ds = evade_ds + block_ds + parry_ds + buff_bonus
     
-    # --- UPDATED: Use Rules ---
     stance_mods = combat_rules.get("stance_modifiers", {})
     stance_data = stance_mods.get(defender_stance, stance_mods.get("creature", {"ds_mod": 1.0}))
     
@@ -314,25 +328,26 @@ def calculate_roundtime(agility: int) -> float: return max(3.0, 5.0 - ((agility 
 # --- MAIN RESOLVE FUNCTION ---
 
 def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_global: dict) -> dict:
-    # --- NEW: Fetch Combat Rules from World ---
     combat_rules = getattr(world, 'game_rules', {})
     if not combat_rules:
-        # Fallback if world.game_rules isn't populated yet (shouldn't happen if DB loaded)
         print("[COMBAT ERROR] Combat Rules missing! Using defaults implies risk of failure.")
-        # (In a real scenario, you might load defaults here or raise an error)
-    # ------------------------------------------
 
     is_attacker_player = isinstance(attacker, Player)
     attacker_name = attacker.name if is_attacker_player else attacker.get("name", "Creature")
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
     attacker_skills = attacker.skills if is_attacker_player else attacker.get("skills", {})
     attacker_posture = attacker.posture if is_attacker_player else attacker.get("posture", "standing")
-    attacker_race = get_entity_race(attacker)
     attacker_stance = attacker.stance if is_attacker_player else attacker.get("stance", "creature")
+    
+    # --- FIX: Get Modifiers ---
+    attacker_modifiers = _get_stat_modifiers(attacker)
 
     is_defender_player = isinstance(defender, Player)
     defender_name = defender.name if is_defender_player else defender.get("name", "Creature")
     defender_stance = defender.stance if is_defender_player else defender.get("stance", "creature")
+    
+    # --- FIX: Get Modifiers ---
+    defender_modifiers = _get_stat_modifiers(defender)
     
     attacker_name_possessive = f"{attacker_name}'s" if not attacker_name.endswith('s') else f"{attacker_name}'"
     
@@ -395,8 +410,21 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     is_ranged_attack = attacker_weapon_type in ["bow"]
 
     # --- PASS RULES DOWN ---
-    attacker_as = calculate_attack_strength(attacker_name, attacker_stats, attacker_skills, attacker_weapon_data, defender_armor_type_str, attacker_posture, attacker_stance, attacker_race, combat_rules)
-    defender_ds = calculate_defense_strength(defender, defender_armor_data, defender_shield_data, defender_weapon_data, defender_offhand_data, is_ranged_attack, defender_stance, combat_rules)
+    attacker_as = calculate_attack_strength(
+        attacker_name, attacker_stats, attacker_skills, 
+        attacker_weapon_data, defender_armor_type_str, 
+        attacker_posture, attacker_stance, 
+        attacker_modifiers, # <-- Passed
+        combat_rules
+    )
+    
+    defender_ds = calculate_defense_strength(
+        defender, defender_armor_data, defender_shield_data, 
+        defender_weapon_data, defender_offhand_data, 
+        is_ranged_attack, defender_stance, 
+        defender_modifiers, # <-- Passed
+        combat_rules
+    )
 
     d100_roll = random.randint(1, 100)
     combat_advantage = getattr(config, 'COMBAT_ADVANTAGE_FACTOR', 40)
@@ -424,7 +452,6 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         base_crit_rank = math.trunc(raw_damage / critical_divisor)
         final_crit_rank = _get_randomized_crit_rank(base_crit_rank)
         
-        # --- UPDATED: Use Rules for Hit Location ---
         hit_location = _get_random_hit_location(combat_rules)
         
         crit_result = _get_critical_result(world, weapon_damage_type, hit_location, final_crit_rank)

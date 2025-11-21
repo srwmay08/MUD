@@ -6,6 +6,7 @@ from mud_backend.core.registry import VerbRegistry
 
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.utils import get_stat_bonus, calculate_skill_bonus
+from mud_backend.core.combat_system import _get_stat_modifiers # Import the new helper
 # --- END MODIFIED ---
 
 # Skills that can be used for tripping
@@ -103,17 +104,17 @@ class Trip(BaseVerb):
         # --- END ENGAGE LOGIC
         # ---
 
-        # ---
-        # --- MODIFIED: Replaced CMAN Check with new logic
-        # ---
-        
         # 4. Perform CMAN Check
         
         # --- Attacker's Offense Bonus ---
         # "biggest factor is... bonus in Combat Maneuvers."
         cman_bonus = calculate_skill_bonus(self.player.skills.get("combat_maneuvers", 0))
-        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", self.player.race)
-        agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", self.player.race)
+        
+        # --- FIX: Use stat_modifiers ---
+        player_modifiers = self.player.stat_modifiers
+        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", player_modifiers)
+        agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", player_modifiers)
+        
         level_bonus = self.player.level * 2 # "Level difference plays a factor"
         
         attacker_bonus = cman_bonus + str_bonus + agi_bonus + level_bonus
@@ -121,14 +122,20 @@ class Trip(BaseVerb):
         # --- Defender's Defense Bonus ---
         defender_stats = target_monster.get("stats", {})
         defender_skills = target_monster.get("skills", {})
-        defender_race = target_monster.get("race", "Human")
         defender_level = target_monster.get("level", 1)
+        
+        # --- FIX: Get Defender Modifiers ---
+        # Since target_monster is a dict (monster), modifiers are {}
+        defender_modifiers = _get_stat_modifiers(target_monster)
 
         # "Each rank...gives...up to +15 to defend" (We use skill bonus, which is stronger)
         def_cman_bonus = calculate_skill_bonus(defender_skills.get("combat_maneuvers", 0))
-        def_str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_race)
-        def_agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_race)
-        def_dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_race)
+        
+        # --- FIX: Pass dictionary ---
+        def_str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
+        def_agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_modifiers)
+        def_dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_modifiers)
+        
         def_level_bonus = defender_level * 2
         
         defender_bonus = def_cman_bonus + def_str_bonus + def_agi_bonus + def_dex_bonus + def_level_bonus

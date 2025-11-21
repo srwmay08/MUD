@@ -61,8 +61,11 @@ class Posture(BaseVerb):
             roll = random.randint(1, 100)
             
             # Calculate stat reduction based on DEX/AGI
-            dex_bonus = get_stat_bonus(self.player.stats.get("DEX", 50), "DEX", self.player.race)
-            agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", self.player.race)
+            # --- FIX: Use stat_modifiers ---
+            modifiers = self.player.stat_modifiers
+            dex_bonus = get_stat_bonus(self.player.stats.get("DEX", 50), "DEX", modifiers)
+            agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", modifiers)
+            # --- END FIX ---
             
             # Average bonus / 20.0 = seconds reduction
             # e.g., (25 + 25) / 20.0 = 2.5s reduction
