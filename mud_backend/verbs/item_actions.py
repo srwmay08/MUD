@@ -2,11 +2,9 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, Tuple, Optional # Updated imports
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
-
-
 
 def _get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -44,6 +42,21 @@ def _find_item_in_inventory(player, game_items_data: Dict[str, Any], target_name
                 target_name in item_data.get("keywords", [])):
                 return item
     return None
+
+def _find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: str) -> Tuple[Any, Optional[str]]:
+    """
+    Finds the first item in a player's hands that matches.
+    Returns (item_ref, slot_name) or (None, None)
+    """
+    for slot in ["mainhand", "offhand"]:
+        item_ref = player.worn_items.get(slot)
+        if item_ref:
+            item_data = _get_item_data(item_ref, game_items_data)
+            if item_data:
+                if (target_name == item_data.get("name", "").lower() or 
+                    target_name in item_data.get("keywords", [])):
+                    return item_ref, slot
+    return None, None
 
 def _find_container_on_player(player, game_items_data: Dict[str, Any], target_name: str) -> Dict[str, Any] | None:
     """Finds a container item on the player (worn or in inventory)."""

@@ -1,7 +1,7 @@
 # mud_backend/verbs/whisper.py
-# NEW FILE
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.registry import VerbRegistry # <-- Added missing import
 
 @VerbRegistry.register(["whisper"])
 class Whisper(BaseVerb):

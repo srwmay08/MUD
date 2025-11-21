@@ -46,7 +46,10 @@ class Carve(BaseVerb):
             self.player.send_message("You need a knife or dagger to carve wood.")
             return
 
-        wood_ref, wood_slot = _find_item_in_hands(self.player, wood_target)
+        # --- FIX: Pass world.game_items to _find_item_in_hands ---
+        wood_ref, wood_slot = _find_item_in_hands(self.player, self.world.game_items, wood_target)
+        # ---------------------------------------------------------
+        
         if not wood_ref:
             self.player.send_message(f"You aren't holding '{wood_target}'.")
             return
