@@ -1,15 +1,10 @@
 # mud_backend/verbs/inventory.py
 from mud_backend.verbs.base_verb import BaseVerb
-# --- REMOVED: from mud_backend.core import game_state ---
 from mud_backend import config
-# ---
-# --- NEW: Import RT helpers ---
-# ---
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-# ---
-# --- END NEW ---
+from mud_backend.core.registry import VerbRegistry 
 
-
+@VerbRegistry.register(["inventory", "inv"])
 class Inventory(BaseVerb):
     """
     Handles the 'inventory' (and 'inv') command.
@@ -65,9 +60,6 @@ class Inventory(BaseVerb):
             
         self.player.send_message(f"\n(Items: {total_items})")
 
-        # ---
-        # --- THIS IS THE FIX ---
-        # ---
         # This hook triggers if 'look at note' (intro_leave_room_tasks) was done
         if ("intro_leave_room_tasks" in self.player.completed_quests and
             "intro_lookinpack" not in self.player.completed_quests):
@@ -81,9 +73,6 @@ class Inventory(BaseVerb):
             # Also set the 'wealth_checked' flag, since INVENTORY implies checking your belongings
             if "intro_wealth_checked" not in self.player.completed_quests:
                 self.player.completed_quests.append("intro_wealth_checked")
-        # ---
-        # --- END FIX
-        # ---
 
     def show_help(self):
         self.player.send_message("Usage:")
@@ -91,6 +80,7 @@ class Inventory(BaseVerb):
         self.player.send_message("  (More inventory commands are coming soon!)")
 
 
+@VerbRegistry.register(["wealth"])
 class Wealth(BaseVerb):
     """
     Handles the 'wealth' command.
@@ -113,9 +103,6 @@ class Wealth(BaseVerb):
         if "loud" in args:
             print(f"[Broadcast] {self.player.name} rummages around in their pockets.")
 
-        # ---
-        # --- THIS IS THE FIX ---
-        # ---
         # This hook triggers if 'look at note' (intro_leave_room_tasks) was done
         if ("intro_leave_room_tasks" in self.player.completed_quests and
             "intro_wealth_checked" not in self.player.completed_quests):
@@ -125,13 +112,9 @@ class Wealth(BaseVerb):
                 "<span class='keyword' data-command='inventory'>INVENTORY</span> to see what you're carrying."
             )
             self.player.completed_quests.append("intro_wealth_checked")
-        # ---
-        # --- END FIX
-        # ---
 
-# ---
-# --- NEW: SWAP VERB
-# ---
+
+@VerbRegistry.register(["swap"])
 class Swap(BaseVerb):
     """
     Handles the 'swap' command.
@@ -165,6 +148,3 @@ class Swap(BaseVerb):
             self.player.send_message(f"You swap {offhand_name} to your right hand.")
 
         _set_action_roundtime(self.player, 1.0)
-# ---
-# --- END NEW VERB
-# ---

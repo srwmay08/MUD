@@ -11,6 +11,7 @@ def _find_teller(room_objects: list) -> bool:
             return True
     return False
 
+@VerbRegistry.register(["deposit"]) # <--- Added
 class Deposit(BaseVerb):
     """
     Handles the 'deposit' command.
@@ -56,6 +57,7 @@ class Deposit(BaseVerb):
         self.player.send_message(f"You deposit {amount} silver into your account.")
         self.player.send_message(f"Your new balance is {self.player.wealth['bank_silvers']} silver.")
 
+@VerbRegistry.register(["withdraw"]) # <--- Added
 class Withdraw(BaseVerb):
     """
     Handles the 'withdraw' command.
@@ -97,6 +99,7 @@ class Withdraw(BaseVerb):
         self.player.send_message(f"You withdraw {amount} silver from your account.")
         self.player.send_message(f"You now have {self.player.wealth['silvers']} silver on hand.")
 
+@VerbRegistry.register(["balance"])
 class Balance(BaseVerb):
     """
     Handles the 'balance' command.

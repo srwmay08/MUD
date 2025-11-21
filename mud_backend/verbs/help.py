@@ -1,5 +1,6 @@
 # mud_backend/verbs/help.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry # <--- ADD THIS
 
 # ---
 # --- MODIFIED: Added GROUP, BAND, WHISPER help
@@ -221,6 +222,7 @@ Sends a private message to a player or your group.
 }
 # --- END NEW ---
 
+@VerbRegistry.register(["help"]) 
 
 class Help(BaseVerb):
     """
