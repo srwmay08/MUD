@@ -89,7 +89,11 @@ class Player(GameEntity):
         self.flags = self.data.get("flags", {})
         self.quest_trip_counter = self.data.get("quest_trip_counter", 0)
         self.visited_rooms = self.data.get("visited_rooms", [])
-        self.is_goto_active = self.data.get("is_goto_active", False)
+        
+        # --- FIX: Use unique ID for goto cancellation ---
+        self.goto_id = None 
+        # ------------------------------------------------
+        
         self.group_id = self.data.get("group_id", None) 
         self.band_id = self.data.get("band_id", None) 
         self.band_xp_bank = self.data.get("band_xp_bank", 0) 
@@ -98,6 +102,7 @@ class Player(GameEntity):
 
     def mark_dirty(self): self._is_dirty = True
 
+    # ... (Rest of properties and methods same as before) ...
     @property
     def race(self) -> str: 
         return self.appearance.get("race", "Human")

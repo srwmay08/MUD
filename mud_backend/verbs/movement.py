@@ -5,6 +5,7 @@ from mud_backend.core.registry import VerbRegistry
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
 import random
+import uuid
 from collections import deque
 from typing import Optional, List, Dict, Set, TYPE_CHECKING
 from mud_backend.core.game_objects import Room
@@ -195,17 +196,17 @@ def _handle_group_move(
                     skip_player_key=member_key
                 )
 
-def _execute_goto_path(world, player_id: str, path: List[str], final_destination_room_id: str, sid: str):
+def _execute_goto_path(world, player_id: str, path: List[str], final_destination_room_id: str, sid: str, goto_id: str):
     player_obj = world.get_player_obj(player_id)
     if not player_obj: return 
 
-    if not player_obj.is_goto_active: return 
+    if not player_obj.is_goto_active or player_obj.goto_id != goto_id: return 
 
     for move_direction in path:
         player_obj = world.get_player_obj(player_id) 
         if not player_obj: return 
         
-        if not player_obj.is_goto_active:
+        if not player_obj.is_goto_active or player_obj.goto_id != goto_id:
             player_obj.send_message("You stop moving.")
             world.socketio.emit('command_response', 
                                  {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
@@ -226,7 +227,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         player_obj = world.get_player_obj(player_id)
         if not player_obj: return
-        if not player_obj.is_goto_active:
+        if not player_obj.is_goto_active or player_obj.goto_id != goto_id:
             player_obj.send_message("You stop moving.")
             world.socketio.emit('command_response', 
                                  {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
@@ -240,6 +241,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                                  {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                  to=sid)
             player_obj.is_goto_active = False
+            player_obj.goto_id = None
             return
 
         original_room_id = player_obj.current_room_id
@@ -250,6 +252,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                      to=sid)
             player_obj.is_goto_active = False
+            player_obj.goto_id = None
             return
         
         target_room_id_step = None
@@ -282,6 +285,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                                          {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                          to=sid)
                 player_obj.is_goto_active = False
+                player_obj.goto_id = None
                 return
         
         if _check_toll_gate(player_obj, target_room_id_step):
@@ -290,6 +294,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                      to=sid)
             player_obj.is_goto_active = False
+            player_obj.goto_id = None
             return
         
         group = world.get_group(player_obj.group_id)
@@ -364,6 +369,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
     player_obj = world.get_player_obj(player_id)
     if player_obj: 
         player_obj.is_goto_active = False 
+        player_obj.goto_id = None
         if player_obj.current_room_id == final_destination_room_id:
             world.remove_combat_state(player_id) 
             player_obj.send_message("You have arrived.")
@@ -540,19 +546,12 @@ class Move(BaseVerb):
         if _check_action_roundtime(self.player, action_type="move"):
             return
 
-        target_name = None
-
-        # Check if the command itself is a direction (e.g. "n", "north")
-        if self.command.lower() in DIRECTION_MAP:
-            target_name = self.command.lower()
-        # Otherwise, check arguments (e.g., "move north")
-        elif self.args:
-            target_name = " ".join(self.args).lower()
-        
-        if not target_name:
+        if not self.args:
             self.player.send_message("Move where? (e.g., NORTH, SOUTH, E, W, etc.)")
             return
 
+        target_name = " ".join(self.args).lower()
+        
         normalized_direction = DIRECTION_MAP.get(target_name, target_name)
         
         target_room_id = self.room.exits.get(normalized_direction)
@@ -757,6 +756,11 @@ class GOTO(BaseVerb):
             return
 
         self.player.is_goto_active = True 
+        
+        # --- Set unique goto ID ---
+        goto_id = uuid.uuid4().hex
+        self.player.goto_id = goto_id
+        # --------------------------
             
         self.world.socketio.start_background_task(
             _execute_goto_path, 
@@ -764,5 +768,6 @@ class GOTO(BaseVerb):
             player_id,
             path, 
             target_room_id,
-            sid
+            sid,
+            goto_id # <-- Pass it in
         )
