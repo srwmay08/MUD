@@ -546,12 +546,19 @@ class Move(BaseVerb):
         if _check_action_roundtime(self.player, action_type="move"):
             return
 
-        if not self.args:
+        target_name = None
+
+        # Check if the command itself is a direction (e.g. "n", "north")
+        if self.command.lower() in DIRECTION_MAP:
+            target_name = self.command.lower()
+        # Otherwise, check arguments (e.g., "move north")
+        elif self.args:
+            target_name = " ".join(self.args).lower()
+        
+        if not target_name:
             self.player.send_message("Move where? (e.g., NORTH, SOUTH, E, W, etc.)")
             return
 
-        target_name = " ".join(self.args).lower()
-        
         normalized_direction = DIRECTION_MAP.get(target_name, target_name)
         
         target_room_id = self.room.exits.get(normalized_direction)
@@ -755,7 +762,7 @@ class GOTO(BaseVerb):
             self.player.send_message("Error: Could not find your connection.")
             return
 
-        self.player.is_goto_active = True 
+        self.player.is_goto_active = True
         
         # --- Set unique goto ID ---
         goto_id = uuid.uuid4().hex
