@@ -132,7 +132,7 @@ class Get(BaseVerb):
                 
             self.player.inventory.remove(item_ref)
             self.player.worn_items[target_hand_slot] = item_ref
-            self.player.send_message(f"You get {item_name} from your {container_data.get('name')} and hold it.")
+            self.player.send_message(f"You get {item_name} from your {container.get('name')} and hold it.")
             
             _set_action_roundtime(self.player, 1.0)
             
@@ -184,6 +184,16 @@ class Get(BaseVerb):
             item_name = item_data.get("name", "an item")
             
             self.player.send_message(f"You get {item_name} from your pack and hold it.")
+            
+            # ---
+            # --- NEW: TUTORIAL HOOK (GET NOTE FROM PACK)
+            # ---
+            if item_ref_from_pack == "inn_note":
+                 if "intro_did_stow" in self.player.completed_quests and "intro_ready_to_leave" not in self.player.completed_quests:
+                      self.player.send_message("\nExcellent. You have your belongings. Now go <span class='keyword' data-command='out'>OUT</span> to the common room.")
+                      self.player.completed_quests.append("intro_ready_to_leave")
+            # ---
+            
             _set_action_roundtime(self.player, 1.0)
 
 
@@ -278,6 +288,16 @@ class Drop(BaseVerb):
                 self.player.worn_items[item_location] = None
                 self.player.inventory.append(item_ref_to_drop)
                 self.player.send_message(f"You put {item_name} in your {container.get('name')}.")
+                
+                # ---
+                # --- NEW: TUTORIAL HOOK (STOW NOTE)
+                # ---
+                if item_ref_to_drop == "inn_note":
+                     if "intro_stow" in self.player.completed_quests and "intro_did_stow" not in self.player.completed_quests:
+                          self.player.send_message("\nGood practice. Now get it back out with <span class='keyword' data-command='get note'>GET NOTE</span>.")
+                          self.player.completed_quests.append("intro_did_stow")
+                # ---
+                
             else:
                 self.player.send_message(f"You can't put things in {container.get('name')} yet.")
                 return
