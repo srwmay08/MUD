@@ -60,7 +60,8 @@ class Train(BaseVerb):
             return
 
         args_str = " ".join(self.args).lower()
-        pending_training = self.player.db_data.get('_pending_training')
+        # --- FIX: Use player.data instead of player.db_data ---
+        pending_training = self.player.data.get('_pending_training')
         
         if args_str == "confirm":
             if not pending_training:
@@ -73,7 +74,8 @@ class Train(BaseVerb):
             if not pending_training:
                 self.player.send_message("You have no pending training to cancel.")
                 return
-            self.player.db_data.pop('_pending_training', None)
+            # --- FIX: Use player.data instead of player.db_data ---
+            self.player.data.pop('_pending_training', None)
             self.player.send_message("Pending training canceled.")
             return
         

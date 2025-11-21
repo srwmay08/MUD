@@ -13,17 +13,12 @@ if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
 # ---
-# --- FUNCTION REMOVED (MOVED TO utils.py) ---
-# ---
-
-# ---
 # Skill Cost Calculation Logic (UNCHANGED)
 # ---
 def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attrs: List[str]) -> int:
     """
     Calculates the final, discounted cost for one TP type (PTP, MTP, or STP).
     """
-    # ... (function contents unchanged) ...
     if base_cost == 0:
         return 0
         
@@ -64,9 +59,7 @@ def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attr
     
     return int(final_cost)
 
-# ... (rest of skill_handler.py is unchanged) ...
 def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
-# ... (function contents unchanged) ...
     player_stats = player.stats
     base_costs = skill_data.get("base_cost", {})
     key_attrs = skill_data.get("key_attributes", {})
@@ -91,7 +84,6 @@ def get_skill_costs(player: Player, skill_data: Dict) -> Dict[str, int]:
 
 # --- REFACTORED: Accept world object ---
 def _find_skill_by_name(world: 'World', skill_name: str) -> Optional[Dict]:
-# ... (function contents unchanged) ...
     skill_name_lower = skill_name.lower()
     # --- FIX: Use world.game_skills ---
     for skill_id, skill_data in world.game_skills.items():
@@ -101,10 +93,7 @@ def _find_skill_by_name(world: 'World', skill_name: str) -> Optional[Dict]:
             return skill_data
     return None
 
-# ... (inside skill_handler.py)
-
 def _format_skill_line(player: Player, skill_data: Dict) -> str:
-# ... (function contents unchanged) ...
     skill_id = skill_data["skill_id"]
     skill_name = skill_data["name"]
     current_rank = player.skills.get(skill_id, 0)
@@ -145,7 +134,6 @@ def _format_skill_line(player: Player, skill_data: Dict) -> str:
 
 # --- REFACTORED: Use player.world ---
 def _show_all_skills_by_category(player: Player):
-# ... (function contents unchanged) ...
     # Your custom category order
     COLUMN_1_CATEGORIES = [
         "Armor Skills", "Weapon Skills", "Combat Skills", 
@@ -274,7 +262,6 @@ def _show_all_skills_by_category(player: Player):
     player.send_message("\n".join(html_lines))
 
 def _show_simple_training_menu(player: Player):
-# ... (function contents unchanged) ...
     player.send_message("\n--- **SKILL TRAINING** ---")
     player.send_message(f"--- TPs: P:{player.ptps} / M:{player.mtps} / S:{player.stps} ---")
     player.send_message("- Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
@@ -284,7 +271,6 @@ def _show_simple_training_menu(player: Player):
 
 # --- REFACTORED: Use player.world ---
 def show_skill_list(player: Player, category: str):
-# ... (function contents unchanged) ...
     category_lower = category.lower()
     
     # --- FIX: Use player.world ---
@@ -341,7 +327,6 @@ def show_skill_list(player: Player, category: str):
     _show_simple_training_menu(player)
 
 def _calculate_total_cost(player: Player, skill_data: Dict, ranks_to_train: int) -> Dict[str, int]:
-# ... (function contents unchanged) ...
     skill_id = skill_data["skill_id"]
     ranks_already_trained = player.ranks_trained_this_level.get(skill_id, 0)
     costs = get_skill_costs(player, skill_data)
@@ -359,7 +344,6 @@ def _calculate_total_cost(player: Player, skill_data: Dict, ranks_to_train: int)
     return {"ptp": total_ptp, "mtp": total_mtp, "stp": total_stp}
 
 def _check_for_tp_conversion(player: Player, total_ptp: int, total_mtp: int, total_stp: int) -> Optional[Dict]:
-# ... (function contents unchanged) ...
     ptp_needed = total_ptp - player.ptps
     mtp_needed = total_mtp - player.mtps
     stp_needed = total_stp - player.stps
@@ -434,7 +418,6 @@ def _check_for_tp_conversion(player: Player, total_ptp: int, total_mtp: int, tot
     }
 
 def _perform_conversion_and_train(player: Player, pending_data: Dict):
-# ... (function contents unchanged) ...
     skill_id = pending_data["skill_id"]
     skill_name = pending_data["skill_name"]
     ranks_to_train = pending_data["ranks_to_train"]
@@ -483,7 +466,8 @@ def _perform_conversion_and_train(player: Player, pending_data: Dict):
     player.send_message(f"You train **{skill_name}** to rank **{new_rank}**!")
     
     # 4. Clean up pending state
-    player.db_data.pop('_pending_training', None)
+    # --- FIX: Use player.data instead of player.db_data ---
+    player.data.pop('_pending_training', None)
 
     # 5. Show the menus
     # --- FIX: Removed the "All Skills" title ---
@@ -493,7 +477,6 @@ def _perform_conversion_and_train(player: Player, pending_data: Dict):
 
 # --- REFACTORED: Use player.world ---
 def train_skill(player: Player, skill_name: str, ranks_to_train: int):
-# ... (function contents unchanged) ...
     if ranks_to_train <= 0:
         player.send_message("You must train at least 1 rank.")
         return
@@ -551,7 +534,8 @@ def train_skill(player: Player, skill_name: str, ranks_to_train: int):
         if conversion_data:
             # 6. CONVERSION POSSIBLE: Set pending state
             pending_data["conversion_data"] = conversion_data
-            player.db_data['_pending_training'] = pending_data
+            # --- FIX: Use player.data instead of player.db_data ---
+            player.data['_pending_training'] = pending_data
             
             # Send confirmation prompt
             player.send_message(conversion_data['msg'])

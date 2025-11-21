@@ -174,7 +174,8 @@ def _handle_stat_roll_input(player: Player, command: str):
         player.send_message("> USE THIS ROLL")
         pool_copy = list(player.current_stat_pool)
         player.stats_to_assign = pool_copy
-        player.db_data['_chargen_selected_pool'] = list(player.current_stat_pool)
+        # --- FIX: Use player.data instead of player.db_data ---
+        player.data['_chargen_selected_pool'] = list(player.current_stat_pool)
         player.stats = {} 
         player.chargen_step = 2
         send_assignment_prompt(player)
@@ -183,7 +184,8 @@ def _handle_stat_roll_input(player: Player, command: str):
         player.send_message("> USE BEST ROLL")
         pool_copy = list(player.best_stat_pool)
         player.stats_to_assign = pool_copy 
-        player.db_data['_chargen_selected_pool'] = list(player.best_stat_pool)
+        # --- FIX: Use player.data instead of player.db_data ---
+        player.data['_chargen_selected_pool'] = list(player.best_stat_pool)
         player.stats = {}
         player.chargen_step = 2
         send_assignment_prompt(player)
@@ -205,7 +207,8 @@ def _complete_stat_assignment(player: Player):
     get_chargen_prompt(player) 
     
     player.stats_to_assign = [] 
-    player.db_data.pop('_chargen_selected_pool', None)
+    # --- FIX: Use player.data instead of player.db_data ---
+    player.data.pop('_chargen_selected_pool', None)
 
 def send_assignment_prompt(player: Player):
     """
@@ -271,7 +274,8 @@ def _handle_assignment_input(player: Player, command: str):
         player.send_message("> RESET")
         player.send_message("All stat assignments have been cleared.")
         player.stats = {} 
-        selected_pool_copy = player.db_data.get('_chargen_selected_pool', [])
+        # --- FIX: Use player.data instead of player.db_data ---
+        selected_pool_copy = player.data.get('_chargen_selected_pool', [])
         player.stats_to_assign = list(selected_pool_copy) 
         send_assignment_prompt(player)
         return
