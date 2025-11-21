@@ -90,14 +90,16 @@ class Player(GameEntity):
         self.quest_trip_counter = self.data.get("quest_trip_counter", 0)
         self.visited_rooms = self.data.get("visited_rooms", [])
         
-        # --- FIX: Restored is_goto_active and added goto_id ---
         self.is_goto_active = self.data.get("is_goto_active", False)
         self.goto_id = None 
-        # ------------------------------------------------------
         
         self.group_id = self.data.get("group_id", None) 
         self.band_id = self.data.get("band_id", None) 
         self.band_xp_bank = self.data.get("band_xp_bank", 0) 
+        
+        # --- NEW: Transient field for movement messages ---
+        self.temp_leave_message = None
+        # --------------------------------------------------
         
         self.level_xp_target = self._get_xp_target_for_level(self.level)
 

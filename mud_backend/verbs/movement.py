@@ -259,10 +259,12 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         move_msg = ""
         move_verb = move_direction
         skill_dc = 0
+        leave_msg = "leaves." # Default
         
         if move_direction in current_room_data.get("exits", {}):
             target_room_id_step = current_room_data.get("exits", {}).get(move_direction)
             move_msg = f"You move {move_direction}..."
+            leave_msg = f"heads {move_direction}."
         else:
             enter_obj = next((obj for obj in current_room_data.get("objects", []) 
                               if ((move_direction in obj.get("keywords", []) or 
@@ -276,9 +278,11 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                     move_verb = "climb"
                     skill_dc = 20 
                     move_msg = f"You climb the {enter_obj.get('name')}..."
+                    leave_msg = f"climbs the {enter_obj.get('name')}."
                 else: 
                     move_verb = "enter"
                     move_msg = f"You enter the {enter_obj.get('name')}..."
+                    leave_msg = f"enters the {enter_obj.get('name')}."
             else:
                 player_obj.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
                 world.socketio.emit('command_response', 
@@ -332,7 +336,10 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         if original_room_id and target_room_id_step != original_room_id:
             world.socketio.server.leave_room(sid, original_room_id)
-            leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> leaves.'
+            
+            # --- FIX: Use dynamic leave message ---
+            leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> {leave_msg}'
+            # --------------------------------------
             
             sids_to_skip_leave = {sid}
             if group and is_leader:
@@ -417,10 +424,14 @@ class Enter(BaseVerb):
         
         if current_posture == "standing":
             move_msg = f"You enter the {enterable_object.get('name', target_name)}..."
+            # --- FIX: Set temp message ---
+            self.player.temp_leave_message = f"enters the {enterable_object.get('name', target_name)}."
+            # -----------------------------
             if not is_door_or_gate:
                 rt = 3.0
         elif current_posture == "prone":
             move_msg = f"You crawl through the {enterable_object.get('name', target_name)}..."
+            self.player.temp_leave_message = f"crawls through the {enterable_object.get('name', target_name)}."
             if not is_door_or_gate:
                 rt = 8.0
         else: 
@@ -514,6 +525,9 @@ class Climb(BaseVerb):
         else:
             rt = max(1.0, 5.0 - (success_margin / 20.0))
             move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
+            # --- FIX: Set temp message ---
+            self.player.temp_leave_message = f"climbs the {target_name}."
+            # -----------------------------
             
         if _check_toll_gate(self.player, target_room_id):
             return
@@ -570,8 +584,12 @@ class Move(BaseVerb):
             
             if current_posture == "standing":
                 move_msg = f"You move {normalized_direction}..."
+                # --- FIX: Set temp message ---
+                self.player.temp_leave_message = f"heads {normalized_direction}."
+                # -----------------------------
             elif current_posture == "prone":
                 move_msg = f"You crawl {normalized_direction}..."
+                self.player.temp_leave_message = f"crawls {normalized_direction}."
             else:
                 self.player.send_message("You must stand up first.")
                 return
@@ -645,8 +663,12 @@ class Exit(BaseVerb):
                 
                 if current_posture == "standing":
                     move_msg = "You head out..."
+                    # --- FIX: Set temp message ---
+                    self.player.temp_leave_message = "heads out."
+                    # -----------------------------
                 elif current_posture == "prone":
                     move_msg = "You crawl out..."
+                    self.player.temp_leave_message = "crawls out."
                 else: 
                     self.player.send_message("You must stand up first.")
                     return
@@ -776,5 +798,5 @@ class GOTO(BaseVerb):
             path, 
             target_room_id,
             sid,
-            goto_id # <-- Pass it in
+            goto_id
         )

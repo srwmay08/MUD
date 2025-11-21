@@ -1,6 +1,6 @@
 # mud_backend/app.py
 import eventlet
-eventlet.monkey_patch(thread=False)
+eventlet.monkey_patch()
 
 import sys
 import os
@@ -160,7 +160,15 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
         
         if new_room_id and old_room_id and old_room_id != new_room_id:
             world.socketio.server.leave_room(sid, old_room_id)
-            world.broadcast_to_room(old_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> leaves.', "message") 
+            
+            # --- FIX: Use custom leave message if present ---
+            leave_msg = result_data.get("leave_message")
+            if not leave_msg:
+                leave_msg = "leaves."
+            
+            world.broadcast_to_room(old_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> {leave_msg}', "message") 
+            # ------------------------------------------------
+            
             world.socketio.server.enter_room(sid, new_room_id)
             world.broadcast_to_room(new_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> arrives.', "message", skip_sid=sid)
             socketio.start_background_task(_handle_npc_idle_dialogue, world, player_name, new_room_id)
@@ -272,7 +280,6 @@ def handle_command_event(data):
         old_room_id = old_player_info.get("current_room_id") if old_player_info else None
         game_event_queue.put((process_command_worker, {"player_name": player_name, "command": command, "sid": sid, "old_room_id": old_room_id}))
 
-# --- CRITICAL FIX: All startup logic is strictly guarded ---
 if __name__ == "__main__":
     # 1. Start Workers (Only in main process)
     print("[SERVER START] Starting Workers...")

@@ -100,6 +100,7 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     if player.game_state == "playing" and command_line.lower() != "ping":
         if player.is_goto_active:
             player.is_goto_active = False 
+            player.goto_id = None
             
     # Ensure room hydration
     world.room_manager.get_room(player.current_room_id) 
@@ -161,11 +162,17 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     vitals_data = player.get_vitals()
     map_data = _get_map_data(player, world)
     
+    # --- FIX: Extract temp_leave_message ---
+    leave_msg = getattr(player, "temp_leave_message", None)
+    player.temp_leave_message = None 
+    # ---------------------------------------
+
     return {
         "messages": player.messages, 
         "game_state": player.game_state,
         "vitals": vitals_data,
-        "map_data": map_data 
+        "map_data": map_data,
+        "leave_message": leave_msg # <-- Added to result
     }
 
 def _run_verb(world: 'World', player: Player, room: Room, command: str, args: List[str]) -> bool:
