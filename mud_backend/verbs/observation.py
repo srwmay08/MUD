@@ -1,9 +1,7 @@
 # mud_backend/verbs/observation.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.db import fetch_player_data
-# --- FIX: Removed .py extension from import ---
 from mud_backend.core.chargen_handler import format_player_description
-# --- END FIX ---
 from mud_backend.core.room_handler import show_room_to_player
 import math
 import random 
@@ -11,11 +9,9 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend.core.game_loop import environment
+from mud_backend.core.registry import VerbRegistry # <-- Added Import
 
-@VerbRegistry.register(["look", "l"]) 
 @VerbRegistry.register(["examine", "x"]) 
-@VerbRegistry.register(["investigate"])
-
 class Examine(BaseVerb):
     """
     Handles the 'examine' command.
@@ -103,6 +99,7 @@ def _get_weather_message_for_window() -> str:
         
     return "You glance out the window." 
 
+@VerbRegistry.register(["look", "l"]) 
 class Look(BaseVerb):
     """Handles the 'look' command."""
     
@@ -301,7 +298,7 @@ class Look(BaseVerb):
         # --- E. Not found ---
         self.player.send_message(f"You do not see a **{target_name}** here.")
 
-
+@VerbRegistry.register(["investigate"]) 
 class Investigate(BaseVerb):
     """
     Handles the 'investigate' command.

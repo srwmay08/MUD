@@ -1,23 +1,34 @@
 # mud_backend/verbs/band.py
-# NEW FILE
 import time
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core.registry import VerbRegistry
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from typing import Optional, Dict, Any
 import uuid
-from mud_backend.core import db # <-- FIX: Import db module directly
+from mud_backend.core import db 
+from mud_backend.core.registry import VerbRegistry # <-- Added
 
 MAX_BAND_MEMBERS = 10
 
-@VerbRegistry.register(["band", "bt"])
-
+@VerbRegistry.register(["band", "bt"]) 
 class Band(BaseVerb):
-    """
-    Handles all persistent Adventuring Band commands:
-    BAND CREATE, BAND INVITE, BAND LIST, BAND REMOVE, BAND KICK, BAND DELETE, BAND JOIN
-    """
+    """Handles persistent Adventuring Band commands."""
     def execute(self):
+        # Handle 'bt' alias shortcut
+        if self.command.lower() == "bt":
+            if not self.player.band_id:
+                self.player.send_message("You are not in an adventuring band.")
+                return
+            if not self.args:
+                self.player.send_message("What do you want to say to your band?")
+                return
+            message = " ".join(self.args)
+            self.world.send_message_to_band(
+                self.player.band_id,
+                f"[{self.player.name}] {message}",
+                msg_type="band_chat"
+            )
+            return
+
         if not self.args:
             self.player.send_message("Usage: BAND <create|invite|join|list|remove|kick|delete>")
             return
@@ -36,22 +47,19 @@ class Band(BaseVerb):
                 "id": new_band_id,
                 "leader": player_key,
                 "members": [player_key],
-                "pending_invites": {} # { "player_name_lower": "inviter_name_lower" }
+                "pending_invites": {} 
             }
             
             self.world.set_band(new_band_id, new_band)
             db.save_band(new_band)
             
             self.player.band_id = new_band_id
-            db.update_player_band(player_key, new_band_id) # Save to player
+            db.update_player_band(player_key, new_band_id) 
             
             self.player.send_message(f"You have created a new adventuring band! (Name: {self.player.name}'s Band)")
             self.player.send_message("Use BAND INVITE <player> to invite members.")
             return
 
-        # ---
-        # --- THIS IS THE FIX: Handle JOIN before checking if player is IN a band
-        # ---
         if command == "join":
             if not target_name:
                 self.player.send_message("Usage: BAND JOIN <leader_name>")
@@ -62,42 +70,32 @@ class Band(BaseVerb):
                 return
 
             target_leader_key = target_name.lower()
-            
-            # Find the band invite
-            # This helper checks all bands for an invite for player_key
             invite_band = self.world.get_band_invite_for_player(player_key)
             
             if not invite_band or invite_band["pending_invites"].get(player_key) != target_leader_key:
                 self.player.send_message(f"You have not been invited to a band by '{target_name.capitalize()}'.")
                 return
             
-            # Found the invite. 'invite_band' is the band object.
             band_id = invite_band["id"]
             
-            # Check for max members
             if len(invite_band["members"]) >= MAX_BAND_MEMBERS:
                 self.player.send_message("That band is now full.")
-                # Clear the (now useless) invite
                 invite_band["pending_invites"].pop(player_key, None)
                 self.world.set_band(band_id, invite_band)
                 db.save_band(invite_band)
                 return
 
-            # Success! Add player to band.
-            invite_band["pending_invites"].pop(player_key, None) # Remove invite
+            invite_band["pending_invites"].pop(player_key, None) 
             invite_band["members"].append(player_key)
             self.world.set_band(band_id, invite_band)
-            db.save_band(invite_band) # Save to DB
+            db.save_band(invite_band) 
             
             self.player.band_id = band_id
-            db.update_player_band(player_key, band_id) # Save player's new band_id
+            db.update_player_band(player_key, band_id) 
             
             self.world.send_message_to_band(band_id, f"{self.player.name.capitalize()} has joined the adventuring band!")
             return
-        # --- END FIX ---
 
-
-        # --- Commands that require you to be in a band ---
         band = self.world.get_band(self.player.band_id)
         if not band:
             self.player.send_message("You are not currently in an adventuring band.")
@@ -119,11 +117,10 @@ class Band(BaseVerb):
         if command == "remove":
             band["members"].remove(player_key)
             self.player.band_id = None
-            db.update_player_band(player_key, None) # Update player in DB
+            db.update_player_band(player_key, None) 
             self.player.send_message("You have left the adventuring band.")
             
             if is_leader:
-                # Leader left, pick new leader or disband
                 if band["members"]:
                     new_leader_key = band["members"][0]
                     band["leader"] = new_leader_key
@@ -131,17 +128,14 @@ class Band(BaseVerb):
                     db.save_band(band)
                     self.world.send_message_to_band(band_id, f"{self.player.name} has left the band. {new_leader_key.capitalize()} is the new leader.")
                 else:
-                    # Band is empty, delete it
                     self.world.remove_band(band_id)
                     db.delete_band(band_id)
             else:
-                # Member left
                 self.world.set_band(band_id, band)
                 db.save_band(band)
                 self.world.send_message_to_band(band_id, f"{self.player.name} has left the adventuring band.")
             return
 
-        # --- Leader-only commands ---
         if not is_leader:
             self.player.send_message("Only the band leader can do that.")
             return
@@ -165,7 +159,6 @@ class Band(BaseVerb):
                 self.player.send_message(f"You have already invited {target_name.capitalize()}.")
                 return
 
-            # Check if player exists (in DB, not just online)
             target_player_data = db.fetch_player_data(target_player_key) 
             if not target_player_data:
                 self.player.send_message(f"There is no player named '{target_name}'.")
@@ -181,7 +174,6 @@ class Band(BaseVerb):
             
             self.player.send_message(f"You have invited {target_name.capitalize()} to join your band.")
             
-            # Send to target player *if they are online*
             self.world.send_message_to_player(
                 target_player_key,
                 f"{self.player.name} has invited you to join their adventuring band. "
@@ -209,7 +201,6 @@ class Band(BaseVerb):
             
             self.world.send_message_to_band(band_id, f"{target_name.capitalize()} has been kicked from the adventuring band by the leader.")
             
-            # Update the kicked player in the DB
             db.update_player_band(target_player_key, None)
             
             target_player_obj = self.world.get_player_obj(target_player_key)
@@ -222,37 +213,14 @@ class Band(BaseVerb):
             self.world.send_message_to_band(band_id, f"The adventuring band '{self.player.name}'s Band' has been deleted by the leader.", skip_player_key=player_key)
             self.player.send_message("You have deleted the adventuring band.")
             
-            # Remove band_id from all players
             for member_key in band["members"]:
                 db.update_player_band(member_key, None)
                 member_obj = self.world.get_player_obj(member_key)
                 if member_obj:
                     member_obj.band_id = None
             
-            # Delete from cache and DB
             self.world.remove_band(band_id)
             db.delete_band(band_id)
             return
             
         self.player.send_message("Usage: BAND <create|invite|join|list|remove|kick|delete>")
-
-
-class BT(BaseVerb):
-    """
-    Handles the 'bt' (Band Talk) command.
-    """
-    def execute(self):
-        if not self.player.band_id:
-            self.player.send_message("You are not in an adventuring band.")
-            return
-            
-        if not self.args:
-            self.player.send_message("What do you want to say to your band?")
-            return
-            
-        message = " ".join(self.args)
-        self.world.send_message_to_band(
-            self.player.band_id,
-            f"[{self.player.name}] {message}",
-            msg_type="band_chat"
-        )

@@ -1,23 +1,16 @@
-# verbs/say.py
-# FIX: Change to absolute import using the top package name
+# mud_backend/verbs/say.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry # <-- Added
 
-@VerbRegistry.register(["say"])
-
+@VerbRegistry.register(["say"]) # <-- Added
 class Say(BaseVerb):
     """Handles the 'say' command."""
     
     def execute(self):
-        # The 'say' verb logic
         if not self.args:
             self.player.send_message("What do you want to say?")
             return
 
         message = " ".join(self.args)
-        
-        # Output for the player
         self.player.send_message(f"You say, \"{message}\"")
-        
-        # Output that would be sent to others in the room
-        # (This requires a message queue system, but we'll simulate the text)
-        print(f"[To Room] {self.player.name} says, \"{message}\"")
+        self.world.broadcast_to_room(self.room.room_id, f"{self.player.name} says, \"{message}\"", "message", skip_sid=self.player.uid)

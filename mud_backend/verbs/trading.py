@@ -2,27 +2,15 @@
 import time
 import re
 from mud_backend.verbs.base_verb import BaseVerb
-# --- REFACTORED: Removed game_state and get_player_object imports ---
 from typing import Dict, Any, Tuple, Optional
-# --- NEW: Import config for DEBUG_MODE ---
 from mud_backend import config
-# --- NEW: Import RT helpers ---
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-# --- NEW: Import quest handler ---
 from mud_backend.core.quest_handler import get_active_quest_for_npc
-# --- END NEW ---
+from mud_backend.core.registry import VerbRegistry # <-- Added
 
-@VerbRegistry.register(["give"]) 
-@VerbRegistry.register(["accept"]) 
-@VerbRegistry.register(["decline"]) 
-@VerbRegistry.register(["cancel"]) 
-@VerbRegistry.register(["exchange"])
-
-# --- NEW: Helper functions copied from equipment.py ---
+# ... (Keep helper functions: _find_item_in_inventory, _count_item_in_inventory, _find_item_in_hands, _find_npc_in_room) ...
 def _find_item_in_inventory(player, target_name: str) -> str | None:
-    """Finds the first item_id in a player's inventory that matches."""
     for item_id in player.inventory:
-        # --- FIX: Use player.world.game_items ---
         item_data = player.world.game_items.get(item_id)
         if item_data:
             if (target_name == item_data.get("name", "").lower() or 
@@ -30,61 +18,38 @@ def _find_item_in_inventory(player, target_name: str) -> str | None:
                 return item_id
     return None
 
-# --- NEW: Helper to count items in inventory ---
 def _count_item_in_inventory(player, target_item_id: str) -> int:
-    """Counts how many of a specific item_id a player has in inventory."""
     count = 0
     for item_id in player.inventory:
         if item_id == target_item_id:
             count += 1
     return count
-# --- END NEW ---
 
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
-    """
-    Finds the first item_id in a player's hands that matches.
-    Returns (item_id, slot_name) or (None, None)
-    """
     for slot in ["mainhand", "offhand"]:
         item_id = player.worn_items.get(slot)
         if item_id:
-            # --- FIX: Use player.world.game_items ---
             item_data = player.world.game_items.get(item_id)
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
                     target_name in item_data.get("keywords", [])):
                     return item_id, slot
     return None, None
-# --- END HELPERS ---
 
-# --- NEW: Helper to find NPCs ---
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
-    """Finds an NPC object in the room by name or keyword."""
     for obj in room.objects:
-        # ---
-        # --- THIS IS THE FIX ---
-        # We now find any object that has quest IDs OR is flagged as an NPC
         if obj.get("quest_giver_ids") or obj.get("is_npc"):
-        # --- END FIX ---
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
                 return obj
     return None
-# --- END NEW HELPER ---
 
 
+@VerbRegistry.register(["give"]) 
 class Give(BaseVerb):
-    """
-    Handles the 'give' command.
-    GIVE <player> <item> (Prompts for ACCEPT)
-    GIVE <player> <amount> (Transfers silver immediately)
-    GIVE <npc> <item> (Handles quests)
-    """
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
         
         if len(self.args) < 2:
             self.player.send_message("Usage: GIVE <target> <item> OR GIVE <player> <amount>")
@@ -92,37 +57,24 @@ class Give(BaseVerb):
             
         target_name_input = self.args[0].lower()
         
-        # ---
-        # --- MODIFIED: Split item/silver logic
-        # ---
         silver_amount = 0
         target_item_name = ""
 
-        # Check for silver first
         if len(self.args) == 2:
             try:
                 silver_amount = int(self.args[1])
                 if silver_amount <= 0:
                     raise ValueError("Must be positive")
             except ValueError:
-                silver_amount = 0 # It's not silver
+                silver_amount = 0 
         
         if silver_amount == 0:
-            # It's an item
             target_item_name = " ".join(self.args[1:]).lower()
-        # ---
-        # --- END MODIFIED
-        # ---
 
-        # ---
-        # --- MODIFIED: BRANCH 0: Quest NPC Check (Items Only)
-        # ---
         if silver_amount == 0 and target_item_name:
             target_npc = _find_npc_in_room(self.room, target_name_input)
             if target_npc:
                 npc_name = target_npc.get("name", "the NPC")
-                
-                # Find the item on the player (hands or inventory)
                 item_id_to_give, item_source_location = _find_item_in_hands(self.player, target_item_name)
                 if not item_id_to_give:
                     item_id_to_give = _find_item_in_inventory(self.player, target_item_name)
@@ -135,33 +87,21 @@ class Give(BaseVerb):
                 
                 item_name = self.world.game_items.get(item_id_to_give, {}).get("name", "that item")
 
-                # --- NEW LOGIC TO FIND THE QUEST ---
                 active_quest = None
                 quest_id_for_item = None
                 
-                # Iterate over *all* quests
                 for quest_id, quest_data in self.world.game_quests.items():
-                    # Is this an item quest?
                     if quest_data.get("item_needed") == item_id_to_give:
-                        # Is this the right NPC to give it to?
                         if quest_data.get("give_target_name") == npc_name.lower():
-                            # Is this quest active for the player? (not done, prereqs met)
-                            
-                            # Check if done
                             is_done = False
                             if quest_id in self.player.completed_quests:
                                 is_done = True
-                            # (add spell/maneuver checks if needed, but these are item quests)
-                            
-                            if is_done:
-                                continue
+                            if is_done: continue
                                 
-                            # Check prereqs
                             prereq_quest = quest_data.get("prereq_quest")
                             if prereq_quest and prereq_quest not in self.player.completed_quests:
                                 continue
                                 
-                            # This is the one!
                             active_quest = quest_data
                             quest_id_for_item = quest_id
                             break
@@ -169,26 +109,18 @@ class Give(BaseVerb):
                 if not active_quest:
                     self.player.send_message(f"The {npc_name} does not seem interested in {item_name}.")
                     return
-                # --- END NEW QUEST LOGIC ---
 
-                # Check if this is the correct item for the active quest
                 item_needed = active_quest.get("item_needed")
-                
                 if item_id_to_give == item_needed:
-                    # It's the right item, now check quantity
                     quantity_needed = active_quest.get("item_quantity", 1)
                     
                     if quantity_needed == 1:
-                        # Simple case: consume the one item
                         if item_source_location == "inventory":
                             self.player.inventory.remove(item_id_to_give)
                         else:
                             self.player.worn_items[item_source_location] = None
                     else:
-                        # Complex case: check for multiple items in inventory
                         item_count = _count_item_in_inventory(self.player, item_id_to_give)
-                        
-                        # Also count the one in hand, if that's what was "given"
                         if item_source_location in ["mainhand", "offhand"]:
                             item_count += 1
                             
@@ -196,80 +128,50 @@ class Give(BaseVerb):
                             self.player.send_message(f"The {npc_name} looks at your {item_name}. \"This is a good start, but I need {quantity_needed} of them. You only have {item_count}.\"")
                             return
                         
-                        # Player has enough, consume them
                         items_removed = 0
-                        # First, remove from hand if that's what they "gave"
                         if item_source_location in ["mainhand", "offhand"]:
                             self.player.worn_items[item_source_location] = None
                             items_removed += 1
                         
-                        # Then, remove the rest from inventory
                         for _ in range(quantity_needed - items_removed):
                             if item_id_to_give in self.player.inventory:
                                 self.player.inventory.remove(item_id_to_give)
                             else:
-                                # This should not happen if our count was correct, but safety check
-                                print(f"[QUEST ERROR] Player {self.player.name} item count mismatch for {item_id_to_give}!")
                                 break
                     
-                    # ---
-                    # --- NEW: Grant Reward
-                    # ---
                     quest_id = quest_id_for_item
-                    
-                    # 1. Send reward message
                     reward_message = active_quest.get("reward_message", "You have completed the task!")
                     self.player.send_message(reward_message)
                     
-                    # ---
-                    # --- MODIFIED: Grant Quest XP via grant_experience
-                    # ---
                     reward_xp = active_quest.get("reward_xp", 0)
                     if reward_xp > 0:
-                        # This now goes through the Band splitting system
                         self.player.grant_experience(reward_xp, source="quest")
-                    # ---
-                    # --- END MODIFIED
-                    # ---
                         
-                    # 3. Grant Silver
                     reward_silver = active_quest.get("reward_silver", 0)
                     if reward_silver > 0:
                         self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + reward_silver
                         self.player.send_message(f"You have been given {reward_silver} silver!")
 
-                    # 4. Grant follow-up item
                     reward_item = active_quest.get("reward_item")
                     if reward_item:
                         self.player.inventory.append(reward_item)
                         item_data = self.world.game_items.get(reward_item, {})
                         self.player.send_message(f"You are given {item_data.get('name', 'an item')}.")
                     
-                    # 5. Grant Spell
                     reward_spell = active_quest.get("reward_spell")
                     if reward_spell:
                         if reward_spell not in self.player.known_spells:
                             self.player.known_spells.append(reward_spell)
-                            # The reward_message already contains the "you learned" text
                         else:
                             self.player.send_message(active_quest.get("already_learned_message", "You have already completed this task."))
-                    # ---
-                    # --- END NEW REWARD LOGIC
-                    # ---
                     
-                    # Mark quest as complete
                     self.player.completed_quests.append(quest_id)
-                    
-                    _set_action_roundtime(self.player, 1.0) # 1s RT for giving
-                    return # Quest complete, verb is done.
+                    _set_action_roundtime(self.player, 1.0) 
+                    return 
                 else:
                     self.player.send_message(f"The {npc_name} does not seem interested in that.")
                     return
-        # ---
-        # --- END MODIFIED BRANCH
-        # ---
 
-        # 1. Check if target player is real and in the same room
         target_player = self.world.get_player_obj(target_name_input)
         if not target_player or target_player.current_room_id != self.player.current_room_id:
             self.player.send_message(f"You don't see anyone named '{self.args[0]}' here.")
@@ -284,52 +186,34 @@ class Give(BaseVerb):
             "offer_time": time.time()
         }
         
-        # --- BRANCH 1: Giving Silver ---
         if silver_amount > 0:
-            # --- MODIFIED: Silver transfers are IMMEDIATE ---
             player_silver = self.player.wealth.get("silvers", 0)
             if player_silver < silver_amount:
                 self.player.send_message(f"You don't have {silver_amount} silver to give.")
                 return
             
-            # Perform immediate transfer
             self.player.wealth["silvers"] = player_silver - silver_amount
             target_player.wealth["silvers"] = target_player.wealth.get("silvers", 0) + silver_amount
             
-            # Send messages to both parties
             self.player.send_message(f"You give {silver_amount} silver to {target_player.name}.")
-            # --- THIS IS THE FIX ---
             self.world.send_message_to_player(target_player.name.lower(), f"{self.player.name} gives you {silver_amount} silver.")
-            # --- END FIX ---
             
-            # --- NEW: Add DEBUG log ---
-            if config.DEBUG_MODE:
-                print(f"[TRADE DEBUG] {self.player.name} gave {silver_amount} silver to {target_player.name} (Immediate).")
-            
-            # --- NEW: Set RT ---
-            _set_action_roundtime(self.player, 1.0) # 1s RT for giving
-            # --- END NEW ---
-            return # We are done.
-            # --- END MODIFICATION ---
+            _set_action_roundtime(self.player, 1.0) 
+            return 
 
-        # --- BRANCH 2: Giving an Item ---
         else:
-            # --- Check for pending trade (MOVED HERE) ---
             if self.world.get_pending_trade(target_player.name.lower()):
                 self.player.send_message(f"{target_player.name} already has a pending offer. Please wait.")
                 return
-            # --- END MOVE ---
 
             item_id_to_give = None
-            item_source_location = None # e.g., "inventory", "mainhand"
+            item_source_location = None 
             
-            # Check hands first
             item_id_hand, hand_slot = _find_item_in_hands(self.player, target_item_name)
             if item_id_hand:
                 item_id_to_give = item_id_hand
                 item_source_location = hand_slot
             else:
-                # Check inventory
                 item_id_inv = _find_item_in_inventory(self.player, target_item_name)
                 if item_id_inv:
                     item_id_to_give = item_id_inv
@@ -345,19 +229,13 @@ class Give(BaseVerb):
                 "trade_type": "item",
                 "item_id": item_id_to_give,
                 "item_name": item_data['name'],
-                "item_source_location": item_source_location, # Track where it came from
+                "item_source_location": item_source_location, 
             })
             
             self.player.send_message(f"You offer {item_data['name']} to {target_player.name}.")
 
-        # 4. Create the pending trade and notify the target player (ITEM ONLY)
         self.world.set_pending_trade(target_player.name.lower(), trade_offer)
         
-        # --- NEW: Add DEBUG log ---
-        if config.DEBUG_MODE:
-            print(f"[TRADE DEBUG] {self.player.name} offered {trade_offer['item_name']} to {target_player.name}. Waiting for ACCEPT.")
-
-        # --- THIS IS THE FIX ---
         self.world.send_message_to_player(
             target_player.name.lower(),
             f"{self.player.name} offers you {trade_offer['item_name']}. "
@@ -365,46 +243,33 @@ class Give(BaseVerb):
             f"'<span class='keyword' data-command='decline'>DECLINE</span>'.\n"
             f"The offer will expire in 30 seconds."
         )
-        # --- END FIX ---
-        
-        # --- NEW: Set RT ---
-        _set_action_roundtime(self.player, 1.0) # 1s RT for offering
-        # --- END NEW ---
+        _set_action_roundtime(self.player, 1.0) 
 
 
+@VerbRegistry.register(["accept"]) 
 class Accept(BaseVerb):
-    """
-    Handles the 'accept' command for trades and exchanges.
-    """
+    """Handles the 'accept' command for trades and exchanges."""
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
 
         player_key = self.player.name.lower()
-        
-        # 1. Check for a pending trade
         trade_offer = self.world.get_pending_trade(player_key)
         
         if not trade_offer:
             self.player.send_message("You have not been offered anything.")
             return
             
-        # 2. Check if the giver is still here
         giver_player = self.world.get_player_obj(trade_offer['from_player_name'].lower())
         if not giver_player or giver_player.current_room_id != self.player.current_room_id:
             self.player.send_message(f"{trade_offer['from_player_name']} is no longer here.")
-            self.world.remove_pending_trade(player_key) # Clear the expired trade
+            self.world.remove_pending_trade(player_key) 
             return
             
         trade_type = trade_offer.get("trade_type", "item")
         item_name = trade_offer.get("item_name", "the item")
 
-        # --- BRANCH 1: Accepting a simple 'GIVE' (item) ---
-        if trade_type == "item": # <-- MODIFIED (removed "or trade_type == 'silver'")
-            
-            # 4. Check if the giver still has the item
+        if trade_type == "item": 
             item_id = trade_offer['item_id']
             item_source = trade_offer['item_source_location']
             item_is_present = False
@@ -420,64 +285,40 @@ class Accept(BaseVerb):
                 self.world.remove_pending_trade(player_key)
                 return
                 
-            # 5. Success! Transfer the item.
             if item_source == "inventory":
                 giver_player.inventory.remove(item_id)
-            else: # Was in a hand
+            else: 
                 giver_player.worn_items[item_source] = None
             
-            # --- NEW LOGIC: Place in hands, then pack ---
             right_hand_slot = "mainhand"
             left_hand_slot = "offhand"
-            
-            # --- THIS IS THE FIX ---
             giver_player_name_lower = giver_player.name.lower()
-            # --- END FIX ---
 
             if self.player.worn_items.get(right_hand_slot) is None:
                 self.player.worn_items[right_hand_slot] = item_id
                 self.player.send_message(f"You accept {item_name} from {giver_player.name} and hold it in your right hand.")
-                # --- THIS IS THE FIX ---
                 self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} accepts your offer for {item_name}.")
             elif self.player.worn_items.get(left_hand_slot) is None:
                 self.player.worn_items[left_hand_slot] = item_id
                 self.player.send_message(f"You accept {item_name} from {giver_player.name} and hold it in your left hand.")
-                # --- THIS IS THE FIX ---
                 self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} accepts your offer for {item_name}.")
             else:
-                # Both hands are full, goes to pack
                 self.player.inventory.append(item_id)
                 self.player.send_message(f"You accept {item_name} from {giver_player.name}. Your hands are full, so you place it in your pack.")
-                # --- THIS IS THE FIX ---
                 self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} accepts your offer for {item_name}.")
-            # --- END NEW LOGIC ---
 
-            # --- NEW: Add DEBUG log ---
-            if config.DEBUG_MODE:
-                print(f"[TRADE DEBUG] {self.player.name} ACCEPTED item {item_name} from {giver_player.name}.")
-
-            # 6. Send confirmations and clear trade
             self.world.remove_pending_trade(player_key)
-            
-            # --- NEW: Set RT ---
             _set_action_roundtime(self.player, 1.0)
-            # --- END NEW ---
 
-        # --- DELETED: Silver-only branch ---
-
-        # --- BRANCH 2: Accepting an 'EXCHANGE' ---
         elif trade_type == "exchange":
             item_id = trade_offer['item_id']
             item_source = trade_offer['item_source_location']
             silver_amount = trade_offer['silver_amount']
             
-            # 4. Check if buyer (self) has enough silver
             if self.player.wealth.get("silvers", 0) < silver_amount:
                 self.player.send_message(f"You cannot afford this. You need {silver_amount} silver.")
-                # Note: We don't cancel the trade here, they can try again.
                 return
 
-            # 5. Check if seller (giver) still has the item
             item_is_present = False
             if item_source == "inventory":
                 if item_id in giver_player.inventory:
@@ -491,19 +332,14 @@ class Accept(BaseVerb):
                 self.world.remove_pending_trade(player_key)
                 return
             
-            # 6. Success! Perform the exchange.
-            # A. Silver transfer
             self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) - silver_amount
             giver_player.wealth["silvers"] = giver_player.wealth.get("silvers", 0) + silver_amount
             
-            # B. Item transfer (from giver)
             if item_source == "inventory":
                 giver_player.inventory.remove(item_id)
-            else: # Was in a hand
+            else: 
                 giver_player.worn_items[item_source] = None
             
-            # C. Item placement (to buyer)
-            # --- NEW LOGIC: Place in hands, then pack ---
             right_hand_slot = "mainhand"
             left_hand_slot = "offhand"
             
@@ -517,84 +353,48 @@ class Accept(BaseVerb):
             else:
                 self.player.inventory.append(item_id)
                 item_received_msg = f"You accept {giver_player.name}'s offer for {item_name}. Your hands are full, so you place it in your pack."
-            # --- END NEW LOGIC ---
             
-            # 7. Send confirmations and clear trade
-            self.player.send_message(f"You hand {giver_player.name} {silver_amount} silver.\n"
-                                     f"{item_received_msg}")
+            self.player.send_message(f"You hand {giver_player.name} {silver_amount} silver.\n{item_received_msg}")
             
-            # --- THIS IS THE FIX ---
             self.world.send_message_to_player(
                 giver_player.name.lower(),
                 f"{self.player.name} hands you {silver_amount} silver.\n"
                 f"{self.player.name} has accepted your offer."
             )
-            # --- END FIX ---
-            
-            # --- NEW: Add DEBUG log ---
-            if config.DEBUG_MODE:
-                print(f"[TRADE DEBUG] {self.player.name} ACCEPTED exchange with {giver_player.name} (Item: {item_name}, Silver: {silver_amount}).")
             
             self.world.remove_pending_trade(player_key)
-            
-            # --- NEW: Set RT ---
             _set_action_roundtime(self.player, 1.0)
-            # --- END NEW ---
 
+@VerbRegistry.register(["decline"]) 
 class Decline(BaseVerb):
-    """
-    Handles the 'decline' command for trades.
-    """
+    """Handles the 'decline' command for trades."""
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
 
         player_key = self.player.name.lower()
-        
-        # 1. Check for a pending trade TO this player
         trade_offer = self.world.remove_pending_trade(player_key)
         
         if not trade_offer:
             self.player.send_message("You have no offers to decline.")
             return
             
-        # --- NEW: Add DEBUG log ---
-        if config.DEBUG_MODE:
-            item_name = trade_offer.get("item_name", "offer")
-            from_name = trade_offer.get("from_player_name", "Unknown")
-            print(f"[TRADE DEBUG] {self.player.name} DECLINED offer of {item_name} from {from_name}.")
-
-        # 2. Notify players (standard decline)
         self.player.send_message(f"You decline the offer from {trade_offer['from_player_name']}.")
-        
-        # --- THIS IS THE FIX ---
-        # Notify the giver, even if they are offline or in another room (so they don't see "offer pending")
         giver_player_name_lower = trade_offer['from_player_name'].lower()
         self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} declines your offer.")
-        # --- END FIX ---
-        
-        # --- NEW: Set RT ---
         _set_action_roundtime(self.player, 1.0)
-        # --- END NEW ---
 
-# --- NEW: Cancel verb ---
+@VerbRegistry.register(["cancel"]) 
 class Cancel(BaseVerb):
-    """
-    Handles the 'cancel' command to retract an offer.
-    """
+    """Handles the 'cancel' command to retract an offer."""
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
         
         giver_key = self.player.name.lower()
         offer_to_cancel = None
         receiver_name = None
         
-        # Find an offer WHERE from_player_name is me
         with self.world.trade_lock:
             for r_name, offer in self.world.pending_trades.items():
                 if offer.get("from_player_name", "").lower() == giver_key:
@@ -603,41 +403,26 @@ class Cancel(BaseVerb):
                     break
         
         if offer_to_cancel and receiver_name:
-            # Found our outgoing offer, remove it
             self.world.remove_pending_trade(receiver_name)
             self.player.send_message(f"You cancel your offer to {receiver_name}.")
-            
-            # --- THIS IS THE FIX ---
-            # Notify the person who *would* have received it
             self.world.send_message_to_player(receiver_name, f"{self.player.name} cancels their offer.")
-            # --- END FIX ---
-            
-            if config.DEBUG_MODE:
-                item_name = offer_to_cancel.get("item_name", "offer")
-                print(f"[TRADE DEBUG] {self.player.name} CANCELLED offer of {item_name} to {receiver_name}.")
         else:
             self.player.send_message("You have no active offers to cancel.")
             
-        # --- NEW: Set RT ---
         _set_action_roundtime(self.player, 1.0)
-        # --- END NEW ---
 
-
-# --- NEW VERB: EXCHANGE ---
+@VerbRegistry.register(["exchange"]) 
 class Exchange(BaseVerb):
     """
     Handles the 'exchange' command.
     EXCHANGE {item} WITH {player} FOR {silvers} SILVER
     """
     def execute(self):
-        # --- THIS IS THE FIX ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END FIX ---
 
         args_str = " ".join(self.args).lower()
         
-        # 1. Parse the command
         if " with " not in args_str or " for " not in args_str:
             self.player.send_message("Usage: EXCHANGE {item} WITH {player} FOR {silvers} SILVER")
             return
@@ -645,22 +430,18 @@ class Exchange(BaseVerb):
         try:
             parts1 = args_str.split(" with ", 1)
             target_item_name = parts1[0].strip()
-            
             parts2 = parts1[1].split(" for ", 1)
             target_player_name = parts2[0].strip()
-            
             parts3 = parts2[1].split(" silver", 1)
             silver_amount_str = parts3[0].strip()
             silver_amount = int(silver_amount_str)
             
             if silver_amount <= 0:
                 raise ValueError("Silver must be positive")
-                
         except Exception:
             self.player.send_message("Usage: EXCHANGE {item} WITH {player} FOR {silvers} SILVER")
             return
 
-        # 2. Find target player
         target_player = self.world.get_player_obj(target_player_name)
         if not target_player or target_player.current_room_id != self.player.current_room_id:
             self.player.send_message(f"You don't see anyone named '{target_player_name}' here.")
@@ -670,12 +451,10 @@ class Exchange(BaseVerb):
             self.player.send_message("You can't exchange things with yourself.")
             return
             
-        # 3. Check for existing pending trade
         if self.world.get_pending_trade(target_player.name.lower()):
             self.player.send_message(f"{target_player.name} already has a pending offer. Please wait.")
             return
 
-        # 4. Find the item (hands or inventory)
         item_id_to_give = None
         item_source_location = None
         
@@ -704,7 +483,6 @@ class Exchange(BaseVerb):
         item_data = self.world.game_items.get(item_id_to_give)
         item_name = item_data.get('name', 'an item')
         
-        # 5. Create the pending trade offer
         trade_offer = {
             "from_player_name": self.player.name,
             "offer_time": time.time(),
@@ -717,23 +495,12 @@ class Exchange(BaseVerb):
         
         self.world.set_pending_trade(target_player.name.lower(), trade_offer)
 
-        # --- NEW: Add DEBUG log ---
-        if config.DEBUG_MODE:
-            print(f"[TRADE DEBUG] {self.player.name} offered {item_name} to {target_player.name} for {silver_amount} silver. Waiting for ACCEPT.")
-
-        # 6. Send notifications
-        # To Seller (self)
         self.player.send_message(
             f"You offer your {item_name} to {target_player.name} for {silver_amount} silvers. "
             f"She has 30 seconds to accept the offer. "
             f"Type '<span class='keyword' data-command='cancel'>CANCEL</span>' to prematurely cancel the offer."
         )
         
-        # ---
-        # --- THIS IS THE BUG FIX ---
-        # Removed the extra '}' at the end of the f-string
-        #
-        # To Buyer (target)
         self.world.send_message_to_player(
             target_player.name.lower(),
             f"{self.player.name} offers you {self.player.name}'s {item_name} for {silver_amount} silvers. "
@@ -741,8 +508,4 @@ class Exchange(BaseVerb):
             f"'<span class='keyword' data-command='decline'>DECLINE</span>' to decline it. "
             f"The offer will expire in 30 seconds."
         )
-        # --- END BUG FIX ---
-        
-        # --- NEW: Set RT ---
         _set_action_roundtime(self.player, 1.0)
-        # --- END NEW ---

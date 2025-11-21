@@ -1,5 +1,6 @@
 # mud_backend/verbs/stance.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry # <-- Added
 
 @VerbRegistry.register(["stance"])
 

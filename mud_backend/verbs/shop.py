@@ -5,6 +5,7 @@ from mud_backend.core import db
 import math
 import random 
 from typing import Tuple, Optional, Dict, Any
+from mud_backend.core.registry import VerbRegistry # <-- Added
 
 @VerbRegistry.register(["list"]) 
 @VerbRegistry.register(["buy", "order"]) 

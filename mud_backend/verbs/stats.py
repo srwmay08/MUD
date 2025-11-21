@@ -1,6 +1,9 @@
 # mud_backend/verbs/stats.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.stat_roller import format_stats 
+from mud_backend.core.registry import VerbRegistry # <-- Added
+
+@VerbRegistry.register(["stats", "stat"])
 
 class Stats(BaseVerb):
     """

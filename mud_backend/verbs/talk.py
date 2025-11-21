@@ -2,22 +2,18 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.quest_handler import get_active_quest_for_npc
 from typing import Dict, Any, Optional
-
-@VerbRegistry.register(["talk"])
+from mud_backend.core.registry import VerbRegistry # <-- Added
 
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     """Finds an NPC object in the room by name or keyword."""
     for obj in room.objects:
-        # ---
-        # --- THIS IS THE FIX ---
-        # We now find any object that has quest IDs OR is flagged as an NPC
         if obj.get("quest_giver_ids") or obj.get("is_npc"):
-        # --- END FIX ---
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
                 return obj
     return None
 
+@VerbRegistry.register(["talk"]) 
 class Talk(BaseVerb):
     """
     Handles the 'talk' command.
@@ -32,10 +28,8 @@ class Talk(BaseVerb):
         if target_name.startswith("to "):
             target_name = target_name[3:].strip()
             
-        # --- NEW: Handle "talk a grizzled warrior" ---
         if target_name.startswith("a "):
             target_name = target_name[2:].strip()
-        # --- END NEW ---
 
         # 1. Find the NPC
         target_npc = _find_npc_in_room(self.room, target_name)
@@ -49,25 +43,18 @@ class Talk(BaseVerb):
         # 2. Find the active quest
         active_quest = get_active_quest_for_npc(self.player, npc_quest_ids)
         
-        # ---
-        # --- THIS IS THE FIX
-        # ---
         if active_quest:
             # 3. Get the detailed talk prompt from the quest
             talk_prompt = active_quest.get("talk_prompt")
             give_target = active_quest.get("give_target_name")
             is_just_receiver = (give_target and give_target == npc_name.lower())
 
-            if talk_prompt and not is_just_receiver: # <--- THIS IS THE FIX
+            if talk_prompt and not is_just_receiver: 
                 self.player.send_message(f"You talk to the {npc_name}.")
                 self.player.send_message(f"The {npc_name} says, \"{talk_prompt}\"")
                 
-                # ---
-                # --- THIS IS THE FIX: Grant item on talk
-                # ---
                 grant_item_id = active_quest.get("grant_item_on_talk")
                 if grant_item_id:
-                    # Check if player already has it (in inventory or hands)
                     has_item = False
                     if grant_item_id in self.player.inventory:
                         has_item = True
@@ -81,7 +68,6 @@ class Talk(BaseVerb):
                         item_data = self.world.game_items.get(grant_item_id, {})
                         item_name = item_data.get("name", "an item")
 
-                        # --- New Logic: Try hands first ---
                         target_hand_slot = None
                         if self.player.worn_items.get("mainhand") is None:
                             target_hand_slot = "mainhand"
@@ -91,7 +77,6 @@ class Talk(BaseVerb):
                         if target_hand_slot:
                             self.player.worn_items[target_hand_slot] = grant_item_id
                             self.player.send_message(f"The {npc_name} hands you {item_name}, which you hold.")
-                            # --- STOW tutorial hook ---
                             if "intro_stow" not in self.player.completed_quests:
                                  self.player.send_message(
                                     "\n<span class='keyword' data-command='help stow'>[Help: STOW]</span> - You are now holding the item. "
@@ -100,51 +85,36 @@ class Talk(BaseVerb):
                                  )
                                  self.player.completed_quests.append("intro_stow")
                         else:
-                            # Hands are full, put in pack
                             self.player.inventory.append(grant_item_id)
                             self.player.send_message(f"The {npc_name} hands you {item_name}. Your hands are full, so you put it in your pack.")
-                # ---
-                # --- END FIX
-                # ---
                 
-                # --- NEW: Grant "trip_training" maneuver ---
                 reward_maneuver = active_quest.get("reward_maneuver")
                 if reward_maneuver and reward_maneuver not in self.player.known_maneuvers:
                     self.player.known_maneuvers.append(reward_maneuver)
                     self.player.send_message(f"You feel you understand the basics of **{reward_maneuver.replace('_', ' ').title()}**.")
-                    # Initialize the counter
                     if reward_maneuver == "trip_training":
                         self.player.quest_trip_counter = 0
-                # --- END NEW ---
             
-            # --- NEW ELSE IF ---
             elif is_just_receiver:
-                # This NPC is just a turn-in, they don't have a talk prompt for this quest
                 self.player.send_message(f"You talk to the {npc_name}.")
                 item_needed_id = active_quest.get("item_needed")
                 if item_needed_id:
                     item_name = self.world.game_items.get(item_needed_id, {}).get("name", "an item")
-                    # Find the keyword for the item
-                    item_keyword = item_name.split()[-1].lower() # e.g., "payment"
+                    item_keyword = item_name.split()[-1].lower() 
                     self.player.send_message(f"The {npc_name} seems to be waiting for something... perhaps you should <span class='keyword' data-command='give clerk {item_keyword}'>GIVE</span> them {item_name}?")
                 else:
                      self.player.send_message(f"The {npc_name} doesn't seem to have much to say.")
-            # --- END NEW ELSE IF ---
 
             else:
                 self.player.send_message(f"The {npc_name} doesn't seem to have much to say.")
         else:
-            # 4. No active quest, check for a "completed all" message
-            # --- MODIFIED: Use the message from monsters.json ---
             all_quests_done_message = target_npc.get("all_quests_done_message", f"The {npc_name} nods at you politely.")
             
-            # Check if all quests for this NPC are *actually* done
             all_done = True
             for q_id in npc_quest_ids:
                 quest_data = self.world.game_quests.get(q_id)
                 if not quest_data: continue
                 
-                # --- NEW: Check spells and maneuvers ---
                 reward_spell = quest_data.get("reward_spell")
                 reward_maneuver = quest_data.get("reward_maneuver")
                 
@@ -156,15 +126,10 @@ class Talk(BaseVerb):
                     is_done = True
                 
                 if not is_done:
-                    all_done = False # Found one not completed
+                    all_done = False 
                     break
-                # --- END NEW ---
             
             if all_done:
                  self.player.send_message(all_quests_done_message)
             else:
-                # Default "busy" message if there are quests, but none are active for the player
                 self.player.send_message(f"The {npc_name} seems busy with other tasks.")
-        # ---
-        # --- END FIX
-        # ---

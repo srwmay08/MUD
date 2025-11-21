@@ -1,20 +1,13 @@
 # mud_backend/verbs/experience.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core.registry import VerbRegistry
 import math
+from mud_backend.core.registry import VerbRegistry # <-- Added
 
-@VerbRegistry.register(["experience", "exp"])
-
+@VerbRegistry.register(["experience", "exp"]) 
 class Experience(BaseVerb):
-    """
-    Handles the 'experience' (and 'exp') command.
-    Displays all experience, level, and training point information.
-    """
-    
+    """Handles the 'experience' (and 'exp') command."""
     def execute(self):
         player = self.player
-
-        # --- Gather All Implemented Data ---
         level = player.level
         absorbed_exp = player.experience
         field_exp = player.unabsorbed_exp
@@ -25,7 +18,6 @@ class Experience(BaseVerb):
         stps = player.stps
         mind_status = player.mind_status.capitalize() 
 
-        # --- Handle Level 100+ "Exp to next TP" ---
         level_label = ""
         exp_to_next = 0
         if player.level < 100:
@@ -35,15 +27,11 @@ class Experience(BaseVerb):
             level_label = "Exp to next TP:"
             exp_to_next = player.level_xp_target - player.experience
 
-        # --- Get Real Implemented Data ---
-        recent_deaths = player.deaths_recent # Use the real value
+        recent_deaths = player.deaths_recent
         deaths_sting = "None"
         if player.death_sting_points > 0:
             deaths_sting = f"{player.death_sting_points} points"
 
-        # --- Format and Send the Output ---
-        # We use f-string alignment (<35) to create the two columns
-        
         line1_left = f" Level: {level}"
         line1_right = f"Recent Deaths: {recent_deaths}"
         player.send_message(f" {line1_left:<35} {line1_right}")
@@ -62,5 +50,4 @@ class Experience(BaseVerb):
         line5_left = f" PTPs/MTPs/STPs: {ptps}/{mtps}/{stps}"
         player.send_message(f" {line5_left:<35} ")
 
-        # Send the mind status
         player.send_message(f"\nYour mind is {mind_status}.")
