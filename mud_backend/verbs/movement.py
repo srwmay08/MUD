@@ -1,22 +1,19 @@
 # mud_backend/verbs/movement.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.config import DIRECTION_MAP # <--- FIX: Import from config
-import random
+from mud_backend.config import DIRECTION_MAP 
+from mud_backend.core.registry import VerbRegistry 
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
+import random
 from collections import deque
 from typing import Optional, List, Dict, Set, TYPE_CHECKING
 from mud_backend.core.game_objects import Room
 from mud_backend.core.room_handler import show_room_to_player, _get_map_data
 from mud_backend.core.skill_handler import attempt_skill_learning
-from mud_backend.core.registry import VerbRegistry # <--- FIX: Added Missing Import
 
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
     from mud_backend.core.game_objects import Player
-
-
-@VerbRegistry.register(["move", "go", "n", "north", "s", "south", "e", "east", "w", "west", "ne", "northeast", "nw", "northwest", "se", "southeast", "sw", "southwest"])
 
 # --- GOTO Target Map ---
 GOTO_MAP = {
@@ -200,11 +197,9 @@ def _handle_group_move(
 
 def _execute_goto_path(world, player_id: str, path: List[str], final_destination_room_id: str, sid: str):
     player_obj = world.get_player_obj(player_id)
-    if not player_obj:
-        return 
+    if not player_obj: return 
 
-    if not player_obj.is_goto_active:
-        return 
+    if not player_obj.is_goto_active: return 
 
     for move_direction in path:
         player_obj = world.get_player_obj(player_id) 
@@ -311,7 +306,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         )
         
         new_room_data = world.get_room(target_room_id_step)
-        new_room = Room(target_room_id_step, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+        new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(player_obj, new_room)
         
         if (target_room_id_step == "town_hall" and
@@ -375,7 +370,6 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             world.socketio.emit('command_response', 
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                      to=sid)
-
 
 @VerbRegistry.register(["enter"]) 
 class Enter(BaseVerb):
