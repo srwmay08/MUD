@@ -1,7 +1,6 @@
 # mud_backend/core/chargen_handler.py
-# --- MODIFIED: Imported Room class ---
-from mud_backend.core.game_objects import Player, RACE_DATA, Room
-# --- END MODIFIED ---
+# --- MODIFIED: Removed RACE_DATA from import ---
+from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.db import fetch_room_data
 from mud_backend import config 
 
@@ -147,13 +146,7 @@ def send_stat_roll_prompt(player: Player):
     player.send_message("- <span class='keyword'>REROLL</span>")
     player.send_message("- <span class='keyword'>USE THIS ROLL</span> (Selects the CURRENT roll)")
     player.send_message("- <span class='keyword'>USE BEST ROLL</span> (Selects the BEST roll)")
-    # ---
-    # --- THIS IS THE FIX
-    # ---
     player.send_message("- <span class='keyword' data-command='help stats'>HELP STATS</span> (Shows what stats do)")
-    # ---
-    # --- END FIX
-    # ---
 
 def _handle_stat_roll_input(player: Player, command: str):
     """Handles commands during the stat rolling step (step 1)."""
@@ -225,13 +218,7 @@ def send_assignment_prompt(player: Player):
     unassigned_str = ", ".join(unassigned_stats)
     
     player.send_message(f"\n--- Assign Your Stats ---")
-    # ---
-    # --- THIS IS THE FIX
-    # ---
     player.send_message("Type <span class='keyword' data-command='help stats'>HELP STATS</span> at any time for a description of each attribute.")
-    # ---
-    # --- END FIX
-    # ---
     
     if player.stats:
         player.send_message(format_stats(player.stats))
@@ -348,7 +335,11 @@ def get_chargen_prompt(player: Player):
 
     question_key = CHARGEN_STEP_KEYS[question_index]
     player_race = player.appearance.get("race", "")
-    race_data = RACE_DATA.get(player_race)
+    
+    # --- MODIFIED: Use world.game_races instead of RACE_DATA ---
+    game_races = player.world.game_races if player.world else {}
+    race_data = game_races.get(player_race)
+    # --- END MODIFIED ---
     
     final_prompt = ""
     
@@ -388,7 +379,11 @@ def _handle_appearance_input(player: Player, text_input: str):
     
     if answer.lower() == "none":
         answer = "" 
-        
+    
+    # --- MODIFIED: Use world.game_races instead of RACE_DATA ---
+    game_races = player.world.game_races if player.world else {}
+    # --- END MODIFIED ---
+
     if question_key == "race":
         answer_lower = answer.lower()
         if answer_lower == "elf":
@@ -402,11 +397,13 @@ def _handle_appearance_input(player: Player, text_input: str):
         else:
             answer = ' '.join([word.capitalize() for word in answer.split()])
         
-        if answer not in RACE_DATA:
+        # --- MODIFIED: Check game_races ---
+        if answer not in game_races:
             player.send_message(f"'{answer}' is not a valid race. Please choose from the list.")
             return 
             
-        player.factions[RACE_DATA[answer]["faction"]] = 50 
+        player.factions[game_races[answer]["faction"]] = 50 
+        # --- END MODIFIED ---
         
     elif question_key == "alignment":
         alignment = answer.lower()
@@ -415,7 +412,9 @@ def _handle_appearance_input(player: Player, text_input: str):
             return 
             
         player_race = player.appearance.get("race")
-        base_faction = RACE_DATA[player_race]["faction"]
+        # --- MODIFIED: Check game_races ---
+        base_faction = game_races[player_race]["faction"]
+        # --- END MODIFIED ---
         
         if alignment == "good":
             if base_faction == "Concordat":
@@ -446,16 +445,14 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.stamina = player.max_stamina
         player.spirit = player.max_spirit
         
-        # --- MODIFIED: Updated item keys ---
         player.worn_items["back"] = "leather_backpack"
         player.worn_items["torso"] = "leather_armor"
         player.inventory.append("iron_dagger") 
-        # --- END MODIFIED ---
         
         player.wealth["silvers"] = 0 
         
-        # --- NEW: Reset Inn Room for Tutorial ---
-        inn_room_data = player.world.game_rooms.get("inn_room")
+        # --- Reset Inn Room for Tutorial ---
+        inn_room_data = player.world.room_manager.get_room("inn_room") # Use manager
         if inn_room_data:
             # 1. Remove note from visible objects
             inn_room_data["objects"] = [
@@ -478,20 +475,15 @@ def _handle_appearance_input(player: Player, text_input: str):
                 hidden.append(note_object)
                 inn_room_data["hidden_objects"] = hidden
             
-            # 3. Save the reset state to DB/Cache
+            # 3. Save the reset state via Manager
             room_obj = Room(
                 room_id=inn_room_data["room_id"],
                 name=inn_room_data["name"],
                 description=inn_room_data["description"],
                 db_data=inn_room_data
             )
-            player.world.save_room(room_obj)
-        # --- END NEW ---
+            player.world.room_manager.save_room(room_obj)
 
-        # ---
-        # --- THIS IS THE FIX ---
-        # ---
-        
         # 1. Send your custom welcome messages.
         player.send_message(
             "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
@@ -503,12 +495,6 @@ def _handle_appearance_input(player: Player, text_input: str):
             "\n<span class='keyword' data-command='help look'>[Help: LOOK]</span> - This is your most basic verb. "
             "Type <span class='keyword' data-command='look'>LOOK</span> to see your surroundings, objects, and exits."
         )
-        
-        # 3. REMOVED the automatic call to show_room_to_player.
-        
-        # ---
-        # --- END FIX
-        # ---
 
 
 def handle_chargen_input(player: Player, text_input: str):
@@ -526,12 +512,13 @@ def handle_chargen_input(player: Player, text_input: str):
 
     if command == "help":
         room_db_data = fetch_room_data(player.current_room_id)
-        # --- MODIFIED: Use world.get_room to get a valid Room object ---
-        dummy_room = player.world.get_room(player.current_room_id)
-        if not dummy_room:
+        # --- MODIFIED: Use world.get_room via Manager ---
+        dummy_room_data = player.world.room_manager.get_room(player.current_room_id)
+        if not dummy_room_data:
              # Fallback just in case
              dummy_room_data = {"room_id": "inn_room", "name": "A Room", "description": "...", "objects": [], "exits": {}}
-             dummy_room = Room(dummy_room_data["room_id"], dummy_room_data["name"], dummy_room_data["description"], dummy_room_data)
+        
+        dummy_room = Room(dummy_room_data["room_id"], dummy_room_data["name"], dummy_room_data["description"], dummy_room_data)
         # --- END MODIFIED ---
         
         help_verb = Help(player.world, player, dummy_room, args, command)

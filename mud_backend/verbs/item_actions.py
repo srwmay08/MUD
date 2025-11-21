@@ -1,15 +1,12 @@
 # mud_backend/verbs/item_actions.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
 from typing import Dict, Any, Union
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
 
-@VerbRegistry.register(["get"]) 
-@VerbRegistry.register(["take"]) 
-@VerbRegistry.register(["drop"]) 
-@VerbRegistry.register(["put", "stow"]) 
-@VerbRegistry.register(["pour"])
+
 
 def _get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -77,6 +74,11 @@ def _find_container_on_player(player, game_items_data: Dict[str, Any], target_na
                 return item_data_with_id
     return None
 
+@VerbRegistry.register(["get"]) 
+@VerbRegistry.register(["take"]) 
+@VerbRegistry.register(["drop"]) 
+@VerbRegistry.register(["put", "stow"]) 
+@VerbRegistry.register(["pour"])
 
 class Get(BaseVerb):
     def execute(self):

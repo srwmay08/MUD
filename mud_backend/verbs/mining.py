@@ -4,15 +4,13 @@ import time
 import math
 import copy
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
 from mud_backend.core.room_handler import show_room_to_player
-
-@VerbRegistry.register(["mine"]) 
-@VerbRegistry.register(["prospect"])
 
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
     """Helper to find a gathering node by name and type."""
@@ -36,6 +34,9 @@ def _has_tool(player, required_tool_type: str) -> bool:
             if item_data and item_data.get("tool_type") == required_tool_type:
                 return True
     return False
+
+@VerbRegistry.register(["mine"]) 
+@VerbRegistry.register(["prospect"])
 
 class Mine(BaseVerb):
     """

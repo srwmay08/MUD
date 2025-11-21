@@ -1,5 +1,6 @@
 # mud_backend/verbs/experience.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 import math
 
 @VerbRegistry.register(["experience", "exp"])

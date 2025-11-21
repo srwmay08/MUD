@@ -3,13 +3,16 @@ import random
 import time
 import copy
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 from typing import Tuple, Optional, TYPE_CHECKING 
 from mud_backend.core.room_handler import show_room_to_player
 
 if TYPE_CHECKING:
     from mud_backend.core.game_objects import Player
 
-@VerbRegistry.register(["forage"])
+@VerbRegistry.register(["forage"]) 
+@VerbRegistry.register(["eat"]) 
+@VerbRegistry.register(["drink"])
 
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """

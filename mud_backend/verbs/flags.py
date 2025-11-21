@@ -1,8 +1,9 @@
 # mud_backend/verbs/flag.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 import re
 
-@VerbRegistry.register(["flag", "flags"])
+
 
 # ---
 # --- MODIFIED: Added groupinvites
@@ -38,6 +39,7 @@ DEFAULT_FLAGS = {
 # ---
 # --- END MODIFIED
 # ---
+@VerbRegistry.register(["flag", "flags"])
 
 class Flag(BaseVerb):
     """

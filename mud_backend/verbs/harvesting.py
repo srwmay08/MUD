@@ -1,5 +1,6 @@
 # mud_backend/verbs/harvesting.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
 from typing import Dict, Any
 from mud_backend.core import db 
@@ -9,6 +10,9 @@ import time
 import math
 from mud_backend import config
 # --- END NEW ---
+
+@VerbRegistry.register(["search"]) 
+@VerbRegistry.register(["skin", "butcher"])
 
 def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] | None:
     """

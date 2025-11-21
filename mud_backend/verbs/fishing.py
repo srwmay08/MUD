@@ -2,6 +2,7 @@ import random
 import time
 import math
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning

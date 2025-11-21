@@ -3,6 +3,7 @@ import time
 import copy 
 import math
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 from mud_backend import config 
 from mud_backend.core import combat_system
 from mud_backend.core import loot_system

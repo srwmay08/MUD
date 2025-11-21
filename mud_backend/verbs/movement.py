@@ -1,5 +1,6 @@
 # mud_backend/verbs/movement.py
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
 from mud_backend.core.command_executor import DIRECTION_MAP
 import random
 # --- MODIFIED: Import _check_action_roundtime, _set_action_roundtime, time ---
@@ -27,9 +28,7 @@ if TYPE_CHECKING:
     from mud_backend.core.game_objects import Player
 
 
-@VerbRegistry.register(["move", "go", "n", "north", "s", "south", "e", "east", "w", "west", "ne", "northeast", "nw", "northwest", "se", "southeast", "sw", "southwest"])
 
-# ---
 # --- NEW: GOTO Target Map
 # ---
 # This maps a "goto" keyword to a room_id
@@ -511,6 +510,12 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                                      {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
                                      to=sid)
 
+
+@VerbRegistry.register(["move", "go", "n", "north", "s", "south", "e", "east", "w", "west", "ne", "northeast", "nw", "northwest", "se", "southeast", "sw", "southwest"])
+@VerbRegistry.register(["enter"]) 
+@VerbRegistry.register(["climb"]) 
+@VerbRegistry.register(["exit", "out"]) 
+@VerbRegistry.register(["goto"])
 
 # --- Class from enter.py ---
 class Enter(BaseVerb):

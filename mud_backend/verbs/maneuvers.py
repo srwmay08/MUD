@@ -2,6 +2,8 @@
 import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
+
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.utils import get_stat_bonus, calculate_skill_bonus
 # --- END MODIFIED ---
