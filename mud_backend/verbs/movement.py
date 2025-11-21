@@ -306,9 +306,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         )
         
         new_room_data = world.get_room(target_room_id_step)
-        # --- FIX WAS HERE: Use target_room_id_step instead of target_room_id ---
         new_room = Room(target_room_id_step, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
-        
         show_room_to_player(player_obj, new_room)
         
         if (target_room_id_step == "town_hall" and
@@ -542,12 +540,19 @@ class Move(BaseVerb):
         if _check_action_roundtime(self.player, action_type="move"):
             return
 
-        if not self.args:
+        target_name = None
+
+        # Check if the command itself is a direction (e.g. "n", "north")
+        if self.command.lower() in DIRECTION_MAP:
+            target_name = self.command.lower()
+        # Otherwise, check arguments (e.g., "move north")
+        elif self.args:
+            target_name = " ".join(self.args).lower()
+        
+        if not target_name:
             self.player.send_message("Move where? (e.g., NORTH, SOUTH, E, W, etc.)")
             return
 
-        target_name = " ".join(self.args).lower()
-        
         normalized_direction = DIRECTION_MAP.get(target_name, target_name)
         
         target_room_id = self.room.exits.get(normalized_direction)
