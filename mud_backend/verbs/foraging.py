@@ -3,19 +3,12 @@ import random
 import time
 import copy
 from mud_backend.verbs.base_verb import BaseVerb
-# --- REMOVED: from mud_backend.core import game_state ---
-from typing import Tuple, Optional, TYPE_CHECKING # <-- NEW
-# --- NEW: Import show_room_to_player ---
+from typing import Tuple, Optional, TYPE_CHECKING 
 from mud_backend.core.room_handler import show_room_to_player
-# --- END NEW ---
 
-# --- NEW: Type checking for Player ---
 if TYPE_CHECKING:
     from mud_backend.core.game_objects import Player
-# --- END NEW ---
 
-
-# --- (Helper _find_item_in_hands is unchanged) ---
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Finds the first item_id in a player's hands that matches.
@@ -24,7 +17,6 @@ def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Option
     for slot in ["mainhand", "offhand"]:
         item_id = player.worn_items.get(slot)
         if item_id:
-            # --- FIX: Use player.world.game_items ---
             item_data = player.world.game_items.get(item_id)
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
@@ -38,15 +30,12 @@ def _has_tool(player, required_tool_type: str) -> bool:
         item_id = player.worn_items.get(slot)
         if item_id:
             item_data = player.world.game_items.get(item_id)
-            # --- FIX: Check for small_edged as a fallback for herbalism ---
             if item_data and (item_data.get("tool_type") == required_tool_type or
                               (required_tool_type == "herbalism" and item_data.get("skill") == "small_edged")):
                 return True
     return False
 
-# ---
-# --- NEW: CENTRAL ROUNDTIME HELPER FUNCTIONS
-# ---
+# --- CENTRAL ROUNDTIME HELPER FUNCTIONS ---
 
 def _check_action_roundtime(player: 'Player', action_type: str) -> bool:
     """
@@ -58,7 +47,9 @@ def _check_action_roundtime(player: 'Player', action_type: str) -> bool:
     player_id = player.name.lower()
     current_time = time.time()
     
+    # --- FIX: Use thread-safe accessor ---
     rt_data = player.world.get_combat_state(player_id)
+    
     if rt_data:
         next_action_time = rt_data.get("next_action_time", 0)
         if current_time < next_action_time:
@@ -93,39 +84,40 @@ def _set_action_roundtime(player: 'Player', duration_seconds: float, message: st
     player_id = player.name.lower()
     final_duration = max(0.5, duration_seconds) # Ensure a minimum RT
     
-    # --- ADD LOCK: Use player.world ---
-    with player.world.combat_lock:
-        # Get existing state or a new dict
-        rt_data = player.world.get_combat_state(player_id)
-        if rt_data is None:
-            rt_data = {}
-        
-        rt_data["next_action_time"] = time.time() + final_duration
-        rt_data["state_type"] = "action" 
-        rt_data["rt_type"] = rt_type # <-- NEW
-        
-        # Explicitly remove combat keys in case they were stuck
-        rt_data.pop("target_id", None)
-        rt_data.pop("current_room_id", None)
-        
-        # Put it back in the global state
-        player.world.set_combat_state(player_id, rt_data)
-    # --- END LOCK ---
+    # --- FIX: Use thread-safe accessors instead of world.combat_lock ---
+    
+    # 1. Get existing state (Thread Safe Read)
+    rt_data = player.world.get_combat_state(player_id)
+    
+    # 2. Prepare new state
+    if rt_data is None:
+        rt_data = {}
+    else:
+        # Create a shallow copy to modify before setting back
+        rt_data = rt_data.copy()
+    
+    rt_data["next_action_time"] = time.time() + final_duration
+    rt_data["state_type"] = "action" 
+    rt_data["rt_type"] = rt_type
+    
+    # Explicitly remove combat keys in case they were stuck
+    rt_data.pop("target_id", None)
+    rt_data.pop("current_room_id", None)
+    
+    # 3. Set state (Thread Safe Write)
+    player.world.set_combat_state(player_id, rt_data)
+    # ------------------------------------------------------------------
     
     # Send the RT message
     if message:
         player.send_message(message)
     
     # Send the generic RT message *only* if no custom message was provided
-    # and the duration is long enough to warrant it.
     elif not message and final_duration >= 0.5:
-        # Don't show "Roundtime" for soft RT, as magic system has its own message
         if rt_type == "hard":
             player.send_message(f"Roundtime: {final_duration:.1f}s")
 
-# ---
-# --- END CENTRAL RT HELPERS
-# ---
+# --- END CENTRAL RT HELPERS ---
 
 
 class Forage(BaseVerb):
@@ -137,26 +129,13 @@ class Forage(BaseVerb):
         if _check_action_roundtime(self.player, action_type="other"):
             return
         
-        # (Assuming 'survival' is the skill for this)
         survival_skill = self.player.skills.get("survival", 0)
-        
-        # ---
-        # --- THIS IS THE FIX: Removed tool check
-        # ---
-        # if not _has_tool(self.player, "herbalism"):
-        #     self.player.send_message("You need a sickle or knife to properly forage for plants.")
-        #     return
-        # ---
-        # --- END FIX
-        # ---
         
         _set_action_roundtime(self.player, 3.0, rt_type="hard")
              
         self.player.send_message("You scan the area for forageable plants...")
         
-        # ---
-        # --- NEW REVEAL LOGIC
-        # ---
+        # --- NEW REVEAL LOGIC ---
         found_nodes_list = []
         refresh_room = False
         
@@ -180,9 +159,6 @@ class Forage(BaseVerb):
                     refresh_room = True
 
         if refresh_room:
-            # ---
-            # --- THIS IS THE FIX ---
-            # ---
             # 1. Save the room so the node is persistent
             self.world.save_room(self.room)
             
@@ -200,16 +176,8 @@ class Forage(BaseVerb):
             
             # 4. Send a simple message *only* to the player
             self.player.send_message(f"You spot {found_nodes_list[0]}!")
-
-            # 5. REMOVED the loop that called show_room_to_player
-            # ---
-            # --- END FIX
-            # ---
         else:
             self.player.send_message("You do not sense any plants of interest here.")
-        # ---
-        # --- END NEW LOGIC
-        # ---
 
 
 class Eat(BaseVerb):
@@ -217,25 +185,20 @@ class Eat(BaseVerb):
     Handles the 'eat' command for herbs and food.
     """
     def execute(self):
-        # --- NEW: RT Check ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
 
         if not self.args:
             self.player.send_message("Eat what?")
             return
 
         target_name = " ".join(self.args).lower()
-        # --- THIS IS THE FIX ---
         item_id, item_location = _find_item_in_hands(self.player, target_name)
         
         if not item_id:
             self.player.send_message(f"You are not holding a '{target_name}' to eat.")
             return
-        # --- END FIX ---
 
-        # --- FIX: Use self.world.game_items ---
         item_data = self.world.game_items.get(item_id)
         if not item_data:
             self.player.send_message("That item seems to have vanished.")
@@ -261,14 +224,10 @@ class Eat(BaseVerb):
         else:
             self.player.send_message(f"You eat {item_name}, but nothing seems to happen.")
 
-        # --- THIS IS THE FIX ---
         # Remove the item from the hand it was in
         self.player.worn_items[item_location] = None
-        # --- END FIX ---
         
-        # --- NEW: Set RT ---
-        _set_action_roundtime(self.player, 3.0, rt_type="hard") # 3s RT for eating
-        # --- END NEW ---
+        _set_action_roundtime(self.player, 3.0, rt_type="hard") 
 
 
 class Drink(BaseVerb):
@@ -276,25 +235,20 @@ class Drink(BaseVerb):
     Handles the 'drink' command for potions.
     """
     def execute(self):
-        # --- NEW: RT Check ---
         if _check_action_roundtime(self.player, action_type="other"):
             return
-        # --- END NEW ---
 
         if not self.args:
             self.player.send_message("Drink what?")
             return
 
         target_name = " ".join(self.args).lower()
-        # --- THIS IS THE FIX ---
         item_id, item_location = _find_item_in_hands(self.player, target_name)
         
         if not item_id:
             self.player.send_message(f"You are not holding a '{target_name}' to drink.")
             return
-        # --- END FIX ---
 
-        # --- FIX: Use self.world.game_items ---
         item_data = self.world.game_items.get(item_id)
         if not item_data:
             self.player.send_message("That item seems to have vanished.")
@@ -307,7 +261,6 @@ class Drink(BaseVerb):
             self.player.send_message(f"You cannot drink {item_name}. Try '{use_verb.upper()}' instead.")
             return
 
-        # (Logic is identical to EAT for now)
         effect = item_data.get("effect_on_use", {})
         if effect.get("heal_hp"):
             hp_to_heal = int(effect.get("heal_hp", 0))
@@ -320,11 +273,6 @@ class Drink(BaseVerb):
         else:
             self.player.send_message(f"You drink {item_name}, but nothing seems to happen.")
 
-        # --- THIS IS THE FIX ---
-        # Remove the item from the hand it was in
         self.player.worn_items[item_location] = None
-        # --- END FIX ---
         
-        # --- NEW: Set RT ---
-        _set_action_roundtime(self.player, 3.0, rt_type="hard") # 3s RT for drinking
-        # --- END NEW ---
+        _set_action_roundtime(self.player, 3.0, rt_type="hard")
