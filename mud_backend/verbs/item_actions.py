@@ -2,7 +2,7 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
-from typing import Dict, Any, Union, Tuple, Optional # Updated imports
+from typing import Dict, Any, Union, Tuple, Optional
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 import time
 
@@ -87,12 +87,7 @@ def _find_container_on_player(player, game_items_data: Dict[str, Any], target_na
                 return item_data_with_id
     return None
 
-@VerbRegistry.register(["get"]) 
-@VerbRegistry.register(["take"]) 
-@VerbRegistry.register(["drop"]) 
-@VerbRegistry.register(["put", "stow"]) 
-@VerbRegistry.register(["pour"])
-
+@VerbRegistry.register(["get", "take"])
 class Get(BaseVerb):
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"): return
@@ -185,7 +180,6 @@ class Get(BaseVerb):
                      self.player.send_message(f"You get {item_name} and hold it.")
                 
                 # --- NEW: TUTORIAL HOOK (GET NOTE FROM GROUND) ---
-                # This was missing, preventing the tutorial from advancing!
                 if item_to_pickup == "inn_note":
                      if "intro_get" in self.player.completed_quests and "intro_lookatnote" not in self.player.completed_quests:
                           self.player.send_message("\nExcellent. You have the note. Now you should <span class='keyword' data-command='look at note'>LOOK AT NOTE</span> to read it.")
@@ -223,6 +217,7 @@ class Get(BaseVerb):
             _set_action_roundtime(self.player, 1.0)
 
 
+@VerbRegistry.register(["drop"])
 class Drop(BaseVerb):
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"): return
@@ -367,8 +362,13 @@ class Drop(BaseVerb):
         
         _set_action_roundtime(self.player, 1.0)
 
+@VerbRegistry.register(["take"])
 class Take(Get): pass
+
+@VerbRegistry.register(["put", "stow"])
 class Put(Drop): pass
+
+@VerbRegistry.register(["pour"])
 class Pour(BaseVerb):
     def execute(self):
         self.player.send_message("Pour is not implemented.")

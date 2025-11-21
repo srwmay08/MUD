@@ -427,7 +427,6 @@ class Player(GameEntity):
         return DEFAULT_UNARMORED_TYPE
     
     def move_to_room(self, target_room_id: str, move_message: str):
-        self.world._stop_combat_for_player(self) # Private helper in Player context? Or public world method.
         # Using world's public stop method
         self.world.stop_combat_for_all(self.name.lower(), "any") 
         
@@ -501,7 +500,7 @@ class Room(GameEntity):
         self.room_id = room_id 
         self.is_room = True
         
-        # --- FIX: Assign to self.data, as self.description is a read-only property ---
+        # Assign to self.data, as self.description is a read-only property
         self.data["description"] = description
         
         self.exits: Dict[str, str] = self.data.get("exits", {})
