@@ -140,7 +140,7 @@ FACTION_RELATIONSHIPS = {
     }
 }
 
-# --- MOVED FROM COMMAND_EXECUTOR ---
+# --- MOVED FROM COMMAND_EXECUTOR TO BREAK CIRCULAR IMPORT ---
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",

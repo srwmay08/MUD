@@ -32,6 +32,8 @@ ALWAYS_ALLOWED_COMMANDS = {
     'look', 'l', 'inventory', 'inv', 'help', 'say', 'quit'
 }
 
+# --- DIRECTION_MAP WAS HERE, NOW MOVED TO CONFIG.PY ---
+
 def _load_verbs():
     """
     Dynamically discovers and imports all modules in the verbs directory.
