@@ -6,7 +6,7 @@ from mud_backend.core.skill_handler import (
     _perform_conversion_and_train
 )
 from mud_backend import config
-from mud_backend.core.registry import VerbRegistry # <-- Added
+from mud_backend.core.registry import VerbRegistry 
 import re
 
 SKILL_TO_WEAPON_MAP = {
@@ -27,10 +27,6 @@ SKILL_TO_WEAPON_MAP = {
 }
 
 @VerbRegistry.register(["check", "checkin"]) 
-@VerbRegistry.register(["train"]) 
-@VerbRegistry.register(["done"]) 
-@VerbRegistry.register(["train_list"])
-
 class CheckIn(BaseVerb):
     """Handles the 'checkin' command."""
     def execute(self):
@@ -42,7 +38,7 @@ class CheckIn(BaseVerb):
         self.player.game_state = "training"
         show_skill_list(self.player, "all")
 
-@VerbRegistry.register(["train_list"]) # avoid conflict with Shop.List
+@VerbRegistry.register(["train_list"]) 
 class List(BaseVerb):
     """Handles the 'list' command *during training*."""
     def execute(self):
@@ -60,7 +56,6 @@ class Train(BaseVerb):
             return
 
         args_str = " ".join(self.args).lower()
-        # --- FIX: Use player.data instead of player.db_data ---
         pending_training = self.player.data.get('_pending_training')
         
         if args_str == "confirm":
@@ -74,7 +69,6 @@ class Train(BaseVerb):
             if not pending_training:
                 self.player.send_message("You have no pending training to cancel.")
                 return
-            # --- FIX: Use player.data instead of player.db_data ---
             self.player.data.pop('_pending_training', None)
             self.player.send_message("Pending training canceled.")
             return

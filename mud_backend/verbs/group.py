@@ -1,5 +1,4 @@
 # mud_backend/verbs/group.py
-# MODIFIED FILE
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
@@ -9,13 +8,7 @@ import uuid
 
 MAX_GROUP_MEMBERS = 10
 
-VerbRegistry.register(["group"]) 
-@VerbRegistry.register(["hold"]) 
-@VerbRegistry.register(["join"]) 
-@VerbRegistry.register(["leave"]) 
-@VerbRegistry.register(["disband"])
-
-
+@VerbRegistry.register(["group"]) 
 class Group(BaseVerb):
     """
     Handles all group-related commands:
@@ -23,8 +16,9 @@ class Group(BaseVerb):
     GROUP REMOVE <player>, GROUP OPEN, GROUP CLOSE
     """
     def execute(self):
+        # ... (Rest of code is unchanged) ...
+        # (Paste the full content of Group.execute from your previous upload here)
         if not self.args:
-            # --- GROUP (Show Status) ---
             self._show_group_status()
             return
 
@@ -94,9 +88,7 @@ class Group(BaseVerb):
             target_player_obj.send_message("You have been removed from the group.")
             return
 
-        # ---
-        # --- MODIFIED: GROUP <player> (Invite/Auto-Join)
-        # ---
+        # GROUP <player> (Invite/Auto-Join)
         target_player_name = " ".join(self.args).lower()
         target_player_obj = self.world.get_player_obj(target_player_name)
         
@@ -108,13 +100,11 @@ class Group(BaseVerb):
             self.player.send_message(f"{target_player_obj.name} is already in a group.")
             return
             
-        # Check for pending invite from *someone else*
         pending_invite = self.world.get_pending_group_invite(target_player_name)
         if pending_invite and pending_invite.get("from_player_name", "").lower() != player_key:
             self.player.send_message(f"{target_player_obj.name} already has a pending group invitation from someone else.")
             return
 
-        # Create new group if player isn't in one
         if not group:
             new_group_id = uuid.uuid4().hex
             group = {
@@ -124,18 +114,13 @@ class Group(BaseVerb):
             }
             self.world.set_group(new_group_id, group)
             self.player.group_id = new_group_id
-            # Message sent in branch
         else:
             if group["leader"] != player_key:
                 self.player.send_message("Only the group leader can invite new members.")
                 return
 
-        # --- THE LOGIC BRANCH ---
         if target_player_obj.flags.get("groupinvites", "on") == "off":
-            # --- BEHAVIOR FOR "GROUPINVITES OFF" (Send Invite) ---
             self.player.send_message(f"You invite {target_player_obj.name} to join your group.")
-
-            # Create the invite
             invite = {
                 "from_player_name": self.player.name,
                 "group_id": self.player.group_id,
@@ -144,31 +129,22 @@ class Group(BaseVerb):
             self.world.set_pending_group_invite(target_player_name, invite)
             
             self.world.send_message_to_player(
-                target_player_obj.name.lower(), # Send to the target player
+                target_player_obj.name.lower(),
                 f"{self.player.name} has invited you to join their group. (Expires in 30 seconds)\n"
                 f"Type '<span class='keyword' data-command='join {self.player.name}'>JOIN {self.player.name}</span>' to accept.",
-                "message" # Explicitly set message type
+                "message"
             )
         else:
-            # --- BEHAVIOR FOR "GROUPINVITES ON" (Auto-Join) ---
-            
-            # Check if group is full
             if len(group["members"]) >= MAX_GROUP_MEMBERS:
                 self.player.send_message(f"Your group is full. You cannot add {target_player_obj.name}.")
                 return
 
-            # Add player directly to group
             group["members"].append(target_player_obj.name.lower())
             target_player_obj.group_id = self.player.group_id
             self.world.set_group(self.player.group_id, group)
             
-            # Send flavor message
             self.player.send_message(f"You invite {target_player_obj.name} to join your group.")
-            # Broadcast to everyone
             self.world.send_message_to_group(self.player.group_id, f"{target_player_obj.name} has joined the group.")
-        # ---
-        # --- END MODIFIED
-        # ---
 
     def _show_group_status(self):
         group = self.world.get_group(self.player.group_id)
@@ -184,11 +160,8 @@ class Group(BaseVerb):
             status = "(Leader)" if member_name.lower() == group['leader'] else ""
             self.player.send_message(f"- {member_name} {status}")
 
-
+@VerbRegistry.register(["hold"]) 
 class Hold(BaseVerb):
-    """
-    Handles the 'hold' command (alias for GROUP <player> with flavor).
-    """
     def execute(self):
         player_key = self.player.name.lower()
         target_player_name = " ".join(self.args).lower()
@@ -203,11 +176,6 @@ class Hold(BaseVerb):
             self.player.send_message(f"{target_player_obj.name} is already in a group.")
             return
         
-        # ---
-        # --- MODIFIED: Auto-Join/Invite Logic
-        # ---
-        
-        # Check for pending invite from *someone else*
         pending_invite = self.world.get_pending_group_invite(target_player_name)
         if pending_invite and pending_invite.get("from_player_name", "").lower() != player_key:
             self.player.send_message(f"{target_player_obj.name} is considering another offer.")
@@ -215,7 +183,6 @@ class Hold(BaseVerb):
             
         group = self.world.get_group(self.player.group_id)
         
-        # Create new group if player isn't in one
         if not group:
             new_group_id = uuid.uuid4().hex
             group = {
@@ -225,18 +192,13 @@ class Hold(BaseVerb):
             }
             self.world.set_group(new_group_id, group)
             self.player.group_id = new_group_id
-            # Flavor message sent in branch
         else:
             if group["leader"] != player_key:
                 self.player.send_message("Only the group leader can invite new members.")
                 return
 
-        # --- THE LOGIC BRANCH ---
         if target_player_obj.flags.get("groupinvites", "on") == "off":
-            # --- BEHAVIOR FOR "GROUPINVITES OFF" (Send Invite) ---
             self.player.send_message(f"You reach out to {target_player_obj.name}, inviting them to join...")
-
-            # Create the invite
             invite = {
                 "from_player_name": self.player.name,
                 "group_id": self.player.group_id,
@@ -245,37 +207,25 @@ class Hold(BaseVerb):
             self.world.set_pending_group_invite(target_player_name, invite)
             
             self.world.send_message_to_player(
-                target_player_obj.name.lower(), # Send to the target player
+                target_player_obj.name.lower(), 
                 f"{self.player.name} reaches out to you, inviting you to join their group. (Expires in 30 seconds)\n"
                 f"Type '<span class='keyword' data-command='join {self.player.name}'>JOIN {self.player.name}</span>' to accept.",
-                "message" # Explicitly set message type
+                "message" 
             )
         else:
-            # --- BEHAVIOR FOR "GROUPINVITES ON" (Auto-Join) ---
-            
-            # Check if group is full
             if len(group["members"]) >= MAX_GROUP_MEMBERS:
                 self.player.send_message(f"Your group is full. You cannot add {target_player_obj.name}.")
                 return
                 
-            # Add player directly to group
             group["members"].append(target_player_obj.name.lower())
             target_player_obj.group_id = self.player.group_id
             self.world.set_group(self.player.group_id, group)
 
-            # Send 'HOLD' flavor text
             self.player.send_message(f"You reach out to hold {target_player_obj.name}'s hand...")
-            # Broadcast to everyone
             self.world.send_message_to_group(self.player.group_id, f"{target_player_obj.name} has joined the group.")
-        # ---
-        # --- END MODIFIED
-        # ---
 
-
+@VerbRegistry.register(["join"]) 
 class Join(BaseVerb):
-    """
-    Handles the 'join' command.
-    """
     def execute(self):
         if not self.args:
             self.player.send_message("Usage: JOIN <player>")
@@ -288,15 +238,10 @@ class Join(BaseVerb):
         player_key = self.player.name.lower()
         target_leader_name = " ".join(self.args).lower()
         
-        # 1. Check for a pending invite
         invite = self.world.get_pending_group_invite(player_key)
         
-        # ---
-        # --- THIS IS THE FIX
-        # ---
         if invite and invite["from_player_name"].lower() == target_leader_name:
-            # --- BRANCH A: Player is accepting a valid invite ---
-            self.world.remove_pending_group_invite(player_key) # Consume the invite
+            self.world.remove_pending_group_invite(player_key) 
             
             group = self.world.get_group(invite["group_id"])
             
@@ -320,7 +265,6 @@ class Join(BaseVerb):
             self.world.send_message_to_group(invite["group_id"], f"{self.player.name} has joined the group.")
             return
         
-        # --- BRANCH B: No invite. This is a "request" to join ---
         target_leader_obj = self.world.get_player_obj(target_leader_name)
         
         if not target_leader_obj or target_leader_obj.current_room_id != self.player.current_room_id:
@@ -331,33 +275,26 @@ class Join(BaseVerb):
             self.player.send_message(f"{target_leader_obj.name} is not accepting group invitations right now.")
             return
         
-        # --- PLAYER IS OPEN, AUTO-JOIN ---
-        
         target_group = self.world.get_group(target_leader_obj.group_id)
         
         if not target_group:
-            # Scenario A: Target (Sevax) is not in a group. Create one.
             new_group_id = uuid.uuid4().hex
             new_group = {
                 "id": new_group_id,
-                "leader": target_leader_name, # Sevax is the leader
-                "members": [target_leader_name, player_key] # Add both
+                "leader": target_leader_name, 
+                "members": [target_leader_name, player_key] 
             }
             self.world.set_group(new_group_id, new_group)
             self.player.group_id = new_group_id
-            target_leader_obj.group_id = new_group_id # Update Sevax's group_id too
+            target_leader_obj.group_id = new_group_id 
             
-            # Notify everyone
             self.world.send_message_to_group(new_group_id, f"{self.player.name} has joined {target_leader_obj.name}'s group.")
 
         else:
-            # Scenario B/C: Target (Sevax) is already in a group.
             if target_group["leader"] != target_leader_name:
-                # Scenario B: Sevax is not the leader
                 self.player.send_message(f"{target_leader_obj.name} is not the leader of their group. You must join the leader.")
                 return
             
-            # Scenario C: Sevax is the leader. Join their group.
             if len(target_group["members"]) >= MAX_GROUP_MEMBERS:
                 self.player.send_message("That group is now full.")
                 return
@@ -367,16 +304,9 @@ class Join(BaseVerb):
             self.world.set_group(target_group["id"], target_group)
             
             self.world.send_message_to_group(target_group["id"], f"{self.player.name} has joined the group.")
-        
-        return
-        # ---
-        # --- END FIX
-        # ---
 
+@VerbRegistry.register(["leave"]) 
 class Leave(BaseVerb):
-    """
-    Handles the 'leave' command.
-    """
     def execute(self):
         group = self.world.get_group(self.player.group_id)
         if not group:
@@ -392,23 +322,18 @@ class Leave(BaseVerb):
         self.world.send_message_to_group(group_id, f"{self.player.name} has left the group.")
         
         if group["leader"] == player_key:
-            # Leader left, find a new leader
             if group["members"]:
                 new_leader_key = group["members"][0]
                 group["leader"] = new_leader_key
                 self.world.set_group(group_id, group)
                 self.world.send_message_to_group(group_id, f"{new_leader_key.capitalize()} is the new group leader.")
             else:
-                # Group is empty, disband it
                 self.world.remove_group(group_id)
         else:
-            # Just a member left, update the group
             self.world.set_group(group_id, group)
             
+@VerbRegistry.register(["disband"]) 
 class Disband(BaseVerb):
-    """
-    Handles the 'disband' command.
-    """
     def execute(self):
         group = self.world.get_group(self.player.group_id)
         if not group:
@@ -423,7 +348,6 @@ class Disband(BaseVerb):
         
         group_id = self.player.group_id
         
-        # Notify and remove all members
         for member_key in group["members"]:
             member_obj = self.world.get_player_obj(member_key)
             if member_obj:
@@ -431,5 +355,4 @@ class Disband(BaseVerb):
                 if member_key != self.player.name.lower():
                     member_obj.send_message("The group has been disbanded by the leader.")
                     
-        # Delete the group from the world
         self.world.remove_group(group_id)
