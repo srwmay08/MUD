@@ -132,7 +132,7 @@ class Get(BaseVerb):
                 
             self.player.inventory.remove(item_ref)
             self.player.worn_items[target_hand_slot] = item_ref
-            self.player.send_message(f"You get {item_name} from your {container.get('name')} and hold it.")
+            self.player.send_message(f"You get {item_name} from your {container_data.get('name')} and hold it.")
             
             _set_action_roundtime(self.player, 1.0)
             
@@ -163,6 +163,13 @@ class Get(BaseVerb):
                      self.player.worn_items[target_hand_slot] = item_to_pickup
                      self.player.send_message(f"You get {item_name} and hold it.")
                 
+                # --- NEW: TUTORIAL HOOK (GET NOTE FROM GROUND) ---
+                # This was missing, preventing the tutorial from advancing!
+                if item_to_pickup == "inn_note":
+                     if "intro_get" in self.player.completed_quests and "intro_lookatnote" not in self.player.completed_quests:
+                          self.player.send_message("\nExcellent. You have the note. Now you should <span class='keyword' data-command='look at note'>LOOK AT NOTE</span> to read it.")
+                # --- END NEW ---
+
                 self.room.objects.remove(item_obj)
                 self.world.save_room(self.room)
                 return
@@ -185,14 +192,12 @@ class Get(BaseVerb):
             
             self.player.send_message(f"You get {item_name} from your pack and hold it.")
             
-            # ---
-            # --- NEW: TUTORIAL HOOK (GET NOTE FROM PACK)
-            # ---
+            # --- NEW: TUTORIAL HOOK (GET NOTE FROM PACK) ---
             if item_ref_from_pack == "inn_note":
                  if "intro_did_stow" in self.player.completed_quests and "intro_ready_to_leave" not in self.player.completed_quests:
                       self.player.send_message("\nExcellent. You have your belongings. Now go <span class='keyword' data-command='out'>OUT</span> to the common room.")
                       self.player.completed_quests.append("intro_ready_to_leave")
-            # ---
+            # --- END NEW ---
             
             _set_action_roundtime(self.player, 1.0)
 
