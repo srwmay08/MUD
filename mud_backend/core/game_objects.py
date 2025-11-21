@@ -467,11 +467,6 @@ class Player(GameEntity):
         return data
 
     def get_vitals(self) -> Dict[str, Any]:
-        # ... [Same as previous version] ...
-        # Copy the entire get_vitals logic here
-        # For brevity in this response, I assume you can copy it from the previous file
-        # as it doesn't depend on RACE_DATA directly.
-        
         # Placeholder Logic:
         worn_data = {}
         for slot_id, slot_name in config.EQUIPMENT_SLOTS.items():
@@ -491,7 +486,13 @@ class Player(GameEntity):
             "current_room_id": self.current_room_id,
             "stance": self.stance,
             "wounds": self.wounds,
-            "worn_items": worn_data
+            "worn_items": worn_data,
+            "exp_to_next": self.level_xp_target - self.experience,
+            "exp_percent": (self.experience / self.level_xp_target) * 100,
+            "posture": self.posture,
+            "status_effects": self.status_effects,
+            "rt_end_time_ms": self.next_action_time * 1000,
+            "rt_type": "hard" # You might want to store this in player state if it varies
         }
 
 class Room(GameEntity):
@@ -499,7 +500,10 @@ class Room(GameEntity):
         super().__init__(uid=room_id, name=name, data=db_data)
         self.room_id = room_id 
         self.is_room = True
-        self.description = description
+        
+        # --- FIX: Assign to self.data, as self.description is a read-only property ---
+        self.data["description"] = description
+        
         self.exits: Dict[str, str] = self.data.get("exits", {})
         self.triggers: Dict[str, str] = self.data.get("triggers", {})
         self.objects: List[Dict[str, Any]] = []
@@ -516,7 +520,7 @@ class Room(GameEntity):
                 **self.data,
                 "room_id": self.room_id,
                 "name": self.name,
-                "description": self.description,
+                "description": self.description, # Reads from self.data["description"]
                 "objects": self.objects,
                 "exits": self.exits,
                 "triggers": self.triggers
