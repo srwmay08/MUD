@@ -1,3 +1,4 @@
+# mud_backend/verbs/fishing.py
 import random
 import time
 import math
@@ -36,7 +37,8 @@ class Fish(BaseVerb):
             return
 
         # 2. Check if this is a valid fishing spot
-        if not self.room.db_data.get("is_fishing_spot", False):
+        # --- FIX: Use self.room.data ---
+        if not self.room.data.get("is_fishing_spot", False):
             self.player.send_message("You can't fish here.")
             return
             
@@ -56,7 +58,8 @@ class Fish(BaseVerb):
         attempt_skill_learning(self.player, "fishing")
         
         # Roll: Skill + d100 vs Room DC
-        skill_dc = self.room.db_data.get("fishing_dc", 50)
+        # --- FIX: Use self.room.data ---
+        skill_dc = self.room.data.get("fishing_dc", 50)
         roll = fishing_skill + random.randint(1, 100)
         
         if roll < skill_dc:
@@ -64,7 +67,8 @@ class Fish(BaseVerb):
             return
 
         # 5. Get Loot
-        loot_table_id = self.room.db_data.get("fishing_loot_table_id")
+        # --- FIX: Use self.room.data ---
+        loot_table_id = self.room.data.get("fishing_loot_table_id")
         if not loot_table_id:
             self.player.send_message("...but nothing seems to be biting.")
             return
@@ -86,7 +90,3 @@ class Fish(BaseVerb):
                 self.player.send_message(f"- {item_name}")
 
         # Note: No node to update, as this is a zone-based skill.
-
-# ---
-# --- REMOVED THE 'Scan' VERB CLASS
-# ---

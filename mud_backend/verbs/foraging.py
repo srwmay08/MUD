@@ -144,7 +144,8 @@ class Forage(BaseVerb):
         found_nodes_list = []
         refresh_room = False
         
-        hidden_objects = self.room.db_data.get("hidden_objects", [])
+        # --- FIX: Use self.room.data ---
+        hidden_objects = self.room.data.get("hidden_objects", [])
         for i in range(len(hidden_objects) - 1, -1, -1):
             obj_stub = hidden_objects[i]
             
@@ -153,7 +154,8 @@ class Forage(BaseVerb):
                 roll = survival_skill + random.randint(1, 100)
                 
                 if roll >= dc:
-                    found_stub = self.room.db_data["hidden_objects"].pop(i)
+                    # --- FIX: Use self.room.data ---
+                    found_stub = self.room.data["hidden_objects"].pop(i)
                     full_node = copy.deepcopy(self.world.game_nodes.get(found_stub["node_id"]))
                     if not full_node: continue
                     

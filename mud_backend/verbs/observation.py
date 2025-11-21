@@ -203,8 +203,9 @@ class Look(BaseVerb):
                 # ---
                 if "FISH" in obj.get("verbs", []):
                     # It's a fishable object. Now check the room.
-                    if (self.room.db_data.get("is_fishing_spot", False) and
-                        self.room.db_data.get("fishing_loot_table_id")):
+                    # --- FIX: Use self.room.data ---
+                    if (self.room.data.get("is_fishing_spot", False) and
+                        self.room.data.get("fishing_loot_table_id")):
                         self.player.send_message("Upon closer inspection, you sense that it contains fish.")
                     else:
                         self.player.send_message("You look, but don't see any fish.")
@@ -357,7 +358,8 @@ class Investigate(BaseVerb):
 
         self.player.send_message("You investigate the room...")
         
-        hidden_objects = self.room.db_data.get("hidden_objects", [])
+        # --- FIX: Use self.room.data ---
+        hidden_objects = self.room.data.get("hidden_objects", [])
         if not hidden_objects:
             self.player.send_message("...but you don't find anything unusual.")
             return
@@ -382,7 +384,8 @@ class Investigate(BaseVerb):
             roll = random.randint(1, 100) + skill_bonus
             
             if roll >= dc:
-                found_obj = self.room.db_data["hidden_objects"].pop(i)
+                # --- FIX: Use self.room.data ---
+                found_obj = self.room.data["hidden_objects"].pop(i)
                 self.room.objects.append(found_obj)
                 found_something = True
                 

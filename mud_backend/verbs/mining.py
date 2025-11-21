@@ -220,7 +220,8 @@ class Prospect(BaseVerb):
         refresh_room = False
         
         # Iterate backwards so we can pop items
-        hidden_objects = self.room.db_data.get("hidden_objects", [])
+        # --- FIX: Use self.room.data ---
+        hidden_objects = self.room.data.get("hidden_objects", [])
         for i in range(len(hidden_objects) - 1, -1, -1):
             obj_stub = hidden_objects[i]
             
@@ -230,7 +231,8 @@ class Prospect(BaseVerb):
                 
                 if roll >= dc:
                     # Success! Pop from hidden and add to live
-                    found_stub = self.room.db_data["hidden_objects"].pop(i)
+                    # --- FIX: Use self.room.data ---
+                    found_stub = self.room.data["hidden_objects"].pop(i)
                     
                     # Get full template
                     full_node = copy.deepcopy(self.world.game_nodes.get(found_stub["node_id"]))

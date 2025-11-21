@@ -1,0 +1,142 @@
+{
+  "Human": {
+    "name": "Human",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 5, "CON": 5, "DEX": 5, "AGI": 5, 
+      "LOG": 5, "INT": 5, "WIS": 5, "INF": 5, 
+      "ZEA": 5, "ESS": 5, "DIS": 5, "AUR": 5
+    },
+    "hp_gain_per_pf_rank": 6,
+    "appearance_options": {
+      "hair_color": ["black", "brown", "blonde", "red", "white"],
+      "eye_color": ["blue", "brown", "green", "hazel"]
+    }
+  },
+  "Wildborn": {
+    "name": "Wildborn",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 10, "CON": 10, "DEX": 5, "AGI": 5, 
+      "LOG": 0, "INT": 10, "WIS": 0, "INF": 0, 
+      "ZEA": 5, "ESS": 5, "DIS": 5, "AUR": 5
+    },
+    "hp_gain_per_pf_rank": 7,
+    "appearance_options": {
+      "hair_color": ["black", "brown", "auburn"],
+      "eye_color": ["brown", "green", "amber"]
+    }
+  },
+  "High Elf": {
+    "name": "High Elf",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 0, "CON": 0, "DEX": 10, "AGI": 10, 
+      "LOG": 10, "INT": 10, "WIS": 5, "INF": 5, 
+      "ZEA": 0, "ESS": 5, "DIS": 0, "AUR": 5
+    },
+    "hp_gain_per_pf_rank": 5,
+    "appearance_options": {
+      "hair_color": ["silver", "blonde", "white", "black"],
+      "eye_color": ["blue", "green", "violet", "silver"]
+    }
+  },
+  "Dwarf": {
+    "name": "Dwarf",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 10, "CON": 15, "DEX": 0, "AGI": 0, 
+      "LOG": 5, "INT": 0, "WIS": 5, "INF": 0, 
+      "ZEA": 10, "ESS": 5, "DIS": 10, "AUR": 0
+    },
+    "hp_gain_per_pf_rank": 8,
+    "appearance_options": {
+      "hair_color": ["black", "brown", "red", "grey"],
+      "eye_color": ["brown", "blue", "grey"]
+    }
+  },
+  "Gnome": {
+    "name": "Gnome",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": -5, "CON": 5, "DEX": 10, "AGI": 5, 
+      "LOG": 15, "INT": 10, "WIS": 5, "INF": 5, 
+      "ZEA": 0, "ESS": 5, "DIS": 5, "AUR": 5
+    },
+    "hp_gain_per_pf_rank": 5,
+    "appearance_options": {
+      "hair_color": ["brown", "blonde", "white", "pink"],
+      "eye_color": ["blue", "green", "brown"]
+    }
+  },
+  "Halfling": {
+    "name": "Halfling",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": -5, "CON": 5, "DEX": 15, "AGI": 15, 
+      "LOG": 5, "INT": 5, "WIS": 5, "INF": 10, 
+      "ZEA": 5, "ESS": 5, "DIS": 0, "AUR": 0
+    },
+    "hp_gain_per_pf_rank": 5,
+    "appearance_options": {
+      "hair_color": ["brown", "blonde", "curly black"],
+      "eye_color": ["brown", "hazel", "blue"]
+    }
+  },
+  "Dark Elf": {
+    "name": "Dark Elf",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 5, "CON": 0, "DEX": 15, "AGI": 10, 
+      "LOG": 5, "INT": 10, "WIS": 0, "INF": 0, 
+      "ZEA": 5, "ESS": 10, "DIS": 0, "AUR": 5
+    },
+    "hp_gain_per_pf_rank": 5,
+    "appearance_options": {
+      "hair_color": ["white", "silver", "black"],
+      "eye_color": ["red", "violet", "black"]
+    }
+  },
+  "Dark Dwarf": {
+    "name": "Dark Dwarf",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 15, "CON": 15, "DEX": 0, "AGI": 0, 
+      "LOG": 5, "INT": 0, "WIS": 5, "INF": -5, 
+      "ZEA": 10, "ESS": 5, "DIS": 10, "AUR": 0
+    },
+    "hp_gain_per_pf_rank": 8,
+    "appearance_options": {
+      "hair_color": ["black", "grey", "white"],
+      "eye_color": ["black", "grey", "red"]
+    }
+  },
+  "Troll": {
+    "name": "Troll",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 20, "CON": 20, "DEX": -5, "AGI": -5, 
+      "LOG": -10, "INT": 0, "WIS": 0, "INF": -10, 
+      "ZEA": 5, "ESS": 20, "DIS": 5, "AUR": 0
+    },
+    "hp_gain_per_pf_rank": 10,
+    "appearance_options": {
+      "hair_color": ["mossy green", "black", "none"],
+      "eye_color": ["black", "yellow"]
+    }
+  },
+  "Goblin": {
+    "name": "Goblin",
+    "faction": "Townsfolk",
+    "stat_modifiers": {
+      "STR": 0, "CON": 5, "DEX": 20, "AGI": 20, 
+      "LOG": 0, "INT": 5, "WIS": 0, "INF": -5, 
+      "ZEA": 5, "ESS": 5, "DIS": 0, "AUR": 5
+    },
+    "hp_gain_per_pf_rank": 6,
+    "appearance_options": {
+      "hair_color": ["black", "none"],
+      "eye_color": ["red", "yellow", "black"]
+    }
+  }
+}

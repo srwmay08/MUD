@@ -100,7 +100,9 @@ def show_room_to_player(player: Player, room: Room):
     # Merge objects from DB stubs with live asset templates
     world = player.world
     merged_objects = []
-    all_objects_stubs = room.db_data.get("objects", []) 
+    
+    # --- FIX: Use room.data instead of room.db_data ---
+    all_objects_stubs = room.data.get("objects", []) 
     
     room_data_in_cache = world.game_rooms.get(room.room_id, {})
     all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
