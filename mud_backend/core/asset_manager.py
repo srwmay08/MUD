@@ -1,12 +1,10 @@
 # mud_backend/core/asset_manager.py
-from typing import Dict, List, Any, Optional
-# REMOVED top-level db import to prevent circular loops
+from typing import Dict, List, Any, Optional, Callable
 
 class AssetManager:
     """
     Manages static game data (Assets).
-    This class is responsible for loading and caching templates, items, and rules.
-    It separates immutable game design data from the mutable World state.
+    Refactored to use Dependency Injection for data loading.
     """
     def __init__(self):
         # --- Global Data Caches ---
@@ -21,62 +19,68 @@ class AssetManager:
         self.factions: Dict[str, Any] = {}
         self.spells: Dict[str, Any] = {}
         
-        # Room templates (Static definitions from DB)
+        # Room templates
         self.room_templates: Dict[str, Dict[str, Any]] = {}
-
-    def load_all_assets(self):
-        """
-        Loads all static assets from the database.
-        """
-        from mud_backend.core import db  # <--- Lazy Import
         
+        # Dependency Injection for lazy loading
+        self.room_loader: Optional[Callable[[str], dict]] = None
+
+    def set_room_loader(self, loader_func: Callable[[str], dict]):
+        """Injects a function to fetch room data (e.g., db.fetch_room_data)."""
+        self.room_loader = loader_func
+
+    def load_all_assets(self, data_source):
+        """
+        Loads all static assets using the provided data_source interface.
+        data_source: The db module or an object matching its interface.
+        """
         print("[ASSETS] Loading all room templates...")
-        self.room_templates = db.fetch_all_rooms()
+        self.room_templates = data_source.fetch_all_rooms()
         
         print("[ASSETS] Loading all monster templates...")
-        self.monster_templates = db.fetch_all_monsters()
+        self.monster_templates = data_source.fetch_all_monsters()
         
         print("[ASSETS] Loading all loot tables...")
-        self.loot_tables = db.fetch_all_loot_tables()
+        self.loot_tables = data_source.fetch_all_loot_tables()
         
         print("[ASSETS] Loading all items...")
-        self.items = db.fetch_all_items()
+        self.items = data_source.fetch_all_items()
         
         print("[ASSETS] Loading level table...")
-        self.level_table = db.fetch_all_levels()
+        self.level_table = data_source.fetch_all_levels()
         
         print("[ASSETS] Loading all skills...")
-        self.skills = db.fetch_all_skills()
+        self.skills = data_source.fetch_all_skills()
         
         print("[ASSETS] Loading all criticals...")
-        self.criticals = db.fetch_all_criticals()
+        self.criticals = data_source.fetch_all_criticals()
         
         print("[ASSETS] Loading all quests...")
-        self.quests = db.fetch_all_quests()
+        self.quests = data_source.fetch_all_quests()
         
         print("[ASSETS] Loading all nodes...")
-        self.nodes = db.fetch_all_nodes()
+        self.nodes = data_source.fetch_all_nodes()
         
         print("[ASSETS] Loading all factions...")
-        self.factions = db.fetch_all_factions()
+        self.factions = data_source.fetch_all_factions()
         
         print("[ASSETS] Loading all spells...")
-        self.spells = db.fetch_all_spells()
+        self.spells = data_source.fetch_all_spells()
         
         print("[ASSETS] Data loaded.")
 
     def get_room_template(self, room_id: str) -> Optional[Dict[str, Any]]:
         """
-        Retrieves a room template, handling lazy loading from DB if missing.
+        Retrieves a room template, using the injected loader if necessary.
         """
         if room_id in self.room_templates:
             return self.room_templates[room_id]
         
-        # Fallback: Lazy Load from DB
-        from mud_backend.core import db # <--- Lazy Import
-        template = db.fetch_room_data(room_id)
-        if template and template.get("room_id") != "void":
-            self.room_templates[room_id] = template
-            return template
+        # Fallback: Use injected loader
+        if self.room_loader:
+            template = self.room_loader(room_id)
+            if template and template.get("room_id") != "void":
+                self.room_templates[room_id] = template
+                return template
             
         return None

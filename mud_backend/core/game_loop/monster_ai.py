@@ -17,7 +17,6 @@ def _check_and_start_npc_combat(world: 'World', npc: Dict, room_id: str):
     if not npc_uid: return 
     if world.get_combat_state(npc_uid): return
     
-    # Use get_room to ensure it's active/hydrated
     room_data = world.get_room(room_id)
     if not room_data: return
 
@@ -61,7 +60,12 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
     with world.index_lock:
         active_uids = list(world.active_mob_uids)
         
-    for uid in active_uids:
+    # --- FIX: Cooperative Yield during identification ---
+    # If we have 1000 mobs, don't lock the server while iterating them all
+    for i, uid in enumerate(active_uids):
+        if i % 50 == 0:
+            world.socketio.sleep(0) # Yield to heartbeat
+            
         room_id = world.mob_locations.get(uid)
         if not room_id:
             world.unregister_mob(uid)
@@ -71,42 +75,48 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
             players_in_room = world.room_players.get(room_id)
         if not players_in_room: continue 
             
-        with world.room_lock:
-            # Use active_rooms directly since register_mob implies it's already there
-            room = world.active_rooms.get(room_id)
-            if not room:
-                 # Fallback: try to load it if for some reason it's missing but listed in index
-                 world.get_room(room_id)
-                 room = world.active_rooms.get(room_id)
-            
-            if not room: continue
+        # Note: get_active_room_safe uses the new directory lock (fast)
+        room = world.get_active_room_safe(room_id)
+        if not room:
+             # Fallback if not active but indexed
+             world.get_room(room_id) # Hydrate
+             room = world.get_active_room_safe(room_id)
+        
+        if not room: continue
 
-            monster_obj = None
+        monster_obj = None
+        # Use fine-grained room lock
+        with room.lock:
             for obj in room.objects:
                 if obj.get("uid") == uid:
                     monster_obj = obj
                     break
-            
-            if not monster_obj:
-                world.unregister_mob(uid)
-                continue
+        
+        if not monster_obj:
+            world.unregister_mob(uid)
+            continue
 
-            monster_id = monster_obj.get("monster_id")
-            if monster_id and "movement_rules" not in monster_obj:
-                 template = world.game_monster_templates.get(monster_id)
-                 if template: monster_obj.update(copy.deepcopy(template))
+        monster_id = monster_obj.get("monster_id")
+        if monster_id and "movement_rules" not in monster_obj:
+             template = world.game_monster_templates.get(monster_id)
+             if template: monster_obj.update(copy.deepcopy(template))
 
-            if monster_obj.get("movement_rules"):
-                in_combat = False
-                with world.combat_lock:
-                     if world.combat_state.get(uid, {}).get("state_type") == "combat":
-                         in_combat = True
-                if not in_combat:
-                    potential_movers.append((monster_obj, room_id))
+        if monster_obj.get("movement_rules"):
+            in_combat = False
+            combat_state = world.get_combat_state(uid)
+            if combat_state and combat_state.get("state_type") == "combat":
+                 in_combat = True
+                 
+            if not in_combat:
+                potential_movers.append((monster_obj, room_id))
 
     moved_monster_uids = set()
 
-    for monster, current_room_id in potential_movers:
+    # --- FIX: Cooperative Yield during movement ---
+    for i, (monster, current_room_id) in enumerate(potential_movers):
+        if i % 10 == 0:
+            world.socketio.sleep(0) # Yield to heartbeat
+
         monster_uid = monster.get("uid")
         if monster_uid and monster_uid in moved_monster_uids: continue
             
@@ -115,7 +125,6 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
         allowed_rooms = movement_rules.get("allowed_rooms", [])
 
         if random.random() < wander_chance:
-            # Get exits from the active room data
             current_room_data = world.get_room(current_room_id)
             if not current_room_data or not current_room_data.get("exits"): continue
                 
@@ -132,28 +141,31 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                     break
             
             if chosen_exit and destination_room_id:
-                with world.room_lock:
-                    success = world.move_object_between_rooms(monster, current_room_id, destination_room_id)
-                    if success:
-                        if monster_uid:
-                            moved_monster_uids.add(monster_uid)
-                            world.update_mob_location(monster_uid, destination_room_id)
-                        
-                        monster_name = monster.get("name", "something")
-                        dep_msg = monster.get("spawn_message_departure", "The {name} slinks off towards the {exit}.").format(name=monster_name, exit=chosen_exit)
-                        broadcast_callback(current_room_id, dep_msg, "ambient_move")
-                        arr_msg = monster.get("spawn_message_arrival", "A {name} slinks in.").format(name=monster_name)
-                        broadcast_callback(destination_room_id, arr_msg, "ambient_move")
-                        
-                        _check_and_start_npc_combat(world, monster, destination_room_id)
+                # World.move_object_between_rooms handles fine-grained locks safely
+                success = world.move_object_between_rooms(monster, current_room_id, destination_room_id)
+                if success:
+                    if monster_uid:
+                        moved_monster_uids.add(monster_uid)
+                        world.update_mob_location(monster_uid, destination_room_id)
+                    
+                    monster_name = monster.get("name", "something")
+                    dep_msg = monster.get("spawn_message_departure", "The {name} slinks off towards the {exit}.").format(name=monster_name, exit=chosen_exit)
+                    broadcast_callback(current_room_id, dep_msg, "ambient_move")
+                    arr_msg = monster.get("spawn_message_arrival", "A {name} slinks in.").format(name=monster_name)
+                    broadcast_callback(destination_room_id, arr_msg, "ambient_move")
+                    
+                    _check_and_start_npc_combat(world, monster, destination_room_id)
 
 def process_monster_ambient_messages(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
-    # Use Spatial Index to identify relevant rooms (those with players)
+    # Use Spatial Index to identify relevant rooms
     with world.index_lock:
         active_rooms = [rid for rid, players in world.room_players.items() if players]
     
-    for room_id in active_rooms:
-        # Use get_room to ensure hydration/access
+    for i, room_id in enumerate(active_rooms):
+        # Yield occasionally
+        if i % 20 == 0:
+            world.socketio.sleep(0)
+
         room_data = world.get_room(room_id)
         if not room_data: continue
 
