@@ -176,15 +176,17 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     }
 
 def _run_verb(world: 'World', player: Player, room: Room, command: str, args: List[str]) -> bool:
-    """
-    Instantiates and executes the verb class found in the registry.
-    Returns True if a verb was found and executed, False otherwise.
-    """
-    VerbClass = VerbRegistry.get_verb_class(command)
+    # Get Class AND Flag
+    verb_info = VerbRegistry.get_verb_info(command)
     
-    if VerbClass:
+    if verb_info:
+        VerbClass, admin_only = verb_info
+        
+        # SECURITY CHECK
+        if admin_only and not player.is_admin:
+            return False # Pretend command doesn't exist
+            
         try:
-            # Instantiate and execute
             verb_instance = VerbClass(world=world, player=player, room=room, args=args, command=command)
             verb_instance.execute()
             return True
@@ -193,6 +195,6 @@ def _run_verb(world: 'World', player: Player, room: Room, command: str, args: Li
             print(f"Error running command '{command}': {e}")
             import traceback
             traceback.print_exc()
-            return True # It was found, just errored
+            return True 
             
     return False

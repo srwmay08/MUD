@@ -25,6 +25,10 @@ class Player(GameEntity):
         self.current_room_id = current_room_id
         self.account_username: str = self.data.get("account_username", "")
         
+        # Admin Flag (In a real app, fetch this from the Account collection, not just Player data)
+        # For now, we will trust the player DB object, but ideally, this is loaded from the Account.
+        self.is_admin: bool = self.data.get("is_admin", False)
+        
         self.messages = [] 
         self._is_dirty = False
         self._last_save_time = time.time()
