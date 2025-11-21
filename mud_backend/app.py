@@ -1,16 +1,13 @@
 # mud_backend/app.py
+import eventlet
+eventlet.monkey_patch()
+
 import sys
 import os
 import time
 import datetime
 import threading 
 import queue 
-
-# --- FIX: Monkey Patch for Greenlets ---
-# This must be the very first thing to run
-import eventlet
-eventlet.monkey_patch()
-# ---------------------------------------
 
 from flask import Flask, request, render_template, session
 from flask_socketio import SocketIO, emit, join_room
