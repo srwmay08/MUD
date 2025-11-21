@@ -306,7 +306,9 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         )
         
         new_room_data = world.get_room(target_room_id_step)
-        new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+        # --- FIX WAS HERE: Use target_room_id_step instead of target_room_id ---
+        new_room = Room(target_room_id_step, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+        
         show_room_to_player(player_obj, new_room)
         
         if (target_room_id_step == "town_hall" and
