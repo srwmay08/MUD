@@ -468,7 +468,8 @@ def fetch_all_factions() -> dict:
 def fetch_all_spells() -> dict:
     """Loads spells.json into a dictionary."""
     print("[DB INIT] Caching all spells from spells.json...")
-    spells = _load_json_data("spells.json")
+    filename = os.path.join("spells", "spells.json")
+    spells = _load_json_data(filename)
     print(f"[DB INIT] ...Cached {len(spells)} spells.")
     return spells
 # --- END NEW ---
