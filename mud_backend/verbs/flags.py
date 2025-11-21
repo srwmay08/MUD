@@ -1,13 +1,8 @@
-# mud_backend/verbs/flag.py
+# mud_backend/verbs/flags.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core.registry import VerbRegistry
+from mud_backend.core.registry import VerbRegistry # <-- Added
 import re
 
-
-
-# ---
-# --- MODIFIED: Added groupinvites
-# ---
 # Define valid options for flags
 FLAG_OPTIONS = {
     "mechanics": ["on", "numberless", "flavorless", "brief", "off"],
@@ -19,7 +14,7 @@ FLAG_OPTIONS = {
     "righthand": ["on", "off"],
     "lefthand": ["on", "off"],
     "safedrop": ["on", "off"],
-    "groupinvites": ["on", "off"] # <-- NEW
+    "groupinvites": ["on", "off"] 
 }
 
 # Define the default state for all flags
@@ -34,34 +29,23 @@ DEFAULT_FLAGS = {
     "righthand": "on",
     "lefthand": "off",
     "safedrop": "on",
-    "groupinvites": "on" # <-- NEW
+    "groupinvites": "on"
 }
-# ---
-# --- END MODIFIED
-# ---
-@VerbRegistry.register(["flag", "flags"])
 
+@VerbRegistry.register(["flag", "flags"]) # <-- Corrected Placement
 class Flag(BaseVerb):
     """
     Handles the 'flag' command to set player preferences.
-    FLAG <name> <value>
-    FLAG
     """
 
     def _show_current_flags(self):
-        """Displays all current flag settings to the player."""
         flags = self.player.flags
         self.player.send_message("--- **Your Current Flags** ---")
-        
-        # We iterate over DEFAULT_FLAGS to ensure a consistent order
         for key, default in DEFAULT_FLAGS.items():
             current_value = flags.get(key, default)
             self.player.send_message(f"{key.upper():<15} {str(current_value).upper()}")
 
     def execute(self):
-        # ---
-        # --- NEW: Alias GROUP OPEN/CLOSE
-        # ---
         args_str = " ".join(self.args).lower()
         if args_str == "group open":
             self.args = ["groupinvites", "on"]
@@ -69,16 +53,11 @@ class Flag(BaseVerb):
         elif args_str == "group close":
             self.args = ["groupinvites", "off"]
             self.player.send_message("(Alias for: FLAG GROUPINVITES OFF)")
-        # ---
-        # --- END NEW
-        # ---
 
         if not self.args:
             self._show_current_flags()
             return
 
-        # Use regex to separate the flag name from the value
-        # This correctly handles "flag idletime 30"
         match = re.match(r"(\w+)\s+(.*)", " ".join(self.args))
         if not match:
             self.player.send_message("Usage: FLAG <setting> <value> (e.g., FLAG COMBAT BRIEF)")
@@ -104,7 +83,6 @@ class Flag(BaseVerb):
                 self.player.flags[flag_name] = value
                 self.player.send_message(f"Flag {flag_name.upper()} set to {value.upper()}.")
                 
-                # Handle mutual exclusion for hands
                 if flag_name == "righthand" and value == "on":
                     if self.player.flags.get("lefthand") == "on":
                         self.player.flags["lefthand"] = "off"

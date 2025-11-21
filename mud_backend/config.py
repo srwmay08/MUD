@@ -10,14 +10,13 @@ DEBUG_COMBAT_ROLLS = True
 DEBUG_GAME_TICK_RESPAWN_PHASE = True
 
 # --- Database ---
-# FIX: Use 127.0.0.1 instead of localhost to avoid Windows DNS timeout issues (Errno 11001)
 MONGO_URI = "mongodb://127.0.0.1:27017/"
 DATABASE_NAME = "MUD_Dev"
 
 # --- Game Loop & State ---
-TICK_INTERVAL_SECONDS = 30    # Global tick: Regens, Env, Time, '>' prompt
-MONSTER_TICK_INTERVAL_SECONDS = 10 # Independent monster movement tick
-PLAYER_TIMEOUT_SECONDS = 600 # 10 minutes
+TICK_INTERVAL_SECONDS = 30    
+MONSTER_TICK_INTERVAL_SECONDS = 10 
+PLAYER_TIMEOUT_SECONDS = 600 
 
 # --- Player & Chargen ---
 CHARGEN_START_ROOM = "inn_room"
@@ -25,24 +24,24 @@ CHARGEN_COMPLETE_ROOM = "town_square"
 PLAYER_DEATH_ROOM_ID = "temple_of_light"
 
 # --- Combat System ---
-STAT_BONUS_BASELINE = 50          # Stats below this give no bonus
+STAT_BONUS_BASELINE = 50          
 BAREHANDED_FLAT_DAMAGE = 1
 DEFAULT_UNARMORED_TYPE = "unarmored"
 
 # Attack Strength (AS)
-MELEE_AS_STAT_BONUS_DIVISOR = 20  # (STR - BASELINE) / 20
-WEAPON_SKILL_AS_BONUS_DIVISOR = 50 # SKILL / 50
+MELEE_AS_STAT_BONUS_DIVISOR = 20  
+WEAPON_SKILL_AS_BONUS_DIVISOR = 50 
 BAREHANDED_BASE_AS = 0
 
 # Defense Strength (DS)
-MELEE_DS_STAT_BONUS_DIVISOR = 10  # (AGI - BASELINE) / 10
+MELEE_DS_STAT_BONUS_DIVISOR = 10  
 UNARMORED_BASE_DS = 0
-SHIELD_SKILL_DS_BONUS_DIVISOR = 10 # SKILL / 10
+SHIELD_SKILL_DS_BONUS_DIVISOR = 10 
 
 # Combat Rolls
-COMBAT_ADVANTAGE_FACTOR = 40      # Base "hit chance" added to roll
-COMBAT_HIT_THRESHOLD = 100        # (AS - DS) + ADVANTAGE + d100 must be > this to hit
-COMBAT_DAMAGE_MODIFIER_DIVISOR = 10 # (ROLL_RESULT - THRESHOLD) / 10 = Bonus Damage
+COMBAT_ADVANTAGE_FACTOR = 40      
+COMBAT_HIT_THRESHOLD = 100        
+COMBAT_DAMAGE_MODIFIER_DIVISOR = 10 
 
 # Roundtime
 ROUNDTIME_DEFAULTS = {
@@ -51,11 +50,11 @@ ROUNDTIME_DEFAULTS = {
 }
 
 # --- Loot & Corpses ---
-CORPSE_DECAY_TIME_SECONDS = 300   # 5 minutes
+CORPSE_DECAY_TIME_SECONDS = 300   
 DEFAULT_DROP_EQUIPPED_CHANCE = 1.0
 DEFAULT_DROP_CARRIED_CHANCE = 1.0
 NPC_DEFAULT_RESPAWN_CHANCE = 0.2
-SKINNING_BASE_RT = 5.0           # Base 15s for skinning, reduced by skill
+SKINNING_BASE_RT = 5.0           
 
 # --- Environment ---
 TIME_CHANGE_INTERVAL_TICKS = 2
@@ -123,7 +122,7 @@ FACTION_LEVELS = {
     "indifferent": -49,
     "apprehensive": -449,
     "dubious": -699,
-    "threatening": -700, # KOS Threshold
+    "threatening": -700, 
     "scowls": -1050
 }
 
@@ -139,4 +138,12 @@ FACTION_RELATIONSHIPS = {
     "townsfolk": {
         "orcs": -2000 
     }
+}
+
+# --- MOVED FROM COMMAND_EXECUTOR ---
+DIRECTION_MAP = {
+    "n": "north", "s": "south", "e": "east", "w": "west",
+    "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
+    "north": "north", "south": "south", "east": "east", "west": "west",
+    "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
