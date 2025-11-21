@@ -12,6 +12,7 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.core import faction_handler
 
 @VerbRegistry.register(["attack"])
+
 class Attack(BaseVerb):
     """
     Handles the 'attack' command.
@@ -105,8 +106,9 @@ class Attack(BaseVerb):
                 
                 self.world.save_room(self.room)
                 
-                # Unregister from AI Index
+                # --- NEW: Unregister from AI Index ---
                 self.world.unregister_mob(monster_uid)
+                # -------------------------------------
                 
                 resolve_data["messages"].append(f"The {corpse_data['name']} falls to the ground.")
                 
@@ -144,10 +146,8 @@ class Attack(BaseVerb):
                 uid = obj.get("uid")
                 is_defeated = False
                 if uid:
-                    # --- FIX: Use get_defeated_monster() instead of 'in' operator ---
-                    if self.world.get_defeated_monster(uid):
-                        is_defeated = True
-                    # ---------------------------------------------------------------
+                    with self.world.defeated_lock:
+                        is_defeated = uid in self.world.defeated_monsters
                 
                 if not is_defeated:
                     if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
@@ -164,11 +164,10 @@ class Attack(BaseVerb):
             self.player.send_message("That creature cannot be attacked right now.")
             return
             
-        # --- FIX: Use get_defeated_monster() instead of 'in' operator ---
-        if self.world.get_defeated_monster(monster_uid):
-            self.player.send_message(f"The {target_monster_data['name']} is already dead.")
-            return
-        # ---------------------------------------------------------------
+        with self.world.defeated_lock:
+            if monster_uid in self.world.defeated_monsters:
+                self.player.send_message(f"The {target_monster_data['name']} is already dead.")
+                return
         
         current_time = time.time()
 
@@ -202,6 +201,7 @@ class Attack(BaseVerb):
                 "state_type": "action",
                 "target_id": monster_uid, 
                 "next_action_time": current_time + rt_seconds, 
+                "duration": rt_seconds, # Store duration
                 "current_room_id": room_id,
                 "rt_type": "hard" 
             })

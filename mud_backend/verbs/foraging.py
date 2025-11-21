@@ -102,6 +102,7 @@ def _set_action_roundtime(player: 'Player', duration_seconds: float, message: st
         rt_data = rt_data.copy()
     
     rt_data["next_action_time"] = time.time() + final_duration
+    rt_data["duration"] = final_duration # Store duration for UI
     rt_data["state_type"] = "action" 
     rt_data["rt_type"] = rt_type
     

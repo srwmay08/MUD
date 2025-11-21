@@ -522,10 +522,13 @@ class Player(GameEntity):
         combat_state = self.world.get_combat_state(self.name.lower())
         real_next_action = 0.0
         real_rt_type = "hard"
+        real_duration = 0.0 # Default
         
         if combat_state:
             real_next_action = combat_state.get("next_action_time", 0.0)
             real_rt_type = combat_state.get("rt_type", "hard")
+            # Try to get stored duration, otherwise estimate it from remaining time (fallback)
+            real_duration = combat_state.get("duration", max(0, real_next_action - time.time()))
         # -------------------------------------------
 
         return {
@@ -541,7 +544,8 @@ class Player(GameEntity):
             "exp_percent": (self.experience / self.level_xp_target) * 100,
             "posture": self.posture,
             "status_effects": self.status_effects,
-            "rt_end_time_ms": real_next_action * 1000, # Use fetched time
+            "rt_end_time_ms": real_next_action * 1000,
+            "rt_duration_ms": real_duration * 1000, # Send duration
             "rt_type": real_rt_type
         }
 

@@ -606,4 +606,5 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
         data = world.get_combat_state(combatant_id)
         if data:
             data["next_action_time"] = current_time + rt_seconds
+            data["duration"] = rt_seconds # Store duration
             world.set_combat_state(combatant_id, data)
