@@ -30,15 +30,21 @@ def _get_furnace_atmosphere(temp: int, slag: int, fuel: int) -> str:
 
 def process_crafting_stations(world: 'World', broadcast_callback):
     """
-    Iterates through all rooms and processes any active crafting stations.
+    Iterates through all active rooms and processes any active crafting stations.
     """
-    for room_id, room_data in world.game_rooms.items():
-        if not room_data or "objects" not in room_data:
-            continue
-            
-        for obj in room_data["objects"]:
-            if obj.get("keywords") and "furnace" in obj.get("keywords") and "state" in obj:
-                _process_furnace_tick(obj, room_id, broadcast_callback)
+    # Snapshot active room IDs to avoid iteration size errors
+    with world.room_directory_lock:
+        active_room_ids = list(world.active_rooms.keys())
+
+    for room_id in active_room_ids:
+        room = world.get_active_room_safe(room_id)
+        if not room: continue
+        
+        # We lock the room because we might modify the furnace state object
+        with room.lock:
+            for obj in room.objects:
+                if obj.get("keywords") and "furnace" in obj.get("keywords") and "state" in obj:
+                    _process_furnace_tick(obj, room_id, broadcast_callback)
 
 def _process_furnace_tick(furnace: dict, room_id: str, broadcast_callback):
     state = furnace["state"]
@@ -68,11 +74,6 @@ def _process_furnace_tick(furnace: dict, room_id: str, broadcast_callback):
         flux = state.get("flux", 0)
         ore = state.get("ore", 0)
         
-        # --- MODIFIED: Slowed down conversion ---
-        # 5 Units per tick.
-        # 1 Ore Item (10u) takes 2 ticks.
-        # 2 Ticks consumes ~10 Fuel (1 Coal Item).
-        # Result: 1 Coal per 1 Ore.
         conversion_amt = 5 
         
         if ore >= conversion_amt:
@@ -87,7 +88,6 @@ def _process_furnace_tick(furnace: dict, room_id: str, broadcast_callback):
             state["ready_metal"] = state.get("ready_metal", 0) + conversion_amt
 
     # 3. Ambient Feedback (Dynamic)
-    # 10% chance per tick to emit flavor text if the furnace is active
     if temp > 100 and random.random() < 0.10:
         flavor_text = _get_furnace_atmosphere(state["temp"], state.get("slag", 0), state.get("fuel", 0))
         broadcast_callback(room_id, f"The {furnace['name']} {flavor_text}", "ambient")
