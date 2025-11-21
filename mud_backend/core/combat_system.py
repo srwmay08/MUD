@@ -303,8 +303,8 @@ def calculate_defense_strength(defender: Any,
     posture_pcts = combat_rules.get("posture_percentage", {})
     posture_percent = posture_pcts.get(posture, 1.0)
     
-    # --- Pass dicts down ---
-    evade_ds = calculate_evade_defense(stats, skills, defender_modifiers, armor_data, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
+    # --- FIX: Use armor_item_data to avoid NameError ---
+    evade_ds = calculate_evade_defense(stats, skills, defender_modifiers, armor_item_data, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
     block_ds = calculate_block_defense(stats, skills, defender_modifiers, shield_item_data, posture_percent, is_ranged_attack, combat_rules)
     parry_ds = calculate_parry_defense(stats, skills, defender_modifiers, weapon_item_data, offhand_item_data, level, posture_percent, is_ranged_attack)
     
