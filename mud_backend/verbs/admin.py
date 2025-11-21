@@ -45,7 +45,7 @@ class Summon(BaseVerb):
         target_player.move_to_room(self.player.current_room_id, "You are magically summoned!")
         self.player.send_message(f"You summoned {target_player.name}.")
 
-@VerbRegistry.register(["wiz", "invis"], admin_only=True)
+@VerbRegistry.register(["wiz", "invis", "inviz"], admin_only=True)
 class Wiz(BaseVerb):
     def execute(self):
         current = self.player.flags.get("invisible", "off")

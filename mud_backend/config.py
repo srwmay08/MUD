@@ -9,6 +9,10 @@ DEBUG_MODE = True
 DEBUG_COMBAT_ROLLS = True
 DEBUG_GAME_TICK_RESPAWN_PHASE = True
 
+# --- Access Control ---
+# Usernames (lowercase) that automatically get admin privileges on all their characters
+ADMIN_ACCOUNTS = ["sevax"] 
+
 # --- Database ---
 MONGO_URI = "mongodb://127.0.0.1:27017/"
 DATABASE_NAME = "MUD_Dev"

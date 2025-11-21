@@ -25,7 +25,14 @@ class Player(GameEntity):
         self.current_room_id = current_room_id
         self.account_username: str = self.data.get("account_username", "")
         
+        # Admin Flag
         self.is_admin: bool = self.data.get("is_admin", False)
+        
+        # --- NEW: Auto-grant admin to configured accounts ---
+        # This overrides the DB flag if the account is in the config list
+        if self.account_username.lower() in getattr(config, 'ADMIN_ACCOUNTS', []):
+            self.is_admin = True
+        # ----------------------------------------------------
         
         self.messages = [] 
         self._is_dirty = False
@@ -465,7 +472,6 @@ class Player(GameEntity):
             "wealth": self.wealth,
             "flags": self.flags,
             "completed_quests": self.completed_quests,
-            # --- FIXED: Added missing persistence fields ---
             "level": self.level,
             "experience": self.experience,
             "unabsorbed_exp": self.unabsorbed_exp,
