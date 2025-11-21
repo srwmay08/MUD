@@ -9,6 +9,54 @@ from typing import Dict, Any, Optional, List, Tuple, Set
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.asset_manager import AssetManager 
 
+class ShardedStore:
+    """
+    A dictionary-like store that splits keys across multiple internal dictionaries (shards).
+    This reduces lock contention significantly for high-frequency read/writes.
+    """
+    def __init__(self, num_shards=16):
+        self.num_shards = num_shards
+        self.shards = [{} for _ in range(num_shards)]
+        self.locks = [threading.RLock() for _ in range(num_shards)]
+
+    def _get_shard(self, key: str):
+        """Determines which shard and lock to use for a given key."""
+        # Simple hash modulo
+        idx = hash(key) % self.num_shards
+        return self.shards[idx], self.locks[idx]
+
+    def get(self, key: str, default=None):
+        data, lock = self._get_shard(key)
+        with lock:
+            return data.get(key, default)
+
+    def set(self, key: str, value: Any):
+        data, lock = self._get_shard(key)
+        with lock:
+            data[key] = value
+
+    def pop(self, key: str, default=None):
+        data, lock = self._get_shard(key)
+        with lock:
+            return data.pop(key, default)
+            
+    def contains(self, key: str) -> bool:
+        data, lock = self._get_shard(key)
+        with lock:
+            return key in data
+
+    def get_all_items(self) -> List[Tuple[str, Any]]:
+        """
+        Aggregates all items from all shards. 
+        Note: This is expensive and not atomic across the whole store,
+        but atomic per shard.
+        """
+        all_items = []
+        for i in range(self.num_shards):
+            with self.locks[i]:
+                all_items.extend(list(self.shards[i].items()))
+        return all_items
+
 class World:
     """
     Holds all mutable game state (Players, Active Rooms, Combat).
@@ -21,20 +69,37 @@ class World:
         # --- Sub-Systems ---
         self.assets = AssetManager() 
         
-        # --- Mutable Runtime State ---
+        # --- Directories (Lookup Tables) ---
+        # These locks are only used when *hydrating* a new room or *logging in* a player.
+        # They are NOT used for general gameplay mechanics.
+        self.room_directory_lock = threading.RLock()
         self.active_rooms: Dict[str, Room] = {} 
+        
+        self.player_directory_lock = threading.RLock()
         self.active_players: Dict[str, Dict[str, Any]] = {}
         
-        self.runtime_monster_hp: Dict[str, int] = {}
-        self.defeated_monsters: Dict[str, Dict[str, Any]] = {}
-        self.combat_state: Dict[str, Dict[str, Any]] = {}
+        # --- Sharded Runtime State (High Contention) ---
+        # Replaces the old global dictionaries with ShardedStores
+        self.runtime_monster_hp = ShardedStore(num_shards=16)
+        self.defeated_monsters = ShardedStore(num_shards=8) # Less contention than HP
+        self.combat_state = ShardedStore(num_shards=32) # Very high contention
+        
+        # --- Low Contention State ---
+        # These are used less frequently, simple locks are fine.
+        self.trade_lock = threading.RLock()
         self.pending_trades: Dict[str, Dict[str, Any]] = {}
         
+        self.group_lock = threading.RLock()
         self.active_groups: Dict[str, Dict[str, Any]] = {}
         self.pending_group_invites: Dict[str, Dict[str, Any]] = {}
+        
+        self.band_lock = threading.RLock()
         self.active_bands: Dict[str, Dict[str, Any]] = {}
 
         # --- Spatial & AI Indices ---
+        # Indices are read often but written to only on move.
+        # We use a dedicated lock for index integrity.
+        self.index_lock = threading.RLock()
         self.room_players: Dict[str, Set[str]] = {}
         self.active_mob_uids: Set[str] = set()
         self.mob_locations: Dict[str, str] = {}
@@ -46,17 +111,6 @@ class World:
         self.game_tick_counter: int = 0
         self.player_timeout_seconds: int = config.PLAYER_TIMEOUT_SECONDS
         self.last_band_payout_time: float = time.time()
-
-        # --- Locks ---
-        self.player_lock = threading.RLock()
-        self.combat_lock = threading.RLock()
-        self.trade_lock = threading.RLock()
-        self.room_lock = threading.RLock()
-        self.monster_hp_lock = threading.RLock()
-        self.defeated_lock = threading.RLock()
-        self.group_lock = threading.RLock()
-        self.band_lock = threading.RLock()
-        self.index_lock = threading.RLock()
 
     # --- PROPERTIES (Compatibility & Shortcuts) ---
     @property
@@ -134,18 +188,18 @@ class World:
 
     # --- Player Management ---
     def get_player_info(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
-        with self.player_lock:
+        with self.player_directory_lock:
             return self.active_players.get(player_name_lower)
 
     def get_player_obj(self, player_name_lower: str) -> Optional['Player']:
-        with self.player_lock:
+        with self.player_directory_lock:
             info = self.active_players.get(player_name_lower)
             if info:
                 return info.get("player_obj")
         return None
 
     def set_player_info(self, player_name_lower: str, data: Dict[str, Any]):
-        with self.player_lock:
+        with self.player_directory_lock:
             self.active_players[player_name_lower] = data
             
     def remove_player(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
@@ -154,29 +208,32 @@ class World:
             self.remove_player_from_room_index(player_name_lower, player_obj.current_room_id)
 
         if player_obj and player_obj.group_id:
-            group = self.get_group(player_obj.group_id)
-            if group:
-                group_id = player_obj.group_id
-                player_obj.group_id = None
-                if player_name_lower in group["members"]:
-                    group["members"].remove(player_name_lower)
-                self.send_message_to_group(group_id, f"{player_obj.name} has left the group (disconnected).")
-                if group["leader"] == player_name_lower:
-                    if group["members"]:
-                        new_leader_key = group["members"][0]
-                        group["leader"] = new_leader_key
-                        self.set_group(group_id, group)
-                        self.send_message_to_group(group_id, f"{new_leader_key.capitalize()} is the new group leader.")
-                    else:
-                        self.remove_group(group_id)
-                else:
-                    self.set_group(group_id, group)
+            self._handle_player_disconnect_group(player_obj, player_name_lower)
             
-        with self.player_lock:
+        with self.player_directory_lock:
             return self.active_players.pop(player_name_lower, None)
 
+    def _handle_player_disconnect_group(self, player_obj, player_name_lower):
+        group = self.get_group(player_obj.group_id)
+        if group:
+            group_id = player_obj.group_id
+            player_obj.group_id = None
+            if player_name_lower in group["members"]:
+                group["members"].remove(player_name_lower)
+            self.send_message_to_group(group_id, f"{player_obj.name} has left the group (disconnected).")
+            if group["leader"] == player_name_lower:
+                if group["members"]:
+                    new_leader_key = group["members"][0]
+                    group["leader"] = new_leader_key
+                    self.set_group(group_id, group)
+                    self.send_message_to_group(group_id, f"{new_leader_key.capitalize()} is the new group leader.")
+                else:
+                    self.remove_group(group_id)
+            else:
+                self.set_group(group_id, group)
+
     def get_all_players_info(self) -> List[Tuple[str, Dict[str, Any]]]:
-        with self.player_lock:
+        with self.player_directory_lock:
             return list(self.active_players.items())
 
     def get_player_group_id_on_load(self, player_name_lower: str) -> Optional[str]:
@@ -187,151 +244,203 @@ class World:
         return None
 
     # --- Room Factory / Hydration ---
+    def get_active_room_safe(self, room_id: str) -> Optional[Room]:
+        """Returns the Active Room Object directly."""
+        with self.room_directory_lock:
+            return self.active_rooms.get(room_id)
+
     def get_room(self, room_id: str) -> Optional[Dict[str, Any]]:
-        with self.room_lock:
-            if room_id in self.active_rooms:
-                return self.active_rooms[room_id].to_dict()
-            
+        """
+        Gets a room dictionary (representation).
+        Hydrates the room if it doesn't exist.
+        """
+        room_obj = None
+        
+        # 1. Check if active
+        with self.room_directory_lock:
+            room_obj = self.active_rooms.get(room_id)
+        
+        # 2. If not active, hydrate
+        if not room_obj:
             template = self.assets.get_room_template(room_id)
-            
             if template:
-                active_objects = []
-                for obj_stub in template.get("objects", []):
-                    node_id = obj_stub.get("node_id")
-                    monster_id = obj_stub.get("monster_id")
-                    merged_obj = copy.deepcopy(obj_stub)
-                    
-                    if node_id:
-                        node_template = self.game_nodes.get(node_id)
-                        if node_template:
-                            full_node = copy.deepcopy(node_template)
-                            full_node.update(merged_obj)
-                            merged_obj = full_node
-                    elif monster_id:
-                        uid = merged_obj.get("uid")
-                        if not uid:
-                            uid = uuid.uuid4().hex
-                            merged_obj["uid"] = uid
-                            
-                        if self.get_defeated_monster(uid):
-                            continue 
-                            
-                        mob_template = self.game_monster_templates.get(monster_id)
-                        if mob_template:
-                            full_mob = copy.deepcopy(mob_template)
-                            full_mob.update(merged_obj)
-                            merged_obj = full_mob
-                            self.register_mob(uid, room_id)
-                    elif merged_obj.get("is_npc") and not merged_obj.get("uid"):
-                         uid = uuid.uuid4().hex
-                         merged_obj["uid"] = uid
-                         self.register_mob(uid, room_id)
-
-                    active_objects.append(merged_obj)
-                
-                new_active_room = Room(
-                    room_id=template["room_id"],
-                    name=template["name"],
-                    description=template.get("description", ""),
-                    db_data=template
-                )
-                new_active_room.objects = active_objects 
-                self.active_rooms[room_id] = new_active_room
-                return new_active_room.to_dict()
-
+                room_obj = self._hydrate_room(template)
+                with self.room_directory_lock:
+                    self.active_rooms[room_id] = room_obj
+        
+        if room_obj:
+            return room_obj.to_dict()
         return None
 
+    def _hydrate_room(self, template: Dict) -> Room:
+        """Internal helper to instantiate a Room."""
+        active_objects = []
+        room_id = template["room_id"]
+        
+        for obj_stub in template.get("objects", []):
+            node_id = obj_stub.get("node_id")
+            monster_id = obj_stub.get("monster_id")
+            merged_obj = copy.deepcopy(obj_stub)
+            
+            if node_id:
+                node_template = self.game_nodes.get(node_id)
+                if node_template:
+                    full_node = copy.deepcopy(node_template)
+                    full_node.update(merged_obj)
+                    merged_obj = full_node
+            elif monster_id:
+                uid = merged_obj.get("uid")
+                if not uid:
+                    uid = uuid.uuid4().hex
+                    merged_obj["uid"] = uid
+                    
+                if self.get_defeated_monster(uid):
+                    continue 
+                    
+                mob_template = self.game_monster_templates.get(monster_id)
+                if mob_template:
+                    full_mob = copy.deepcopy(mob_template)
+                    full_mob.update(merged_obj)
+                    merged_obj = full_mob
+                    self.register_mob(uid, room_id)
+            elif merged_obj.get("is_npc") and not merged_obj.get("uid"):
+                 uid = uuid.uuid4().hex
+                 merged_obj["uid"] = uid
+                 self.register_mob(uid, room_id)
+
+            active_objects.append(merged_obj)
+        
+        new_active_room = Room(
+            room_id=template["room_id"],
+            name=template["name"],
+            description=template.get("description", ""),
+            db_data=template
+        )
+        new_active_room.objects = active_objects 
+        return new_active_room
+
     def get_all_rooms(self) -> Dict[str, Dict[str, Any]]:
-        with self.room_lock:
+        with self.room_directory_lock:
+            # Snapshotting active rooms + templates is expensive.
+            # We return active rooms serialized + remaining templates.
             all_rooms = copy.deepcopy(self.assets.room_templates)
             for rid, room_obj in self.active_rooms.items():
                 all_rooms[rid] = room_obj.to_dict()
             return all_rooms
             
     def update_room_cache(self, room_id: str, room_data: Dict[str, Any]):
-        with self.room_lock:
-            if room_id in self.active_rooms:
-                room_obj = self.active_rooms[room_id]
+        # Updates active room object directly
+        with self.room_directory_lock:
+            room_obj = self.active_rooms.get(room_id)
+        
+        if room_obj:
+            with room_obj.lock:
                 room_obj.objects = room_data.get("objects", [])
 
     def save_room(self, room_obj):
         from mud_backend.core import db
-        with self.room_lock:
+        # Update directory entry if missing
+        with self.room_directory_lock:
             self.active_rooms[room_obj.room_id] = room_obj
+        # Async save ideally, but synchronous for now
         db.save_room_state(room_obj) 
 
     def move_object_between_rooms(self, obj_to_move: Dict, from_room_id: str, to_room_id: str) -> bool:
-        with self.room_lock:
-            source_data = self.get_room(from_room_id)
-            dest_data = self.get_room(to_room_id)
-            if not source_data or not dest_data: return False
+        """
+        THREAD-SAFE MOVE: Acquires fine-grained locks on both rooms.
+        Prevents deadlocks by ordering lock acquisition by room_id.
+        """
+        # 1. Get references
+        with self.room_directory_lock:
+            source_room = self.active_rooms.get(from_room_id)
+            dest_room = self.active_rooms.get(to_room_id)
             
-            source_room = self.active_rooms[from_room_id]
-            dest_room = self.active_rooms[to_room_id]
+        if not source_room or not dest_room:
+            # Try to hydrate if missing (using get_room triggers hydration)
+            if not source_room: self.get_room(from_room_id); 
+            if not dest_room: self.get_room(to_room_id);
+            with self.room_directory_lock:
+                source_room = self.active_rooms.get(from_room_id)
+                dest_room = self.active_rooms.get(to_room_id)
+            if not source_room or not dest_room: return False
 
-            found_index = -1
-            uid = obj_to_move.get("uid")
-            
-            for i, obj in enumerate(source_room.objects):
-                if obj is obj_to_move: 
-                    found_index = i
-                    break
-                if uid and obj.get("uid") == uid:
-                    found_index = i
-                    break
-            
-            if found_index == -1: return False
+        # 2. Determine Lock Order (lexicographical) to avoid Deadlock
+        first_lock = source_room if from_room_id < to_room_id else dest_room
+        second_lock = dest_room if from_room_id < to_room_id else source_room
 
-            real_obj = source_room.objects.pop(found_index)
-            dest_room.objects.append(real_obj)
-            
-            return True
+        # 3. Acquire Locks
+        with first_lock.lock:
+            with second_lock.lock:
+                # 4. Perform Move
+                found_index = -1
+                uid = obj_to_move.get("uid")
+                
+                for i, obj in enumerate(source_room.objects):
+                    if obj is obj_to_move: 
+                        found_index = i
+                        break
+                    if uid and obj.get("uid") == uid:
+                        found_index = i
+                        break
+                
+                if found_index == -1: return False
 
-    # --- Combat/States (Truncated for brevity as unchanged from Phase 3) ---
+                real_obj = source_room.objects.pop(found_index)
+                dest_room.objects.append(real_obj)
+                return True
+
+    # --- Combat/States (Using ShardedStore) ---
+    
     def get_combat_state(self, combatant_id: str) -> Optional[Dict[str, Any]]:
-        with self.combat_lock: return self.combat_state.get(combatant_id)
+        return self.combat_state.get(combatant_id)
 
     def set_combat_state(self, combatant_id: str, data: Dict[str, Any]):
-        with self.combat_lock: self.combat_state[combatant_id] = data
+        self.combat_state.set(combatant_id, data)
             
     def remove_combat_state(self, combatant_id: str) -> Optional[Dict[str, Any]]:
-        with self.combat_lock: return self.combat_state.pop(combatant_id, None)
+        return self.combat_state.pop(combatant_id)
 
     def get_all_combat_states(self) -> List[Tuple[str, Dict[str, Any]]]:
-        with self.combat_lock: return list(self.combat_state.items())
+        return self.combat_state.get_all_items()
             
     def stop_combat_for_all(self, combatant_id_1: str, combatant_id_2: str):
-        with self.combat_lock:
-            self.combat_state.pop(combatant_id_1, None)
-            self.combat_state.pop(combatant_id_2, None)
+        # Remove independently
+        self.combat_state.pop(combatant_id_1)
+        self.combat_state.pop(combatant_id_2)
 
     def get_monster_hp(self, monster_uid: str) -> Optional[int]:
-        with self.monster_hp_lock: return self.runtime_monster_hp.get(monster_uid)
+        return self.runtime_monster_hp.get(monster_uid)
 
     def set_monster_hp(self, monster_uid: str, hp: int):
-        with self.monster_hp_lock: self.runtime_monster_hp[monster_uid] = hp
+        self.runtime_monster_hp.set(monster_uid, hp)
             
     def modify_monster_hp(self, monster_uid: str, max_hp: int, damage: int) -> int:
-        with self.monster_hp_lock:
-            if monster_uid not in self.runtime_monster_hp: self.runtime_monster_hp[monster_uid] = max_hp
-            self.runtime_monster_hp[monster_uid] -= damage
-            return self.runtime_monster_hp[monster_uid]
+        # Note: modification requires read+write. 
+        # ShardedStore operations are atomic individually but not transactionally.
+        # So we need to manually use the shard lock here.
+        data, lock = self.runtime_monster_hp._get_shard(monster_uid)
+        with lock:
+            if monster_uid not in data: 
+                data[monster_uid] = max_hp
+            data[monster_uid] -= damage
+            return data[monster_uid]
 
     def remove_monster_hp(self, monster_uid: str):
-        with self.monster_hp_lock: self.runtime_monster_hp.pop(monster_uid, None)
+        self.runtime_monster_hp.pop(monster_uid)
     
     def get_defeated_monster(self, monster_uid: str) -> Optional[Dict[str, Any]]:
-        with self.defeated_lock: return self.defeated_monsters.get(monster_uid)
+        return self.defeated_monsters.get(monster_uid)
 
     def set_defeated_monster(self, monster_uid: str, data: Dict[str, Any]):
-        with self.defeated_lock: self.defeated_monsters[monster_uid] = data
+        self.defeated_monsters.set(monster_uid, data)
             
     def remove_defeated_monster(self, monster_uid: str) -> Optional[Dict[str, Any]]:
-        with self.defeated_lock: return self.defeated_monsters.pop(monster_uid, None)
+        return self.defeated_monsters.pop(monster_uid)
 
     def get_all_defeated_monsters(self) -> List[Tuple[str, Dict[str, Any]]]:
-        with self.defeated_lock: return list(self.defeated_monsters.items())
+        return self.defeated_monsters.get_all_items()
     
+    # --- Trades/Groups/Bands (Simple Locks) ---
     def get_pending_trade(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         with self.trade_lock: return self.pending_trades.get(player_name_lower)
             
@@ -384,6 +493,7 @@ class World:
 
     def send_message_to_player(self, player_name_lower: str, message: str, msg_type: str = "message"):
         if not self.socketio: return
+        # Use our new safe method
         player_info = self.get_player_info(player_name_lower)
         if player_info:
             sid = player_info.get("sid")
@@ -407,8 +517,12 @@ class World:
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             if not player_obj or not sid or sid == skip_sid: continue
+            
+            # Lock not strictly necessary for flag reading, but safe
+            # (Flags are usually set via commands, not background)
             if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
             if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
+            
             self.socketio.emit(msg_type, message, to=sid)
     
     def send_message_to_group(self, group_id: str, message: str, msg_type: str = "message", skip_player_key: Optional[str] = None):

@@ -3,6 +3,7 @@ import math
 import time
 import copy
 import uuid
+import threading
 from mud_backend import config
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from typing import Optional, List, Dict, Any, Tuple, TYPE_CHECKING
@@ -154,6 +155,7 @@ RACE_DATA = {
 class Player:
     def __init__(self, world: 'World', name: str, current_room_id: str, db_data: Optional[dict] = None):
         self.world = world 
+        self.lock = threading.RLock() # --- NEW: Instance Lock for Thread Safety
         
         self.name = name
         self.current_room_id = current_room_id
@@ -701,19 +703,18 @@ class Player:
             
             target_obj = self.world.get_player_obj(target_id)
             if not target_obj:
-                # --- FIX: Iterate Active Rooms instead of ALL rooms ---
+                # Iterate Active Rooms instead of ALL rooms
+                # Use get_active_room_safe to avoid re-hydrating or excessive locking
                 room_id = combat_data.get("current_room_id")
                 if room_id:
-                    room = self.world.get_room(room_id)
+                    room = self.world.get_active_room_safe(room_id)
                     if room:
-                        # Room objects are Dicts in get_room() return
-                        # But if we have access to ActiveRoom object via world, we can check properties
-                        # get_room returns a dict representation, so we iterate the dict list
-                        objects = room.get("objects", [])
-                        for obj in objects:
-                             if obj.get("uid") == target_id:
-                                target_obj = obj
-                                break
+                        # Access object list with thread safety
+                        with room.lock:
+                            for obj in room.objects:
+                                if obj.get("uid") == target_id:
+                                    target_obj = obj
+                                    break
             
             if target_obj:
                 target_name = target_obj.get("name", target_id) if isinstance(target_obj, dict) else target_obj.name
@@ -932,6 +933,10 @@ class Room:
 
         self.objects: List[Dict[str, Any]] = []
         
+        # --- NEW: Instance Lock ---
+        self.lock = threading.RLock()
+        # --------------------------
+        
         raw_objects = self.db_data.get("objects", [])
         
         for obj_stub in raw_objects:
@@ -942,20 +947,21 @@ class Room:
             self.objects.append(merged_obj)
 
     def to_dict(self) -> dict:
-        data = {
-            **self.db_data,
-            "room_id": self.room_id,
-            "name": self.name,
-            "description": self.description,
-            "objects": self.objects,
-            "exits": self.exits,
-            "triggers": self.triggers
-        }
-        
-        if self._id:
-            data["_id"] = self._id
+        with self.lock:
+            data = {
+                **self.db_data,
+                "room_id": self.room_id,
+                "name": self.name,
+                "description": self.description,
+                "objects": self.objects,
+                "exits": self.exits,
+                "triggers": self.triggers
+            }
+            
+            if self._id:
+                data["_id"] = self._id
 
-        return data
+            return data
 
     def __repr__(self):
         return f"<Room: {self.name}>"
