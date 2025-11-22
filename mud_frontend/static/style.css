@@ -23,7 +23,7 @@ body {
 
 /* --- MODIFIED: Map Panel is now Left Panel --- */
 #left-panel {
-    width: 300px;
+    width: 250px;
     flex-shrink: 0;
     /* --- NEW: Use flex for widgets --- */
     display: flex;

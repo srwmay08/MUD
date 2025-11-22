@@ -95,6 +95,59 @@ class Train(BaseVerb):
 
         train_skill(self.player, skill_name, ranks_to_train)
 
+@VerbRegistry.register(["levelup", "level"]) 
+class LevelUp(BaseVerb):
+    """
+    Handles the 'levelup' command *during training*.
+    Advances the player's level if they have enough experience.
+    """
+    def execute(self):
+        # Must be in training state (which implies being at an inn via CheckIn)
+        if self.player.game_state != "training":
+             self.player.send_message("You must be checked in at an inn to level up.")
+             return
+
+        # Check if player has enough XP
+        if self.player.experience < self.player.level_xp_target:
+             self.player.send_message("You do not have enough experience to level up yet.")
+             return
+        
+        # --- Perform Level Up ---
+        if self.player.level >= 100:
+             # Post-cap logic: Gain TPs but level stays capped (or handled differently)
+             # For now, giving +1/+1 as per original logic
+             ptps, mtps = 1, 1
+             self.player.ptps += ptps
+             self.player.mtps += mtps
+             self.player.send_message(f"**You gain 1 MTP and 1 PTP from post-cap experience!**")
+             
+             # Reset target for next post-cap point
+             self.player.level_xp_target = self.player.experience + 2500
+        else:
+             # Normal Level Up
+             self.player.level += 1
+             
+             # Grant new TPs
+             ptps, mtps, stps = self.player._calculate_tps_per_level()
+             self.player.ptps += ptps
+             self.player.mtps += mtps
+             self.player.stps += stps
+             
+             # --- KEY CHANGE: Reset the training limit for the new level ---
+             self.player.ranks_trained_this_level.clear()
+             
+             self.player.send_message(f"**CONGRATULATIONS! You have advanced to Level {self.player.level}!**")
+             self.player.send_message(f"You gain: {ptps} PTPs, {mtps} MTPs, {stps} STPs.")
+             self.player.send_message("Your skill training limits have been reset for this level.")
+             
+             # Update target for next level
+             self.player.level_xp_target = self.player._get_xp_target_for_level(self.player.level)
+
+        self.player.mark_dirty()
+        
+        # Refresh the skill list display to show new TPs
+        show_skill_list(self.player, "all")
+
 @VerbRegistry.register(["done"]) 
 class Done(BaseVerb):
     """Handles the 'done' command *during training*."""

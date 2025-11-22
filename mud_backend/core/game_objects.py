@@ -28,11 +28,9 @@ class Player(GameEntity):
         # Admin Flag
         self.is_admin: bool = self.data.get("is_admin", False)
         
-        # --- NEW: Auto-grant admin to configured accounts ---
-        # This overrides the DB flag if the account is in the config list
+        # Auto-grant admin to configured accounts
         if self.account_username.lower() in getattr(config, 'ADMIN_ACCOUNTS', []):
             self.is_admin = True
-        # ----------------------------------------------------
         
         self.messages = [] 
         self._is_dirty = False
@@ -399,30 +397,23 @@ class Player(GameEntity):
         return int(ptp_calc), int(mtp_calc), int(stp_calc)
 
     def _check_for_level_up(self):
+        """
+        Checks if the player has enough experience to level up.
+        Does NOT apply the level up; instead, it notifies the player
+        that they need to visit an inn to train.
+        """
         if self.level_xp_target == 0: self.level_xp_target = self._get_xp_target_for_level(self.level)
-        changed = False
-        while self.experience >= self.level_xp_target:
-            if self.level >= 100:
-                ptps, mtps = 1, 1
-                self.ptps += ptps
-                self.mtps += mtps
-                self.send_message(f"**You gain 1 MTP and 1 PTP from post-cap experience!**")
-                self.level_xp_target = self.experience + 2500
-                if self.level_xp_target <= self.experience: self.level_xp_target = self.experience + 1
-                changed = True
+        
+        if self.experience >= self.level_xp_target:
+            # Only notify if not already capped/maxed (unless we want to support infinite post-cap)
+            # Simple notification
+            if self.level < 100:
+                self.send_message(f"**You have enough experience to advance to level {self.level + 1}!**")
+                self.send_message("Visit an inn and <span class='keyword' data-command='checkin'>CHECK IN</span> to train and level up.")
             else:
-                self.level += 1
-                ptps, mtps, stps = self._calculate_tps_per_level()
-                self.ptps += ptps
-                self.mtps += mtps
-                self.stps += stps
-                self.ranks_trained_this_level.clear()
-                self.send_message(f"**CONGRATULATIONS! You have advanced to Level {self.level}!**")
-                self.send_message(f"You gain: {ptps} PTPs, {mtps} MTPs, {stps} STPs.")
-                self.send_message("Your skill training limits have been reset for this level.")
-                self.level_xp_target = self._get_xp_target_for_level(self.level)
-                changed = True
-        if changed: self.mark_dirty()
+                # Post-cap notification
+                self.send_message("**You have enough experience for a post-cap training point!**")
+                self.send_message("Visit an inn to train.")
 
     def send_message(self, message: str):
         self.messages.append(message)
@@ -518,18 +509,15 @@ class Player(GameEntity):
                         "slot_display": slot_name
                     }
 
-        # --- FIX: Fetch real RT from world state ---
         combat_state = self.world.get_combat_state(self.name.lower())
         real_next_action = 0.0
         real_rt_type = "hard"
-        real_duration = 0.0 # Default
+        real_duration = 0.0 
         
         if combat_state:
             real_next_action = combat_state.get("next_action_time", 0.0)
             real_rt_type = combat_state.get("rt_type", "hard")
-            # Try to get stored duration, otherwise estimate it from remaining time (fallback)
             real_duration = combat_state.get("duration", max(0, real_next_action - time.time()))
-        # -------------------------------------------
 
         return {
             "health": self.hp, "max_health": self.max_hp,
@@ -545,7 +533,7 @@ class Player(GameEntity):
             "posture": self.posture,
             "status_effects": self.status_effects,
             "rt_end_time_ms": real_next_action * 1000,
-            "rt_duration_ms": real_duration * 1000, # Send duration
+            "rt_duration_ms": real_duration * 1000, 
             "rt_type": real_rt_type
         }
 

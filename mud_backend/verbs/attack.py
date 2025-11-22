@@ -146,8 +146,10 @@ class Attack(BaseVerb):
                 uid = obj.get("uid")
                 is_defeated = False
                 if uid:
-                    with self.world.defeated_lock:
-                        is_defeated = uid in self.world.defeated_monsters
+                    # --- FIX: Use accessor instead of direct check ---
+                    if self.world.get_defeated_monster(uid):
+                        is_defeated = True
+                    # ---------------------------------------------
                 
                 if not is_defeated:
                     if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
@@ -164,10 +166,11 @@ class Attack(BaseVerb):
             self.player.send_message("That creature cannot be attacked right now.")
             return
             
-        with self.world.defeated_lock:
-            if monster_uid in self.world.defeated_monsters:
-                self.player.send_message(f"The {target_monster_data['name']} is already dead.")
-                return
+        # --- FIX: Use accessor instead of direct check ---
+        if self.world.get_defeated_monster(monster_uid):
+             self.player.send_message(f"The {target_monster_data['name']} is already dead.")
+             return
+        # ---------------------------------------------
         
         current_time = time.time()
 
@@ -201,7 +204,7 @@ class Attack(BaseVerb):
                 "state_type": "action",
                 "target_id": monster_uid, 
                 "next_action_time": current_time + rt_seconds, 
-                "duration": rt_seconds, # Store duration
+                "duration": rt_seconds,
                 "current_room_id": room_id,
                 "rt_type": "hard" 
             })
