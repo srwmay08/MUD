@@ -18,6 +18,63 @@ class Attack(BaseVerb):
     Handles the 'attack' command.
     """
     
+    def _trigger_social_aggro(self, target_monster_data: dict):
+        """
+        Checks for other monsters in the room with the same faction
+        and triggers them to attack the player.
+        """
+        target_faction = target_monster_data.get("faction")
+        if not target_faction:
+            return
+
+        target_uid = target_monster_data.get("uid")
+        player_id = self.player.name.lower()
+        current_time = time.time()
+
+        for obj in self.room.objects:
+            # Skip the one we are already hitting
+            if obj.get("uid") == target_uid:
+                continue
+                
+            # Must be a monster/npc
+            if not (obj.get("is_monster") or obj.get("is_npc")):
+                continue
+            
+            # Check Faction match
+            if obj.get("faction") != target_faction:
+                continue
+                
+            # Check if already fighting (don't spam messages)
+            mob_uid = obj.get("uid")
+            combat_state = self.world.get_combat_state(mob_uid)
+            if combat_state and combat_state.get("state_type") == "combat":
+                continue
+                
+            # --- Trigger Aggro ---
+            monster_name = obj.get("name", "A creature")
+            self.player.send_message(f"The {monster_name} comes to the aid of its kin!")
+            self.world.broadcast_to_room(
+                self.room.room_id, 
+                f"The {monster_name} joins the fight against {self.player.name}!", 
+                "combat_broadcast", 
+                skip_sid=self.player.uid
+            )
+            
+            # Calculate RT for the monster so it doesn't hit INSTANTLY
+            monster_agi = obj.get("stats", {}).get("AGI", 50)
+            monster_rt = combat_system.calculate_roundtime(monster_agi)
+            
+            self.world.set_combat_state(mob_uid, {
+                "state_type": "combat",
+                "target_id": player_id,
+                "next_action_time": current_time + (monster_rt / 2), # Reacts quickly
+                "current_room_id": self.room.room_id
+            })
+            
+            # Ensure HP is set
+            if self.world.get_monster_hp(mob_uid) is None:
+                self.world.set_monster_hp(mob_uid, obj.get("max_hp", 50))
+
     def _resolve_and_handle_attack(self, target_monster_data: dict) -> dict:
         """
         Resolves one attack swing.
@@ -55,6 +112,11 @@ class Attack(BaseVerb):
                 target_monster_data.get("max_hp", 1),
                 damage
             )
+
+            # --- NEW: Trigger Social Aggro on Hit ---
+            if new_hp > 0 and not is_fatal:
+                self._trigger_social_aggro(target_monster_data)
+            # ----------------------------------------
 
             if new_hp <= 0 or is_fatal:
                 consequence_msg = f"**The {target_monster_data['name']} has been DEFEATED!**"
@@ -106,9 +168,7 @@ class Attack(BaseVerb):
                 
                 self.world.save_room(self.room)
                 
-                # --- NEW: Unregister from AI Index ---
                 self.world.unregister_mob(monster_uid)
-                # -------------------------------------
                 
                 resolve_data["messages"].append(f"The {corpse_data['name']} falls to the ground.")
                 
@@ -146,10 +206,8 @@ class Attack(BaseVerb):
                 uid = obj.get("uid")
                 is_defeated = False
                 if uid:
-                    # --- FIX: Use accessor instead of direct check ---
-                    if self.world.get_defeated_monster(uid):
-                        is_defeated = True
-                    # ---------------------------------------------
+                    with self.world.defeated_lock:
+                        is_defeated = uid in self.world.defeated_monsters
                 
                 if not is_defeated:
                     if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
@@ -166,11 +224,10 @@ class Attack(BaseVerb):
             self.player.send_message("That creature cannot be attacked right now.")
             return
             
-        # --- FIX: Use accessor instead of direct check ---
-        if self.world.get_defeated_monster(monster_uid):
-             self.player.send_message(f"The {target_monster_data['name']} is already dead.")
-             return
-        # ---------------------------------------------
+        with self.world.defeated_lock:
+            if monster_uid in self.world.defeated_monsters:
+                self.player.send_message(f"The {target_monster_data['name']} is already dead.")
+                return
         
         current_time = time.time()
 
@@ -204,7 +261,7 @@ class Attack(BaseVerb):
                 "state_type": "action",
                 "target_id": monster_uid, 
                 "next_action_time": current_time + rt_seconds, 
-                "duration": rt_seconds,
+                "duration": rt_seconds, 
                 "current_room_id": room_id,
                 "rt_type": "hard" 
             })

@@ -2,6 +2,7 @@
 import threading
 import copy
 import uuid
+from collections import deque
 from typing import Dict, Any, Optional, Set, List, Union, TYPE_CHECKING
 from mud_backend.core.game_objects import Room, Player
 
@@ -22,7 +23,7 @@ class ConnectionManager:
             if sid: 
                 self.socketio.emit(msg_type, message, to=sid)
             
-            # --- NEW: Handle Snooping ---
+            # Handle Snooping
             player_obj = player_info.get("player_obj")
             if player_obj:
                 snoopers = player_obj.flags.get("snooped_by", [])
@@ -32,12 +33,11 @@ class ConnectionManager:
                         snooper_info = self.world.get_player_info(snooper_name)
                         if snooper_info and snooper_info.get("sid"):
                             self.socketio.emit("message", snoop_msg, to=snooper_info["sid"])
-            # ----------------------------
 
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         if not self.socketio: return
         
-        # Normalize skip_sid to a set for efficient lookup/handling
+        # Normalize skip_sid to a set
         skip_sids_set = set()
         if skip_sid:
             if isinstance(skip_sid, str):
@@ -45,7 +45,7 @@ class ConnectionManager:
             elif isinstance(skip_sid, (list, set, tuple)):
                 skip_sids_set.update(skip_sid)
         
-        # Flag check logic (ambient/combat toggles)
+        # Simple broadcast (for things that don't check flags)
         is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
         
         if not is_flag_checked:
@@ -57,7 +57,7 @@ class ConnectionManager:
                 self.socketio.emit(msg_type, message, to=room_id)
             return
 
-        # If checking flags, iterate players in room
+        # Flag-checked broadcast (iterate players to check preferences)
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
         
         for player_name in players_in_room:
@@ -67,13 +67,89 @@ class ConnectionManager:
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
-            # Check against the set
             if not player_obj or not sid or sid in skip_sids_set: continue
             
             if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
             if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
             
             self.socketio.emit(msg_type, message, to=sid)
+
+    def broadcast_to_world(self, message: str, msg_type: str = "global_chat", skip_player_name: str = None):
+        """Sends a message to every connected player."""
+        if not self.socketio: return
+        
+        all_players = self.world.get_all_players_info()
+        for p_name, p_info in all_players:
+            if skip_player_name and p_name == skip_player_name:
+                continue
+            
+            sid = p_info.get("sid")
+            if sid:
+                self.socketio.emit(msg_type, message, to=sid)
+
+    def broadcast_to_radius(self, start_room_id: str, radius: int, message: str, msg_type: str = "message", skip_player_name: str = None):
+        """
+        Broadcasts to rooms within 'radius' steps.
+        Applies a +1 cost penalty when transitioning between Indoor/Outdoor to dampen sound.
+        """
+        if not self.socketio: return
+
+        # BFS to find valid rooms and their distances
+        rooms_in_range = set()
+        
+        # Queue: (room_id, current_cost)
+        queue = deque([(start_room_id, 0)])
+        visited_costs = {start_room_id: 0}
+        
+        while queue:
+            curr_id, curr_cost = queue.popleft()
+            
+            # If we are within range, add to target list
+            if curr_cost <= radius:
+                rooms_in_range.add(curr_id)
+            
+            # If we hit the limit, don't scan neighbors
+            if curr_cost >= radius:
+                continue
+
+            curr_room = self.world.room_manager.get_room(curr_id)
+            if not curr_room: continue
+            
+            is_curr_outdoor = curr_room.get("is_outdoor", False)
+            
+            for direction, next_room_id in curr_room.get("exits", {}).items():
+                next_room = self.world.room_manager.get_room(next_room_id)
+                if not next_room: continue
+                
+                is_next_outdoor = next_room.get("is_outdoor", False)
+                
+                # Base movement cost is 1
+                move_cost = 1
+                
+                # Penalty: Outdoor <-> Indoor transition adds +1 cost (reducing range)
+                # e.g. From Street (Outdoor) to House (Indoor) costs 2 movement points.
+                if is_curr_outdoor != is_next_outdoor:
+                    move_cost += 1
+                
+                new_total_cost = curr_cost + move_cost
+                
+                # If we found a cheaper way to this room, or haven't visited it
+                if next_room_id not in visited_costs or new_total_cost < visited_costs[next_room_id]:
+                    visited_costs[next_room_id] = new_total_cost
+                    queue.append((next_room_id, new_total_cost))
+
+        # Now broadcast to the identified set of rooms
+        all_players = self.world.get_all_players_info()
+        
+        for p_name, p_info in all_players:
+            if skip_player_name and p_name == skip_player_name:
+                continue
+                
+            p_room_id = p_info.get("current_room_id")
+            if p_room_id in rooms_in_range:
+                sid = p_info.get("sid")
+                if sid:
+                    self.socketio.emit(msg_type, message, to=sid)
 
 
 class RoomManager:

@@ -9,5 +9,20 @@
       "gold ring"
     ],
     "base_value": 250
+  },
+  "signet_of_communion": {
+    "name": "a banded iron signet",
+    "description": "A heavy iron ring consisting of two interlocking bands. The outer band is etched with rune-like grooves and can be TWISTED to activate or TAPPED to deactivate. You can TURN the band to cycle channels.",
+    "item_type": "jewelry",
+    "wearable_slot": "finger_left",
+    "keywords": [
+      "signet",
+      "ring",
+      "iron ring",
+      "banded ring",
+      "communion ring"
+    ],
+    "base_value": 500,
+    "special_verbs": ["twist", "turn", "focus", "send", "tap"]
   }
 }

@@ -64,7 +64,23 @@
         "damage_type": "slash",
         "chance": 0.2
       }
-    ]
+    ],
+    "damage_factors": {
+      "unarmored": 0.30,
+      "cloth": 0.25,
+      "leather": 0.15,
+      "scale": 0.10,
+      "chain": 0.05,
+      "plate": 0.02
+    },
+    "avd_modifiers": {
+      "unarmored": 25,
+      "cloth": 20,
+      "leather": 15,
+      "scale": 10,
+      "chain": 5,
+      "plate": 0
+    }
   },
   "iron_short_sword": {
     "name": "an iron short sword",
