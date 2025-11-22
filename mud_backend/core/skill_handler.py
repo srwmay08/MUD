@@ -8,9 +8,7 @@ from mud_backend.core.utils import get_stat_bonus
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
-# ---
-# Skill Cost Calculation Logic
-# ---
+# --- Skill Cost Calculation Logic ---
 def _calculate_final_cost(base_cost: int, player_stats: Dict[str, int], key_attrs: List[str]) -> int:
     """
     Calculates the final, discounted cost for one TP type (PTP, MTP, or STP).
@@ -171,6 +169,12 @@ def _show_all_skills_by_category(player: Player):
     column_1_lines.append("<tr><td colspan='3'>--- **SKILL TRAINING** ---</td></tr>")
     column_1_lines.append(f"<tr><td colspan='3'>TPs: P:{player.ptps} / M:{player.mtps} / S:{player.stps}</td></tr>")
     column_1_lines.append("<tr><td colspan='3'>---</td></tr>")
+    
+    # --- MODIFIED: Show LEVELUP first if eligible ---
+    if player.experience >= player.level_xp_target:
+        column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword' data-command='levelup'>LEVELUP</span>' to advance level.</td></tr>")
+    # ------------------------------------------------
+    
     column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.</td></tr>")
     column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.</td></tr>")
     column_1_lines.append("<tr><td colspan='3'>- Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>'</td></tr>")
@@ -230,6 +234,12 @@ def _show_all_skills_by_category(player: Player):
 def _show_simple_training_menu(player: Player):
     player.send_message("\n--- **SKILL TRAINING** ---")
     player.send_message(f"--- TPs: P:{player.ptps} / M:{player.mtps} / S:{player.stps} ---")
+    
+    # --- MODIFIED: Show LEVELUP first if eligible ---
+    if player.experience >= player.level_xp_target:
+        player.send_message("- Type '<span class='keyword' data-command='levelup'>LEVELUP</span>' to advance level.")
+    # ------------------------------------------------
+    
     player.send_message("- Type '<span class='keyword' data-command='list all'>LIST ALL</span>' to see all skills.")
     player.send_message("- Type '<span class='keyword' data-command='list categories'>LIST CATEGORIES</span>' to see skill groups.")
     player.send_message("- Type '<span class='keyword'>TRAIN &lt;skill&gt; &lt;ranks&gt;</span>' (e.g., TRAIN BRAWLING 1)")

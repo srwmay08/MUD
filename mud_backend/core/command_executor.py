@@ -94,13 +94,10 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             player.group_id = world.get_player_group_id_on_load(player.name.lower())
             world.add_player_to_room_index(player.name.lower(), player.current_room_id)
 
-    # --- NEW: Check Freeze ---
+    # Check Freeze
     if player.flags.get("frozen", "off") == "on":
-        # Allow 'quit' or 'help' potentially, but usually freeze blocks everything
         if command_line.strip().lower() not in ['quit', 'help']:
             player.send_message("You are frozen solid and cannot act.")
-            
-            # Need to return state so UI doesn't break
             vitals_data = player.get_vitals()
             map_data = _get_map_data(player, world)
             return {
@@ -110,7 +107,6 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
                 "map_data": map_data,
                 "leave_message": None 
             }
-    # -------------------------
 
     # 2. State Management Updates
     if player.game_state == "playing" and command_line.lower() != "ping":
@@ -123,7 +119,6 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     room = world.room_manager.get_active_room_safe(player.current_room_id)
     
     if not room:
-        # Fallback void room
         room = Room("void", "The Void", "Nothing is here.")
 
     # 3. Command Parsing
@@ -133,7 +128,6 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
 
     # 4. Game State Handling
     if player.game_state == "chargen":
-        # Chargen logic remains manual for now as it's state-driven, not verb-driven
         if player.chargen_step == 0 and command == "look":
             do_initial_stat_roll(player); player.chargen_step = 1
         elif player.chargen_step > 0 and command == "look":
@@ -145,24 +139,22 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             handle_chargen_input(player, command_line)
 
     elif player.game_state == "training":
-        # Training state handling
-        if command in ["list", "train", "done", "check", "checkin"]:
+        # --- FIXED: Added 'levelup' and 'level' to allowed training commands ---
+        if command in ["list", "train", "done", "check", "checkin", "levelup", "level"]:
              _run_verb(world, player, room, command, args)
         elif command == "look":
-             # Allow look, but warn
              _run_verb(world, player, room, command, args)
              if args: player.send_message("You must 'done' training to interact with objects.")
         else:
-            if not parts: player.send_message("Invalid command. Type 'list', 'train', or 'done'.")
+            if not parts: player.send_message("Invalid command. Type 'list', 'train', 'levelup', or 'done'.")
             else: player.send_message(f"You cannot '{command}' while training. Type 'done' to finish.")
 
     elif player.game_state == "playing":
         if not parts:
             if command_line.lower() != "ping": player.send_message("What?")
         else:
-            # 5. Execute Verb via Registry
             if _run_verb(world, player, room, command, args):
-                pass # Verb executed successfully
+                pass 
             else:
                 player.send_message(f"I don't know the command **'{command}'**.")
     
@@ -178,10 +170,8 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
     vitals_data = player.get_vitals()
     map_data = _get_map_data(player, world)
     
-    # --- FIX: Extract temp_leave_message ---
     leave_msg = getattr(player, "temp_leave_message", None)
     player.temp_leave_message = None 
-    # ---------------------------------------
 
     return {
         "messages": player.messages, 
@@ -196,21 +186,16 @@ def _run_verb(world: 'World', player: Player, room: Room, command: str, args: Li
     Instantiates and executes the verb class found in the registry.
     Returns True if a verb was found and executed, False otherwise.
     """
-    # --- NEW: Use get_verb_info to check Admin privileges ---
-    # Requires Registry update to support tuples
     verb_info = VerbRegistry.get_verb_info(command)
     
     if verb_info:
         VerbClass, admin_only = verb_info
         
-        # SECURITY CHECK
-        # Use getattr incase Player object isn't fully migrated yet
         is_admin = getattr(player, "is_admin", False)
         if admin_only and not is_admin:
-            return False # Pretend command doesn't exist
+            return False 
             
         try:
-            # Instantiate and execute
             verb_instance = VerbClass(world=world, player=player, room=room, args=args, command=command)
             verb_instance.execute()
             return True
@@ -219,6 +204,6 @@ def _run_verb(world: 'World', player: Player, room: Room, command: str, args: Li
             print(f"Error running command '{command}': {e}")
             import traceback
             traceback.print_exc()
-            return True # It was found, just errored
+            return True 
             
     return False
