@@ -1,0 +1,58 @@
+{
+    "aethelion": {
+        "name": "Aethelion",
+        "title": "God of Good & Justice",
+        "domains": ["abjuration", "protection", "justice"],
+        "conflicts": ["morthos"],
+        "description": "The ultimate protector against the Void. His followers are paladins and guardians."
+    },
+    "sentis": {
+        "name": "Sentis",
+        "title": "The Watcher",
+        "domains": ["abjuration", "divination", "vigilance"],
+        "conflicts": [],
+        "description": "The ever-watchful eye. Grants wards of alarm and guarding."
+    },
+    "thoran": {
+        "name": "Thoran",
+        "title": "The Loyal Fury",
+        "domains": ["abjuration", "war", "loyalty"],
+        "conflicts": ["elora"],
+        "description": "Protects others through physical might and shielding."
+    },
+    "aerina": {
+        "name": "Aerina",
+        "title": "The Silver Shield",
+        "domains": ["abjuration", "magic", "elves"],
+        "conflicts": ["dark_elf_deities"],
+        "description": "Weaves magical wards for the elven people."
+    },
+    "verrona": {
+        "name": "Verrona",
+        "title": "The Hearthmother",
+        "domains": ["abjuration", "hearth", "family"],
+        "conflicts": [],
+        "description": "Protects the home and family from harm."
+    },
+    "elora": {
+        "name": "Elora",
+        "title": "The Dove",
+        "domains": ["abjuration", "peace", "healing"],
+        "conflicts": ["thoran", "morthos"],
+        "description": "Specializes in Sanctuary spells and preventing violence."
+    },
+    "morthos": {
+        "name": "Morthos",
+        "title": "Judge of the Damned",
+        "domains": ["abjuration", "death", "order"],
+        "conflicts": ["aethelion", "elora"],
+        "description": "Protects against undeath and seals souls to their fate."
+    },
+    "avron": {
+        "name": "Avron",
+        "title": "The Little Defender",
+        "domains": ["abjuration", "luck", "halflings"],
+        "conflicts": [],
+        "description": "Uses small but mighty magical defenses to protect the weak."
+    }
+}

@@ -18,8 +18,12 @@ class AssetManager:
         self.nodes: Dict[str, Any] = {} 
         self.factions: Dict[str, Any] = {}
         self.spells: Dict[str, Any] = {}
-        self.combat_rules: Dict[str, Any] = {} # <--- NEW
-        self.races: Dict[str, Any] = {} # <--- NEW
+        self.combat_rules: Dict[str, Any] = {} 
+        self.races: Dict[str, Any] = {} 
+        
+        # --- NEW: Lore Assets ---
+        self.deities: Dict[str, Any] = {}
+        self.guilds: Dict[str, Any] = {}
         
         # Room templates
         self.room_templates: Dict[str, Dict[str, Any]] = {}
@@ -73,7 +77,13 @@ class AssetManager:
         self.combat_rules = data_source.fetch_combat_rules()
 
         print("[ASSETS] Loading all races...")
-        self.races = data_source.fetch_all_races() # <--- NEW
+        self.races = data_source.fetch_all_races() 
+        
+        print("[ASSETS] Loading deities...")
+        self.deities = data_source.fetch_all_deities()
+        
+        print("[ASSETS] Loading guilds...")
+        self.guilds = data_source.fetch_all_guilds()
         
         print("[ASSETS] Data loaded.")
 

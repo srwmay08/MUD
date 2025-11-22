@@ -1,0 +1,20 @@
+{
+    "order_of_the_aegis": {
+        "name": "The Order of the Aegis",
+        "type": "abjuration",
+        "description": "A high-end, elite guild of magical bodyguards and security specialists.",
+        "specialization": ["personal_defense", "counter_magic"]
+    },
+    "wardwrights_covenant": {
+        "name": "The Wardwrights' Covenant",
+        "type": "abjuration",
+        "description": "A civic-minded guild focused on large-scale infrastructure and public safety.",
+        "specialization": ["infrastructure", "wards"]
+    },
+    "seekers_of_the_unbroken_seal": {
+        "name": "The Seekers of the Unbroken Seal",
+        "type": "abjuration",
+        "description": "A secretive order dedicated to neutralizing cursed items and unstable portals.",
+        "specialization": ["containment", "banishment"]
+    }
+}

@@ -93,6 +93,11 @@ class Player(GameEntity):
         self.known_maneuvers = self.data.get("known_maneuvers", [])
         self.completed_quests = self.data.get("completed_quests", [])
         self.factions = self.data.get("factions", {})
+        
+        # --- Religion & Lore ---
+        self.deities = self.data.get("deities", []) 
+        self.guilds = self.data.get("guilds", [])   
+        
         self.flags = self.data.get("flags", {})
         self.quest_trip_counter = self.data.get("quest_trip_counter", 0)
         self.visited_rooms = self.data.get("visited_rooms", [])
@@ -463,6 +468,9 @@ class Player(GameEntity):
             "wealth": self.wealth,
             "flags": self.flags,
             "completed_quests": self.completed_quests,
+            "factions": self.factions,
+            "deities": self.deities, 
+            "guilds": self.guilds, 
             "level": self.level,
             "experience": self.experience,
             "unabsorbed_exp": self.unabsorbed_exp,

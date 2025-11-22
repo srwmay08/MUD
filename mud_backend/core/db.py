@@ -298,14 +298,58 @@ def fetch_all_races() -> dict:
     return _load_json_data("races.json")
 
 def fetch_all_spells() -> dict:
-    # Support nested folder structure if needed, or just flat
-    # You likely have mud_backend/data/spells/spells.json
+    """
+    Loads all spell definitions from data/spells/*.json.
+    """
+    spells = {}
+    data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+    
+    # Search recursively for spell files
+    for file_path in glob.glob(os.path.join(data_dir, '**/spells*.json'), recursive=True):
+        # Also check for files specifically named like 'abjuration.json' inside spells folder
+        # Actually, the safest is to load all .json files in the spells directory
+        pass
+
+    # Explicitly look in the spells directory
+    spells_dir = os.path.join(data_dir, 'spells')
+    if os.path.exists(spells_dir):
+        for file_path in glob.glob(os.path.join(spells_dir, '*.json')):
+            with open(file_path, 'r') as f:
+                try:
+                    spell_data = json.load(f)
+                    if isinstance(spell_data, dict):
+                        spells.update(spell_data)
+                except json.JSONDecodeError:
+                    print(f"[DB ERROR] Invalid JSON in spell file: {file_path}")
+    
+    # Backward compatibility if spells.json is in root data
+    root_spells = _load_json_data("spells.json")
+    if root_spells:
+        spells.update(root_spells)
+                
+    return spells
+
+def fetch_all_deities() -> dict:
+    """Loads deity definitions."""
     try:
-        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'spells', 'spells.json')
-        with open(json_path, 'r') as f:
-            return json.load(f)
-    except:
-        return _load_json_data("spells.json")
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lore', 'deities.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"[DB ERROR] Could not load deities: {e}")
+    return {}
+
+def fetch_all_guilds() -> dict:
+    """Loads guild definitions."""
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lore', 'guilds.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"[DB ERROR] Could not load guilds: {e}")
+    return {}
 
 def fetch_combat_rules() -> dict:
     return _load_json_data("combat_rules.json")

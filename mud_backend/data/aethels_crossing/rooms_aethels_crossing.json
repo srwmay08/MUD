@@ -7,6 +7,7 @@
         },
         "is_outdoor": true,
         "objects": [
+            {"name": "A banded iron ring", "item_id": "signet_of_communion", "is_item": "true", "keywords": ["ring"], "verbs": ["get"]},
             {
                 "name": "statue of a merchant-prince",
                 "description": "A verdigris-stained bronze statue of a forgotten merchant-prince, now serving mostly as a perch for gulls. Its base is a common meeting spot for deals both public and private.",

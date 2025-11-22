@@ -296,6 +296,14 @@
         "key_attributes": {"ptp": [], "mtp": ["INT", "INF"], "stp": ["ESS"]}
     },
     {
+        "skill_id": "abjuration",
+        "name": "Abjuration",
+        "category": "Magical Skills",
+        "keywords": ["abjuration", "protecting", "warding"],
+        "base_cost": {"ptp": 0, "mtp": 10, "stp": 5},
+        "key_attributes": {"ptp": [], "mtp": ["LOG", "INT"], "stp": ["WIS", "ESS"]}
+    },
+    {
         "skill_id": "elemental_lore",
         "name": "Elemental Lore",
         "category": "Lore Skills",
