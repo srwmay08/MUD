@@ -6,8 +6,10 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core import combat_system
-from mud_backend import config 
+from mud_backend import config
+from mud_backend.core.registry import VerbRegistry # <--- Fixed: Re-added import
 
+@VerbRegistry.register(["prep", "prepare"]) # <--- Fixed: Re-added decorator
 class Prep(BaseVerb):
     """
     Handles the 'prep' (prepare) command for spells.
@@ -64,6 +66,7 @@ class Prep(BaseVerb):
         mana_cost = spell_data.get("mana_cost", 0)
         spirit_cost = spell_data.get("spirit_cost", 0)
         
+        # Optional: Admins bypass costs? For now, enforcing cost.
         if mana_cost > 0 and self.player.mana < mana_cost:
             self.player.send_message("You do not have enough mana.")
             return
@@ -88,6 +91,7 @@ class Prep(BaseVerb):
         _set_action_roundtime(self.player, 1.0, rt_type="hard")
 
 
+@VerbRegistry.register(["cast", "incant"]) # <--- Fixed: Re-added decorator
 class Cast(BaseVerb):
     """
     Handles the 'cast' command.
