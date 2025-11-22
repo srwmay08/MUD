@@ -323,9 +323,12 @@ def fetch_all_spells() -> dict:
                     print(f"[DB ERROR] Invalid JSON in spell file: {file_path}")
     
     # Backward compatibility if spells.json is in root data
-    root_spells = _load_json_data("spells.json")
-    if root_spells:
-        spells.update(root_spells)
+    # FIX: Check existence before trying to load to avoid error log
+    root_spells_path = os.path.join(data_dir, "spells.json")
+    if os.path.exists(root_spells_path):
+        root_spells = _load_json_data("spells.json")
+        if root_spells:
+            spells.update(root_spells)
                 
     return spells
 

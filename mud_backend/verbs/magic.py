@@ -7,9 +7,9 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core import combat_system
 from mud_backend import config
-from mud_backend.core.registry import VerbRegistry # <--- Fixed: Re-added import
+from mud_backend.core.registry import VerbRegistry
 
-@VerbRegistry.register(["prep", "prepare"]) # <--- Fixed: Re-added decorator
+@VerbRegistry.register(["prep", "prepare"])
 class Prep(BaseVerb):
     """
     Handles the 'prep' (prepare) command for spells.
@@ -66,7 +66,6 @@ class Prep(BaseVerb):
         mana_cost = spell_data.get("mana_cost", 0)
         spirit_cost = spell_data.get("spirit_cost", 0)
         
-        # Optional: Admins bypass costs? For now, enforcing cost.
         if mana_cost > 0 and self.player.mana < mana_cost:
             self.player.send_message("You do not have enough mana.")
             return
@@ -91,7 +90,7 @@ class Prep(BaseVerb):
         _set_action_roundtime(self.player, 1.0, rt_type="hard")
 
 
-@VerbRegistry.register(["cast", "incant"]) # <--- Fixed: Re-added decorator
+@VerbRegistry.register(["cast", "incant"])
 class Cast(BaseVerb):
     """
     Handles the 'cast' command.
@@ -257,11 +256,14 @@ class Cast(BaseVerb):
             self.player.send_message(msg_target.format(target=target_monster.get('name')))
 
             spell_as = skill_bonus * 4 + spell_data.get("bonus_as", 0)
+            
+            # --- FIX: Use empty dict for monster racial mods to prevent crash ---
             spell_ds = get_stat_bonus(
                 target_monster.get("stats", {}).get("WIS", 50), 
                 "WIS", 
-                target_monster.get("race", "Human")
+                {} 
             )
+            
             int_b = get_stat_bonus(self.player.stats.get("INT", 50), "INT", self.player.stat_modifiers)
             wis_b = get_stat_bonus(self.player.stats.get("WIS", 50), "WIS", self.player.stat_modifiers)
             avd = math.trunc((int_b + wis_b) / 2)
