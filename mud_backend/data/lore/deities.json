@@ -4,55 +4,191 @@
         "title": "God of Good & Justice",
         "domains": ["abjuration", "protection", "justice"],
         "conflicts": ["morthos"],
-        "description": "The ultimate protector against the Void. His followers are paladins and guardians."
+        "description": "The ultimate protector against the Void. His followers are paladins and guardians.",
+        "teaches_spells": [
+            "1002", 
+            "1034", 
+            "1050", 
+            "1007", 
+            "1003", 
+            "1009", 
+            "1012", 
+            "1018", 
+            "1021", 
+            "1031", 
+            "1026", 
+            "1024", 
+            "1038", 
+            "1001", 
+            "1023" 
+        ]
     },
     "sentis": {
         "name": "Sentis",
         "title": "The Watcher",
         "domains": ["abjuration", "divination", "vigilance"],
         "conflicts": [],
-        "description": "The ever-watchful eye. Grants wards of alarm and guarding."
+        "description": "The ever-watchful eye. Grants wards of alarm and guarding.",
+        "teaches_spells": [
+            "1001", 
+            "1017", 
+            "1027", 
+            "1022", 
+            "1019", 
+            "1030", 
+            "1016", 
+            "1007", 
+            "1004", 
+            "1008", 
+            "1010", 
+            "1015", 
+            "1044", 
+            "1012", 
+            "1003" 
+        ]
     },
     "thoran": {
         "name": "Thoran",
         "title": "The Loyal Fury",
         "domains": ["abjuration", "war", "loyalty"],
         "conflicts": ["elora"],
-        "description": "Protects others through physical might and shielding."
+        "description": "Protects others through physical might and shielding.",
+        "teaches_spells": [
+            "1011", 
+            "1023", 
+            "1010", 
+            "1020", 
+            "1021", 
+            "1049", 
+            "1007", 
+            "1028", 
+            "1002", 
+            "1040", 
+            "1033", 
+            "1031", 
+            "1006", 
+            "1036", 
+            "1029" 
+        ]
     },
     "aerina": {
         "name": "Aerina",
         "title": "The Silver Shield",
         "domains": ["abjuration", "magic", "elves"],
         "conflicts": ["dark_elf_deities"],
-        "description": "Weaves magical wards for the elven people."
+        "description": "Weaves magical wards for the elven people.",
+        "teaches_spells": [
+            "1008", 
+            "1036", 
+            "1042", 
+            "1045", 
+            "1014", 
+            "1037", 
+            "1033", 
+            "1035", 
+            "1001", 
+            "1004", 
+            "1011", 
+            "1018", 
+            "1047", 
+            "1025", 
+            "1044" 
+        ]
     },
     "verrona": {
         "name": "Verrona",
         "title": "The Hearthmother",
         "domains": ["abjuration", "hearth", "family"],
         "conflicts": [],
-        "description": "Protects the home and family from harm."
+        "description": "Protects the home and family from harm.",
+        "teaches_spells": [
+            "1006", 
+            "1028", 
+            "1016", 
+            "1019", 
+            "1029", 
+            "1013", 
+            "1015", 
+            "1023", 
+            "1007", 
+            "1021", 
+            "1020", 
+            "1010", 
+            "1012", 
+            "1002", 
+            "1032" 
+        ]
     },
     "elora": {
         "name": "Elora",
         "title": "The Dove",
         "domains": ["abjuration", "peace", "healing"],
         "conflicts": ["thoran", "morthos"],
-        "description": "Specializes in Sanctuary spells and preventing violence."
+        "description": "Specializes in Sanctuary spells and preventing violence.",
+        "teaches_spells": [
+            "1013", 
+            "1032", 
+            "1027", 
+            "1012", 
+            "1029", 
+            "1001", 
+            "1002", 
+            "1038", 
+            "1009", 
+            "1016", 
+            "1021", 
+            "1042", 
+            "1046", 
+            "1049", 
+            "1007" 
+        ]
     },
     "morthos": {
         "name": "Morthos",
         "title": "Judge of the Damned",
         "domains": ["abjuration", "death", "order"],
         "conflicts": ["aethelion", "elora"],
-        "description": "Protects against undeath and seals souls to their fate."
+        "description": "Protects against undeath and seals souls to their fate.",
+        "teaches_spells": [
+            "1038", 
+            "1039", 
+            "1041", 
+            "1026", 
+            "1047", 
+            "1008", 
+            "1034", 
+            "1044", 
+            "1035", 
+            "1016", 
+            "1043", 
+            "1040", 
+            "1033", 
+            "1031", 
+            "1011" 
+        ]
     },
     "avron": {
         "name": "Avron",
         "title": "The Little Defender",
         "domains": ["abjuration", "luck", "halflings"],
         "conflicts": [],
-        "description": "Uses small but mighty magical defenses to protect the weak."
+        "description": "Uses small but mighty magical defenses to protect the weak.",
+        "teaches_spells": [
+            "1004", 
+            "1018", 
+            "1014", 
+            "1007", 
+            "1015", 
+            "1005", 
+            "1012", 
+            "1001", 
+            "1048", 
+            "1025", 
+            "1008", 
+            "1003", 
+            "1032", 
+            "1027", 
+            "1037" 
+        ]
     }
 }

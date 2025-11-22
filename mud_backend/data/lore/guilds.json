@@ -2,19 +2,67 @@
     "order_of_the_aegis": {
         "name": "The Order of the Aegis",
         "type": "abjuration",
-        "description": "A high-end, elite guild of magical bodyguards and security specialists.",
-        "specialization": ["personal_defense", "counter_magic"]
+        "description": "A high-end, elite guild of magical bodyguards. Specializes in personal-defense and counter-magic.",
+        "teaches_spells": [
+            "1004", 
+            "1011", 
+            "1036", 
+            "1003", 
+            "1048", 
+            "1049", 
+            "1010", 
+            "1020", 
+            "1021", 
+            "1040", 
+            "1028", 
+            "1044", 
+            "1007", 
+            "1045", 
+            "1033" 
+        ]
     },
     "wardwrights_covenant": {
         "name": "The Wardwrights' Covenant",
         "type": "abjuration",
         "description": "A civic-minded guild focused on large-scale infrastructure and public safety.",
-        "specialization": ["infrastructure", "wards"]
+        "teaches_spells": [
+            "1001", 
+            "1015", 
+            "1017", 
+            "1023", 
+            "1019", 
+            "1030", 
+            "1025", 
+            "1016", 
+            "1028", 
+            "1007", 
+            "1009", 
+            "1012", 
+            "1032", 
+            "1027", 
+            "1022" 
+        ]
     },
     "seekers_of_the_unbroken_seal": {
         "name": "The Seekers of the Unbroken Seal",
         "type": "abjuration",
         "description": "A secretive order dedicated to neutralizing cursed items and unstable portals.",
-        "specialization": ["containment", "banishment"]
+        "teaches_spells": [
+            "1008", 
+            "1034", 
+            "1044", 
+            "1035", 
+            "1026", 
+            "1043", 
+            "1033", 
+            "1039", 
+            "1018", 
+            "1012", 
+            "1038", 
+            "1042", 
+            "1022", 
+            "1037", 
+            "1024" 
+        ]
     }
 }

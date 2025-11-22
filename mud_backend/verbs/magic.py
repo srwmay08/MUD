@@ -11,6 +11,7 @@ from mud_backend import config
 class Prep(BaseVerb):
     """
     Handles the 'prep' (prepare) command for spells.
+    Usage: PREP <spell_id> or PREP <spell_name>
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="cast"):
@@ -22,7 +23,7 @@ class Prep(BaseVerb):
 
         args_str = " ".join(self.args).lower()
         parts = args_str.split()
-        spell_name_input = parts[0]
+        spell_input = parts[0]
         rank = 1
         if len(parts) > 1:
             try: rank = int(parts[1])
@@ -36,10 +37,8 @@ class Prep(BaseVerb):
         
         # --- ADMIN OVERRIDE: Admins can prep any spell in the game ---
         if getattr(self.player, "is_admin", False):
-            # Search entire game library
             source_list = game_spells.keys()
         else:
-            # Search only learned spells
             source_list = self.player.known_spells
         # ------------------------------------------------------------
 
@@ -48,9 +47,10 @@ class Prep(BaseVerb):
             if not s_data:
                 continue
             
-            # Find by exact match or starting keyword in name
-            if (spell_name_input == s_data["name"].lower() or 
-                s_data["name"].lower().startswith(spell_name_input)):
+            # Match by ID (e.g. "1001") OR Name (e.g. "Minor Ward")
+            if (spell_input == str(candidate_id) or 
+                spell_input == s_data["name"].lower() or 
+                s_data["name"].lower().startswith(spell_input)):
                 spell_id = candidate_id
                 spell_display_name = s_data["name"]
                 spell_data = s_data
@@ -64,8 +64,6 @@ class Prep(BaseVerb):
         mana_cost = spell_data.get("mana_cost", 0)
         spirit_cost = spell_data.get("spirit_cost", 0)
         
-        # (Optional: You could also bypass costs for admins here if desired, 
-        # but usually admins just use 'restore' to get mana back)
         if mana_cost > 0 and self.player.mana < mana_cost:
             self.player.send_message("You do not have enough mana.")
             return
@@ -73,7 +71,6 @@ class Prep(BaseVerb):
             self.player.send_message("You do not have enough spirit.")
             return
 
-        # Deduct resources
         self.player.mana -= mana_cost
         self.player.spirit -= spirit_cost
 
@@ -94,6 +91,7 @@ class Prep(BaseVerb):
 class Cast(BaseVerb):
     """
     Handles the 'cast' command.
+    Usage: CAST, CAST <target>, or CAST <spell_id> <target> (to confirm)
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="cast"):
@@ -104,18 +102,26 @@ class Cast(BaseVerb):
             self.player.send_message("You have no spell prepared.")
             return
 
-        # Clear the spell *before* execution
-        self.player.prepared_spell = None
-        
-        # Soft RT for casting
-        _set_action_roundtime(self.player, 3.0, "Cast Roundtime 3 Seconds.", rt_type="soft")
-
         spell_id = prepared_data.get("spell_id")
         spell_data = self.world.game_spells.get(spell_id)
         
         if not spell_data:
             self.player.send_message("The magic fizzles. (Spell data not found)")
+            self.player.prepared_spell = None
             return
+
+        # --- Check if user typed 'CAST 1001' matches prepared ---
+        if self.args:
+            first_arg = self.args[0].lower()
+            if first_arg == str(spell_id):
+                # User typed 'cast 1001' while 1001 is prepped. 
+                # Consume this arg so it's not treated as a target name.
+                self.args.pop(0)
+
+        # Clear prep
+        self.player.prepared_spell = None
+        
+        _set_action_roundtime(self.player, 3.0, "Cast Roundtime 3 Seconds.", rt_type="soft")
 
         # --- ADMIN OVERRIDE: Bypass Level Requirement ---
         req_level = spell_data.get("req_level", 0)
@@ -134,12 +140,9 @@ class Cast(BaseVerb):
         # --- HANDLER: HEAL ---
         if effect_type == "heal":
             base_heal = spell_data.get("base_power", 10)
-            # Scaling: +1 healing per 10 skill bonus
             bonus_heal = math.trunc(skill_bonus / 10)
             heal_amount = base_heal + bonus_heal 
-            
             self.player.hp = min(self.player.max_hp, self.player.hp + heal_amount)
-            
             msg = spell_data.get("cast_message_self", "You cast a healing spell.")
             self.player.send_message(f"{msg} (Healed {heal_amount} HP)")
             return
@@ -151,10 +154,8 @@ class Cast(BaseVerb):
             duration_per_rank = spell_data.get("duration_per_rank", 10)
             duration = max(30, skill_ranks * duration_per_rank)
             
-            # Determine targets
             targets = [self.player]
             if effect_type == "group_buff":
-                # Basic group logic: Add everyone in the same group in the same room
                 if self.player.group_id:
                     group = self.world.get_group(self.player.group_id)
                     if group:
@@ -164,27 +165,17 @@ class Cast(BaseVerb):
                             if member and member.current_room_id == self.player.current_room_id:
                                 targets.append(member)
 
-            # Buff Calculation Logic
             buff_value = base_power
-            
             if buff_type == "ds_bonus":
-                # DS Bonus Calculation
-                # Base + ((Skill - 2) / 3)
                 bonus = base_power + math.floor(max(0, skill_ranks - 2) / 3)
-                # Capped at level
                 buff_value = min(bonus, max(1, self.player.level))
-                
             elif buff_type == "perception_bonus":
                 buff_value = base_power + math.floor(skill_ranks / 2)
-                
             elif buff_type == "armor_padding":
-                # Simplified padding (just stores it, combat system needs to use 'crit_padding' later)
-                buff_value = base_power + math.floor(skill_ranks / 10) # e.g. 5 + 2 = 7 padding
-            
+                buff_value = base_power + math.floor(skill_ranks / 10)
             elif buff_type == "sanctuary":
-                buff_value = 1 # Binary flag
+                buff_value = 1
             
-            # Apply to all targets
             for target in targets:
                 target.buffs[spell_id] = {
                     "type": buff_type,
@@ -203,21 +194,19 @@ class Cast(BaseVerb):
         # --- HANDLER: DISPEL ---
         elif effect_type == "dispel":
             target_type = spell_data.get("target_type", "self")
-            
             target = self.player
+            
             if target_type == "target":
                 if not self.args:
                     self.player.send_message("Dispel who?")
                     return
                 t_name = " ".join(self.args).lower()
-                # Try player first
                 t_obj = self.world.get_player_obj(t_name)
                 if not t_obj or t_obj.current_room_id != self.player.current_room_id:
                     self.player.send_message("Target not found.")
                     return
                 target = t_obj
 
-            # Dispel Logic (Remove random buffs)
             if not target.buffs:
                 self.player.send_message(f"{target.name} has no effects to dispel.")
                 return
@@ -226,7 +215,6 @@ class Cast(BaseVerb):
             removed = 0
             keys_to_remove = []
             
-            # Simple approach: remove the first N keys
             for buff_id in list(target.buffs.keys()):
                 if removed >= max_effects: break
                 keys_to_remove.append(buff_id)
@@ -261,23 +249,15 @@ class Cast(BaseVerb):
                 return
 
             self.player.send_message(f"You gesture at a {target_monster.get('name')}.")
-            
             msg_target = spell_data.get("cast_message_target", "You attack {target} with magic!")
             self.player.send_message(msg_target.format(target=target_monster.get('name')))
 
-            # --- Combat Math ---
-            # AS = (Skill Bonus * 4) + Spell Bonus
-            spell_as = skill_bonus * 4 
-            spell_as += spell_data.get("bonus_as", 0)
-            
-            # DS: Target WIS
+            spell_as = skill_bonus * 4 + spell_data.get("bonus_as", 0)
             spell_ds = get_stat_bonus(
                 target_monster.get("stats", {}).get("WIS", 50), 
                 "WIS", 
                 target_monster.get("race", "Human")
             )
-            
-            # AvD: (Caster INT + Caster WIS) / 2
             int_b = get_stat_bonus(self.player.stats.get("INT", 50), "INT", self.player.stat_modifiers)
             wis_b = get_stat_bonus(self.player.stats.get("WIS", 50), "WIS", self.player.stat_modifiers)
             avd = math.trunc((int_b + wis_b) / 2)
@@ -285,25 +265,19 @@ class Cast(BaseVerb):
             d100_roll = random.randint(1, 100)
             combat_roll_result = (spell_as - spell_ds) + avd + d100_roll
             
-            roll_string = (
-                f"  AS: +{spell_as} vs DS: +{spell_ds} with AvD: +{avd} + d100 roll: +{d100_roll} = +{combat_roll_result}"
-            )
+            roll_string = (f"  AS: +{spell_as} vs DS: +{spell_ds} with AvD: +{avd} + d100 roll: +{d100_roll} = +{combat_roll_result}")
             self.player.send_message(roll_string)
             
             if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
-                # --- Hit! ---
                 endroll_success_margin = combat_roll_result - config.COMBAT_HIT_THRESHOLD
-                
                 damage_factor = spell_data.get("base_damage_factor", 0.25)
                 
-                # --- Bonus Damage vs Family ---
                 bonus_families = spell_data.get("bonus_damage_vs_family", [])
                 target_family = target_monster.get("family", "Unknown")
                 if target_family in bonus_families:
                     damage_factor *= 2.0
                     self.player.send_message(f"The spell flares brightly against the {target_family}!")
-                # -------------------------
-
+                
                 raw_damage = max(1, endroll_success_margin * damage_factor)
                 
                 critical_divisor = 5
@@ -326,7 +300,6 @@ class Cast(BaseVerb):
                 self.player.send_message(f"  ... and hit for {total_damage} points of damage!")
                 self.player.send_message(f"  {crit_msg}")
                 
-                # --- Apply damage ---
                 monster_uid = target_monster.get("uid")
                 new_hp = self.world.modify_monster_hp(
                     monster_uid,
@@ -336,8 +309,6 @@ class Cast(BaseVerb):
                 
                 if new_hp <= 0 or is_fatal:
                     self.player.send_message(f"The {target_monster.get('name')} falls to the ground and dies.")
-                    # Handle death via generic combat system
-                    # (This simplified version just removes it from room)
                     if target_monster in self.room.objects:
                         self.room.objects.remove(target_monster)
                     self.world.set_defeated_monster(monster_uid, { 
@@ -349,12 +320,9 @@ class Cast(BaseVerb):
                     self.world.stop_combat_for_all(self.player.name.lower(), monster_uid)
                 
             else:
-                # --- Miss! ---
                 self.player.send_message(f"The spell dissipates harmlessly near the {target_monster.get('name')}.")
-
             return
             
-        # --- Unknown Effect ---
         else:
             self.player.send_message(f"You cast {spell_data['name']}, but nothing seems to happen. (Effect '{effect_type}' not implemented)")
             return

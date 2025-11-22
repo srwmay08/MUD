@@ -1,5 +1,5 @@
 {
-    "minor_ward": {
+    "1001": {
         "name": "Minor Ward",
         "school": "abjuration",
         "spirit_cost": 5,
@@ -13,7 +13,7 @@
         "cast_message_self": "You whisper a prayer of vigilance. Your senses sharpen.",
         "cast_message_room": "{caster}'s eyes flash with a vigilant light."
     },
-    "shield_of_faith": {
+    "1002": {
         "name": "Shield of Faith",
         "school": "abjuration",
         "spirit_cost": 8,
@@ -27,7 +27,21 @@
         "cast_message_self": "A shimmering, translucent shield manifests around you.",
         "cast_message_room": "A shimmering shield manifests around {caster}."
     },
-    "deflection": {
+    "1003": {
+        "name": "Shield",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 5,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 10,
+        "skill": "abjuration",
+        "duration_per_rank": 10,
+        "req_level": 1,
+        "cast_message_self": "An invisible disk of force hovers before you to deflect attacks.",
+        "cast_message_room": "An invisible disk of force hovers before {caster}."
+    },
+    "1004": {
         "name": "Deflection",
         "school": "abjuration",
         "spirit_cost": 0,
@@ -41,7 +55,21 @@
         "cast_message_self": "The air around you hardens, deflecting incoming blows.",
         "cast_message_room": "The air around {caster} seems to harden and shimmer."
     },
-    "banish_vermin": {
+    "1005": {
+        "name": "Resist Fear",
+        "school": "abjuration",
+        "spirit_cost": 10,
+        "mana_cost": 0,
+        "effect": "buff",
+        "buff_type": "magic_defense",
+        "base_power": 20,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 2,
+        "cast_message_self": "Your heart steels against terror.",
+        "cast_message_room": "{caster} stands taller, their expression grim and determined."
+    },
+    "1006": {
         "name": "Banish Vermin",
         "school": "abjuration",
         "spirit_cost": 15,
@@ -55,7 +83,21 @@
         "cast_message_target": "You point at {target} and command it to BEGONE!",
         "cast_message_room": "{caster} points a finger at {target}, shouting a word of banishment!"
     },
-    "lesser_dispel": {
+    "1007": {
+        "name": "Mage Armor",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 10,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 20,
+        "skill": "abjuration",
+        "duration_per_rank": 30,
+        "req_level": 3,
+        "cast_message_self": "A field of force surrounds you, like invisible armor.",
+        "cast_message_room": "A field of force surrounds {caster}."
+    },
+    "1008": {
         "name": "Lesser Dispel",
         "school": "abjuration",
         "spirit_cost": 10,
@@ -68,7 +110,35 @@
         "cast_message_self": "You feel a cleansing wave wash over you.",
         "cast_message_room": "{caster} shudders as a cleansing wave washes over them."
     },
-    "arcane_aegis": {
+    "1009": {
+        "name": "Protection from Evil",
+        "school": "abjuration",
+        "spirit_cost": 15,
+        "mana_cost": 0,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 20,
+        "skill": "abjuration",
+        "duration_per_rank": 15,
+        "req_level": 4,
+        "cast_message_self": "You glow with a soft, holy light that repels evil.",
+        "cast_message_room": "{caster} glows with a soft, holy light."
+    },
+    "1010": {
+        "name": "Barkskin",
+        "school": "abjuration",
+        "spirit_cost": 15,
+        "mana_cost": 0,
+        "effect": "buff",
+        "buff_type": "armor_padding",
+        "base_power": 8,
+        "skill": "abjuration",
+        "duration_per_rank": 40,
+        "req_level": 4,
+        "cast_message_self": "Your skin toughens, taking on the texture of rough oak.",
+        "cast_message_room": "{caster}'s skin toughens like oak bark."
+    },
+    "1011": {
         "name": "Arcane Aegis",
         "school": "abjuration",
         "spirit_cost": 0,
@@ -82,7 +152,20 @@
         "cast_message_self": "Plates of force interlock over your armor.",
         "cast_message_room": "Plates of translucent force appear over {caster}'s armor."
     },
-    "sanctuary": {
+    "1012": {
+        "name": "Remove Blindness",
+        "school": "abjuration",
+        "spirit_cost": 20,
+        "mana_cost": 0,
+        "effect": "dispel",
+        "target_type": "target",
+        "max_effects": 1,
+        "skill": "abjuration",
+        "req_level": 5,
+        "cast_message_target": "You wash the darkness from {target}'s eyes.",
+        "cast_message_room": "{caster} touches {target}'s eyes, washing away the darkness."
+    },
+    "1013": {
         "name": "Sanctuary",
         "school": "abjuration",
         "spirit_cost": 25,
@@ -96,7 +179,21 @@
         "cast_message_self": "A profound aura of peace surrounds you.",
         "cast_message_room": "A profound aura of peace surrounds {caster}."
     },
-    "resist_elements": {
+    "1014": {
+        "name": "Lightning Reflexes",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 15,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 25,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 6,
+        "cast_message_self": "You feel lighter, ready to dodge at a moment's notice.",
+        "cast_message_room": "{caster} moves with sudden, twitchy speed."
+    },
+    "1015": {
         "name": "Resist Elements",
         "school": "abjuration",
         "spirit_cost": 5,
@@ -110,7 +207,21 @@
         "cast_message_self": "You feel insulated against heat and cold.",
         "cast_message_room": "{caster} is surrounded by a faint, thermal haze."
     },
-    "watchful_eye": {
+    "1016": {
+        "name": "Iron Will",
+        "school": "abjuration",
+        "spirit_cost": 20,
+        "mana_cost": 0,
+        "effect": "buff",
+        "buff_type": "magic_defense",
+        "base_power": 30,
+        "skill": "abjuration",
+        "duration_per_rank": 30,
+        "req_level": 7,
+        "cast_message_self": "Your mind becomes a fortress.",
+        "cast_message_room": "{caster}'s gaze becomes intensely focused."
+    },
+    "1017": {
         "name": "Watchful Eye",
         "school": "abjuration",
         "spirit_cost": 20,
@@ -124,7 +235,77 @@
         "cast_message_self": "You feel a third eye open in your mind, watching for danger.",
         "cast_message_room": "{caster} looks unnervingly alert."
     },
-    "circle_of_protection": {
+    "1018": {
+        "name": "Free Action",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 25,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 25,
+        "skill": "abjuration",
+        "duration_per_rank": 10,
+        "req_level": 8,
+        "cast_message_self": "You feel slippery and unconstrained by magic or web.",
+        "cast_message_room": "{caster} seems to move with supernatural fluidity."
+    },
+    "1019": {
+        "name": "Arcane Lock",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 20,
+        "effect": "buff",
+        "buff_type": "armor_padding",
+        "base_power": 15,
+        "skill": "abjuration",
+        "duration_per_rank": 60,
+        "req_level": 8,
+        "cast_message_self": "You lock your armor's joints with magical force.",
+        "cast_message_room": "{caster}'s armor glows as it locks into place."
+    },
+    "1020": {
+        "name": "Great Fortitude",
+        "school": "abjuration",
+        "spirit_cost": 20,
+        "mana_cost": 0,
+        "effect": "buff",
+        "buff_type": "armor_padding",
+        "base_power": 12,
+        "skill": "abjuration",
+        "duration_per_rank": 30,
+        "req_level": 9,
+        "cast_message_self": "You feel incredibly resilient.",
+        "cast_message_room": "{caster} looks hale and hearty."
+    },
+    "1021": {
+        "name": "Mass Shield",
+        "school": "abjuration",
+        "spirit_cost": 20,
+        "mana_cost": 20,
+        "effect": "group_buff",
+        "buff_type": "ds_bonus",
+        "base_power": 15,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 9,
+        "cast_message_self": "You weave a shield that covers your entire party.",
+        "cast_message_room": "A shield of force extends to cover the group."
+    },
+    "1022": {
+        "name": "Invisibility Purge",
+        "school": "abjuration",
+        "spirit_cost": 20,
+        "mana_cost": 10,
+        "effect": "buff",
+        "buff_type": "perception_bonus",
+        "base_power": 30,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 9,
+        "cast_message_self": "You emit a pulse that highlights the unseen.",
+        "cast_message_room": "{caster} emits a pulse that ripples through the air."
+    },
+    "1023": {
         "name": "Circle of Protection",
         "school": "abjuration",
         "spirit_cost": 40,
@@ -138,7 +319,62 @@
         "cast_message_self": "You project a wide circle of protective energy around your group!",
         "cast_message_room": "{caster} projects a wide circle of protective energy!"
     },
-    "stone_skin": {
+    "1024": {
+        "name": "Elemental Blast",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 40,
+        "effect": "attack",
+        "damage_type": "electricity",
+        "base_damage_factor": 0.55,
+        "skill": "abjuration",
+        "req_level": 10,
+        "bonus_damage_vs_family": ["Elemental"],
+        "cast_message_target": "You unleash a raw blast of disruptive energy at {target}!",
+        "cast_message_room": "{caster} unleashes a blast of disruptive energy at {target}!"
+    },
+    "1025": {
+        "name": "Mass Ward",
+        "school": "abjuration",
+        "spirit_cost": 25,
+        "mana_cost": 25,
+        "effect": "group_buff",
+        "buff_type": "perception_bonus",
+        "base_power": 15,
+        "skill": "abjuration",
+        "duration_per_rank": 30,
+        "req_level": 11,
+        "cast_message_self": "You extend your senses to your allies.",
+        "cast_message_room": "{caster} extends a protective watch over the group."
+    },
+    "1026": {
+        "name": "Binding Strike",
+        "school": "abjuration",
+        "spirit_cost": 30,
+        "mana_cost": 20,
+        "effect": "attack",
+        "damage_type": "crush",
+        "base_damage_factor": 0.5,
+        "skill": "abjuration",
+        "req_level": 11,
+        "cast_message_target": "Bands of force constrict around {target} as you strike!",
+        "cast_message_room": "Bands of force constrict around {target}!"
+    },
+    "1027": {
+        "name": "Silence",
+        "school": "abjuration",
+        "spirit_cost": 30,
+        "mana_cost": 10,
+        "effect": "buff",
+        "buff_type": "sanctuary",
+        "base_power": 1,
+        "skill": "abjuration",
+        "duration_per_rank": 30,
+        "req_level": 11,
+        "cast_message_self": "All sound fades around you. You move in perfect silence.",
+        "cast_message_room": "All sound fades around {caster}."
+    },
+    "1028": {
         "name": "Stone Skin",
         "school": "abjuration",
         "spirit_cost": 10,
@@ -152,7 +388,73 @@
         "cast_message_self": "Your skin turns grey and hard as granite.",
         "cast_message_room": "{caster}'s skin turns grey and hard as granite."
     },
-    "dismissal": {
+    "1029": {
+        "name": "Regenerate",
+        "school": "abjuration",
+        "spirit_cost": 50,
+        "mana_cost": 0,
+        "effect": "heal",
+        "base_power": 100,
+        "skill": "abjuration",
+        "req_level": 12,
+        "cast_message_self": "A massive surge of life energy knits your wounds instantly.",
+        "cast_message_room": "{caster}'s wounds knit together before your eyes."
+    },
+    "1030": {
+        "name": "Glyph of Warding",
+        "school": "abjuration",
+        "spirit_cost": 30,
+        "mana_cost": 0,
+        "effect": "attack",
+        "damage_type": "electricity",
+        "base_damage_factor": 0.6,
+        "skill": "abjuration",
+        "req_level": 12,
+        "cast_message_target": "A glowing glyph appears on {target} and detonates!",
+        "cast_message_room": "A glowing glyph detonates on {target}!"
+    },
+    "1031": {
+        "name": "Divine Wrath",
+        "school": "abjuration",
+        "spirit_cost": 40,
+        "mana_cost": 0,
+        "effect": "attack",
+        "damage_type": "impact",
+        "base_damage_factor": 0.6,
+        "skill": "abjuration",
+        "req_level": 13,
+        "bonus_damage_vs_family": ["Undead", "Demon"],
+        "cast_message_target": "You channel the pure wrath of the gods at {target}!",
+        "cast_message_room": "{caster} strikes {target} with a pillar of divine light!"
+    },
+    "1032": {
+        "name": "Repulsion",
+        "school": "abjuration",
+        "spirit_cost": 40,
+        "mana_cost": 20,
+        "effect": "buff",
+        "buff_type": "sanctuary",
+        "base_power": 1,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 13,
+        "cast_message_self": "You create a field that pushes everything away.",
+        "cast_message_room": "A field of force pushes you away from {caster}."
+    },
+    "1033": {
+        "name": "Dimensional Anchor",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 40,
+        "effect": "attack",
+        "damage_type": "impact",
+        "base_damage_factor": 0.5,
+        "skill": "abjuration",
+        "req_level": 13,
+        "cast_message_target": "A green ray strikes {target}, weighing them down.",
+        "cast_message_room": "A green ray strikes {target}."
+    },
+    "1034": {
         "name": "Dismissal",
         "school": "abjuration",
         "spirit_cost": 30,
@@ -166,7 +468,20 @@
         "cast_message_target": "You command the forces binding {target} to this plane to unravel!",
         "cast_message_room": "{caster} commands the forces binding {target} to unravel!"
     },
-    "spell_shield": {
+    "1035": {
+        "name": "Remove Curse",
+        "school": "abjuration",
+        "spirit_cost": 50,
+        "mana_cost": 50,
+        "effect": "dispel",
+        "target_type": "target",
+        "max_effects": 1,
+        "skill": "abjuration",
+        "req_level": 14,
+        "cast_message_target": "You unweave the dark magic cursing {target}.",
+        "cast_message_room": "{caster} weaves a complex counter-spell over {target}."
+    },
+    "1036": {
         "name": "Spell Shield",
         "school": "abjuration",
         "spirit_cost": 20,
@@ -180,7 +495,21 @@
         "cast_message_self": "Runes of negation orbit your body, ready to absorb magic.",
         "cast_message_room": "Runes of negation orbit {caster}."
     },
-    "death_ward": {
+    "1037": {
+        "name": "True Seeing",
+        "school": "abjuration",
+        "spirit_cost": 30,
+        "mana_cost": 20,
+        "effect": "buff",
+        "buff_type": "perception_bonus",
+        "base_power": 50,
+        "skill": "abjuration",
+        "duration_per_rank": 30,
+        "req_level": 15,
+        "cast_message_self": "You see all things as they truly are.",
+        "cast_message_room": "{caster}'s eyes glow with piercing blue light."
+    },
+    "1038": {
         "name": "Death Ward",
         "school": "abjuration",
         "spirit_cost": 60,
@@ -194,7 +523,77 @@
         "cast_message_self": "A somber grey aura protects your life force.",
         "cast_message_room": "A somber grey aura surrounds {caster}."
     },
-    "greater_dispel": {
+    "1039": {
+        "name": "Undeath to Death",
+        "school": "abjuration",
+        "spirit_cost": 80,
+        "mana_cost": 20,
+        "effect": "attack",
+        "damage_type": "impact",
+        "base_damage_factor": 0.9,
+        "skill": "abjuration",
+        "req_level": 16,
+        "bonus_damage_vs_family": ["Undead"],
+        "cast_message_target": "You command the stolen life force within {target} to disperse!",
+        "cast_message_room": "{caster} commands the life force within {target} to disperse!"
+    },
+    "1040": {
+        "name": "Shield of Law",
+        "school": "abjuration",
+        "spirit_cost": 30,
+        "mana_cost": 20,
+        "effect": "buff",
+        "buff_type": "armor_padding",
+        "base_power": 20,
+        "skill": "abjuration",
+        "duration_per_rank": 30,
+        "req_level": 16,
+        "cast_message_self": "Geometric planes of force reinforce your defenses.",
+        "cast_message_room": "Geometric planes of force surround {caster}."
+    },
+    "1041": {
+        "name": "Cloak of Chaos",
+        "school": "abjuration",
+        "spirit_cost": 20,
+        "mana_cost": 30,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 35,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 16,
+        "cast_message_self": "Your form blurs and shifts chaotically.",
+        "cast_message_room": "{caster}'s form blurs and shifts chaotically."
+    },
+    "1042": {
+        "name": "Mind Blank",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 50,
+        "effect": "buff",
+        "buff_type": "magic_defense",
+        "base_power": 60,
+        "skill": "abjuration",
+        "duration_per_rank": 40,
+        "req_level": 17,
+        "cast_message_self": "Your mind becomes a void, undetectable and untouchable.",
+        "cast_message_room": "{caster}'s presence seems to fade from your mind's eye."
+    },
+    "1043": {
+        "name": "Banishment",
+        "school": "abjuration",
+        "spirit_cost": 60,
+        "mana_cost": 40,
+        "effect": "attack",
+        "damage_type": "vacuum",
+        "base_damage_factor": 0.8,
+        "skill": "abjuration",
+        "req_level": 17,
+        "bonus_damage_vs_family": ["Demon", "Spirit", "Elemental"],
+        "cast_message_target": "You rip a hole in reality to cast {target} out!",
+        "cast_message_room": "{caster} rips a hole in reality to cast {target} out!"
+    },
+    "1044": {
         "name": "Greater Dispel",
         "school": "abjuration",
         "spirit_cost": 40,
@@ -207,7 +606,77 @@
         "cast_message_target": "You rip the magical auras from {target}!",
         "cast_message_room": "{caster} rips the magical auras from {target}!"
     },
-    "aegis_of_the_gods": {
+    "1045": {
+        "name": "Prismatic Shield",
+        "school": "abjuration",
+        "spirit_cost": 20,
+        "mana_cost": 60,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 50,
+        "skill": "abjuration",
+        "duration_per_rank": 15,
+        "req_level": 18,
+        "cast_message_self": "A multi-colored shield of light swirls around you.",
+        "cast_message_room": "A multi-colored shield of light swirls around {caster}."
+    },
+    "1046": {
+        "name": "Holy Aura",
+        "school": "abjuration",
+        "spirit_cost": 50,
+        "mana_cost": 0,
+        "effect": "group_buff",
+        "buff_type": "ds_bonus",
+        "base_power": 25,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 18,
+        "cast_message_self": "A blinding holy light surrounds you and your allies.",
+        "cast_message_room": "A blinding holy light surrounds the group."
+    },
+    "1047": {
+        "name": "Unholy Aura",
+        "school": "abjuration",
+        "spirit_cost": 50,
+        "mana_cost": 0,
+        "effect": "group_buff",
+        "buff_type": "ds_bonus",
+        "base_power": 25,
+        "skill": "abjuration",
+        "duration_per_rank": 20,
+        "req_level": 18,
+        "cast_message_self": "A dark, protective miasma surrounds you and your allies.",
+        "cast_message_room": "A dark miasma surrounds the group."
+    },
+    "1048": {
+        "name": "Foresight",
+        "school": "abjuration",
+        "spirit_cost": 30,
+        "mana_cost": 30,
+        "effect": "buff",
+        "buff_type": "ds_bonus",
+        "base_power": 40,
+        "skill": "abjuration",
+        "duration_per_rank": 10,
+        "req_level": 19,
+        "cast_message_self": "You see attacks before they happen.",
+        "cast_message_room": "{caster}'s eyes glow with prescience."
+    },
+    "1049": {
+        "name": "Wall of Force",
+        "school": "abjuration",
+        "spirit_cost": 0,
+        "mana_cost": 60,
+        "effect": "buff",
+        "buff_type": "sanctuary",
+        "base_power": 1,
+        "skill": "abjuration",
+        "duration_per_rank": 10,
+        "req_level": 19,
+        "cast_message_self": "You conjure an invisible, immovable wall of force.",
+        "cast_message_room": "An invisible wall of force appears around {caster}."
+    },
+    "1050": {
         "name": "Aegis of the Gods",
         "school": "abjuration",
         "spirit_cost": 100,
