@@ -10,7 +10,78 @@ from mud_backend.core import combat_system
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
+def _scan_for_player_targets(world: 'World', monster_data: Dict, room_id: str) -> bool:
+    """
+    Scans the room for players. If an aggressive or KOS player is found,
+    starts combat and returns True.
+    """
+    monster_uid = monster_data.get("uid")
+    if not monster_uid: return False
+    
+    # If already fighting, don't switch targets or spam
+    if world.get_combat_state(monster_uid): return False
+
+    is_aggressive = monster_data.get("is_aggressive", False)
+    
+    # Get all players in the room
+    player_names = world.entity_manager.get_players_in_room(room_id)
+    if not player_names: return False
+
+    target_player = None
+    
+    for p_name in player_names:
+        p_info = world.get_player_info(p_name)
+        if not p_info: continue
+        
+        player_obj = p_info.get("player_obj")
+        if not player_obj: continue
+        
+        # Ignore dead players, admins, or invisible players
+        if player_obj.hp <= 0: continue
+        if player_obj.flags.get("invisible", "off") == "on": continue
+        
+        # Check Aggression Flags
+        is_kos = faction_handler.is_player_kos_to_entity(player_obj, monster_data)
+        
+        if is_aggressive or is_kos:
+            target_player = player_obj
+            break
+    
+    if target_player:
+        current_time = time.time()
+        monster_name = monster_data.get("name", "A creature")
+        
+        # Broadcast attack
+        world.broadcast_to_room(
+            room_id, 
+            f"The {monster_name} attacks {target_player.name}!", 
+            "combat_broadcast"
+        )
+        
+        target_player.send_message(f"The {monster_name} attacks you!")
+        
+        # Calculate Reaction/Roundtime
+        monster_agi = monster_data.get("stats", {}).get("AGI", 50)
+        monster_rt = combat_system.calculate_roundtime(monster_agi)
+        
+        # Set Combat State
+        world.set_combat_state(monster_uid, {
+            "state_type": "combat",
+            "target_id": target_player.name.lower(),
+            "next_action_time": current_time + (monster_rt / 2), # Attps quickly
+            "current_room_id": room_id
+        })
+        
+        # Ensure HP is initialized
+        if world.get_monster_hp(monster_uid) is None:
+            world.set_monster_hp(monster_uid, monster_data.get("max_hp", 50))
+            
+        return True # Combat started
+
+    return False
+
 def _check_and_start_npc_combat(world: 'World', npc: Dict, room_id: str):
+    """Checks for hostile NPCs/Monsters in the room."""
     npc_faction = npc.get("faction")
     if not npc_faction: return 
     npc_uid = npc.get("uid")
@@ -60,8 +131,6 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
     with world.index_lock:
         active_uids = list(world.active_mob_uids)
         
-    # --- FIX: Cooperative Yield during identification ---
-    # If we have 1000 mobs, don't lock the server while iterating them all
     for i, uid in enumerate(active_uids):
         if i % 50 == 0:
             world.socketio.sleep(0) # Yield to heartbeat
@@ -71,21 +140,31 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
             world.unregister_mob(uid)
             continue
             
+        # Check if room is active (has players)
+        # Note: Even if room is 'inactive' in memory, we might want to process logic 
+        # if we want persistence, but for optimization we usually only process active rooms.
         with world.index_lock:
             players_in_room = world.room_players.get(room_id)
-        if not players_in_room: continue 
-            
-        # Note: get_active_room_safe uses the new directory lock (fast)
+        
+        # Optimization: If no players in room, skip AI processing for this mob?
+        # But we need to process wandering into player rooms. 
+        # Let's allow processing but use safe getters.
+        
         room = world.get_active_room_safe(room_id)
         if not room:
-             # Fallback if not active but indexed
-             world.get_room(room_id) # Hydrate
-             room = world.get_active_room_safe(room_id)
+             # If room isn't in active memory, check if players are there (via index)
+             # If players are there, we must hydrate.
+             if players_in_room:
+                 world.get_room(room_id) # Hydrate
+                 room = world.get_active_room_safe(room_id)
+             else:
+                 # No players, room inactive. Skip complex AI to save cycles.
+                 # (You could implement 'background wander' here later)
+                 continue
         
         if not room: continue
 
         monster_obj = None
-        # Use fine-grained room lock
         with room.lock:
             for obj in room.objects:
                 if obj.get("uid") == uid:
@@ -96,11 +175,22 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
             world.unregister_mob(uid)
             continue
 
+        # Hydrate template data if missing
         monster_id = monster_obj.get("monster_id")
         if monster_id and "movement_rules" not in monster_obj:
              template = world.game_monster_templates.get(monster_id)
              if template: monster_obj.update(copy.deepcopy(template))
 
+        # --- AI PRIORITY 1: Combat Check ---
+        # Scan for players to attack
+        started_combat = _scan_for_player_targets(world, monster_obj, room_id)
+        
+        # Scan for NPC enemies (if player check didn't start combat)
+        if not started_combat:
+            _check_and_start_npc_combat(world, monster_obj, room_id)
+
+        # --- AI PRIORITY 2: Movement ---
+        # Only move if not in combat
         if monster_obj.get("movement_rules"):
             in_combat = False
             combat_state = world.get_combat_state(uid)
@@ -112,10 +202,10 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
 
     moved_monster_uids = set()
 
-    # --- FIX: Cooperative Yield during movement ---
+    # Process Movement
     for i, (monster, current_room_id) in enumerate(potential_movers):
         if i % 10 == 0:
-            world.socketio.sleep(0) # Yield to heartbeat
+            world.socketio.sleep(0)
 
         monster_uid = monster.get("uid")
         if monster_uid and monster_uid in moved_monster_uids: continue
@@ -141,7 +231,6 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                     break
             
             if chosen_exit and destination_room_id:
-                # World.move_object_between_rooms handles fine-grained locks safely
                 success = world.move_object_between_rooms(monster, current_room_id, destination_room_id)
                 if success:
                     if monster_uid:
@@ -154,15 +243,15 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                     arr_msg = monster.get("spawn_message_arrival", "A {name} slinks in.").format(name=monster_name)
                     broadcast_callback(destination_room_id, arr_msg, "ambient_move")
                     
-                    _check_and_start_npc_combat(world, monster, destination_room_id)
+                    # Re-scan for targets in new room immediately
+                    if not _scan_for_player_targets(world, monster, destination_room_id):
+                        _check_and_start_npc_combat(world, monster, destination_room_id)
 
 def process_monster_ambient_messages(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
-    # Use Spatial Index to identify relevant rooms
     with world.index_lock:
         active_rooms = [rid for rid, players in world.room_players.items() if players]
     
     for i, room_id in enumerate(active_rooms):
-        # Yield occasionally
         if i % 20 == 0:
             world.socketio.sleep(0)
 

@@ -15,7 +15,7 @@
     },
     "factions": {
         "Townsfolk": {
-            "name": "Townsfolk of Icemule",
+            "name": "Townsfolk of Aethel's Crossing",
             "kos_factions": ["ShadowtuskOrcs"],
             "allies": []
         },
@@ -30,7 +30,7 @@
         },
         "Creatures": {
             "name": "Wild Creatures",
-            "kos_factions": [],
+            "kos_factions": ["Human", "Wildborn", "High_Elf", "Dwarf", "Gnome", "Halfling", "Dark_Elf", "Dark_Dwarf", "Troll", "Goblin"],
             "allies": [],
             "on_kill": {}
         }
