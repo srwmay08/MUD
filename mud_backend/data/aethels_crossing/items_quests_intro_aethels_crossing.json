@@ -10,6 +10,17 @@
     ],
     "base_value": 0
   },
+  "scrawled_note": {
+    "name": "a scrawled note",
+    "description": "A jagged piece of parchment nailed to a post. It reads: 'You're awake. The Guildmaster wants a word. Don't keep him waiting in the <span class='keyword' data-command='out'>Hub</span>.'",
+    "item_type": "quest",
+    "keywords": [
+      "note",
+      "scrawled note",
+      "parchment"
+    ],
+    "base_value": 0
+  },
   "lodging_tax_payment": {
     "name": "a lodging tax payment",
     "description": "A sealed envelope addressed to the Town Clerk. It feels like it contains a few coins.",

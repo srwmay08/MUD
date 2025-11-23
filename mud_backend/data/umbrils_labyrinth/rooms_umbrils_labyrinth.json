@@ -1,0 +1,180 @@
+[
+    {
+        "room_id": "umbril_hostel",
+        "name": "The Shadowed Hostel",
+        "x": 0,
+        "y": 0,
+        "z": -2,
+        "interior_id": "umbril_guild",
+        "description": {
+            "default": "A cramped, dank dormitory carved directly into the sewer walls. Hammocks strung from rusted chains fill the room, most occupied by sleeping figures who keep their weapons close. The air is thick with the smell of unwashed bodies and damp stone. A rough archway leads OUT to the guild hub."
+        },
+        "objects": [
+            {
+                "name": "hammock",
+                "description": "A filthy canvas hammock strung from rusted chains.",
+                "keywords": ["hammock", "bed"],
+                "verbs": ["look", "examine"]
+            }
+        ],
+        "hidden_objects": [
+            {
+                "name": "a scrawled note",
+                "item_id": "scrawled_note",
+                "description": "A piece of parchment nailed to a post with a dagger.",
+                "perception_dc": 1,
+                "keywords": ["note", "parchment", "scrawled note"],
+                "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                "is_item": true
+            }
+        ],
+        "exits": {
+            "out": "umbril_hub"
+        }
+    },
+    {
+        "room_id": "umbril_hub",
+        "name": "The Broken Sextant - Undercity Hub",
+        "x": 0,
+        "y": -1,
+        "z": -2,
+        "interior_id": "umbril_guild",
+        "description": {
+            "default": "The beating heart of the city's criminal underbelly. Torches burn with a smokeless, magical grey fire, illuminating a large natural cavern. Thieves, smugglers, and outcasts of all races mingle here, trading secrets and stolen goods. A large tunnel leads UP towards the sewers, and a rough archway leads back to the hostel."
+        },
+        "objects": [
+            {
+                "name": "a guild master",
+                "description": "A shadowy figure in dark leather armor, watching the room with calculating eyes.",
+                "keywords": ["master", "guild master", "figure"],
+                "verbs": ["look", "talk to", "examine"],
+                "is_npc": true
+            }
+        ],
+        "exits": {
+            "up": "well_bottom",
+            "in": "umbril_hostel"
+        }
+    },
+    {
+        "room_id": "well_bottom",
+        "name": "The Bottom of a Sewage Cistern",
+        "x": 0,
+        "y": 0,
+        "z": -1,
+        "description": {
+            "default": "It is dark and cramped down here. The air is foul and smells of sewage. Dark passages lead east and west. A hidden grate leads DOWN to the guild hub. A rusted iron ladder leads UP to the surface."
+        },
+        "objects": [
+            {
+                "name": "iron ladder",
+                "description": "A rusted iron ladder leads back up to a dark alley in Aethel's Crossing.",
+                "verbs": ["CLIMB"],
+                "target_room": "ts_southeast",
+                "keywords": ["ladder", "iron ladder"]
+            },
+            {
+                "name": "grate",
+                "description": "A heavy iron grate covering a hole in the floor. It looks like it can be opened.",
+                "verbs": ["open", "enter", "climb"],
+                "target_room": "umbril_hub",
+                "keywords": ["grate", "hole"]
+            }
+        ],
+        "exits": {
+            "north": "flooded_tunnel",
+            "east": "cave_east",
+            "west": "cave_west",
+            "down": "umbril_hub"
+        }
+    },
+    {
+        "room_id": "cave_east",
+        "name": "A Dark Sewer Tunnel",
+        "x": 1,
+        "y": 0,
+        "z": -1,
+        "description": {
+            "default": "The damp, foul smell from the cistern intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
+        },
+        "objects": [
+            {
+                "name": "stirring monster",
+                "description": "A mass of shadows and wet fur, it huffs angrily.",
+                "verbs": ["look", "attack"],
+                "perception_dc": 15,
+                "is_monster": true,
+                "monster_id": "well_bottom_stirring_monster"
+            }
+        ],
+        "exits": {
+            "west": "well_bottom"
+        }
+    },
+    {
+        "room_id": "cave_west",
+        "name": "A Dark Sewer Tunnel",
+        "x": -1,
+        "y": 0,
+        "z": -1,
+        "description": {
+            "default": "The damp, foul smell from the cistern intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
+        },
+        "objects": [
+            {
+                "name": "stirring monster",
+                "description": "A mass of shadows and wet fur, it huffs angrily.",
+                "verbs": ["look", "attack"],
+                "perception_dc": 15,
+                "is_monster": true,
+                "monster_id": "well_bottom_stirring_monster"
+            }
+        ],
+        "exits": {
+            "east": "well_bottom"
+        }
+    },
+    {
+        "room_id": "flooded_tunnel",
+        "name": "Flooded Tunnel",
+        "x": 0,
+        "y": 1,
+        "z": -1,
+        "description": {
+            "default": "You wade through knee-deep, foul-smelling water. The tunnel, built of ancient, crumbling brick, continues north. The main cistern is to the south."
+        },
+        "objects": [
+            {
+                "name": "murky water",
+                "description": "Filthy water flows slowly through the tunnel. You can't see the bottom.",
+                "keywords": ["water", "murky water"],
+                "verbs": ["look", "examine"]
+            }
+        ],
+        "exits": {
+            "south": "well_bottom",
+            "north": "forgotten_crypt"
+        }
+    },
+    {
+        "room_id": "forgotten_crypt",
+        "name": "Forgotten Crypt",
+        "x": 0,
+        "y": 2,
+        "z": -1,
+        "description": {
+            "default": "The tunnel opens into a small, domed chamber that was once a crypt. Stone sarcophagi line the walls, their lids askew. The air is heavy with the smell of dust and decay. The only exit is the flooded tunnel to the south."
+        },
+        "objects": [
+            {
+                "name": "stone sarcophagus",
+                "description": "An ancient stone sarcophagus. Its lid has been pushed aside, revealing only darkness within.",
+                "keywords": ["sarcophagus", "stone sarcophagus", "crypt"],
+                "verbs": ["look", "examine", "investigate"]
+            }
+        ],
+        "exits": {
+            "south": "flooded_tunnel"
+        }
+    }
+]

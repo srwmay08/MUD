@@ -1,194 +1,1002 @@
 {
     "aethelion": {
         "name": "Aethelion",
-        "title": "God of Good & Justice",
-        "domains": ["abjuration", "protection", "justice"],
-        "conflicts": ["morthos"],
-        "description": "The ultimate protector against the Void. His followers are paladins and guardians.",
+        "title": "The Celestial Architect",
+        "domains": ["abjuration", "protection", "justice", "draconic"],
+        "conflicts": ["morthos", "tenebrax"],
+        "description": "Draconic God of Good & Justice. The ultimate protector against the Void.",
         "teaches_spells": [
-            "1002", 
-            "1034", 
-            "1050", 
-            "1007", 
-            "1003", 
-            "1009", 
-            "1012", 
-            "1018", 
-            "1021", 
-            "1031", 
-            "1026", 
-            "1024", 
-            "1038", 
-            "1001", 
-            "1023" 
+            "1002", "1034", "1050", "1007", "1003", "1009", "1012", "1018", 
+            "1021", "1031", "1026", "1024", "1038", "1001", "1023"
         ]
+    },
+    "tenebrax": {
+        "name": "Tenebrax",
+        "title": "The Five-Mawed Void",
+        "domains": ["evil", "ambition", "draconic"],
+        "conflicts": ["aethelion"],
+        "description": "Draconic Goddess of Evil & Ambition.",
+        "teaches_spells": []
+    },
+    "aurelion": {
+        "name": "Aurelion",
+        "title": "Keeper of the Sun",
+        "domains": ["sun", "order"],
+        "conflicts": [],
+        "description": "God of the Sun.",
+        "teaches_spells": []
+    },
+    "keryth": {
+        "name": "Keryth",
+        "title": "Lord of Spells",
+        "domains": ["magic", "wizardry"],
+        "conflicts": [],
+        "description": "God of Wizardry.",
+        "teaches_spells": []
+    },
+    "kallistos": {
+        "name": "Kallistos",
+        "title": "The Scribe",
+        "domains": ["writing", "knowledge"],
+        "conflicts": [],
+        "description": "God of Writing.",
+        "teaches_spells": []
+    },
+    "volund": {
+        "name": "Volund",
+        "title": "Lord of All Smiths",
+        "domains": ["craft", "smithing"],
+        "conflicts": [],
+        "description": "God of Craft.",
+        "teaches_spells": []
     },
     "sentis": {
         "name": "Sentis",
         "title": "The Watcher",
         "domains": ["abjuration", "divination", "vigilance"],
         "conflicts": [],
-        "description": "The ever-watchful eye. Grants wards of alarm and guarding.",
+        "description": "God of Watchfulness.",
         "teaches_spells": [
-            "1001", 
-            "1017", 
-            "1027", 
-            "1022", 
-            "1019", 
-            "1030", 
-            "1016", 
-            "1007", 
-            "1004", 
-            "1008", 
-            "1010", 
-            "1015", 
-            "1044", 
-            "1012", 
-            "1003" 
+            "1001", "1017", "1027", "1022", "1019", "1030", "1016", "1007", 
+            "1004", "1008", "1010", "1015", "1044", "1012", "1003"
         ]
+    },
+    "tauron": {
+        "name": "Tauron",
+        "title": "Lord on the Rack",
+        "domains": ["endurance", "suffering"],
+        "conflicts": [],
+        "description": "God of Endurance.",
+        "teaches_spells": []
+    },
+    "lucian": {
+        "name": "Lucian",
+        "title": "The Morninglord",
+        "domains": ["dawn", "light"],
+        "conflicts": [],
+        "description": "God of the Dawn.",
+        "teaches_spells": []
+    },
+    "epistis": {
+        "name": "Epistis",
+        "title": "The Binder",
+        "domains": ["knowledge"],
+        "conflicts": [],
+        "description": "God of Knowledge.",
+        "teaches_spells": []
+    },
+    "rystra": {
+        "name": "Rystra",
+        "title": "Grandmaster of Strategy",
+        "domains": ["strategy", "war"],
+        "conflicts": [],
+        "description": "Goddess of Strategy.",
+        "teaches_spells": []
+    },
+    "destira": {
+        "name": "Destira",
+        "title": "He of the Third Eye",
+        "domains": ["fate", "divination"],
+        "conflicts": [],
+        "description": "God of Fate.",
+        "teaches_spells": []
     },
     "thoran": {
         "name": "Thoran",
         "title": "The Loyal Fury",
-        "domains": ["abjuration", "war", "loyalty"],
+        "domains": ["abjuration", "war", "loyalty", "courage"],
         "conflicts": ["elora"],
-        "description": "Protects others through physical might and shielding.",
+        "description": "God of Courage.",
         "teaches_spells": [
-            "1011", 
-            "1023", 
-            "1010", 
-            "1020", 
-            "1021", 
-            "1049", 
-            "1007", 
-            "1028", 
-            "1002", 
-            "1040", 
-            "1033", 
-            "1031", 
-            "1006", 
-            "1036", 
-            "1029" 
+            "1011", "1023", "1010", "1020", "1021", "1049", "1007", "1028", 
+            "1002", "1040", "1033", "1031", "1006", "1036", "1029"
         ]
     },
-    "aerina": {
-        "name": "Aerina",
-        "title": "The Silver Shield",
-        "domains": ["abjuration", "magic", "elves"],
-        "conflicts": ["dark_elf_deities"],
-        "description": "Weaves magical wards for the elven people.",
-        "teaches_spells": [
-            "1008", 
-            "1036", 
-            "1042", 
-            "1045", 
-            "1014", 
-            "1037", 
-            "1033", 
-            "1035", 
-            "1001", 
-            "1004", 
-            "1011", 
-            "1018", 
-            "1047", 
-            "1025", 
-            "1044" 
-        ]
-    },
-    "verrona": {
-        "name": "Verrona",
-        "title": "The Hearthmother",
-        "domains": ["abjuration", "hearth", "family"],
+    "valerus": {
+        "name": "Valerus",
+        "title": "Grimjaws",
+        "domains": ["justice", "war"],
         "conflicts": [],
-        "description": "Protects the home and family from harm.",
-        "teaches_spells": [
-            "1006", 
-            "1028", 
-            "1016", 
-            "1019", 
-            "1029", 
-            "1013", 
-            "1015", 
-            "1023", 
-            "1007", 
-            "1021", 
-            "1020", 
-            "1010", 
-            "1012", 
-            "1002", 
-            "1032" 
-        ]
+        "description": "God of Justice & War.",
+        "teaches_spells": []
+    },
+    "aurea": {
+        "name": "Aurea",
+        "title": "The Golden Lady",
+        "domains": ["trade", "wealth"],
+        "conflicts": [],
+        "description": "Goddess of Trade.",
+        "teaches_spells": []
+    },
+    "fimbul": {
+        "name": "Fimbul",
+        "title": "The Frostmaiden",
+        "domains": ["winter", "cold"],
+        "conflicts": [],
+        "description": "Goddess of Winter.",
+        "teaches_spells": []
+    },
+    "nemion": {
+        "name": "Nemion",
+        "title": "The Doombringer",
+        "domains": ["revenge"],
+        "conflicts": [],
+        "description": "God of Revenge.",
+        "teaches_spells": []
+    },
+    "morwena": {
+        "name": "Morwena",
+        "title": "The Lady of the Mists",
+        "domains": ["illusion", "trickery"],
+        "conflicts": [],
+        "description": "Goddess of Illusion.",
+        "teaches_spells": []
+    },
+    "karna": {
+        "name": "Karna",
+        "title": "Lord of Bones",
+        "domains": ["death", "undead"],
+        "conflicts": [],
+        "description": "God of Death.",
+        "teaches_spells": []
+    },
+    "noxira": {
+        "name": "Nox'ira",
+        "title": "Mistress of the Night",
+        "domains": ["darkness", "loss"],
+        "conflicts": [],
+        "description": "Goddess of Loss.",
+        "teaches_spells": []
+    },
+    "vipra": {
+        "name": "Vipra",
+        "title": "Mother of Plagues",
+        "domains": ["poison", "disease"],
+        "conflicts": [],
+        "description": "Goddess of Poison and Disease.",
+        "teaches_spells": []
+    },
+    "talok": {
+        "name": "Talok",
+        "title": "The Destroyer",
+        "domains": ["storms", "destruction"],
+        "conflicts": [],
+        "description": "God of Storms.",
+        "teaches_spells": []
+    },
+    "levia": {
+        "name": "Levia",
+        "title": "Queen of Depths",
+        "domains": ["sea", "water"],
+        "conflicts": [],
+        "description": "Goddess of the Sea.",
+        "teaches_spells": []
+    },
+    "gaea": {
+        "name": "Gaea",
+        "title": "The World-Soul",
+        "domains": ["nature"],
+        "conflicts": [],
+        "description": "God of Wild Nature.",
+        "teaches_spells": []
+    },
+    "demeria": {
+        "name": "Demeria",
+        "title": "The Great Mother",
+        "domains": ["agriculture", "life"],
+        "conflicts": [],
+        "description": "Goddess of Agriculture.",
+        "teaches_spells": []
     },
     "elora": {
         "name": "Elora",
-        "title": "The Dove",
+        "title": "Mother of Green Groves",
         "domains": ["abjuration", "peace", "healing"],
         "conflicts": ["thoran", "morthos"],
-        "description": "Specializes in Sanctuary spells and preventing violence.",
+        "description": "Goddess of Peace.",
         "teaches_spells": [
-            "1013", 
-            "1032", 
-            "1027", 
-            "1012", 
-            "1029", 
-            "1001", 
-            "1002", 
-            "1038", 
-            "1009", 
-            "1016", 
-            "1021", 
-            "1042", 
-            "1046", 
-            "1049", 
-            "1007" 
+            "1013", "1032", "1027", "1012", "1029", "1001", "1002", "1038", 
+            "1009", "1016", "1021", "1042", "1046", "1049", "1007"
         ]
+    },
+    "cernun": {
+        "name": "Cernun",
+        "title": "The Horned Lord",
+        "domains": ["tracking", "nature"],
+        "conflicts": [],
+        "description": "God of Tracking.",
+        "teaches_spells": []
+    },
+    "calyra": {
+        "name": "Calyra",
+        "title": "Our Lady of Joy",
+        "domains": ["joy"],
+        "conflicts": [],
+        "description": "Goddess of Joy.",
+        "teaches_spells": []
+    },
+    "rugar": {
+        "name": "Rugar",
+        "title": "The Beastlord",
+        "domains": ["hunt", "beasts"],
+        "conflicts": [],
+        "description": "God of the Hunt.",
+        "teaches_spells": []
+    },
+    "verdessa": {
+        "name": "Verdessa",
+        "title": "Lady of the Wood",
+        "domains": ["forests"],
+        "conflicts": [],
+        "description": "Goddess of Forests.",
+        "teaches_spells": []
+    },
+    "lyron": {
+        "name": "Lyron",
+        "title": "Lord of All Songs",
+        "domains": ["music", "poetry"],
+        "conflicts": [],
+        "description": "God of Poetry and Song.",
+        "teaches_spells": []
+    },
+    "venora": {
+        "name": "Venora",
+        "title": "The Firehair",
+        "domains": ["love", "beauty"],
+        "conflicts": [],
+        "description": "Goddess of Love & Beauty.",
+        "teaches_spells": []
+    },
+    "styrm": {
+        "name": "Styrm",
+        "title": "Wave Master",
+        "domains": ["sea", "sailors"],
+        "conflicts": [],
+        "description": "God of Sailors.",
+        "teaches_spells": []
+    },
+    "vesperus": {
+        "name": "Vesperus",
+        "title": "Scribe of the End",
+        "domains": ["death", "knowledge"],
+        "conflicts": [],
+        "description": "Scribe of the Dead.",
+        "teaches_spells": []
     },
     "morthos": {
         "name": "Morthos",
         "title": "Judge of the Damned",
         "domains": ["abjuration", "death", "order"],
         "conflicts": ["aethelion", "elora"],
-        "description": "Protects against undeath and seals souls to their fate.",
+        "description": "God of Death.",
         "teaches_spells": [
-            "1038", 
-            "1039", 
-            "1041", 
-            "1026", 
-            "1047", 
-            "1008", 
-            "1034", 
-            "1044", 
-            "1035", 
-            "1016", 
-            "1043", 
-            "1040", 
-            "1033", 
-            "1031", 
-            "1011" 
+            "1038", "1039", "1041", "1026", "1047", "1008", "1034", "1044", 
+            "1035", "1016", "1043", "1040", "1033", "1031", "1011"
         ]
+    },
+    "mytha": {
+        "name": "Mytha",
+        "title": "Mother of All Magic",
+        "domains": ["magic"],
+        "conflicts": [],
+        "description": "Goddess of Magic.",
+        "teaches_spells": []
+    },
+    "yselda": {
+        "name": "Yselda",
+        "title": "The Moonmaiden",
+        "domains": ["moon"],
+        "conflicts": [],
+        "description": "Goddess of the Moon.",
+        "teaches_spells": []
+    },
+    "proel": {
+        "name": "Proel",
+        "title": "The Foehammer",
+        "domains": ["war"],
+        "conflicts": [],
+        "description": "God of War.",
+        "teaches_spells": []
+    },
+    "tychon": {
+        "name": "Tychon",
+        "title": "Lady of Luck",
+        "domains": ["luck"],
+        "conflicts": [],
+        "description": "Goddess of Luck.",
+        "teaches_spells": []
+    },
+    "caelus": {
+        "name": "Caelus",
+        "title": "The Starlight Weaver",
+        "domains": ["magic", "art", "elves"],
+        "conflicts": [],
+        "description": "The First God of Art & Magic.",
+        "teaches_spells": []
+    },
+    "aerina": {
+        "name": "Aerina",
+        "title": "Queen of Arvandor",
+        "domains": ["abjuration", "magic", "elves", "wisdom"],
+        "conflicts": ["dark_elf_deities"],
+        "description": "Goddess of Wisdom & Protection.",
+        "teaches_spells": [
+            "1008", "1036", "1042", "1045", "1014", "1037", "1033", "1035", 
+            "1001", "1004", "1011", "1018", "1047", "1025", "1044"
+        ]
+    },
+    "aleria": {
+        "name": "Aleria",
+        "title": "Queen of Avariel",
+        "domains": ["sky", "air"],
+        "conflicts": [],
+        "description": "Goddess of the Sky.",
+        "teaches_spells": []
+    },
+    "elerion": {
+        "name": "Elerion",
+        "title": "The Dolphin Prince",
+        "domains": ["sea", "elves"],
+        "conflicts": [],
+        "description": "God of the Sea.",
+        "teaches_spells": []
+    },
+    "sylvix": {
+        "name": "Sylvix",
+        "title": "The Trickster",
+        "domains": ["mischief", "trickery"],
+        "conflicts": [],
+        "description": "God of Mischief.",
+        "teaches_spells": []
+    },
+    "faelar": {
+        "name": "Faelar",
+        "title": "The Lone Wolf",
+        "domains": ["outcasts", "nature"],
+        "conflicts": [],
+        "description": "God of Outcasts.",
+        "teaches_spells": []
+    },
+    "hanalia": {
+        "name": "Hanalia",
+        "title": "The Winsome Rose",
+        "domains": ["love", "beauty"],
+        "conflicts": [],
+        "description": "Goddess of Love & Beauty.",
+        "teaches_spells": []
+    },
+    "chronar": {
+        "name": "Chronar",
+        "title": "Lord of the Continuum",
+        "domains": ["time", "history"],
+        "conflicts": [],
+        "description": "God of Time, History & Philosophy.",
+        "teaches_spells": []
+    },
+    "erathis": {
+        "name": "Erathis",
+        "title": "The Leaflord",
+        "domains": ["nature"],
+        "conflicts": [],
+        "description": "God of Nature.",
+        "teaches_spells": []
+    },
+    "sephira": {
+        "name": "Sephira",
+        "title": "Lady of Dreams",
+        "domains": ["dreams", "travel", "divination"],
+        "conflicts": [],
+        "description": "Goddess of Divination, Dreams, Travel.",
+        "teaches_spells": []
+    },
+    "shevros": {
+        "name": "Shevros",
+        "title": "The Black Archer",
+        "domains": ["vengeance"],
+        "conflicts": [],
+        "description": "God of Vengeance.",
+        "teaches_spells": []
+    },
+    "solan": {
+        "name": "Solan",
+        "title": "The Hunter",
+        "domains": ["archery", "hunt"],
+        "conflicts": [],
+        "description": "God of Archery.",
+        "teaches_spells": []
+    },
+    "umbraxis": {
+        "name": "Umbraxis",
+        "title": "The Eclipsing Eye",
+        "domains": ["shadow", "drow", "ambition"],
+        "conflicts": [],
+        "description": "Goddess of Ambition & Shadow.",
+        "teaches_spells": []
+    },
+    "astraea": {
+        "name": "Astraea",
+        "title": "The Dark Dancer",
+        "domains": ["moon", "song", "drow"],
+        "conflicts": [],
+        "description": "Goddess of Song and Moonlight.",
+        "teaches_spells": []
+    },
+    "kiarana": {
+        "name": "Kiarana",
+        "title": "The Revenancer",
+        "domains": ["necromancy", "undead"],
+        "conflicts": [],
+        "description": "Goddess of Necromancy.",
+        "teaches_spells": []
+    },
+    "tel_vectus": {
+        "name": "Tel-Vectus",
+        "title": "The Spider Who Waits",
+        "domains": ["war", "drow"],
+        "conflicts": [],
+        "description": "God of Warriors.",
+        "teaches_spells": []
+    },
+    "vhaer": {
+        "name": "Vhaer",
+        "title": "The Shadow",
+        "domains": ["thievery", "shadow"],
+        "conflicts": [],
+        "description": "God of Thieves.",
+        "teaches_spells": []
+    },
+    "bar_modan": {
+        "name": "Bar-Modan",
+        "title": "The Soul Forger",
+        "domains": ["creation", "dwarves"],
+        "conflicts": [],
+        "description": "God of Creation.",
+        "teaches_spells": []
+    },
+    "bar_abbas": {
+        "name": "Bar-Abbas",
+        "title": "The Avaricious",
+        "domains": ["greed"],
+        "conflicts": [],
+        "description": "God of Greed.",
+        "teaches_spells": []
+    },
+    "verrona": {
+        "name": "Verrona",
+        "title": "The Revered Mother",
+        "domains": ["abjuration", "hearth", "family", "home"],
+        "conflicts": [],
+        "description": "Goddess of Hearth & Home.",
+        "teaches_spells": [
+            "1006", "1028", "1016", "1019", "1029", "1013", "1015", "1023", 
+            "1007", "1021", "1020", "1010", "1012", "1002", "1032"
+        ]
+    },
+    "klangor": {
+        "name": "Klangor",
+        "title": "The Goblinbane",
+        "domains": ["war", "dwarves"],
+        "conflicts": [],
+        "description": "God of War.",
+        "teaches_spells": []
+    },
+    "dugmaron": {
+        "name": "Dugmaron",
+        "title": "The Tinkerer",
+        "domains": ["discovery", "invention"],
+        "conflicts": [],
+        "description": "God of Discovery.",
+        "teaches_spells": []
+    },
+    "dumathen": {
+        "name": "Dumathen",
+        "title": "The Mine Keeper",
+        "domains": ["secrets", "mining"],
+        "conflicts": [],
+        "description": "God of Buried Secrets.",
+        "teaches_spells": []
+    },
+    "gormul": {
+        "name": "Gormul",
+        "title": "Lord of the Bronze Mask",
+        "domains": ["vigilance"],
+        "conflicts": [],
+        "description": "God of Vigilance.",
+        "teaches_spells": []
+    },
+    "haelax": {
+        "name": "Haelax",
+        "title": "The Luckmaiden",
+        "domains": ["war", "luck"],
+        "conflicts": [],
+        "description": "Goddess of War Luck.",
+        "teaches_spells": []
+    },
+    "marthon": {
+        "name": "Marthon",
+        "title": "God of Wanderers",
+        "domains": ["travel"],
+        "conflicts": [],
+        "description": "God of Wanderers.",
+        "teaches_spells": []
+    },
+    "shara_la": {
+        "name": "Shara-la",
+        "title": "The Shinning Dancer",
+        "domains": ["healing"],
+        "conflicts": [],
+        "description": "Goddess of Healing.",
+        "teaches_spells": []
+    },
+    "vergad": {
+        "name": "Vergad",
+        "title": "The Laughter",
+        "domains": ["luck", "wealth"],
+        "conflicts": [],
+        "description": "God of Luck & Wealth.",
+        "teaches_spells": []
+    },
+    "dur_ignis": {
+        "name": "Dur-Ignis",
+        "title": "The Exile",
+        "domains": ["fire", "craft", "duergar"],
+        "conflicts": [],
+        "description": "God of Magma & Chaotic Craft.",
+        "teaches_spells": []
+    },
+    "dur_duerra": {
+        "name": "Dur-Duerra",
+        "title": "Queen of the Axe",
+        "domains": ["war", "duergar"],
+        "conflicts": [],
+        "description": "Goddess of Conquest.",
+        "teaches_spells": []
+    },
+    "elarra": {
+        "name": "Elarra",
+        "title": "Goddess of Fertility & Protection",
+        "domains": ["fertility", "protection", "halflings"],
+        "conflicts": [],
+        "description": "Goddess of Fertility & Protection.",
+        "teaches_spells": []
     },
     "avron": {
         "name": "Avron",
-        "title": "The Little Defender",
-        "domains": ["abjuration", "luck", "halflings"],
+        "title": "The Defender",
+        "domains": ["abjuration", "luck", "halflings", "vigilance", "war"],
         "conflicts": [],
-        "description": "Uses small but mighty magical defenses to protect the weak.",
+        "description": "God of Vigilance & War.",
         "teaches_spells": [
-            "1004", 
-            "1018", 
-            "1014", 
-            "1007", 
-            "1015", 
-            "1005", 
-            "1012", 
-            "1001", 
-            "1048", 
-            "1025", 
-            "1008", 
-            "1003", 
-            "1032", 
-            "1027", 
-            "1037" 
+            "1004", "1018", "1014", "1007", "1015", "1005", "1012", "1001", 
+            "1048", "1025", "1008", "1003", "1032", "1027", "1037"
         ]
+    },
+    "baris": {
+        "name": "Baris",
+        "title": "The Scamp",
+        "domains": ["thievery", "adventure"],
+        "conflicts": [],
+        "description": "God of Thievery & Adventure.",
+        "teaches_spells": []
+    },
+    "cyrella": {
+        "name": "Cyrella",
+        "title": "The Faithful",
+        "domains": ["hearth"],
+        "conflicts": [],
+        "description": "Goddess of Hearth & Home.",
+        "teaches_spells": []
+    },
+    "shyla": {
+        "name": "Shyla",
+        "title": "Green Sister",
+        "domains": ["agriculture", "weather"],
+        "conflicts": [],
+        "description": "Goddess of Agriculture & Weather.",
+        "teaches_spells": []
+    },
+    "urogal": {
+        "name": "Urogal",
+        "title": "The Shaper",
+        "domains": ["earth", "death"],
+        "conflicts": [],
+        "description": "God of Earth & Death.",
+        "teaches_spells": []
+    },
+    "hrogar": {
+        "name": "Hrogar",
+        "title": "The One-Eyed",
+        "domains": ["war", "orcs"],
+        "conflicts": [],
+        "description": "God of War.",
+        "teaches_spells": []
+    },
+    "groma": {
+        "name": "Groma",
+        "title": "The Cave Mother",
+        "domains": ["healing", "orcs"],
+        "conflicts": [],
+        "description": "Goddess of Healing and Home.",
+        "teaches_spells": []
+    },
+    "brakk": {
+        "name": "Brakk",
+        "title": "The Fist",
+        "domains": ["strength", "orcs"],
+        "conflicts": [],
+        "description": "God of Strength.",
+        "teaches_spells": []
+    },
+    "krennic": {
+        "name": "Krennic",
+        "title": "The War Master",
+        "domains": ["war", "strategy"],
+        "conflicts": [],
+        "description": "God of Strategy.",
+        "teaches_spells": []
+    },
+    "yurgus": {
+        "name": "Yurgus",
+        "title": "The Lord of Maggots",
+        "domains": ["death", "disease"],
+        "conflicts": [],
+        "description": "God of Death & Disease.",
+        "teaches_spells": []
+    },
+    "skulk": {
+        "name": "Skulk",
+        "title": "The Night Lord",
+        "domains": ["darkness", "stealth"],
+        "conflicts": [],
+        "description": "God of Darkness & Stealth.",
+        "teaches_spells": []
+    },
+    "omnus": {
+        "name": "Omnus",
+        "title": "All-Father",
+        "domains": ["giants"],
+        "conflicts": [],
+        "description": "Father of Giants.",
+        "teaches_spells": []
+    },
+    "stronar": {
+        "name": "Stronar",
+        "title": "The Thunderhead",
+        "domains": ["storm", "giants"],
+        "conflicts": [],
+        "description": "God of Storm Giants.",
+        "teaches_spells": []
+    },
+    "iallana": {
+        "name": "Iallana",
+        "title": "Queen of Love",
+        "domains": ["love", "giants"],
+        "conflicts": [],
+        "description": "Goddess of Cloud Giants.",
+        "teaches_spells": []
+    },
+    "surt": {
+        "name": "Surt",
+        "title": "The Crafter",
+        "domains": ["fire", "giants"],
+        "conflicts": [],
+        "description": "God of Fire Giants.",
+        "teaches_spells": []
+    },
+    "rhym": {
+        "name": "Rhym",
+        "title": "Lord of Frost",
+        "domains": ["frost", "giants"],
+        "conflicts": [],
+        "description": "God of Frost Giants.",
+        "teaches_spells": []
+    },
+    "skoreus": {
+        "name": "Skoreus",
+        "title": "King of Rocks",
+        "domains": ["stone", "art"],
+        "conflicts": [],
+        "description": "God of Stone Giants & of Art.",
+        "teaches_spells": []
+    },
+    "grolar": {
+        "name": "Grolar",
+        "title": "God of Hill Giants",
+        "domains": ["war", "giants"],
+        "conflicts": [],
+        "description": "God of War.",
+        "teaches_spells": []
+    },
+    "sylphra": {
+        "name": "Sylphra",
+        "title": "Lady of the Winds",
+        "domains": ["air"],
+        "conflicts": [],
+        "description": "Goddess of Air.",
+        "teaches_spells": []
+    },
+    "grumlor": {
+        "name": "Grum'lor",
+        "title": "The Earthlord",
+        "domains": ["earth"],
+        "conflicts": [],
+        "description": "God of Earth.",
+        "teaches_spells": []
+    },
+    "kaelen": {
+        "name": "Kaelen",
+        "title": "King of the Waters",
+        "domains": ["water"],
+        "conflicts": [],
+        "description": "God of Water.",
+        "teaches_spells": []
+    },
+    "agnis": {
+        "name": "Agnis",
+        "title": "The Lord of Flames",
+        "domains": ["fire"],
+        "conflicts": [],
+        "description": "God of Fire.",
+        "teaches_spells": []
+    },
+    "belpheron": {
+        "name": "Belpheron",
+        "title": "Master of the Nine Hells",
+        "domains": ["evil", "law"],
+        "conflicts": [],
+        "description": "God of Indulgence.",
+        "teaches_spells": []
+    },
+    "taurnoth": {
+        "name": "Taur'noth",
+        "title": "Prince of Beasts",
+        "domains": ["beasts", "chaos"],
+        "conflicts": [],
+        "description": "Demon Lord of Minotaurs.",
+        "teaches_spells": []
+    },
+    "malakor": {
+        "name": "Malakor",
+        "title": "The Black Hand",
+        "domains": ["tyranny", "strife"],
+        "conflicts": [],
+        "description": "God of Tyranny.",
+        "teaches_spells": []
+    },
+    "calamia": {
+        "name": "Calamia",
+        "title": "Lady Doom",
+        "domains": ["misfortune", "luck"],
+        "conflicts": [],
+        "description": "Goddess of Misfortune.",
+        "teaches_spells": []
+    },
+    "skarros": {
+        "name": "Skarros",
+        "title": "God of Murder",
+        "domains": ["murder"],
+        "conflicts": [],
+        "description": "God of Murder.",
+        "teaches_spells": []
+    },
+    "cyraxxus": {
+        "name": "Cyraxxus",
+        "title": "Lord of Lies",
+        "domains": ["trickery", "lies"],
+        "conflicts": [],
+        "description": "God of Lies.",
+        "teaches_spells": []
+    },
+    "neh_thalgu": {
+        "name": "Neh-Thalgu",
+        "title": "Prince of Depths",
+        "domains": ["chaos", "depths"],
+        "conflicts": [],
+        "description": "Demon Prince.",
+        "teaches_spells": []
+    },
+    "gor_maw": {
+        "name": "Gor-Maw",
+        "title": "Prince of Demons",
+        "domains": ["chaos", "demons"],
+        "conflicts": [],
+        "description": "Demon Prince.",
+        "teaches_spells": []
+    },
+    "ild_riel": {
+        "name": "Ild-Riel",
+        "title": "Prince of Deception",
+        "domains": ["deception"],
+        "conflicts": [],
+        "description": "Demon Prince.",
+        "teaches_spells": []
+    },
+    "azgaroth": {
+        "name": "Az'garoth",
+        "title": "The Dark Prince",
+        "domains": ["chaos", "evil"],
+        "conflicts": [],
+        "description": "Demon Prince.",
+        "teaches_spells": []
+    },
+    "globb": {
+        "name": "Glob'b",
+        "title": "The Faceless Lord",
+        "domains": ["ooze"],
+        "conflicts": [],
+        "description": "Lord of Oozes.",
+        "teaches_spells": []
+    },
+    "kosskar": {
+        "name": "Koss'kar",
+        "title": "Prince of Wrath",
+        "domains": ["wrath"],
+        "conflicts": [],
+        "description": "Demon Prince.",
+        "teaches_spells": []
+    },
+    "dolora": {
+        "name": "Dolora",
+        "title": "The Maiden of Pain",
+        "domains": ["pain", "suffering"],
+        "conflicts": [],
+        "description": "Goddess of Pain.",
+        "teaches_spells": []
+    },
+    "syrinax": {
+        "name": "Syrinax",
+        "title": "Queen of Succubi",
+        "domains": ["lust", "chaos"],
+        "conflicts": [],
+        "description": "Demon Queen.",
+        "teaches_spells": []
+    },
+    "umbril": {
+        "name": "Umbril",
+        "title": "Lord of Shadows",
+        "domains": ["shadows", "thievery"],
+        "conflicts": [],
+        "description": "God of Thieves.",
+        "teaches_spells": []
+    },
+    "qth_plk": {
+        "name": "Q'th-plk",
+        "title": "Prince of Vermin",
+        "domains": ["vermin", "chaos"],
+        "conflicts": [],
+        "description": "Demon Prince.",
+        "teaches_spells": []
+    },
+    "thangor": {
+        "name": "Than'gor",
+        "title": "Prince of Undeath",
+        "domains": ["undeath", "evil"],
+        "conflicts": [],
+        "description": "Demon Prince of Undeath.",
+        "teaches_spells": []
+    },
+    "nocta_mater": {
+        "name": "Nocta Mater",
+        "title": "Mother of Demons",
+        "domains": ["demons"],
+        "conflicts": [],
+        "description": "Mother of Demons.",
+        "teaches_spells": []
+    },
+    "pazrael": {
+        "name": "Paz'rael",
+        "title": "Dark Angel of the Four Winds",
+        "domains": ["air", "evil"],
+        "conflicts": [],
+        "description": "Demon Lord.",
+        "teaches_spells": []
+    },
+    "plool_goop": {
+        "name": "Plool-goop",
+        "title": "The Sea Mother",
+        "domains": ["sea", "monsters"],
+        "conflicts": [],
+        "description": "Goddess of Kua-Toa.",
+        "teaches_spells": []
+    },
+    "eadrosh": {
+        "name": "Eadrosh",
+        "title": "The Deliverer",
+        "domains": ["sea", "merfolk"],
+        "conflicts": [],
+        "description": "God of Merfolk.",
+        "teaches_spells": []
+    },
+    "ruggak": {
+        "name": "Ruggak",
+        "title": "The Ambusher",
+        "domains": ["ambush", "bugbears"],
+        "conflicts": [],
+        "description": "God of Bugbears.",
+        "teaches_spells": []
+    },
+    "tkulmak": {
+        "name": "T'kulmak",
+        "title": "Gnomesmasher",
+        "domains": ["kobolds", "traps"],
+        "conflicts": [],
+        "description": "God of Kobolds.",
+        "teaches_spells": []
+    },
+    "lzog": {
+        "name": "L'zog",
+        "title": "The Devourer",
+        "domains": ["gluttony"],
+        "conflicts": [],
+        "description": "God of Troglodytes.",
+        "teaches_spells": []
+    },
+    "grbiyet": {
+        "name": "Gr'biyet",
+        "title": "The High Chieftain",
+        "domains": ["goblins", "war"],
+        "conflicts": [],
+        "description": "God of Goblins.",
+        "teaches_spells": []
+    },
+    "shkar": {
+        "name": "Sh'kar",
+        "title": "The Caller from the Depths",
+        "domains": ["sea", "sharks"],
+        "conflicts": [],
+        "description": "God of Sahuagin.",
+        "teaches_spells": []
+    },
+    "ssua": {
+        "name": "S'Sua",
+        "title": "The Survivor",
+        "domains": ["survival", "lizardfolk"],
+        "conflicts": [],
+        "description": "God of Lizardfolk.",
+        "teaches_spells": []
+    },
+    "urlen": {
+        "name": "Urlen",
+        "title": "The Caller Below",
+        "domains": ["earth"],
+        "conflicts": [],
+        "description": "God of Molemen.",
+        "teaches_spells": []
+    },
+    "gnorok": {
+        "name": "G'norok",
+        "title": "Prince of Gnolls",
+        "domains": ["gnolls", "hunger"],
+        "conflicts": [],
+        "description": "God of Gnolls.",
+        "teaches_spells": []
+    },
+    "mycon": {
+        "name": "My'con",
+        "title": "Queen of Fungi",
+        "domains": ["fungi", "rot"],
+        "conflicts": [],
+        "description": "Goddess of Fungi.",
+        "teaches_spells": []
     }
 }

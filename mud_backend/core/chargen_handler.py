@@ -1,5 +1,4 @@
 # mud_backend/core/chargen_handler.py
-# --- MODIFIED: Removed RACE_DATA from import ---
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.db import fetch_room_data
 from mud_backend import config 
@@ -25,9 +24,9 @@ def get_article(word: str) -> str:
 
 # === CHARGEN_STEP_KEYS ===
 CHARGEN_STEP_KEYS = [
-    "race", "alignment", "height", "build", "age", "eye_char", "eye_color",
+    "race", "height", "build", "age", "eye_char", "eye_color",
     "complexion", "hair_style", "hair_texture", "hair_color", "hair_quirk",
-    "face", "nose", "mark", "unique"
+    "face", "nose"
 ]
 
 # === DEFAULT_CHARGEN_QUESTIONS ===
@@ -35,10 +34,6 @@ DEFAULT_CHARGEN_QUESTIONS = {
     "race": {
         "key": "race",
         "prompt": "You see your reflection. What is your **Race**?\n(Options: <span class='keyword'>Human</span>, <span class='keyword'>Wildborn</span>, <span class='keyword'>High Elf</span>, <span class='keyword'>Dwarf</span>, <span class='keyword'>Gnome</span>, <span class='keyword'>Halfling</span>, <span class='keyword'>Dark Elf</span>, <span class='keyword'>Dark Dwarf</span>, <span class='keyword'>Troll</span>, <span class='keyword'>Goblin</span>)"
-    },
-    "alignment": {
-        "key": "alignment",
-        "prompt": "What is your guiding **Alignment**?\n(This will affect your starting reputation.)\n(Options: <span class='keyword'>Good</span>, <span class='keyword'>Neutral</span>, <span class='keyword'>Evil</span>)"
     },
     "height": {
         "key": "height",
@@ -87,14 +82,6 @@ DEFAULT_CHARGEN_QUESTIONS = {
     "nose": {
         "key": "nose",
         "prompt": "What is your **Nose Shape**?\n(Options: <span class='keyword'>straight</span>, <span class='keyword'>aquiline</span>, <span class='keyword'>broad</span>, <span class='keyword'>button</span>)"
-    },
-    "mark": {
-        "key": "mark",
-        "prompt": "Any **Distinguishing Mark**?\n(e.g., <span class='keyword'>a scar over one eye</span>, <span class='keyword'>none</span>)"
-    },
-    "unique": {
-        "key": "unique",
-        "prompt": "Finally, what **Unique Feature** do you have?\n(e.g., <span class='keyword'>a silver locket</span>, <span class='keyword'>a faint aura</span>, <span class='keyword'>none</span>)"
     }
 }
 
@@ -174,7 +161,7 @@ def _handle_stat_roll_input(player: Player, command: str):
         player.send_message("> USE THIS ROLL")
         pool_copy = list(player.current_stat_pool)
         player.stats_to_assign = pool_copy
-        # --- FIX: Use player.data instead of player.db_data ---
+        # Use player.data directly for internal storage
         player.data['_chargen_selected_pool'] = list(player.current_stat_pool)
         player.stats = {} 
         player.chargen_step = 2
@@ -184,7 +171,7 @@ def _handle_stat_roll_input(player: Player, command: str):
         player.send_message("> USE BEST ROLL")
         pool_copy = list(player.best_stat_pool)
         player.stats_to_assign = pool_copy 
-        # --- FIX: Use player.data instead of player.db_data ---
+        # Use player.data directly for internal storage
         player.data['_chargen_selected_pool'] = list(player.best_stat_pool)
         player.stats = {}
         player.chargen_step = 2
@@ -207,7 +194,7 @@ def _complete_stat_assignment(player: Player):
     get_chargen_prompt(player) 
     
     player.stats_to_assign = [] 
-    # --- FIX: Use player.data instead of player.db_data ---
+    # Use player.data directly for internal storage
     player.data.pop('_chargen_selected_pool', None)
 
 def send_assignment_prompt(player: Player):
@@ -274,7 +261,7 @@ def _handle_assignment_input(player: Player, command: str):
         player.send_message("> RESET")
         player.send_message("All stat assignments have been cleared.")
         player.stats = {} 
-        # --- FIX: Use player.data instead of player.db_data ---
+        # Use player.data directly for internal storage
         selected_pool_copy = player.data.get('_chargen_selected_pool', [])
         player.stats_to_assign = list(selected_pool_copy) 
         send_assignment_prompt(player)
@@ -340,10 +327,8 @@ def get_chargen_prompt(player: Player):
     question_key = CHARGEN_STEP_KEYS[question_index]
     player_race = player.appearance.get("race", "")
     
-    # --- MODIFIED: Use world.game_races instead of RACE_DATA ---
     game_races = player.world.game_races if player.world else {}
     race_data = game_races.get(player_race)
-    # --- END MODIFIED ---
     
     final_prompt = ""
     
@@ -384,9 +369,7 @@ def _handle_appearance_input(player: Player, text_input: str):
     if answer.lower() == "none":
         answer = "" 
     
-    # --- MODIFIED: Use world.game_races instead of RACE_DATA ---
     game_races = player.world.game_races if player.world else {}
-    # --- END MODIFIED ---
 
     if question_key == "race":
         answer_lower = answer.lower()
@@ -401,36 +384,10 @@ def _handle_appearance_input(player: Player, text_input: str):
         else:
             answer = ' '.join([word.capitalize() for word in answer.split()])
         
-        # --- MODIFIED: Check game_races ---
         if answer not in game_races:
             player.send_message(f"'{answer}' is not a valid race. Please choose from the list.")
             return 
             
-        player.factions[game_races[answer]["faction"]] = 50 
-        # --- END MODIFIED ---
-        
-    elif question_key == "alignment":
-        alignment = answer.lower()
-        if alignment not in ["good", "neutral", "evil"]:
-            player.send_message("Please choose Good, Neutral, or Evil.")
-            return 
-            
-        player_race = player.appearance.get("race")
-        # --- MODIFIED: Check game_races ---
-        base_faction = game_races[player_race]["faction"]
-        # --- END MODIFIED ---
-        
-        if alignment == "good":
-            if base_faction == "Concordat":
-                player.factions[base_faction] += 50 
-            elif base_faction == "Dominion":
-                player.factions[base_faction] -= 25 
-        elif alignment == "evil":
-            if base_faction == "Concordat":
-                player.factions[base_faction] -= 25 
-            elif base_faction == "Dominion":
-                player.factions[base_faction] += 50 
-        
     player.appearance[question_key] = answer
     player.send_message(f"> {answer}")
 
@@ -449,12 +406,11 @@ def _handle_appearance_input(player: Player, text_input: str):
         player.stamina = player.max_stamina
         player.spirit = player.max_spirit
         
-        # --- NEW: Recalculate Training Points based on assigned stats ---
+        # Recalculate Training Points based on assigned stats
         ptps, mtps, stps = player._calculate_tps_per_level()
         player.ptps = ptps
         player.mtps = mtps
         player.stps = stps
-        # ---------------------------------------------------------------
         
         player.worn_items["back"] = "leather_backpack"
         player.worn_items["torso"] = "leather_armor"
@@ -462,44 +418,85 @@ def _handle_appearance_input(player: Player, text_input: str):
         
         player.wealth["silvers"] = 0 
         
-        # --- Reset Inn Room for Tutorial ---
-        inn_room_data = player.world.room_manager.get_room("inn_room") # Use manager
-        if inn_room_data:
-            # 1. Remove note from visible objects
-            inn_room_data["objects"] = [
-                obj for obj in inn_room_data.get("objects", []) 
-                if obj.get("item_id") != "inn_note"
-            ]
+        # --- FACTION SPAWN LOGIC ---
+        player_race = player.appearance.get("race")
+        base_faction = game_races.get(player_race, {}).get("faction", "Townsfolk")
+        
+        start_room_id = "inn_room" # Default Good/Neutral
+        
+        # Check for Evil Factions
+        if base_faction in ["ShadowtuskOrcs", "DarkElves", "DarkDwarves"]:
+            start_room_id = "umbril_hostel"
             
-            # 2. Ensure note is in hidden_objects
-            hidden = inn_room_data.get("hidden_objects", [])
-            if not any(h.get("item_id") == "inn_note" for h in hidden):
-                note_object = {
-                    "name": "a note",
-                    "item_id": "inn_note",
-                    "description": "A folded piece of parchment rests on the table.",
-                    "perception_dc": 10,
-                    "keywords": ["note", "parchment", "a note"],
-                    "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
-                    "is_item": True
-                }
-                hidden.append(note_object)
-                inn_room_data["hidden_objects"] = hidden
-            
-            # 3. Save the reset state via Manager
-            room_obj = Room(
-                room_id=inn_room_data["room_id"],
-                name=inn_room_data["name"],
-                description=inn_room_data["description"],
-                db_data=inn_room_data
+            # --- Setup Evil Start Room ---
+            hostel_data = player.world.room_manager.get_room(start_room_id)
+            if hostel_data:
+                # Ensure scrawled_note is hidden
+                hidden = hostel_data.get("hidden_objects", [])
+                if not any(h.get("item_id") == "scrawled_note" for h in hidden):
+                    note_object = {
+                        "name": "a scrawled note",
+                        "item_id": "scrawled_note",
+                        "description": "A jagged piece of parchment nailed to a post.",
+                        "perception_dc": 1,
+                        "keywords": ["note", "parchment", "scrawled note"],
+                        "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                        "is_item": True
+                    }
+                    hidden.append(note_object)
+                    hostel_data["hidden_objects"] = hidden
+                
+                # Persist reset state
+                room_obj = Room(
+                    room_id=hostel_data["room_id"],
+                    name=hostel_data["name"],
+                    description=hostel_data["description"],
+                    db_data=hostel_data
+                )
+                player.world.room_manager.save_room(room_obj)
+                
+            player.send_message(
+                "\nYou awaken in a damp, crowded hostel in the Undercity. "
+                "You feel a bit groggy... maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
             )
-            player.world.room_manager.save_room(room_obj)
+            
+        else:
+            # --- Setup Good Start Room (Inn) ---
+            inn_room_data = player.world.room_manager.get_room("inn_room")
+            if inn_room_data:
+                inn_room_data["objects"] = [
+                    obj for obj in inn_room_data.get("objects", []) 
+                    if obj.get("item_id") != "inn_note"
+                ]
+                hidden = inn_room_data.get("hidden_objects", [])
+                if not any(h.get("item_id") == "inn_note" for h in hidden):
+                    note_object = {
+                        "name": "a note",
+                        "item_id": "inn_note",
+                        "description": "A folded piece of parchment rests on the table.",
+                        "perception_dc": 1,
+                        "keywords": ["note", "parchment", "a note"],
+                        "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                        "is_item": True
+                    }
+                    hidden.append(note_object)
+                    inn_room_data["hidden_objects"] = hidden
+                
+                room_obj = Room(
+                    room_id=inn_room_data["room_id"],
+                    name=inn_room_data["name"],
+                    description=inn_room_data["description"],
+                    db_data=inn_room_data
+                )
+                player.world.room_manager.save_room(room_obj)
 
-        # 1. Send your custom welcome messages.
-        player.send_message(
-            "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
-            "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
-        )
+            player.send_message(
+                "\nYou awaken in a simple room at the inn. You feel a bit groggy... "
+                "maybe you should <span class='keyword' data-command='look'>LOOK</span> around."
+            )
+        
+        # Move player to their faction start room
+        player.move_to_room(start_room_id, "")
         
         # 2. Make the [Help: LOOK] text a clickable keyword
         player.send_message(
@@ -522,15 +519,13 @@ def handle_chargen_input(player: Player, text_input: str):
     args = command_parts[1:] if len(command_parts) > 1 else []
 
     if command == "help":
-        room_db_data = fetch_room_data(player.current_room_id)
-        # --- MODIFIED: Use world.get_room via Manager ---
+        # Fetch dummy room via manager to avoid direct DB calls
         dummy_room_data = player.world.room_manager.get_room(player.current_room_id)
         if not dummy_room_data:
              # Fallback just in case
              dummy_room_data = {"room_id": "inn_room", "name": "A Room", "description": "...", "objects": [], "exits": {}}
         
         dummy_room = Room(dummy_room_data["room_id"], dummy_room_data["name"], dummy_room_data["description"], dummy_room_data)
-        # --- END MODIFIED ---
         
         help_verb = Help(player.world, player, dummy_room, args, command)
         help_verb.execute()
@@ -601,13 +596,8 @@ def format_player_description(player_data: dict) -> str:
         face_parts.append(f"{get_article(app.get('face'))} {app.get('face')} face")
     if app.get('nose'):
         face_parts.append(f"{get_article(app.get('nose'))} {app.get('nose')} nose")
-    if app.get('mark'):
-        face_parts.append(f"{get_article(app.get('mark'))} {app.get('mark')}")
     
     if face_parts:
         desc.append(f"{pr['subj']} has " + ", ".join(face_parts) + ".")
-
-    if app.get('unique'):
-        desc.append(app.get('unique') + ".")
 
     return "\n".join(desc)

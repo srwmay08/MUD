@@ -1,7 +1,12 @@
 {
   "Human": {
     "name": "Human",
-    "faction": "Human",
+    "faction": "Townsfolk",
+    "faction_modifiers": {
+        "Townsfolk": 500,
+        "HighElves": 100,
+        "Dwarves": 100
+    },
     "stat_modifiers": {
       "STR": 5, "CON": 5, "DEX": 5, "AGI": 5, 
       "LOG": 5, "INT": 5, "WIS": 5, "INF": 5, 
@@ -15,7 +20,11 @@
   },
   "Wildborn": {
     "name": "Wildborn",
-    "faction": "Wildborn",
+    "faction": "Townsfolk",
+    "faction_modifiers": {
+        "Townsfolk": 300,
+        "Creatures": 200
+    },
     "stat_modifiers": {
       "STR": 10, "CON": 10, "DEX": 5, "AGI": 5, 
       "LOG": 0, "INT": 10, "WIS": 0, "INF": 0, 
@@ -29,7 +38,13 @@
   },
   "High Elf": {
     "name": "High Elf",
-    "faction": "High_Elf",
+    "faction": "HighElves",
+    "faction_modifiers": {
+        "HighElves": 1000,
+        "DarkElves": -2000,
+        "Townsfolk": 200,
+        "Dwarves": -100
+    },
     "stat_modifiers": {
       "STR": 0, "CON": 0, "DEX": 10, "AGI": 10, 
       "LOG": 10, "INT": 10, "WIS": 5, "INF": 5, 
@@ -43,7 +58,13 @@
   },
   "Dwarf": {
     "name": "Dwarf",
-    "faction": "Dwarf",
+    "faction": "Dwarves",
+    "faction_modifiers": {
+        "Dwarves": 1000,
+        "DarkDwarves": -2000,
+        "Townsfolk": 200,
+        "HighElves": -100
+    },
     "stat_modifiers": {
       "STR": 10, "CON": 15, "DEX": 0, "AGI": 0, 
       "LOG": 5, "INT": 0, "WIS": 5, "INF": 0, 
@@ -57,7 +78,11 @@
   },
   "Gnome": {
     "name": "Gnome",
-    "faction": "Gnome",
+    "faction": "Townsfolk",
+    "faction_modifiers": {
+        "Townsfolk": 400,
+        "Dwarves": 200
+    },
     "stat_modifiers": {
       "STR": -5, "CON": 5, "DEX": 10, "AGI": 5, 
       "LOG": 15, "INT": 10, "WIS": 5, "INF": 5, 
@@ -71,7 +96,11 @@
   },
   "Halfling": {
     "name": "Halfling",
-    "faction": "Halfling",
+    "faction": "Townsfolk",
+    "faction_modifiers": {
+        "Townsfolk": 600,
+        "HighElves": 100
+    },
     "stat_modifiers": {
       "STR": -5, "CON": 5, "DEX": 15, "AGI": 15, 
       "LOG": 5, "INT": 5, "WIS": 5, "INF": 10, 
@@ -85,7 +114,12 @@
   },
   "Dark Elf": {
     "name": "Dark Elf",
-    "faction": "Dark_Elf",
+    "faction": "DarkElves",
+    "faction_modifiers": {
+        "DarkElves": 1000,
+        "HighElves": -2000,
+        "Townsfolk": -1000
+    },
     "stat_modifiers": {
       "STR": 5, "CON": 0, "DEX": 15, "AGI": 10, 
       "LOG": 5, "INT": 10, "WIS": 0, "INF": 0, 
@@ -99,7 +133,12 @@
   },
   "Dark Dwarf": {
     "name": "Dark Dwarf",
-    "faction": "Dark_Dwarf",
+    "faction": "DarkDwarves",
+    "faction_modifiers": {
+        "DarkDwarves": 1000,
+        "Dwarves": -2000,
+        "Townsfolk": -1000
+    },
     "stat_modifiers": {
       "STR": 15, "CON": 15, "DEX": 0, "AGI": 0, 
       "LOG": 5, "INT": 0, "WIS": 5, "INF": -5, 
@@ -113,7 +152,11 @@
   },
   "Troll": {
     "name": "Troll",
-    "faction": "Troll",
+    "faction": "ShadowtuskOrcs",
+    "faction_modifiers": {
+        "ShadowtuskOrcs": 500,
+        "Townsfolk": -2000
+    },
     "stat_modifiers": {
       "STR": 20, "CON": 20, "DEX": -5, "AGI": -5, 
       "LOG": -10, "INT": 0, "WIS": 0, "INF": -10, 
@@ -127,7 +170,11 @@
   },
   "Goblin": {
     "name": "Goblin",
-    "faction": "Goblin",
+    "faction": "ShadowtuskOrcs",
+    "faction_modifiers": {
+        "ShadowtuskOrcs": 500,
+        "Townsfolk": -1500
+    },
     "stat_modifiers": {
       "STR": 0, "CON": 5, "DEX": 20, "AGI": 20, 
       "LOG": 0, "INT": 5, "WIS": 0, "INF": -5, 
