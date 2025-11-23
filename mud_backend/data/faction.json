@@ -1,7 +1,7 @@
 {
     "config": {
         "con_levels": [
-            { "name": "Ally", "min": 1051, "max": 2000 },
+            { "name": "Ally", "min": 1051, "max": 5000 },
             { "name": "Warmly", "min": 701, "max": 1050 },
             { "name": "Kindly", "min": 451, "max": 700 },
             { "name": "Amiable", "min": 51, "max": 450 },
@@ -9,19 +9,21 @@
             { "name": "Apprehensive", "min": -449, "max": -50 },
             { "name": "Dubious", "min": -699, "max": -450 },
             { "name": "Threatening", "min": -1049, "max": -700 },
-            { "name": "Scowls", "min": -2000, "max": -1050 }
+            { "name": "Scowls", "min": -5000, "max": -1050 }
         ],
         "default_con": "Indifferent"
     },
     "factions": {
         "Townsfolk": {
-            "name": "Townsfolk of Aethel's Crossing",
+            "name": "Townsfolk of Icemule",
             "kos_factions": ["ShadowtuskOrcs"],
-            "allies": []
+            "opposing_factions": ["ShadowtuskOrcs"],
+            "allies": ["HighElves", "Dwarves"]
         },
         "ShadowtuskOrcs": {
             "name": "Shadowtusk Orcs",
-            "kos_factions": ["Townsfolk"],
+            "kos_factions": ["Townsfolk", "HighElves", "Dwarves"],
+            "opposing_factions": ["Townsfolk"],
             "allies": [],
             "on_kill": {
                 "ShadowtuskOrcs": -50,
@@ -30,9 +32,33 @@
         },
         "Creatures": {
             "name": "Wild Creatures",
-            "kos_factions": ["Human", "Wildborn", "High_Elf", "Dwarf", "Gnome", "Halfling", "Dark_Elf", "Dark_Dwarf", "Troll", "Goblin"],
+            "kos_factions": ["Townsfolk"],
             "allies": [],
             "on_kill": {}
+        },
+        "HighElves": {
+            "name": "The High Elven Council",
+            "kos_factions": ["DarkElves", "ShadowtuskOrcs"],
+            "opposing_factions": ["DarkElves"],
+            "allies": ["Townsfolk"]
+        },
+        "DarkElves": {
+            "name": "The Dark Elven House",
+            "kos_factions": ["HighElves"],
+            "opposing_factions": ["HighElves"],
+            "allies": []
+        },
+        "Dwarves": {
+            "name": "The Mountain Clans",
+            "kos_factions": ["DarkDwarves", "ShadowtuskOrcs"],
+            "opposing_factions": ["DarkDwarves"],
+            "allies": ["Townsfolk"]
+        },
+        "DarkDwarves": {
+            "name": "The Deep Clans",
+            "kos_factions": ["Dwarves"],
+            "opposing_factions": ["Dwarves"],
+            "allies": []
         }
     }
 }
