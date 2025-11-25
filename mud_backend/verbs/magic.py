@@ -255,23 +255,41 @@ class Cast(BaseVerb):
             msg_target = spell_data.get("cast_message_target", "You attack {target} with magic!")
             self.player.send_message(msg_target.format(target=target_monster.get('name')))
 
-            spell_as = skill_bonus * 4 + spell_data.get("bonus_as", 0)
-            
-            # --- FIX: Use empty dict for monster racial mods to prevent crash ---
-            spell_ds = get_stat_bonus(
-                target_monster.get("stats", {}).get("WIS", 50), 
-                "WIS", 
-                {} 
+            # --- NEW: Bolt AS Calculation ---
+            combat_rules = getattr(self.world, 'game_rules', {})
+            spell_as = combat_system.calculate_bolt_as(
+                self.player, self.player.stats, self.player.skills, 
+                self.player.stat_modifiers, combat_rules
             )
             
-            int_b = get_stat_bonus(self.player.stats.get("INT", 50), "INT", self.player.stat_modifiers)
-            wis_b = get_stat_bonus(self.player.stats.get("WIS", 50), "WIS", self.player.stat_modifiers)
-            avd = math.trunc((int_b + wis_b) / 2)
+            # Bonus AS from specific spell
+            spell_as += spell_data.get("bonus_as", 0)
+
+            # --- Defender DS ---
+            # Spell Attacks usually check against Ranged DS or specialized Magic DS
+            # Using standard calculate_defense_strength with is_ranged=True
+            defender_modifiers = combat_system._get_stat_modifiers(target_monster)
+            
+            # Monsters don't wear armor in item slots usually, assume innate/natural
+            # Passing None for items triggers innate checks inside calc
+            spell_ds = combat_system.calculate_defense_strength(
+                target_monster, 
+                None, None, None, None, # No equipment for monster
+                True, # is_ranged
+                target_monster.get("stance", "creature"),
+                defender_modifiers,
+                combat_rules
+            )
+            
+            # AvD for Bolts (Usually 0 or specific to spell vs armor)
+            # Simplified: Spell AvD vs Target Armor
+            # Assuming unarmored/natural for now or need to fetch from spell data
+            avd = spell_data.get("avd", 25) # Base spell AvD
             
             d100_roll = random.randint(1, 100)
-            combat_roll_result = (spell_as - spell_ds) + avd + d100_roll
+            combat_roll_result = (spell_as + avd) - spell_ds + d100_roll
             
-            roll_string = (f"  AS: +{spell_as} vs DS: +{spell_ds} with AvD: +{avd} + d100 roll: +{d100_roll} = +{combat_roll_result}")
+            roll_string = (f"  AS: +{spell_as} + AvD: +{avd} + d100: +{d100_roll} - DS: -{spell_ds} = +{combat_roll_result}")
             self.player.send_message(roll_string)
             
             if combat_roll_result > config.COMBAT_HIT_THRESHOLD:

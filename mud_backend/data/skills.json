@@ -264,6 +264,14 @@
         "key_attributes": {"ptp": ["DEX"], "mtp": ["LOG", "WIS"], "stp": ["WIS"]}
     },
     {
+        "skill_id": "spell_aiming",
+        "name": "Spell Aiming",
+        "category": "Magical Skills",
+        "keywords": ["spell aiming", "aiming", "spells"],
+        "base_cost": {"ptp": 2, "mtp": 8, "stp": 2},
+        "key_attributes": {"ptp": ["DEX"], "mtp": ["INT", "LOG"], "stp": []}
+    },
+    {
         "skill_id": "arcane_symbols",
         "name": "Arcane Symbols",
         "category": "Magical Skills",
