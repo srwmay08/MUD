@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MUD Entity Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #121212; color: #e5e5e5; height: 100vh; overflow: hidden; display: flex; font-family: sans-serif; }
+        .panel { padding: 1rem; display: flex; flex-direction: column; height: 100%; border-right: 1px solid #333; }
+        .scroll-y { overflow-y: auto; flex-grow: 1; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e1e1e; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        
+        input, select, textarea { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 4px 8px; border-radius: 4px; width: 100%; font-family: monospace; font-size: 0.9rem; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #f59e0b; }
+        
+        label { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; margin-top: 8px; display: block; }
+        
+        .list-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
+        .list-item:hover { background: #222; }
+        .list-item.active { background: #f59e0b; color: #000; }
+        
+        .btn { padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.2s; }
+        .btn-primary { background: #f59e0b; color: #000; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-neutral { background: #374151; color: #fff; }
+        
+        .group-box { border: 1px solid #333; padding: 8px; border-radius: 4px; background: #181818; margin-top: 4px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="panel" style="width: 250px; background: #0a0a0a;">
+    <h1 class="text-amber-500 font-bold text-xl mb-4">Entity Architect</h1>
+    
+    <div class="mb-4">
+        <label>Category</label>
+        <select id="category-select" onchange="loadFileList()">
+            <option value="monsters">Monsters & NPCs</option>
+            <option value="items">Items</option>
+            <option value="nodes">Gathering Nodes</option>
+        </select>
+    </div>
+
+    <div class="mb-4 flex-grow flex flex-col">
+        <label>Files</label>
+        <select id="file-select" class="flex-grow" size="10" onchange="loadFile()"></select>
+    </div>
+
+    <div class="flex gap-2">
+        <button onclick="saveFile()" class="btn btn-primary w-full">Save File</button>
+    </div>
+</div>
+
+<div class="panel" style="width: 300px; background: #121212;">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="font-bold text-gray-300">Entities</h2>
+        <button onclick="createEntity()" class="btn btn-neutral text-xs">+ New</button>
+    </div>
+    <input type="text" id="search-box" placeholder="Filter..." class="mb-2" oninput="renderEntityList()">
+    <div id="entity-list" class="scroll-y"></div>
+</div>
+
+<div class="panel flex-grow" style="background: #181818; padding: 0;">
+    <div id="editor-header" class="p-4 border-b border-gray-700 flex justify-between bg-black/20">
+        <span id="editor-title" class="text-lg font-bold text-gray-400">Select an entity</span>
+        <button onclick="deleteEntity()" class="btn btn-danger hidden" id="delete-btn">Delete</button>
+    </div>
+    <div id="form-container" class="scroll-y p-6 hidden">
+        </div>
+    <div id="snippet-container" class="scroll-y p-6 hidden text-gray-300">
+        <h3 class="text-amber-500 font-bold mb-2">Room Object Snippet Generator</h3>
+        <p class="text-xs mb-4">Design a static object, portal, or crafting station here, then copy the JSON.</p>
+        
+        <label>Type</label>
+        <select id="snip-type" onchange="renderSnippetForm()">
+            <option value="scenery">Static Scenery</option>
+            <option value="portal">Interactive Portal (Exit)</option>
+            <option value="crafting">Crafting Station (Furnace)</option>
+        </select>
+        <div id="snip-form" class="mt-4 space-y-2"></div>
+        <label>Result JSON</label>
+        <textarea id="snip-output" class="h-32 font-mono text-xs text-green-400"></textarea>
+    </div>
+</div>
+
+<script>
+    // --- State ---
+    let currentCategory = "monsters";
+    let currentData = null; // The full JSON object/list from file
+    let isDictStructure = false; // True for items/nodes, False for monsters
+    let activeEntityId = null; // Key or Index
+    let activeFilename = "";
+
+    // --- Initialization ---
+    window.onload = () => { loadFileList(); };
+
+    // --- API Calls ---
+    async function loadFileList() {
+        currentCategory = document.getElementById('category-select').value;
+        const res = await fetch('/api/files');
+        const files = await res.json();
+        const select = document.getElementById('file-select');
+        select.innerHTML = '';
+        
+        (files[currentCategory] || []).forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.innerText = f;
+            select.appendChild(opt);
+        });
+        
+        // Switch to snippet view if no file selected, or editor if file selected
+        document.getElementById('form-container').classList.add('hidden');
+        document.getElementById('snippet-container').classList.remove('hidden');
+        renderSnippetForm();
+    }
+
+    async function loadFile() {
+        activeFilename = document.getElementById('file-select').value;
+        if(!activeFilename) return;
+
+        const res = await fetch(`/api/load?file=${encodeURIComponent(activeFilename)}`);
+        const json = await res.json();
+        
+        if(json.error) return alert(json.error);
+        
+        currentData = json.data;
+        isDictStructure = json.is_dict;
+        activeEntityId = null;
+        
+        renderEntityList();
+        document.getElementById('form-container').classList.add('hidden');
+        document.getElementById('snippet-container').classList.add('hidden');
+        document.getElementById('delete-btn').classList.add('hidden');
+        document.getElementById('editor-title').innerText = activeFilename;
+    }
+
+    async function saveFile() {
+        if(!activeFilename || !currentData) return;
+        
+        const res = await fetch('/api/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ filename: activeFilename, data: currentData })
+        });
+        const result = await res.json();
+        if(result.success) alert("Saved successfully!");
+        else alert("Error: " + result.error);
+    }
+
+    // --- List Rendering ---
+    function renderEntityList() {
+        const container = document.getElementById('entity-list');
+        container.innerHTML = '';
+        const filter = document.getElementById('search-box').value.toLowerCase();
+
+        let keys = [];
+        if(isDictStructure) {
+            keys = Object.keys(currentData);
+        } else {
+            keys = currentData.map((_, i) => i);
+        }
+
+        keys.forEach(key => {
+            let entity = isDictStructure ? currentData[key] : currentData[key];
+            let name = entity.name || "Unnamed";
+            let idDisplay = isDictStructure ? key : (entity.monster_id || entity.uid || key);
+            
+            if(name.toLowerCase().includes(filter) || String(idDisplay).toLowerCase().includes(filter)) {
+                const div = document.createElement('div');
+                div.className = `list-item ${key == activeEntityId ? 'active' : ''}`;
+                div.innerHTML = `<span>${name}</span><span class="text-gray-500 text-xs">${idDisplay}</span>`;
+                div.onclick = () => loadEntity(key);
+                container.appendChild(div);
+            }
+        });
+    }
+
+    // --- Form Rendering Logic ---
+    function loadEntity(key) {
+        activeEntityId = key;
+        renderEntityList(); // Highlight active
+        
+        const entity = isDictStructure ? currentData[key] : currentData[key];
+        
+        document.getElementById('form-container').classList.remove('hidden');
+        document.getElementById('snippet-container').classList.add('hidden');
+        document.getElementById('delete-btn').classList.remove('hidden');
+        
+        const container = document.getElementById('form-container');
+        container.innerHTML = '';
+        
+        // --- KEY FIELD (ID) ---
+        // For Dict structures (Items), the ID is the key. For Lists (Monsters), it's a field.
+        if (isDictStructure) {
+            container.appendChild(createInput("Entity ID (Key)", key, (val) => {
+                if (val !== activeEntityId) {
+                    // Key change logic: Move data to new key, delete old
+                    currentData[val] = currentData[activeEntityId];
+                    delete currentData[activeEntityId];
+                    activeEntityId = val;
+                    renderEntityList();
+                }
+            }));
+        } else {
+            // It's a list, usually has an internal ID
+            const idField = currentCategory === 'monsters' ? 'monster_id' : 'node_id';
+            if(entity[idField] !== undefined) {
+                container.appendChild(createInput(`${idField} (Unique)`, entity[idField], (val) => updateField(idField, val)));
+            }
+        }
+
+        // --- COMMON FIELDS ---
+        container.appendChild(createInput("Name", entity.name || "", (val) => updateField("name", val)));
+        container.appendChild(createInput("Description", entity.description || "", (val) => updateField("description", val)));
+        container.appendChild(createInput("Keywords (comma sep)", (entity.keywords || []).join(', '), (val) => {
+            updateField("keywords", val.split(',').map(s => s.trim()).filter(s => s));
+        }));
+
+        // --- CATEGORY SPECIFIC FIELDS ---
+        if (currentCategory === 'monsters') renderMonsterFields(container, entity);
+        else if (currentCategory === 'items') renderItemFields(container, entity);
+        else if (currentCategory === 'nodes') renderNodeFields(container, entity);
+    }
+
+    function updateField(field, value) {
+        if(isDictStructure) currentData[activeEntityId][field] = value;
+        else currentData[activeEntityId][field] = value;
+        if(field === 'name') renderEntityList();
+    }
+
+    function createEntity() {
+        if(!currentData) return;
+        
+        let newObj = { name: "New Entity", description: "..." };
+        let newKey = "";
+
+        if (currentCategory === 'monsters') {
+            newObj.monster_id = "new_monster_" + Date.now();
+            newObj.level = 1;
+            newObj.is_monster = true;
+            newObj.stats = {STR:50, CON:50, DEX:50, AGI:50, LOG:10, INT:10, WIS:10, INF:10, ZEA:10, ESS:10, DIS:10, AUR:10};
+            if(!isDictStructure) {
+                currentData.push(newObj);
+                loadEntity(currentData.length - 1);
+            }
+        } else if (currentCategory === 'items') {
+            newKey = "new_item_" + Date.now();
+            newObj.item_type = "component";
+            newObj.base_value = 10;
+            currentData[newKey] = newObj;
+            loadEntity(newKey);
+        } else if (currentCategory === 'nodes') {
+            newKey = "new_node_" + Date.now();
+            newObj.node_id = newKey;
+            newObj.node_type = "mining";
+            currentData[newKey] = newObj;
+            loadEntity(newKey);
+        }
+        renderEntityList();
+    }
+
+    function deleteEntity() {
+        if(activeEntityId === null) return;
+        if(!confirm("Delete this entity?")) return;
+        
+        if(isDictStructure) {
+            delete currentData[activeEntityId];
+        } else {
+            currentData.splice(activeEntityId, 1);
+        }
+        activeEntityId = null;
+        document.getElementById('form-container').classList.add('hidden');
+        renderEntityList();
+    }
+
+    // --- Field Renderers ---
+
+    function createInput(label, value, onChange) {
+        const div = document.createElement('div');
+        div.className = "mb-2";
+        div.innerHTML = `<label>${label}</label>`;
+        const input = document.createElement('input');
+        input.value = value;
+        input.oninput = (e) => onChange(e.target.value);
+        div.appendChild(input);
+        return div;
+    }
+
+    function createSelect(label, value, options, onChange) {
+        const div = document.createElement('div');
+        div.className = "mb-2";
+        div.innerHTML = `<label>${label}</label>`;
+        const sel = document.createElement('select');
+        options.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt; o.innerText = opt;
+            if(opt === value) o.selected = true;
+            sel.appendChild(o);
+        });
+        sel.onchange = (e) => onChange(e.target.value);
+        div.appendChild(sel);
+        return div;
+    }
+
+    function createCheckbox(label, checked, onChange) {
+        const div = document.createElement('div');
+        div.className = "mb-2 flex items-center gap-2";
+        const input = document.createElement('input');
+        input.type = "checkbox";
+        input.style.width = "auto";
+        input.checked = checked;
+        input.onchange = (e) => onChange(e.target.checked);
+        div.appendChild(input);
+        div.innerHTML += `<span class="text-sm font-bold text-gray-400 uppercase">${label}</span>`;
+        div.querySelector('input').onchange = (e) => onChange(e.target.checked);
+        return div;
+    }
+
+    function renderMonsterFields(container, entity) {
+        container.appendChild(createCheckbox("Is NPC (Friendly)", !!entity.is_npc, (v) => updateField("is_npc", v)));
+        container.appendChild(createCheckbox("Is Aggressive", !!entity.is_aggressive, (v) => updateField("is_aggressive", v)));
+        
+        const grid = document.createElement('div');
+        grid.className = "grid grid-cols-2 gap-4";
+        grid.appendChild(createInput("Level", entity.level || 1, (v) => updateField("level", parseInt(v))));
+        grid.appendChild(createInput("Max HP", entity.max_hp || 50, (v) => updateField("max_hp", parseInt(v))));
+        grid.appendChild(createInput("Faction", entity.faction || "", (v) => updateField("faction", v)));
+        grid.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v)));
+        container.appendChild(grid);
+
+        // Stats Grid
+        const statBox = document.createElement('div');
+        statBox.className = "group-box";
+        statBox.innerHTML = "<label>Stats</label><div class='stat-grid' id='stat-grid'></div>";
+        const statGrid = statBox.querySelector('#stat-grid');
+        
+        const stats = entity.stats || {STR:50, CON:50, DEX:50, AGI:50};
+        Object.keys(stats).forEach(stat => {
+            const div = document.createElement('div');
+            div.innerHTML = `<span class='text-xs text-amber-500'>${stat}</span>`;
+            const inp = document.createElement('input');
+            inp.type = "number"; inp.value = stats[stat]; inp.className = "text-center";
+            inp.onchange = (e) => { stats[stat] = parseInt(e.target.value); updateField("stats", stats); };
+            div.appendChild(inp);
+            statGrid.appendChild(div);
+        });
+        container.appendChild(statBox);
+    }
+
+    function renderItemFields(container, entity) {
+        container.appendChild(createSelect("Item Type", entity.item_type, 
+            ["weapon", "armor", "shield", "container", "tool", "component", "gem", "jewelry", "ore", "ore_gravel", "ingot", "herb", "quest"], 
+            (v) => updateField("item_type", v)));
+            
+        const grid = document.createElement('div');
+        grid.className = "grid grid-cols-2 gap-4";
+        
+        grid.appendChild(createInput("Base Value", entity.base_value || 0, (v) => updateField("base_value", parseInt(v))));
+        grid.appendChild(createSelect("Slot", entity.wearable_slot || "", 
+            ["", "mainhand", "offhand", "head", "torso", "legs", "feet", "hands", "back", "waist", "neck", "finger_right", "finger_left"], 
+            (v) => updateField("wearable_slot", v)));
+            
+        container.appendChild(grid);
+        
+        if(entity.item_type === "weapon") {
+            const wBox = document.createElement('div');
+            wBox.className = "group-box";
+            wBox.innerHTML = "<label>Weapon Data</label>";
+            wBox.appendChild(createInput("Skill", entity.skill || "brawling", (v) => updateField("skill", v)));
+            // Add attack list editor here later if needed
+            container.appendChild(wBox);
+        }
+        
+        if(entity.item_type === "armor") {
+            const aBox = document.createElement('div');
+            aBox.className = "group-box";
+            aBox.innerHTML = "<label>Armor Data</label>";
+            aBox.appendChild(createSelect("Armor Type", entity.armor_type || "cloth", ["cloth", "leather", "scale", "chain", "plate"], (v) => updateField("armor_type", v)));
+            aBox.appendChild(createInput("RT Penalty", entity.armor_rt || 0, (v) => updateField("armor_rt", parseInt(v))));
+            container.appendChild(aBox);
+        }
+    }
+
+    function renderNodeFields(container, entity) {
+        container.appendChild(createSelect("Node Type", entity.node_type, ["mining", "herbalism", "lumberjacking", "fishing"], (v) => updateField("node_type", v)));
+        container.appendChild(createInput("Skill DC", entity.skill_dc || 20, (v) => updateField("skill_dc", parseInt(v))));
+        container.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v)));
+        container.appendChild(createInput("Default Taps", entity.default_taps || 1, (v) => updateField("default_taps", parseInt(v))));
+    }
+
+    // --- Snippet Generator (Local Room Objects) ---
+    function renderSnippetForm() {
+        const type = document.getElementById('snip-type').value;
+        const form = document.getElementById('snip-form');
+        const out = document.getElementById('snip-output');
+        form.innerHTML = '';
+        
+        const updateSnip = () => {
+            let obj = {};
+            if(type === 'scenery') {
+                obj.name = document.getElementById('s-name').value;
+                obj.description = document.getElementById('s-desc').value;
+                obj.keywords = document.getElementById('s-keys').value.split(',').map(s=>s.trim());
+                obj.verbs = ["look", "examine"];
+            } else if (type === 'portal') {
+                obj.name = document.getElementById('s-name').value;
+                obj.target_room = document.getElementById('s-target').value;
+                obj.verbs = document.getElementById('s-verbs').value.split(',').map(s=>s.trim().toUpperCase());
+                obj.keywords = document.getElementById('s-keys').value.split(',').map(s=>s.trim());
+            } else if (type === 'crafting') {
+                obj.name = document.getElementById('s-name').value;
+                obj.keywords = document.getElementById('s-keys').value.split(',').map(s=>s.trim());
+                obj.state = { temp: 20, fuel: 0, ore: 0, flux: 0, slag: 0 };
+                obj.verbs = ["look", "assess", "charge", "bellow", "vent", "tap"];
+            }
+            out.value = JSON.stringify(obj, null, 4);
+        };
+
+        if (type === 'scenery') {
+            form.appendChild(createInput("Name", "a statue", updateSnip)); form.lastChild.querySelector('input').id = 's-name';
+            form.appendChild(createInput("Description", "It looks old.", updateSnip)); form.lastChild.querySelector('input').id = 's-desc';
+            form.appendChild(createInput("Keywords", "statue, old statue", updateSnip)); form.lastChild.querySelector('input').id = 's-keys';
+        } else if (type === 'portal') {
+            form.appendChild(createInput("Name", "iron ladder", updateSnip)); form.lastChild.querySelector('input').id = 's-name';
+            form.appendChild(createInput("Target Room ID", "sewer_main", updateSnip)); form.lastChild.querySelector('input').id = 's-target';
+            form.appendChild(createInput("Verbs", "CLIMB, ENTER", updateSnip)); form.lastChild.querySelector('input').id = 's-verbs';
+            form.appendChild(createInput("Keywords", "ladder, iron ladder", updateSnip)); form.lastChild.querySelector('input').id = 's-keys';
+        } else if (type === 'crafting') {
+            form.appendChild(createInput("Name", "stone furnace", updateSnip)); form.lastChild.querySelector('input').id = 's-name';
+            form.appendChild(createInput("Keywords", "furnace, stone furnace", updateSnip)); form.lastChild.querySelector('input').id = 's-keys';
+        }
+        updateSnip();
+    }
+</script>
+</body>
+</html>

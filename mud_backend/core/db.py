@@ -233,13 +233,22 @@ def _load_json_data(filename: str) -> Any:
 def fetch_all_monsters() -> dict:
     monster_templates = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-    for file_path in glob.glob(os.path.join(data_dir, '**/monsters*.json'), recursive=True):
-        with open(file_path, 'r') as f:
-            monster_list = json.load(f)
-        if isinstance(monster_list, list):
-            for m in monster_list:
-                if isinstance(m, dict) and m.get("monster_id"):
-                    monster_templates[m["monster_id"]] = m
+    
+    # --- NEW: Load both monsters*.json AND npcs*.json ---
+    search_patterns = ['**/monsters*.json', '**/npcs*.json']
+    
+    for pattern in search_patterns:
+        for file_path in glob.glob(os.path.join(data_dir, pattern), recursive=True):
+            with open(file_path, 'r') as f:
+                try:
+                    monster_list = json.load(f)
+                    if isinstance(monster_list, list):
+                        for m in monster_list:
+                            if isinstance(m, dict) and m.get("monster_id"):
+                                monster_templates[m["monster_id"]] = m
+                except json.JSONDecodeError:
+                    print(f"[DB ERROR] Invalid JSON in {file_path}")
+                    
     return monster_templates
 
 def fetch_all_loot_tables() -> dict:
@@ -283,17 +292,6 @@ def fetch_all_nodes() -> dict:
 def fetch_all_factions() -> dict:
     return _load_json_data("faction.json")
 
-def _load_json_data(filename: str) -> Any:
-    try:
-        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', filename)
-        with open(json_path, 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"[DB ERROR] Could not find '{filename}' at: {json_path}")
-    except json.JSONDecodeError:
-        print(f"[DB ERROR] '{filename}' contains invalid JSON.")
-    return {}
-
 def fetch_all_races() -> dict:
     return _load_json_data("races.json")
 
@@ -304,13 +302,6 @@ def fetch_all_spells() -> dict:
     spells = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
     
-    # Search recursively for spell files
-    for file_path in glob.glob(os.path.join(data_dir, '**/spells*.json'), recursive=True):
-        # Also check for files specifically named like 'abjuration.json' inside spells folder
-        # Actually, the safest is to load all .json files in the spells directory
-        pass
-
-    # Explicitly look in the spells directory
     spells_dir = os.path.join(data_dir, 'spells')
     if os.path.exists(spells_dir):
         for file_path in glob.glob(os.path.join(spells_dir, '*.json')):
@@ -322,8 +313,6 @@ def fetch_all_spells() -> dict:
                 except json.JSONDecodeError:
                     print(f"[DB ERROR] Invalid JSON in spell file: {file_path}")
     
-    # Backward compatibility if spells.json is in root data
-    # FIX: Check existence before trying to load to avoid error log
     root_spells_path = os.path.join(data_dir, "spells.json")
     if os.path.exists(root_spells_path):
         root_spells = _load_json_data("spells.json")

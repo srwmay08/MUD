@@ -148,54 +148,5 @@
             "mainhand": "iron_short_sword",
             "torso": "leather_armor"
         }
-    },
-    {
-        "monster_id": "grizzled_warrior",
-        "name": "a grizzled warrior",
-        "keywords": ["warrior", "grizzled warrior", "trainer"],
-        "faction": "Townsfolk",
-        "is_aggressive": false,
-        "description": "A grizzled old warrior paces, his eyes scanning for... something. He carries a long spear and looks like he's seen a hundred battles.",
-        "verbs": ["look", "attack", "talk"],
-        "perception_dc": 0,
-        "is_monster": true,
-        "is_npc": true,
-        "hp": 150,
-        "max_hp": 150,
-
-        "level": 10,
-        "family": "Human",
-        "body_type": "biped",
-        "is_undead": false,
-        "is_non_corporeal": false,
-        "areas_found": ["town_square", "ts_north", "ts_south", "ts_east", "ts_west", "ts_northeast", "ts_northwest", "ts_southeast", "ts_southwest"],
-        "bcs": true,
-        "attack_attributes": ["physical (polearms)", "combat maneuvers (trip)"],
-        "defense_attributes": ["leather armor", "high defense"],
-        "action_timer_seconds": 7,
-        "spawn_message_arrival": "A grizzled warrior wanders in.",
-        "spawn_message_departure": "The grizzled warrior wanders off to the {exit}.",
-
-        "respawn_time_seconds": 60,
-        "respawn_chance_per_tick": 1.0,
-        "movement_rules": {
-            "wander_chance": 0.8,
-            "allowed_rooms": [
-                "town_square", "ts_north", "ts_south", "ts_east", "ts_west", 
-                "ts_northeast", "ts_northwest", "ts_southeast", "ts_southwest"
-            ]
-        },
-        "stats": {
-            "STR": 80, "CON": 80, "DEX": 80, "AGI": 80,
-            "LOG": 50, "INT": 50, "WIS": 50, "INF": 50,
-            "ZEA": 50, "ESS": 50, "DIS": 50, "AUR": 50
-        },
-        "skills": { "polearms": 80, "combat_maneuvers": 80 },
-        "equipped": {
-            "mainhand": "iron_spear",
-            "torso": "leather_armor"
-        },
-        "quest_giver_ids": ["trip_quest_1"],
-        "all_quests_done_message": "The warrior nods at you. 'You've got the hang of it. Now go practice on something... uglier.'"
     }
 ]
