@@ -29,7 +29,7 @@
         .btn-neutral { background: #374151; color: #fff; }
         
         .group-box { border: 1px solid #333; padding: 8px; border-radius: 4px; background: #181818; margin-top: 4px; }
-        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
     </style>
 </head>
 <body>
@@ -43,6 +43,7 @@
             <option value="monsters">Monsters & NPCs</option>
             <option value="items">Items</option>
             <option value="nodes">Gathering Nodes</option>
+            <option value="loot">Loot Tables</option>
         </select>
     </div>
 
@@ -88,16 +89,56 @@
     </div>
 </div>
 
+<datalist id="dl-skills"></datalist>
+<datalist id="dl-items"></datalist>
+<datalist id="dl-loot"></datalist>
+<datalist id="dl-slots">
+    <option value="mainhand">
+    <option value="offhand">
+    <option value="head">
+    <option value="torso">
+    <option value="legs">
+    <option value="feet">
+    <option value="hands">
+    <option value="back">
+    <option value="waist">
+    <option value="neck">
+    <option value="finger_right">
+    <option value="finger_left">
+</datalist>
+
 <script>
     // --- State ---
     let currentCategory = "monsters";
-    let currentData = null; // The full JSON object/list from file
-    let isDictStructure = false; // True for items/nodes, False for monsters
-    let activeEntityId = null; // Key or Index
+    let currentData = null; 
+    let isDictStructure = false; 
+    let activeEntityId = null; 
     let activeFilename = "";
+    
+    // Reference data for autocomplete
+    let refs = { skills: [], items: [], loot_tables: [] };
 
     // --- Initialization ---
-    window.onload = () => { loadFileList(); };
+    window.onload = async () => { 
+        await fetchReferences();
+        loadFileList(); 
+    };
+
+    async function fetchReferences() {
+        try {
+            const res = await fetch('/api/references');
+            refs = await res.json();
+            
+            // Populate Datalists
+            const populate = (id, list) => {
+                const el = document.getElementById(id);
+                el.innerHTML = list.map(v => `<option value="${v}">`).join('');
+            };
+            populate('dl-skills', refs.skills);
+            populate('dl-items', refs.items);
+            populate('dl-loot', refs.loot_tables);
+        } catch (e) { console.error("Failed to load refs", e); }
+    }
 
     // --- API Calls ---
     async function loadFileList() {
@@ -114,7 +155,6 @@
             select.appendChild(opt);
         });
         
-        // Switch to snippet view if no file selected, or editor if file selected
         document.getElementById('form-container').classList.add('hidden');
         document.getElementById('snippet-container').classList.remove('hidden');
         renderSnippetForm();
@@ -168,10 +208,18 @@
 
         keys.forEach(key => {
             let entity = isDictStructure ? currentData[key] : currentData[key];
-            let name = entity.name || "Unnamed";
-            let idDisplay = isDictStructure ? key : (entity.monster_id || entity.uid || key);
+            let name = "";
+            let idDisplay = "";
+
+            if (currentCategory === 'loot') {
+                name = key; // Loot tables are usually just keys in a dict
+                idDisplay = `(${entity.length || 0} items)`;
+            } else {
+                name = entity.name || "Unnamed";
+                idDisplay = isDictStructure ? key : (entity.monster_id || entity.uid || key);
+            }
             
-            if(name.toLowerCase().includes(filter) || String(idDisplay).toLowerCase().includes(filter)) {
+            if(String(name).toLowerCase().includes(filter) || String(idDisplay).toLowerCase().includes(filter)) {
                 const div = document.createElement('div');
                 div.className = `list-item ${key == activeEntityId ? 'active' : ''}`;
                 div.innerHTML = `<span>${name}</span><span class="text-gray-500 text-xs">${idDisplay}</span>`;
@@ -184,7 +232,7 @@
     // --- Form Rendering Logic ---
     function loadEntity(key) {
         activeEntityId = key;
-        renderEntityList(); // Highlight active
+        renderEntityList();
         
         const entity = isDictStructure ? currentData[key] : currentData[key];
         
@@ -195,12 +243,10 @@
         const container = document.getElementById('form-container');
         container.innerHTML = '';
         
-        // --- KEY FIELD (ID) ---
-        // For Dict structures (Items), the ID is the key. For Lists (Monsters), it's a field.
+        // --- KEY FIELD ---
         if (isDictStructure) {
             container.appendChild(createInput("Entity ID (Key)", key, (val) => {
                 if (val !== activeEntityId) {
-                    // Key change logic: Move data to new key, delete old
                     currentData[val] = currentData[activeEntityId];
                     delete currentData[activeEntityId];
                     activeEntityId = val;
@@ -208,24 +254,27 @@
                 }
             }));
         } else {
-            // It's a list, usually has an internal ID
             const idField = currentCategory === 'monsters' ? 'monster_id' : 'node_id';
             if(entity[idField] !== undefined) {
                 container.appendChild(createInput(`${idField} (Unique)`, entity[idField], (val) => updateField(idField, val)));
             }
         }
 
-        // --- COMMON FIELDS ---
-        container.appendChild(createInput("Name", entity.name || "", (val) => updateField("name", val)));
-        container.appendChild(createInput("Description", entity.description || "", (val) => updateField("description", val)));
-        container.appendChild(createInput("Keywords (comma sep)", (entity.keywords || []).join(', '), (val) => {
-            updateField("keywords", val.split(',').map(s => s.trim()).filter(s => s));
-        }));
+        // --- CATEGORY SPECIFIC RENDERERS ---
+        if (currentCategory === 'loot') {
+            renderLootFields(container, entity); // Entity is the array of loot items
+        } else {
+            // Common Fields for non-loot entities
+            container.appendChild(createInput("Name", entity.name || "", (val) => updateField("name", val)));
+            container.appendChild(createInput("Description", entity.description || "", (val) => updateField("description", val)));
+            container.appendChild(createInput("Keywords (comma sep)", (entity.keywords || []).join(', '), (val) => {
+                updateField("keywords", val.split(',').map(s => s.trim()).filter(s => s));
+            }));
 
-        // --- CATEGORY SPECIFIC FIELDS ---
-        if (currentCategory === 'monsters') renderMonsterFields(container, entity);
-        else if (currentCategory === 'items') renderItemFields(container, entity);
-        else if (currentCategory === 'nodes') renderNodeFields(container, entity);
+            if (currentCategory === 'monsters') renderMonsterFields(container, entity);
+            else if (currentCategory === 'items') renderItemFields(container, entity);
+            else if (currentCategory === 'nodes') renderNodeFields(container, entity);
+        }
     }
 
     function updateField(field, value) {
@@ -261,6 +310,10 @@
             newObj.node_type = "mining";
             currentData[newKey] = newObj;
             loadEntity(newKey);
+        } else if (currentCategory === 'loot') {
+            newKey = "new_loot_table_" + Date.now();
+            currentData[newKey] = []; // Empty list
+            loadEntity(newKey);
         }
         renderEntityList();
     }
@@ -279,14 +332,15 @@
         renderEntityList();
     }
 
-    // --- Field Renderers ---
+    // --- Helpers ---
 
-    function createInput(label, value, onChange) {
+    function createInput(label, value, onChange, listId=null) {
         const div = document.createElement('div');
         div.className = "mb-2";
         div.innerHTML = `<label>${label}</label>`;
         const input = document.createElement('input');
         input.value = value;
+        if(listId) input.setAttribute('list', listId);
         input.oninput = (e) => onChange(e.target.value);
         div.appendChild(input);
         return div;
@@ -318,29 +372,223 @@
         input.onchange = (e) => onChange(e.target.checked);
         div.appendChild(input);
         div.innerHTML += `<span class="text-sm font-bold text-gray-400 uppercase">${label}</span>`;
-        div.querySelector('input').onchange = (e) => onChange(e.target.checked);
         return div;
     }
 
-    function renderMonsterFields(container, entity) {
-        container.appendChild(createCheckbox("Is NPC (Friendly)", !!entity.is_npc, (v) => updateField("is_npc", v)));
-        container.appendChild(createCheckbox("Is Aggressive", !!entity.is_aggressive, (v) => updateField("is_aggressive", v)));
+    // Supports datalists for keys and values
+    function createKeyValueEditor(label, dataObj, onChange, keyListId=null, valueListId=null) {
+        if (!dataObj) dataObj = {}; 
         
+        const wrapper = document.createElement('div');
+        wrapper.className = "group-box mb-2";
+        wrapper.innerHTML = `<label>${label}</label><div class="kv-list"></div><button class="btn btn-neutral text-xs mt-1">+ Add</button>`;
+        
+        const list = wrapper.querySelector('.kv-list');
+        const btn = wrapper.querySelector('button');
+        
+        const render = () => {
+            list.innerHTML = '';
+            Object.entries(dataObj).forEach(([k, v]) => {
+                const row = document.createElement('div');
+                row.className = "flex gap-1 mb-1";
+                
+                const keyInput = document.createElement('input');
+                keyInput.className = "w-1/2 text-xs";
+                keyInput.placeholder = "Key";
+                keyInput.value = k;
+                if(keyListId) keyInput.setAttribute('list', keyListId);
+
+                const valInput = document.createElement('input');
+                valInput.className = "w-1/2 text-xs";
+                valInput.placeholder = "Value";
+                valInput.value = v;
+                if(valueListId) valInput.setAttribute('list', valueListId);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = "text-red-500 px-2 font-bold";
+                delBtn.innerText = "×";
+
+                // Key Change Logic
+                keyInput.onchange = (e) => {
+                    const newK = e.target.value;
+                    if (newK !== k && newK) {
+                        dataObj[newK] = dataObj[k];
+                        delete dataObj[k];
+                        onChange(dataObj);
+                        render();
+                    }
+                };
+                
+                // Value Change Logic
+                valInput.onchange = (e) => {
+                    const val = e.target.value;
+                    dataObj[k] = isNaN(val) ? val : (val.trim() === "" ? "" : parseFloat(val));
+                    onChange(dataObj);
+                };
+                
+                delBtn.onclick = () => {
+                    delete dataObj[k];
+                    onChange(dataObj);
+                    render();
+                };
+                
+                row.appendChild(keyInput);
+                row.appendChild(valInput);
+                row.appendChild(delBtn);
+                list.appendChild(row);
+            });
+        };
+        
+        btn.onclick = () => {
+            let i = 1;
+            while (dataObj[`new_${i}`]) i++;
+            dataObj[`new_${i}`] = "";
+            onChange(dataObj);
+            render();
+        };
+        
+        render();
+        return wrapper;
+    }
+
+    // --- Entity Specific Renderers ---
+
+    function renderLootFields(container, lootList) {
+        // lootList is an Array of Objects: { item_id: "", chance: 1.0, quantity: 1 }
+        const wrapper = document.createElement('div');
+        wrapper.className = "group-box";
+        wrapper.innerHTML = `<label>Loot Entries</label><div class="loot-list"></div><button class="btn btn-neutral text-xs mt-1">+ Add Item</button>`;
+        const list = wrapper.querySelector('.loot-list');
+        
+        const render = () => {
+            list.innerHTML = '';
+            lootList.forEach((entry, idx) => {
+                const row = document.createElement('div');
+                row.className = "flex gap-2 mb-2 items-center bg-black/30 p-2 rounded";
+                
+                // Item ID Input (with datalist)
+                const itemInp = document.createElement('input');
+                itemInp.className = "flex-grow text-xs";
+                itemInp.placeholder = "Item ID";
+                itemInp.setAttribute('list', 'dl-items');
+                itemInp.value = entry.item_id || "";
+                itemInp.onchange = (e) => { entry.item_id = e.target.value; saveFile(); }; // Auto-save triggers via reference logic implies modification
+
+                // Chance Input
+                const chanceInp = document.createElement('input');
+                chanceInp.type = "number";
+                chanceInp.className = "w-16 text-xs text-center";
+                chanceInp.placeholder = "0.0-1.0";
+                chanceInp.step = 0.01;
+                chanceInp.value = entry.chance || 1.0;
+                chanceInp.onchange = (e) => { entry.chance = parseFloat(e.target.value); };
+
+                // Quantity Input (Simple or Range)
+                // Handling JSON lists in input is tricky, assume simple int for now or csv
+                const qtyInp = document.createElement('input');
+                qtyInp.className = "w-20 text-xs text-center";
+                qtyInp.placeholder = "Qty (1 or 1,3)";
+                // Helper to format array [1,3] to string "1,3"
+                let qtyVal = entry.quantity;
+                if(Array.isArray(qtyVal)) qtyVal = qtyVal.join(',');
+                qtyInp.value = qtyVal || 1;
+                
+                qtyInp.onchange = (e) => {
+                    const val = e.target.value;
+                    if(val.includes(',')) {
+                        entry.quantity = val.split(',').map(n => parseInt(n));
+                    } else {
+                        entry.quantity = parseInt(val);
+                    }
+                };
+
+                const delBtn = document.createElement('button');
+                delBtn.className = "text-red-500 font-bold";
+                delBtn.innerText = "×";
+                delBtn.onclick = () => {
+                    lootList.splice(idx, 1);
+                    render();
+                };
+
+                row.innerHTML = `<span class="text-xs text-gray-500 w-4">${idx+1}.</span>`;
+                row.appendChild(itemInp);
+                row.appendChild(chanceInp);
+                row.appendChild(qtyInp);
+                row.appendChild(delBtn);
+                
+                list.appendChild(row);
+            });
+        };
+
+        wrapper.querySelector('button').onclick = () => {
+            lootList.push({ item_id: "", chance: 1.0, quantity: 1 });
+            render();
+        };
+
+        render();
+        container.appendChild(wrapper);
+    }
+
+    function renderMonsterFields(container, entity) {
+        // Flags
+        const flagDiv = document.createElement('div');
+        flagDiv.className = "flex flex-wrap gap-4 mb-2";
+        flagDiv.appendChild(createCheckbox("Is NPC", !!entity.is_npc, (v) => updateField("is_npc", v)));
+        flagDiv.appendChild(createCheckbox("Aggressive", !!entity.is_aggressive, (v) => updateField("is_aggressive", v)));
+        flagDiv.appendChild(createCheckbox("Undead", !!entity.is_undead, (v) => updateField("is_undead", v)));
+        flagDiv.appendChild(createCheckbox("Non-Corporeal", !!entity.is_non_corporeal, (v) => updateField("is_non_corporeal", v)));
+        flagDiv.appendChild(createCheckbox("BCS", !!entity.bcs, (v) => updateField("bcs", v)));
+        container.appendChild(flagDiv);
+
+        // Basic Info
         const grid = document.createElement('div');
-        grid.className = "grid grid-cols-2 gap-4";
+        grid.className = "grid grid-cols-2 gap-4 mb-2";
         grid.appendChild(createInput("Level", entity.level || 1, (v) => updateField("level", parseInt(v))));
         grid.appendChild(createInput("Max HP", entity.max_hp || 50, (v) => updateField("max_hp", parseInt(v))));
-        grid.appendChild(createInput("Faction", entity.faction || "", (v) => updateField("faction", v)));
-        grid.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v)));
+        grid.appendChild(createInput("Faction", entity.faction || "Townsfolk", (v) => updateField("faction", v)));
+        grid.appendChild(createInput("Family", entity.family || "Human", (v) => updateField("family", v)));
+        grid.appendChild(createInput("Body Type", entity.body_type || "biped", (v) => updateField("body_type", v)));
+        grid.appendChild(createInput("Perception DC", entity.perception_dc || 0, (v) => updateField("perception_dc", parseInt(v))));
         container.appendChild(grid);
+
+        // Timers
+        const grid2 = document.createElement('div');
+        grid2.className = "grid grid-cols-3 gap-4 mb-2 bg-black/20 p-2 rounded border border-gray-700";
+        grid2.appendChild(createInput("Action Timer (s)", entity.action_timer_seconds || 5, (v) => updateField("action_timer_seconds", parseFloat(v))));
+        grid2.appendChild(createInput("Respawn Time (s)", entity.respawn_time_seconds || 300, (v) => updateField("respawn_time_seconds", parseFloat(v))));
+        grid2.appendChild(createInput("Respawn Chance", entity.respawn_chance_per_tick || 0.2, (v) => updateField("respawn_chance_per_tick", parseFloat(v))));
+        container.appendChild(grid2);
+
+        // Messages
+        container.appendChild(createInput("Spawn Arrival Msg", entity.spawn_message_arrival || "A creature arrives.", (v) => updateField("spawn_message_arrival", v)));
+        container.appendChild(createInput("Spawn Departure Msg", entity.spawn_message_departure || "A creature leaves {exit}.", (v) => updateField("spawn_message_departure", v)));
+
+        // Lists
+        const listGrid = document.createElement('div');
+        listGrid.className = "grid grid-cols-2 gap-4 mb-2";
+        listGrid.appendChild(createInput("Attack Attributes (csv)", (entity.attack_attributes || []).join(', '), (v) => updateField("attack_attributes", v.split(',').map(s=>s.trim()).filter(s=>s))));
+        listGrid.appendChild(createInput("Defense Attributes (csv)", (entity.defense_attributes || []).join(', '), (v) => updateField("defense_attributes", v.split(',').map(s=>s.trim()).filter(s=>s))));
+        listGrid.appendChild(createInput("Areas Found (csv)", (entity.areas_found || []).join(', '), (v) => updateField("areas_found", v.split(',').map(s=>s.trim()).filter(s=>s))));
+        listGrid.appendChild(createInput("Wander Chance (0.0-1.0)", entity.movement_rules?.wander_chance || 0.0, (v) => {
+            if(!entity.movement_rules) entity.movement_rules = {};
+            entity.movement_rules.wander_chance = parseFloat(v);
+            updateField("movement_rules", entity.movement_rules);
+        }));
+        container.appendChild(listGrid);
+
+        // ** UPDATED: Use Datalists **
+        // Skills: Key=SkillID (dl-skills), Value=Rank
+        container.appendChild(createKeyValueEditor("Skills", entity.skills || {}, (v) => updateField("skills", v), "dl-skills"));
+        
+        // Equipped: Key=Slot (dl-slots), Value=ItemID (dl-items)
+        container.appendChild(createKeyValueEditor("Equipped", entity.equipped || {}, (v) => updateField("equipped", v), "dl-slots", "dl-items"));
 
         // Stats Grid
         const statBox = document.createElement('div');
         statBox.className = "group-box";
         statBox.innerHTML = "<label>Stats</label><div class='stat-grid' id='stat-grid'></div>";
         const statGrid = statBox.querySelector('#stat-grid');
-        
-        const stats = entity.stats || {STR:50, CON:50, DEX:50, AGI:50};
+        const stats = entity.stats || {STR:50, CON:50, DEX:50, AGI:50, LOG:10, INT:10, WIS:10, INF:10, ZEA:10, ESS:10, DIS:10, AUR:10};
         Object.keys(stats).forEach(stat => {
             const div = document.createElement('div');
             div.innerHTML = `<span class='text-xs text-amber-500'>${stat}</span>`;
@@ -351,6 +599,9 @@
             statGrid.appendChild(div);
         });
         container.appendChild(statBox);
+        
+        // Loot Table ID (dl-loot)
+        container.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v), "dl-loot"));
     }
 
     function renderItemFields(container, entity) {
@@ -360,23 +611,19 @@
             
         const grid = document.createElement('div');
         grid.className = "grid grid-cols-2 gap-4";
-        
         grid.appendChild(createInput("Base Value", entity.base_value || 0, (v) => updateField("base_value", parseInt(v))));
         grid.appendChild(createSelect("Slot", entity.wearable_slot || "", 
             ["", "mainhand", "offhand", "head", "torso", "legs", "feet", "hands", "back", "waist", "neck", "finger_right", "finger_left"], 
             (v) => updateField("wearable_slot", v)));
-            
         container.appendChild(grid);
         
         if(entity.item_type === "weapon") {
             const wBox = document.createElement('div');
             wBox.className = "group-box";
             wBox.innerHTML = "<label>Weapon Data</label>";
-            wBox.appendChild(createInput("Skill", entity.skill || "brawling", (v) => updateField("skill", v)));
-            // Add attack list editor here later if needed
+            wBox.appendChild(createInput("Skill", entity.skill || "brawling", (v) => updateField("skill", v), "dl-skills"));
             container.appendChild(wBox);
         }
-        
         if(entity.item_type === "armor") {
             const aBox = document.createElement('div');
             aBox.className = "group-box";
@@ -390,12 +637,12 @@
     function renderNodeFields(container, entity) {
         container.appendChild(createSelect("Node Type", entity.node_type, ["mining", "herbalism", "lumberjacking", "fishing"], (v) => updateField("node_type", v)));
         container.appendChild(createInput("Skill DC", entity.skill_dc || 20, (v) => updateField("skill_dc", parseInt(v))));
-        container.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v)));
+        container.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v), "dl-loot"));
         container.appendChild(createInput("Default Taps", entity.default_taps || 1, (v) => updateField("default_taps", parseInt(v))));
     }
 
-    // --- Snippet Generator (Local Room Objects) ---
     function renderSnippetForm() {
+        // (Same as before, minimal logic)
         const type = document.getElementById('snip-type').value;
         const form = document.getElementById('snip-form');
         const out = document.getElementById('snip-output');

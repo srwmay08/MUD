@@ -5,7 +5,6 @@ from flask import Flask, render_template, request, jsonify
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Path to game data
 DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_backend', 'data'))
 STATIC_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_frontend', 'static'))
 
@@ -24,7 +23,7 @@ def list_files():
         "monsters": [],
         "items": [],
         "nodes": [],
-        "quests": []
+        "loot": []  # Added loot category
     }
     
     # Scan for Monsters/NPCs
@@ -41,8 +40,57 @@ def list_files():
     for f in glob.glob(os.path.join(DATA_DIR, "**", "nodes*.json"), recursive=True):
         rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
         categories["nodes"].append(rel)
+
+    # Scan for Loot
+    for f in glob.glob(os.path.join(DATA_DIR, "**", "loot*.json"), recursive=True):
+        rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
+        categories["loot"].append(rel)
         
     return jsonify(categories)
+
+@app.route('/api/references', methods=['GET'])
+def get_references():
+    """Returns lists of IDs for skills, items, and loot tables for autocomplete."""
+    refs = {
+        "skills": [],
+        "items": [],
+        "loot_tables": []
+    }
+
+    # 1. Skills
+    skills_path = os.path.join(DATA_DIR, "skills.json")
+    if os.path.exists(skills_path):
+        try:
+            with open(skills_path, 'r') as f:
+                data = json.load(f)
+                # skills.json is a list of objects
+                refs["skills"] = [s.get("skill_id") for s in data if "skill_id" in s]
+        except: pass
+
+    # 2. Items (scan all items_*.json)
+    for f in glob.glob(os.path.join(DATA_DIR, "**", "items_*.json"), recursive=True):
+        try:
+            with open(f, 'r') as file:
+                data = json.load(file)
+                if isinstance(data, dict):
+                    refs["items"].extend(data.keys())
+        except: pass
+
+    # 3. Loot Tables (scan all loot*.json)
+    for f in glob.glob(os.path.join(DATA_DIR, "**", "loot*.json"), recursive=True):
+        try:
+            with open(f, 'r') as file:
+                data = json.load(file)
+                if isinstance(data, dict):
+                    refs["loot_tables"].extend(data.keys())
+        except: pass
+    
+    # Sort for UI
+    refs["skills"].sort()
+    refs["items"].sort()
+    refs["loot_tables"].sort()
+
+    return jsonify(refs)
 
 @app.route('/api/load', methods=['GET'])
 def load_file():
@@ -56,7 +104,6 @@ def load_file():
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        # Determine structure type
         is_dict = isinstance(data, dict)
         return jsonify({"data": data, "is_dict": is_dict})
     except Exception as e:
@@ -73,7 +120,6 @@ def save_file():
     path = os.path.join(DATA_DIR, filename)
     
     try:
-        # Create backup
         if os.path.exists(path):
             with open(path + ".bak", 'w', encoding='utf-8') as f:
                 json.dump(json.load(open(path)), f, indent=4)
