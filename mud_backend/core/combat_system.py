@@ -8,12 +8,15 @@ if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
 from mud_backend.core.game_objects import Player
+from mud_backend.core.db import save_game_state
+from mud_backend.core import loot_system
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.core.game_loop import environment
 from mud_backend import config
 
 # --- HELPER FUNCTIONS ---
+
 class CombatLogBuilder:
     PLAYER_MISS_MESSAGES = [
         "   A clean miss.", "   You miss {defender} completely.", "   {defender} avoids the attack!",
@@ -29,22 +32,28 @@ class CombatLogBuilder:
         self.weapon = weapon_name
         self.verb = verb
         self.verb_npc = self._conjugate(verb)
+    
     def _conjugate(self, verb: str) -> str:
         if verb.endswith(('s', 'sh', 'ch', 'x', 'o')): return verb + "es"
         return verb + "s"
+    
     def get_attempt_message(self, perspective: str) -> str:
         if perspective == 'attacker': return f"You {self.verb} {self.weapon} at {self.defender}!"
         elif perspective == 'defender': return f"{self.attacker} {self.verb_npc} {self.weapon} at you!"
         else: return f"{self.attacker} {self.verb_npc} {self.weapon} at {self.defender}!"
+    
     def get_hit_result_message(self, total_damage: int) -> str:
         return f"   ... and hits for {total_damage} points of damage!"
+    
     def get_broadcast_hit_message(self, perspective: str, total_damage: int) -> str:
         if perspective == 'attacker': return f"You hit {self.defender} for {total_damage} points of damage!"
         else: return f"{self.attacker} hits {self.defender} for {total_damage} points of damage!"
+    
     def get_miss_message(self, perspective: str) -> str:
         if perspective == 'attacker': return random.choice(self.PLAYER_MISS_MESSAGES).format(defender=self.defender)
         elif perspective == 'defender': return random.choice(self.MONSTER_MISS_MESSAGES).format(attacker=self.attacker, defender="you")
         else: return random.choice(self.MONSTER_MISS_MESSAGES).format(attacker=self.attacker, defender=self.defender)
+    
     def get_broadcast_miss_message(self, perspective: str) -> str:
         if perspective == 'attacker': return f"You miss {self.defender}."
         else: return f"{self.attacker} misses {self.defender}."
@@ -141,58 +150,82 @@ def _get_critical_result(world: 'World', damage_type: str, location: str, rank: 
 def _get_stat_modifiers(entity: Any) -> Dict[str, int]:
     return entity.stat_modifiers if isinstance(entity, Player) else {}
 
-# --- CALCULATION FUNCTIONS ---
+# --- ROUNDTIME CALCULATIONS ---
+
+def calculate_roundtime_twc(attacker_stats: dict, main_weapon: dict, off_weapon: dict) -> float:
+    """
+    Calculates RT for Two-Weapon Combat.
+    TWCBaseSpeed = RightBaseSpeed + max(LeftBaseSpeed - 2, 0) + max(WeightPenalty, 0)
+    WeightPenalty = min(LeftWeight - 2 - STROffset, 3)
+    STROffset = trunc((STRBonus + 10)/15)
+    """
+    # Defaults if data is missing
+    right_base = main_weapon.get("base_speed", 3) if main_weapon else 0
+    left_base = off_weapon.get("base_speed", 3) if off_weapon else 0
+    left_weight = off_weapon.get("weight", 3) if off_weapon else 0
+    
+    str_stat = attacker_stats.get("STR", 50)
+    str_bonus = get_stat_bonus(str_stat, "STR", {}) # Raw stats used for offset, no racial mods usually
+    
+    str_offset = math.trunc((str_bonus + 10) / 15)
+    
+    weight_penalty = min(left_weight - 2 - str_offset, 3)
+    weight_penalty = max(weight_penalty, 0) # Ensure non-negative
+    
+    twc_base = right_base + max(left_base - 2, 0) + weight_penalty
+    
+    # Apply Agility Reduction
+    agi_stat = attacker_stats.get("AGI", 50)
+    rt_reduction = (agi_stat - 50) / 25
+    final_rt = max(3.0, twc_base - rt_reduction)
+    
+    return final_rt
+
+def calculate_roundtime(agility: int, weapon_base_speed: int = 3) -> float: 
+    """Standard single-weapon RT."""
+    return max(3.0, float(weapon_base_speed + 2) - ((agility - 50) / 25))
+
+
+# --- ATTACK STRENGTH (AS) ---
 
 def calculate_attack_strength(attacker: Any, attacker_stats: dict, attacker_skills: dict,
                               weapon_item_data: dict | None,
-                              attacker_posture: str, attacker_stance: str, 
+                              attacker_stance: str, 
                               attacker_modifiers: dict,
-                              combat_rules: dict) -> int:
+                              combat_rules: dict,
+                              hand: str = "main") -> int:
+    """
+    Calculates Attack Strength (AS).
+    Handles Melee (1H/2H), TWC (Offhand penalty), and Ranged (Asrial's Formula).
+    """
     as_val = 0
     
-    # 1. Basic Bonuses
     strength_stat = attacker_stats.get("STR", 50)
     str_bonus = get_stat_bonus(strength_stat, "STR", attacker_modifiers)
     dex_stat = attacker_stats.get("DEX", 50)
     dex_bonus = get_stat_bonus(dex_stat, "DEX", attacker_modifiers)
 
-    # --- RANGED LOGIC (Bows/Crossbows) ---
     weapon_skill_name = weapon_item_data.get("skill") if weapon_item_data else "brawling"
     
+    # --- RANGED LOGIC (Bows/Crossbows) ---
     if weapon_skill_name in ["bows", "crossbows"]:
-        # Asrial's Formula: 
-        # [Ranged Skill + DEX + (Ambush-40)/4 + (Perception-40)/4 + Enchant + Kneeling] * Stance
+        # Formula: [Skill + DEX + (Ambush-40)/4 + (Perception-40)/4 + Enchant] * Stance
         
-        # Skill
         skill_rank = attacker_skills.get(weapon_skill_name, 0)
         skill_bonus = calculate_skill_bonus(skill_rank)
         as_val += skill_bonus
-        
-        # DEX
         as_val += dex_bonus
         
-        # Ambush & Perception (Ranks above 40 give bonus)
         ambush_ranks = attacker_skills.get("ambush", 0)
-        perception_ranks = attacker_skills.get("perception", 0) # Ensure this skill exists in skills.json
-        
-        if ambush_ranks > 40:
-            as_val += math.floor((ambush_ranks - 40) / 4)
-        if perception_ranks > 40:
-            as_val += math.floor((perception_ranks - 40) / 4)
+        perception_ranks = attacker_skills.get("perception", 0)
+        if ambush_ranks > 40: as_val += math.floor((ambush_ranks - 40) / 4)
+        if perception_ranks > 40: as_val += math.floor((perception_ranks - 40) / 4)
             
-        # Enchant
-        if weapon_item_data:
-            as_val += min(50, weapon_item_data.get("enchantment", 0)) # Capped at +50 per docs
-            
-        # Kneeling Bonus (Crossbows only)
-        if weapon_skill_name == "crossbows" and attacker_posture == "kneeling":
-            kneel_table = combat_rules.get("ranged_rules", {}).get("crossbow_kneeling_bonus", {})
-            as_val += kneel_table.get(attacker_stance, 0)
+        if weapon_item_data: as_val += min(50, weapon_item_data.get("enchantment", 0))
             
         # Ranged Stance Multiplier
         ranged_stance_mods = combat_rules.get("ranged_rules", {}).get("as_stance_modifiers", {})
         stance_mod = ranged_stance_mods.get(attacker_stance, 1.0)
-        
         as_val = int(as_val * stance_mod)
         
     # --- MELEE LOGIC ---
@@ -200,12 +233,12 @@ def calculate_attack_strength(attacker: Any, attacker_stats: dict, attacker_skil
         # STR Bonus
         as_val += str_bonus
 
-        # Weapon/Skill Bonus
         skill_bonus = 0
+        skill_rank = 0
         if not weapon_item_data or weapon_item_data.get("item_type") != "weapon": 
             # Brawling
-            brawling_rank = attacker_skills.get("brawling", 0)
-            skill_bonus = calculate_skill_bonus(brawling_rank)
+            skill_rank = attacker_skills.get("brawling", 0)
+            skill_bonus = calculate_skill_bonus(skill_rank)
             base_barehanded = getattr(config, 'BAREHANDED_BASE_AS', 0)
             as_val += base_barehanded
         else:
@@ -213,10 +246,30 @@ def calculate_attack_strength(attacker: Any, attacker_stats: dict, attacker_skil
             skill_rank = attacker_skills.get(weapon_skill_name, 0)
             skill_bonus = calculate_skill_bonus(skill_rank)
         
-        # Apply Melee Stance Factor (Offensive=1.0, Defensive=0.5)
+        # --- TWC OFFHAND LOGIC ---
+        if hand == "off":
+            # Formula: 0.6 * WeaponSkill + 0.4 * TWCSkill
+            twc_rank = attacker_skills.get("two_weapon_combat", 0)
+            twc_bonus = calculate_skill_bonus(twc_rank)
+            
+            combined_skill = (0.6 * skill_bonus) + (0.4 * twc_bonus)
+            as_val += math.floor(combined_skill)
+            
+            # Cap check: If STR > DEX, offhand is limited by DEX
+            if str_bonus > dex_bonus:
+                as_val -= str_bonus
+                as_val += dex_bonus
+        else:
+            # Main hand: Full skill
+            as_val += skill_bonus
+        
+        # Apply Melee Stance Factor (1.0 to 0.5 scaling of skill effectiveness)
         stance_mods = combat_rules.get("stance_modifiers", {})
         stance_data = stance_mods.get(attacker_stance, stance_mods.get("creature", {}))
         skill_factor = stance_data.get("weapon_skill_factor", 1.0)
+        
+        # Remove full skill and re-add factored skill
+        as_val -= skill_bonus
         as_val += math.floor(skill_bonus * skill_factor)
         
         # Combat Maneuvers (CM / 2)
@@ -230,12 +283,10 @@ def calculate_attack_strength(attacker: Any, attacker_stats: dict, attacker_skil
         # Melee Stance Penalty (Additive)
         as_val += stance_data.get("as_penalty", 0)
         
-        # Posture Modifier (Multiplicative for melee)
-        posture_mods = combat_rules.get("posture_modifiers", {})
-        posture_data = posture_mods.get(attacker_posture, posture_mods.get("standing", {"as_mod": 1.0}))
-        as_val = int(as_val * posture_data.get("as_mod", 1.0))
+        # Posture Modifier (Multiplicative) would usually go here if using legacy system
+        # Currently assuming GSIV-style Stance handles the bulk of modification.
 
-    # Common: Buffs (AS Bonus)
+    # Buffs (AS Bonus)
     buffs = attacker.buffs if isinstance(attacker, Player) else attacker.get("buffs", {})
     for buff in buffs.values():
         if buff.get("type") == "as_bonus":
@@ -243,7 +294,11 @@ def calculate_attack_strength(attacker: Any, attacker_stats: dict, attacker_skil
 
     return max(0, as_val)
 
+
+# --- DEFENSE STRENGTH (DS) ---
+
 def _get_posture_status_factor(entity_posture: str, status_effects: list, combat_rules: dict) -> float:
+    """Calculates the multiplier for E/B/P based on posture/status."""
     factor = 1.0
     p_mods = combat_rules.get("posture_modifiers", {})
     p_data = p_mods.get(entity_posture, p_mods.get("standing", {}))
@@ -256,7 +311,9 @@ def _get_posture_status_factor(entity_posture: str, status_effects: list, combat
     return factor
 
 def calculate_generic_defense(defender: Any, combat_rules: dict) -> int:
+    """Calculates Generic DS: Spells + Environment + Status Penalties."""
     ds = 0
+    
     buffs = defender.buffs if isinstance(defender, Player) else defender.get("buffs", {})
     for buff in buffs.values():
         if buff.get("type") == "ds_bonus":
@@ -319,19 +376,16 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
     
     # --- RANGED ATTACKER LOGIC (Incoming Ranged Attack) ---
     if is_ranged: 
-        # "Ranged weapon users receive a small amount of DS vs ranged attacks... no stance bonus... small fraction of enchant"
-        # Standard melee parry is bypassed entirely for ranged attacks (return 0), unless specifically handled.
-        # Since user said "small amount... exact formula unknown", I will add a tiny flat bonus based on enchant if holding a bow.
-        if weapon_skill in ["bows", "crossbows"]:
-             enchant = weapon_data.get("enchantment", 0)
-             return math.floor(enchant / 2) # Arbitrary "small fraction"
+        # Standard melee parry is bypassed.
+        # Small flat bonus for holding a weapon/runestaff might apply (Enchant/2)
+        if weapon_skill in ["bows", "crossbows", "staves"]:
+             enchant = weapon_data.get("enchantment", 0) if weapon_data else 0
+             return math.floor(enchant / 2) 
         return 0
     
-    # --- RANGED DEFENDER LOGIC (Holding a Bow/XBow vs Melee) ---
+    # --- RANGED DEFENDER LOGIC (Holding Bow vs Melee) ---
     if weapon_skill in ["bows", "crossbows"]:
         ranged_rules = combat_rules.get("ranged_rules", {})
-        
-        # [(Ranged Skill + trunc(Perception/2) + trunc(Ambush/2)) * StanceMod] + Enchant + StanceBonus
         
         # Skill Bonus
         skill_ranks = defender_skills.get(weapon_skill, 0)
@@ -347,7 +401,7 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
         stance_mod = ranged_rules.get("ds_stance_modifiers", {}).get(weapon_type_key, {}).get(defender_stance, 0.0)
         
         # Enchant
-        enchant = weapon_data.get("enchantment", 0)
+        enchant = weapon_data.get("enchantment", 0) if weapon_data else 0
         
         # Stance Bonus
         stance_bonus = ranged_rules.get("ds_stance_bonus", {}).get(defender_stance, 0)
@@ -380,6 +434,46 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
             
         return math.floor(parry_ds * factor_mod)
 
+    # --- TWC PARRY LOGIC (Dual Wielding) ---
+    is_twc = (offhand_data is not None and offhand_data.get("item_type") == "weapon")
+    if is_twc:
+        # Primary Hand DS (Uses Standard 1H Formula)
+        weapon_ranks = defender_skills.get(weapon_skill, 0)
+        str_b = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
+        dex_b = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_modifiers)
+        enchant = weapon_data.get("enchantment", 0) if weapon_data else 0
+
+        # Using 1H Polearm table as a proxy for Standard 1H modifiers since they are usually identical
+        stance_mods_1h = combat_rules.get("polearm_rules", {}).get("1h_grip", {}).get("modifiers", {})
+        stance_bonus_1h = combat_rules.get("polearm_rules", {}).get("1h_grip", {}).get("bonuses", {})
+        
+        mod_1h = stance_mods_1h.get(defender_stance, 0.5)
+        bonus_1h = stance_bonus_1h.get(defender_stance, 0)
+        
+        base_primary = weapon_ranks + math.floor(str_b/4) + math.floor(dex_b/4) + math.floor(enchant/2)
+        primary_ds = (base_primary * mod_1h) + bonus_1h
+        
+        # Off-Hand DS
+        twc_ranks = defender_skills.get("two_weapon_combat", 0)
+        off_enchant = offhand_data.get("enchantment", 0)
+        
+        twc_rules = combat_rules.get("twc_rules", {})
+        off_mod_table = twc_rules.get("offhand_stance_modifiers", {})
+        off_mod = off_mod_table.get(defender_stance, 0.25)
+        
+        off_keywords = offhand_data.get("keywords", [])
+        flat_bonus = twc_rules.get("offhand_bonus_default", 5)
+        for special in twc_rules.get("special_offhand_weapons", []):
+            if special in off_keywords:
+                flat_bonus = twc_rules.get("offhand_bonus_special", 15)
+                break
+                
+        base_off = twc_ranks + math.floor(str_b/4) + math.floor(dex_b/4) + math.floor(off_enchant/2)
+        offhand_ds = (base_off * off_mod) + flat_bonus
+        
+        total_parry = primary_ds + offhand_ds
+        return math.floor(total_parry * factor_mod)
+
     # --- STANDARD MELEE LOGIC ---
     weapon_ranks = defender_skills.get(weapon_skill, 0)
     str_b = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
@@ -405,6 +499,7 @@ def calculate_defense_strength(defender: Any,
                                is_ranged_attack: bool, defender_stance: str,
                                defender_modifiers: dict,
                                combat_rules: dict) -> int:
+    
     if isinstance(defender, Player):
         stats, skills, posture, level = defender.stats, defender.skills, defender.posture, defender.level
         status_effects = defender.status_effects
@@ -421,20 +516,28 @@ def calculate_defense_strength(defender: Any,
     
     evade_ds = calculate_evade_defense(stats, skills, defender_modifiers, armor_item_data, shield_item_data, stance_percent, factor_mod, is_ranged_attack, combat_rules)
     block_ds = calculate_block_defense(stats, skills, defender_modifiers, shield_item_data, stance_percent, factor_mod, is_ranged_attack, combat_rules)
-    parry_ds = calculate_parry_defense(stats, skills, defender_modifiers, weapon_item_data, offhand_item_data, level, stance_percent, factor_mod, is_ranged_attack, defender_stance, combat_rules)
+    
+    # Pass offhand for TWC/Polearm penalty checks
+    parry_ds = calculate_parry_defense(
+        stats, skills, defender_modifiers, 
+        weapon_item_data, offhand_item_data, 
+        level, stance_percent, factor_mod, is_ranged_attack, defender_stance, combat_rules
+    )
+    
     generic_ds = calculate_generic_defense(defender, combat_rules)
     
     total_ds = generic_ds + evade_ds + block_ds + parry_ds
     return max(0, total_ds)
 
-def calculate_roundtime(agility: int) -> float: return max(3.0, 5.0 - ((agility - 50) / 25))
 
-# --- MAIN RESOLVE FUNCTION --- (Unchanged structure, just ensures calls use updated funcs)
-def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_global: dict) -> dict:
+# --- MAIN RESOLVE FUNCTION ---
+
+def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_global: dict, is_offhand: bool = False) -> dict:
     combat_rules = getattr(world, 'game_rules', {})
     if not combat_rules:
         print("[COMBAT ERROR] Combat Rules missing! Using defaults.")
 
+    # --- Setup Entities ---
     is_attacker_player = isinstance(attacker, Player)
     attacker_name = attacker.name if is_attacker_player else attacker.get("name", "Creature")
     attacker_stats = attacker.stats if is_attacker_player else attacker.get("stats", {})
@@ -450,6 +553,7 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     
     attacker_name_possessive = f"{attacker_name}'s" if not attacker_name.endswith('s') else f"{attacker_name}'"
     
+    # --- Equip Setup ---
     if is_defender_player:
         defender_armor_data = defender.get_equipped_item_data("torso")
         defender_shield_data = defender.get_equipped_item_data("offhand")
@@ -467,35 +571,42 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         defender_armor_type_str = get_entity_armor_type(defender, game_items_global)
 
     if defender_shield_data and defender_shield_data.get("item_type") != "shield": defender_shield_data = None
-    if defender_offhand_data and defender_offhand_data.get("item_type") == "shield": defender_offhand_data = None
-        
-    selected_attack = None
-    attack_list = []
+    
+    # --- Determine Attacker Weapon (Main vs Offhand) ---
     attacker_weapon_data = None
+    hand_key = "main"
     
     if is_attacker_player:
-        attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
-        weapon_skill_to_learn = "brawling"
-        if attacker_weapon_data: weapon_skill_to_learn = attacker_weapon_data.get("skill", "brawling")
-        attempt_skill_learning(attacker, weapon_skill_to_learn)
-        if attacker_weapon_data: attack_list = attacker_weapon_data.get("attacks", [])
-        else: attack_list = [{ "verb": "punch", "damage_type": "crush", "weapon_name": "your fist", "chance": 1.0 }]
+        if is_offhand:
+            attacker_weapon_data = attacker.get_equipped_item_data("offhand")
+            hand_key = "off"
+        else:
+            attacker_weapon_data = attacker.get_equipped_item_data("mainhand")
     else:
+        # Monster logic
         mainhand_id = attacker.get("equipped", {}).get("mainhand")
         attacker_weapon_data = game_items_global.get(mainhand_id) if mainhand_id else None
-        if attacker_weapon_data: attack_list = attacker_weapon_data.get("attacks", [])
-        else: attack_list = attacker.get("attacks", [])
         
-    if not attack_list: attack_list = [{ "verb": "attack", "damage_type": "crush", "weapon_name": "something", "chance": 1.0 }]
+    # --- Select Attack Verb ---
+    selected_attack = None
+    attack_list = []
+    if attacker_weapon_data:
+        attack_list = attacker_weapon_data.get("attacks", [])
+    elif not is_attacker_player:
+        attack_list = attacker.get("attacks", [])
+    
+    if not attack_list: attack_list = [{ "verb": "attack", "damage_type": "crush", "weapon_name": "fist", "chance": 1.0 }]
     selected_attack = _get_weighted_attack(attack_list)
     if not selected_attack: selected_attack = attack_list[0]
 
     attack_verb = selected_attack.get("verb", "attack")
     weapon_damage_type = selected_attack.get("damage_type", "crush")
-    weapon_damage_factor = 0.100
-    broadcast_weapon_display = "" 
-
+    
+    # --- Determine AvD Bonus & Display ---
     avd_bonus = 0
+    weapon_damage_factor = 0.1
+    broadcast_weapon_display = ""
+
     if attacker_weapon_data:
         weapon_damage_factor = attacker_weapon_data.get("damage_factors", {}).get(defender_armor_type_str, 0.100)
         avd_mods = attacker_weapon_data.get("avd_modifiers", {})
@@ -511,21 +622,23 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
             
         damage_factors = attacker.get("damage_factors", {}) if not is_attacker_player else {}
         weapon_damage_factor = damage_factors.get(defender_armor_type_str, 0.100)
-        
         avd_mods = attacker.get("avd_modifiers", {})
         avd_bonus = avd_mods.get(defender_armor_type_str, 0)
 
     attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
-    is_ranged_attack = attacker_weapon_type in ["bow"]
+    is_ranged_attack = attacker_weapon_type in ["bow", "crossbow"]
 
+    # --- CALCULATE AS ---
     attacker_as = calculate_attack_strength(
         attacker, attacker_stats, attacker_skills, 
         attacker_weapon_data, 
-        attacker_posture, attacker_stance, 
+        attacker_stance,
         attacker_modifiers,
-        combat_rules
+        combat_rules,
+        hand=hand_key
     )
     
+    # --- CALCULATE DS ---
     defender_ds = calculate_defense_strength(
         defender, defender_armor_data, defender_shield_data, 
         defender_weapon_data, defender_offhand_data, 
@@ -534,17 +647,18 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         combat_rules
     )
 
+    # --- ROLL ---
     d100_roll = random.randint(1, 100)
     combat_roll_result = (attacker_as + avd_bonus) - defender_ds + d100_roll 
 
+    # --- LOGGING ---
     as_str = f"+{attacker_as}" if attacker_as >= 0 else str(attacker_as)
     avd_str = f"+{avd_bonus}" if avd_bonus >= 0 else str(avd_bonus)
-    ds_str = f"-{defender_ds}" 
     
     roll_string = (f"  AS: {as_str} + AvD: {avd_str} + d100: +{d100_roll} - DS: {defender_ds} = {combat_roll_result}")
     
     log_builder = CombatLogBuilder(attacker_name, defender_name, broadcast_weapon_display, attack_verb)
-    results = {'hit': False, 'damage': 0, 'attempt_msg': "", 'defender_attempt_msg': "", 'broadcast_attempt_msg': "", 'roll_string': roll_string, 'result_msg': "", 'broadcast_result_msg': "", 'critical_msg': "", 'is_fatal': False}
+    results = {'hit': False, 'damage': 0, 'combat_continues': True, 'attempt_msg': "", 'broadcast_attempt_msg': "", 'roll_string': roll_string, 'result_msg': "", 'broadcast_result_msg': "", 'critical_msg': "", 'is_fatal': False}
 
     if is_attacker_player:
         results['attempt_msg'] = log_builder.get_attempt_message('attacker')
@@ -553,17 +667,19 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         results['attempt_msg'] = log_builder.get_attempt_message('defender')
         results['broadcast_attempt_msg'] = log_builder.get_attempt_message('room')
 
+    # --- RESOLUTION ---
     if combat_roll_result > config.COMBAT_HIT_THRESHOLD:
         results['hit'] = True
         endroll_success_margin = combat_roll_result - config.COMBAT_HIT_THRESHOLD
         raw_damage = max(1, endroll_success_margin * weapon_damage_factor) 
+        
         critical_divisor = _get_entity_critical_divisor(defender, defender_armor_data)
         base_crit_rank = math.trunc(raw_damage / critical_divisor)
         final_crit_rank = _get_randomized_crit_rank(base_crit_rank)
         
         hit_location = _get_random_hit_location(combat_rules)
-        
         crit_result = _get_critical_result(world, weapon_damage_type, hit_location, final_crit_rank)
+        
         extra_damage = crit_result["extra_damage"]
         total_damage = math.trunc(raw_damage) + extra_damage
         results['damage'] = total_damage
@@ -588,10 +704,8 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         else:
             results['result_msg'] = log_builder.get_miss_message('defender')
             results['broadcast_result_msg'] = log_builder.get_broadcast_miss_message('room')
+            
     return results
-
-def stop_combat(world: 'World', combatant_id: str, target_id: str):
-    world.stop_combat_for_all(combatant_id, target_id)
 
 def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callback, send_vitals_callback):
     current_time = time.time()
@@ -627,7 +741,7 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             world.remove_combat_state(combatant_id) 
             continue
 
-        attack_results = resolve_attack(world, attacker, defender, game_items_global=world.game_items)
+        attack_results = resolve_attack(world, attacker, defender, world.game_items, is_offhand=False)
 
         sid_to_skip = None
         if is_defender_player:
