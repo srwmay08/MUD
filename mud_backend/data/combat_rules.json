@@ -1,12 +1,12 @@
 {
     "stance_modifiers": {
-        "offensive": {"as_mod": 1.15, "ds_mod": 0.70},
-        "advance":   {"as_mod": 1.10, "ds_mod": 0.80},
-        "forward":   {"as_mod": 1.05, "ds_mod": 0.90},
-        "neutral":   {"as_mod": 1.00, "ds_mod": 1.00},
-        "guarded":   {"as_mod": 0.90, "ds_mod": 1.10},
-        "defensive": {"as_mod": 0.75, "ds_mod": 1.25},
-        "creature":  {"as_mod": 1.00, "ds_mod": 1.00}
+        "offensive": {"as_penalty": 0, "ds_mod": 0.70},
+        "advance":   {"as_penalty": -20, "ds_mod": 0.80},
+        "forward":   {"as_penalty": -40, "ds_mod": 0.90},
+        "neutral":   {"as_penalty": -60, "ds_mod": 1.00},
+        "guarded":   {"as_penalty": -80, "ds_mod": 1.10},
+        "defensive": {"as_penalty": -100, "ds_mod": 1.25},
+        "creature":  {"as_penalty": 0, "ds_mod": 1.00}
     },
     "posture_modifiers": {
         "standing":  {"as_mod": 1.0, "ds_mod": 1.0},

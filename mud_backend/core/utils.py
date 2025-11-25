@@ -4,11 +4,8 @@ from typing import Dict, Any
 
 def get_stat_bonus(stat_value: int, stat_name: str, race_modifiers: Dict[str, int]) -> int:
     """
-    Calculates the stat bonus.
-    Args:
-        stat_value: The raw value of the stat (e.g. 60)
-        stat_name: The name (e.g. "STR")
-        race_modifiers: A dictionary of modifiers for the specific race (e.g. {"STR": 5, ...})
+    Calculates the stat bonus based on Gemstone IV formula:
+    Bonus = floor((RawStat - 50) / 2) + RaceModifier
     """
     base_bonus = math.floor((stat_value - 50) / 2)
     race_bonus = race_modifiers.get(stat_name, 0)
