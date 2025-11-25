@@ -23,51 +23,43 @@ def list_files():
         "monsters": [],
         "items": [],
         "nodes": [],
-        "loot": []  # Added loot category
+        "loot": [],
+        "spells": [] # Added spells
     }
     
-    # Scan for Monsters/NPCs
-    for f in glob.glob(os.path.join(DATA_DIR, "**", "monsters*.json"), recursive=True):
-        rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
-        categories["monsters"].append(rel)
+    def scan(pattern, cat):
+        for f in glob.glob(os.path.join(DATA_DIR, "**", pattern), recursive=True):
+            rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
+            categories[cat].append(rel)
 
-    # Scan for Items
-    for f in glob.glob(os.path.join(DATA_DIR, "**", "items_*.json"), recursive=True):
-        rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
-        categories["items"].append(rel)
-
-    # Scan for Nodes
-    for f in glob.glob(os.path.join(DATA_DIR, "**", "nodes*.json"), recursive=True):
-        rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
-        categories["nodes"].append(rel)
-
-    # Scan for Loot
-    for f in glob.glob(os.path.join(DATA_DIR, "**", "loot*.json"), recursive=True):
-        rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
-        categories["loot"].append(rel)
+    scan("monsters*.json", "monsters")
+    scan("items_*.json", "items")
+    scan("nodes*.json", "nodes")
+    scan("loot*.json", "loot")
+    scan("spells*.json", "spells") # Scan for spells
         
     return jsonify(categories)
 
 @app.route('/api/references', methods=['GET'])
 def get_references():
-    """Returns lists of IDs for skills, items, and loot tables for autocomplete."""
+    """Returns lists of IDs for skills, items, loot tables, and spells for autocomplete."""
     refs = {
         "skills": [],
         "items": [],
-        "loot_tables": []
+        "loot_tables": [],
+        "spells": []
     }
 
-    # 1. Skills
+    # 1. Skills (List of Dicts)
     skills_path = os.path.join(DATA_DIR, "skills.json")
     if os.path.exists(skills_path):
         try:
             with open(skills_path, 'r') as f:
                 data = json.load(f)
-                # skills.json is a list of objects
                 refs["skills"] = [s.get("skill_id") for s in data if "skill_id" in s]
         except: pass
 
-    # 2. Items (scan all items_*.json)
+    # 2. Items (Dict of Dicts)
     for f in glob.glob(os.path.join(DATA_DIR, "**", "items_*.json"), recursive=True):
         try:
             with open(f, 'r') as file:
@@ -76,7 +68,7 @@ def get_references():
                     refs["items"].extend(data.keys())
         except: pass
 
-    # 3. Loot Tables (scan all loot*.json)
+    # 3. Loot Tables (Dict of Lists/Dicts)
     for f in glob.glob(os.path.join(DATA_DIR, "**", "loot*.json"), recursive=True):
         try:
             with open(f, 'r') as file:
@@ -84,11 +76,18 @@ def get_references():
                 if isinstance(data, dict):
                     refs["loot_tables"].extend(data.keys())
         except: pass
+
+    # 4. Spells (Dict of Dicts)
+    for f in glob.glob(os.path.join(DATA_DIR, "**", "spells*.json"), recursive=True):
+        try:
+            with open(f, 'r') as file:
+                data = json.load(file)
+                if isinstance(data, dict):
+                    refs["spells"].extend(data.keys())
+        except: pass
     
     # Sort for UI
-    refs["skills"].sort()
-    refs["items"].sort()
-    refs["loot_tables"].sort()
+    for k in refs: refs[k].sort()
 
     return jsonify(refs)
 
