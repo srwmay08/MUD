@@ -187,5 +187,21 @@
         "talk_prompt": "That receipt needs to get back to the Town Clerk at the <span class='keyword' data-command='goto townhall'>Town Hall</span>!",
         "reward_message": "The Town Clerk is relieved. 'That's... all of them? Amazing! You've been a huge help. Here is your final pay. I'll let the Innkeeper know your debt is clear. You've earned it!' You are awarded 250 silver.\n\n<span class='keyword' data-command='check in'>[Help: CHECK IN]</span> - You must be tired from all that running around. You should <span class='keyword' data-command='check in'>CHECK IN</span> at the inn to train your skills.",
         "already_learned_message": "The Town Clerk nods. 'Thank you again for your help.'"
+    },
+    "aethelion_duties": {
+        "name": "Duties of the Light",
+        "give_target_name": "high priest",
+        "req_counters": {
+            "polished_sun_disc": 1,
+            "lit_brazier": 1,
+            "recited_litany": 1,
+            "scrubbed_steps": 1,
+            "focused_prism": 1,
+            "alms_given": 10
+        },
+        "progress_prompt": "The temple is not yet in order. Attend to the discs, the braziers, the steps, the prism, and the poor at our gates. And do not forget your vows.",
+        "talk_prompt": "The temple shines, and your soul reflects its light. You have served with humility.",
+        "reward_spell": "1005",
+        "reward_message": "The High Priest smiles. 'You understand that true power comes from service. Receive now the blessing of inner strength.' You have learned Resist Fear!"
     }
 }

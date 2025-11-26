@@ -71,6 +71,23 @@ class Give(BaseVerb):
         if silver_amount == 0:
             target_item_name = " ".join(self.args[1:]).lower()
 
+        # --- ALMS GIVING LOGIC ---
+        if silver_amount > 0:
+            target_npc = _find_npc_in_room(self.room, target_name_input)
+            if target_npc and "beggar" in target_npc.get("keywords", []):
+                if self.player.wealth.get("silvers", 0) >= silver_amount:
+                    self.player.wealth["silvers"] -= silver_amount
+                    self.player.send_message(f"You give {silver_amount} silver to the beggar.")
+                    self.player.send_message("The beggar bows their head. 'Bless you, child of light.'")
+                    
+                    self.player.quest_counters["alms_given"] = self.player.quest_counters.get("alms_given", 0) + silver_amount
+                    _set_action_roundtime(self.player, 1.0)
+                    return
+                else:
+                    self.player.send_message("You don't have that much silver.")
+                    return
+        # -------------------------
+
         if silver_amount == 0 and target_item_name:
             target_npc = _find_npc_in_room(self.room, target_name_input)
             if target_npc:

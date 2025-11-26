@@ -99,7 +99,14 @@ class Player(GameEntity):
         self.guilds = self.data.get("guilds", [])   
         
         self.flags = self.data.get("flags", {})
-        self.quest_trip_counter = self.data.get("quest_trip_counter", 0)
+        
+        # --- Quest Counters (NEW) ---
+        self.quest_counters = self.data.get("quest_counters", {})
+        
+        # Backwards compatibility
+        if self.data.get("quest_trip_counter"):
+            self.quest_counters["trip_training_attempts"] = self.data.get("quest_trip_counter")
+
         self.visited_rooms = self.data.get("visited_rooms", [])
         
         self.is_goto_active = self.data.get("is_goto_active", False)
@@ -402,21 +409,12 @@ class Player(GameEntity):
         return int(ptp_calc), int(mtp_calc), int(stp_calc)
 
     def _check_for_level_up(self):
-        """
-        Checks if the player has enough experience to level up.
-        Does NOT apply the level up; instead, it notifies the player
-        that they need to visit an inn to train.
-        """
         if self.level_xp_target == 0: self.level_xp_target = self._get_xp_target_for_level(self.level)
-        
         if self.experience >= self.level_xp_target:
-            # Only notify if not already capped/maxed (unless we want to support infinite post-cap)
-            # Simple notification
             if self.level < 100:
                 self.send_message(f"**You have enough experience to advance to level {self.level + 1}!**")
                 self.send_message("Visit an inn and <span class='keyword' data-command='checkin'>CHECK IN</span> to train and level up.")
             else:
-                # Post-cap notification
                 self.send_message("**You have enough experience for a post-cap training point!**")
                 self.send_message("Visit an inn to train.")
 
@@ -467,6 +465,7 @@ class Player(GameEntity):
             "worn_items": self.worn_items,
             "wealth": self.wealth,
             "flags": self.flags,
+            "quest_counters": self.quest_counters, # NEW: Save quest counters
             "completed_quests": self.completed_quests,
             "factions": self.factions,
             "deities": self.deities, 

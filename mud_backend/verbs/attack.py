@@ -90,6 +90,19 @@ class Attack(BaseVerb):
                 resolve_data["messages"].append(consequence_msg)
                 resolve_data["combat_continues"] = False 
                 
+                # --- UPDATE QUEST COUNTERS ---
+                monster_id = target_monster_data.get("monster_id")
+                monster_family = target_monster_data.get("family")
+                
+                if monster_id:
+                    key = f"{monster_id}_kills"
+                    self.player.quest_counters[key] = self.player.quest_counters.get(key, 0) + 1
+                    
+                if monster_family:
+                    key = f"{monster_family}_kills"
+                    self.player.quest_counters[key] = self.player.quest_counters.get(key, 0) + 1
+                # -----------------------------
+
                 # XP Logic
                 player_level = self.player.level
                 monster_level = target_monster_data.get("level", 1)

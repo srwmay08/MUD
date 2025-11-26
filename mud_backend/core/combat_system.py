@@ -8,14 +8,9 @@ if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
 from mud_backend.core.game_objects import Player
-from mud_backend.core.db import save_game_state
-from mud_backend.core import loot_system
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
-from mud_backend.core.skill_handler import attempt_skill_learning
-from mud_backend.core.game_loop import environment
 from mud_backend import config
 
-# --- HELPER FUNCTIONS --- (Unchanged log builder)
 class CombatLogBuilder:
     PLAYER_MISS_MESSAGES = [
         "   A clean miss.", "   You miss {defender} completely.", "   {defender} avoids the attack!",
@@ -143,7 +138,18 @@ def _get_critical_result(world: 'World', damage_type: str, location: str, rank: 
 def _get_stat_modifiers(entity: Any) -> Dict[str, int]:
     return entity.stat_modifiers if isinstance(entity, Player) else {}
 
+def _get_posture_status_factor(entity_posture: str, status_effects: list, combat_rules: dict) -> float:
+    factor = 1.0
+    p_mods = combat_rules.get("posture_modifiers", {})
+    p_data = p_mods.get(entity_posture, p_mods.get("standing", {}))
+    factor *= p_data.get("defense_factor", 1.0)
+    s_mods = combat_rules.get("status_modifiers", {})
+    for effect in status_effects:
+        if effect in s_mods: factor *= s_mods[effect].get("defense_factor", 1.0)
+    return factor
+
 # --- ROUNDTIME ---
+
 def calculate_roundtime_twc(attacker_stats: dict, main_weapon: dict, off_weapon: dict) -> float:
     right_base = main_weapon.get("base_speed", 3) if main_weapon else 0
     left_base = off_weapon.get("base_speed", 3) if off_weapon else 0
@@ -164,6 +170,101 @@ def calculate_roundtime_twc(attacker_stats: dict, main_weapon: dict, off_weapon:
 
 def calculate_roundtime(agility: int, weapon_base_speed: int = 3) -> float: 
     return max(3.0, float(weapon_base_speed + 2) - ((agility - 50) / 25))
+
+# --- MAGIC COMBAT CALCULATIONS ---
+
+def get_casting_stat(school: str) -> str:
+    """Returns the primary attribute for a spell school."""
+    if "elemental" in school or "sorcerous" in school:
+        return "INT"
+    if "spiritual" in school or "abjuration" in school:
+        return "WIS"
+    if "mental" in school:
+        return "LOG"
+    return "WIS" # Default
+
+def calculate_casting_strength(caster: Any, spell_data: dict) -> int:
+    """
+    Calculates CS (Casting Strength).
+    CS = Level + Stat Bonus + (Ranks * 3)
+    """
+    # 1. Stats
+    skill_name = spell_data.get("skill", "spiritual_lore")
+    school = spell_data.get("school", "spiritual")
+    stat_name = get_casting_stat(school)
+    
+    caster_stats = caster.stats if isinstance(caster, Player) else caster.get("stats", {})
+    caster_modifiers = _get_stat_modifiers(caster)
+    stat_val = caster_stats.get(stat_name, 50)
+    stat_bonus = get_stat_bonus(stat_val, stat_name, caster_modifiers)
+    
+    # 2. Level
+    caster_level = caster.level if isinstance(caster, Player) else caster.get("level", 1)
+    
+    # 3. Skill Ranks
+    ranks = 0
+    if isinstance(caster, Player):
+        ranks = caster.skills.get(skill_name, 0)
+    else:
+        # Monsters assume rank = level for primary magic skills
+        ranks = caster_level 
+        
+    cs = caster_level + stat_bonus + (ranks * 3)
+    return cs
+
+def calculate_target_defense(target: Any, spell_data: dict) -> int:
+    """
+    Calculates TD (Target Defense) against magic.
+    TD = Level + Stat Bonus + Magic Defense Buffs
+    """
+    # 1. Stats (Target defends with same stat type as attack usually, or WIS for will)
+    school = spell_data.get("school", "spiritual")
+    stat_name = get_casting_stat(school)
+    
+    target_stats = target.stats if isinstance(target, Player) else target.get("stats", {})
+    target_modifiers = _get_stat_modifiers(target)
+    stat_val = target_stats.get(stat_name, 50)
+    stat_bonus = get_stat_bonus(stat_val, stat_name, target_modifiers)
+    
+    # 2. Level
+    target_level = target.level if isinstance(target, Player) else target.get("level", 1)
+    
+    # 3. Buffs
+    buff_bonus = 0
+    buffs = target.buffs if isinstance(target, Player) else target.get("buffs", {})
+    for buff in buffs.values():
+        if buff.get("type") == "magic_defense":
+            buff_bonus += buff.get("val", 0)
+            
+    td = target_level + stat_bonus + buff_bonus
+    return td
+
+def get_cva(target: Any) -> int:
+    """
+    Cast vs Armor (CvA). 
+    Positive = Easier to hit (Cloth). Negative = Harder to hit (Plate).
+    """
+    armor_type = config.DEFAULT_UNARMORED_TYPE
+    if isinstance(target, Player):
+        armor_type = target.get_armor_type()
+    else:
+        # Heuristic for monsters based on description/attributes
+        defense_attrs = target.get("defense_attributes", [])
+        if "plate" in str(defense_attrs): armor_type = "plate"
+        elif "chain" in str(defense_attrs): armor_type = "chain"
+        elif "leather" in str(defense_attrs): armor_type = "leather"
+        else: armor_type = "cloth"
+        
+    # Arbitrary values: High negative protects well, positive makes it easier
+    cva_map = {
+        "unarmored": 20,
+        "cloth": 15,
+        "leather": 0,
+        "scale": -5,
+        "chain": -10,
+        "plate": -20
+    }
+    return cva_map.get(armor_type, 0)
 
 
 # --- ATTACK STRENGTH (AS) ---
@@ -292,20 +393,6 @@ def calculate_attack_strength(attacker: Any, attacker_stats: dict, attacker_skil
         stance_data = stance_mods.get(attacker_stance, stance_mods.get("creature", {}))
         skill_factor = stance_data.get("weapon_skill_factor", 1.0)
         
-        # Adjust skill portion by stance factor (remove full, add factored)
-        # Note: This assumes skill_bonus was fully added above.
-        # For TWC, we added a combined skill. We apply factor to THAT.
-        # For Main, we added skill_bonus.
-        # Simplification: Re-calculate total so far, find difference... 
-        # Actually, cleaner to just apply factor to the skill component directly before adding.
-        # But we already added it. So subtract and re-add.
-        # ... Wait, simpler:
-        # For TWC: as_val has stat + combined_skill. 
-        # For Main: as_val has stat + skill_bonus.
-        # Let's just do:
-        # as_val -= current_skill_contribution
-        # as_val += math.floor(current_skill_contribution * skill_factor)
-        
         current_skill_contrib = math.floor((0.6 * skill_bonus) + (0.4 * calculate_skill_bonus(attacker_skills.get("two_weapon_combat", 0)))) if hand == "off" else skill_bonus
         as_val -= current_skill_contrib
         as_val += math.floor(current_skill_contrib * skill_factor)
@@ -329,17 +416,6 @@ def calculate_attack_strength(attacker: Any, attacker_stats: dict, attacker_skil
     return max(0, as_val)
 
 # --- DEFENSE STRENGTH (DS) ---
-# (All DS functions remain unchanged from previous successful iteration)
-
-def _get_posture_status_factor(entity_posture: str, status_effects: list, combat_rules: dict) -> float:
-    factor = 1.0
-    p_mods = combat_rules.get("posture_modifiers", {})
-    p_data = p_mods.get(entity_posture, p_mods.get("standing", {}))
-    factor *= p_data.get("defense_factor", 1.0)
-    s_mods = combat_rules.get("status_modifiers", {})
-    for effect in status_effects:
-        if effect in s_mods: factor *= s_mods[effect].get("defense_factor", 1.0)
-    return factor
 
 def calculate_generic_defense(defender: Any, combat_rules: dict) -> int:
     ds = 0
