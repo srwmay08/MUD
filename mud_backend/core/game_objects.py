@@ -24,11 +24,8 @@ class Player(GameEntity):
         
         self.current_room_id = current_room_id
         self.account_username: str = self.data.get("account_username", "")
-        
-        # Admin Flag
         self.is_admin: bool = self.data.get("is_admin", False)
         
-        # Auto-grant admin to configured accounts
         if self.account_username.lower() in getattr(config, 'ADMIN_ACCOUNTS', []):
             self.is_admin = True
         
@@ -37,7 +34,6 @@ class Player(GameEntity):
         self._last_save_time = time.time()
         self.command_queue: List[str] = [] 
 
-        # State & Stats
         self.experience: int = self.data.get("experience", 0)
         self.unabsorbed_exp: int = self.data.get("unabsorbed_exp", 0)
         self.level: int = self.data.get("level", 0)
@@ -57,13 +53,11 @@ class Player(GameEntity):
         self.skills = self.data.get("skills", {})
         self.skill_learning_progress = self.data.get("skill_learning_progress", {})
         
-        # Vitals
         self._hp = min(self.data.get("hp", 100), self.max_hp)
         self._mana = min(self.data.get("mana", 100), self.max_mana)
         self._stamina = min(self.data.get("stamina", 100), self.max_stamina)
         self._spirit = min(self.data.get("spirit", 10), self.max_spirit)
         
-        # Inventory
         self.inventory = self.data.get("inventory", [])
         self.worn_items = self.data.get("worn_items", {})
         for slot_key in config.EQUIPMENT_SLOTS.keys():
@@ -75,7 +69,6 @@ class Player(GameEntity):
         self.status_effects = self.data.get("status_effects", [])
         self.next_action_time = self.data.get("next_action_time", 0.0)
         
-        # Trackers
         self.deaths_recent = self.data.get("deaths_recent", 0)
         self.death_sting_points = self.data.get("death_sting_points", 0)
         self.con_lost = self.data.get("con_lost", 0)
@@ -93,31 +86,22 @@ class Player(GameEntity):
         self.known_maneuvers = self.data.get("known_maneuvers", [])
         self.completed_quests = self.data.get("completed_quests", [])
         self.factions = self.data.get("factions", {})
-        
-        # --- Religion & Lore ---
         self.deities = self.data.get("deities", []) 
         self.guilds = self.data.get("guilds", [])   
-        
         self.flags = self.data.get("flags", {})
-        
-        # --- Quest Counters (NEW) ---
         self.quest_counters = self.data.get("quest_counters", {})
         
-        # Backwards compatibility
         if self.data.get("quest_trip_counter"):
             self.quest_counters["trip_training_attempts"] = self.data.get("quest_trip_counter")
 
         self.visited_rooms = self.data.get("visited_rooms", [])
-        
         self.is_goto_active = self.data.get("is_goto_active", False)
         self.goto_id = None 
-        
         self.group_id = self.data.get("group_id", None) 
         self.band_id = self.data.get("band_id", None) 
         self.band_xp_bank = self.data.get("band_xp_bank", 0) 
         
         self.temp_leave_message = None
-        
         self.level_xp_target = self._get_xp_target_for_level(self.level)
 
     def mark_dirty(self): self._is_dirty = True
@@ -134,7 +118,6 @@ class Player(GameEntity):
     def stat_modifiers(self) -> dict:
         return self.race_data.get("stat_modifiers", {})
 
-    # --- Stat Calculations ---
     @property
     def con_bonus(self) -> int: 
         return get_stat_bonus(self.stats.get("CON", 50), "CON", self.stat_modifiers)
@@ -221,7 +204,6 @@ class Player(GameEntity):
             self._spirit = value
             self.mark_dirty()
 
-    # --- Regen & Logic ---
     @property
     def hp_regeneration(self) -> int:
         pf_ranks = self.skills.get("physical_fitness", 0)
@@ -465,7 +447,7 @@ class Player(GameEntity):
             "worn_items": self.worn_items,
             "wealth": self.wealth,
             "flags": self.flags,
-            "quest_counters": self.quest_counters, # NEW: Save quest counters
+            "quest_counters": self.quest_counters,
             "completed_quests": self.completed_quests,
             "factions": self.factions,
             "deities": self.deities, 
@@ -554,6 +536,7 @@ class Room(GameEntity):
         self.triggers: Dict[str, str] = self.data.get("triggers", {})
         self.objects: List[Dict[str, Any]] = []
         self.lock = threading.RLock()
+        self.ambient_events = self.data.get("ambient_events", []) # <--- NEW: Load ambient events
         
         raw_objects = self.data.get("objects", [])
         for obj_stub in raw_objects:
@@ -569,7 +552,8 @@ class Room(GameEntity):
                 "description": self.description,
                 "objects": self.objects,
                 "exits": self.exits,
-                "triggers": self.triggers
+                "triggers": self.triggers,
+                "ambient_events": self.ambient_events # <--- NEW: Persist ambient events
             }
             if self.uid and not self.uid.startswith("room_"):
                  data["_id"] = self.uid 

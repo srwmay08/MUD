@@ -7,10 +7,16 @@
         "description": {
             "default": "A colossal archway of pale limestone dominates the view, positioned to swallow the first rays of the morning sun. The double doors are heavy timber plated in burnished bronze, embossed with a relief of a rising sun that seems to radiate a faint warmth even in the dead of night. The air here is crisp and carries the sharp, metallic scent of a brewing storm mixed with morning dew. Underfoot, a terrazzo mosaic spirals outward from a central eagle statue, its shadow creeping across the floor like the hand of a divine clock."
         },
+        "ambient_events": [
+            { "type": "time", "time": "DAWN", "message": "The rising sun strikes the bronze doors, causing them to blaze with golden light!" },
+            { "type": "time", "time": "DUSK", "message": "The shadows lengthen across the mosaic floor as the sun sets." },
+            { "type": "periodic", "chance": 0.1, "message": "A gentle breeze swirls leaves across the terrazzo mosaic." },
+            { "type": "periodic", "chance": 0.05, "message": "The bronze doors hum faintly, as if responding to a distant bell." }
+        ],
         "objects": [
             {"name": "bronze doors", "description": "Massive doors of gilded bronze depicting a rising sun.", "keywords": ["door", "doors"], "verbs": ["look", "open"]},
             {"name": "sun-dial mosaic", "description": "A complex floor mosaic. A shadow cast by the eagle statue indicates the time of day.", "keywords": ["mosaic", "floor", "dial"], "verbs": ["look", "examine"]},
-            {"name": "eagle statue", "description": "A bronze eagle with spread wings.", "keywords": ["statue", "eagle"], "verbs": ["look"]}
+            {"name": "dragon statue", "description": "A bronze dragon with spread wings.", "keywords": ["statue", "dragon"], "verbs": ["look"]}
         ],
         "exits": { "out": "ts_east", "east": "temple_nave" }
     },
@@ -22,6 +28,13 @@
         "description": {
             "default": "The vastness of this chamber presses down with a holy weight, a symphony of white marble and golden accents. Rows of high-backed pews carved from bleached ash wood stretch toward the dais, their surfaces worn smooth by generations of prayer. Above, the ceiling opens into a magnificent faceted crystal dome, splitting the natural light into dancing ribbons of color that wash over the congregation. The air is still and thick with the smell of beeswax and the silent hum of the Ever-Burning Brazier."
         },
+        "ambient_events": [
+            { "type": "periodic", "chance": 0.15, "message": "The Ever-Burning Brazier flares brightly for a moment, casting long shadows." },
+            { "type": "periodic", "chance": 0.1, "message": "Faint chanting echoes from the upper galleries." },
+            { "type": "periodic", "chance": 0.05, "message": "A beam of colored light from the crystal dome tracks across the floor." },
+            { "type": "periodic", "chance": 0.08, "message": "An almoner walks quietly through the nave, carrying a basket of bread." },
+            { "type": "periodic", "chance": 0.08, "message": "A group of pilgrims enters, kneeling in awe before the altar." }
+        ],
         "objects": [
             {"name": "ever-burning brazier", "description": "A massive golden bowl holding a magical, heatless flame representing eternal vigilance.", "keywords": ["brazier", "fire", "flame"], "verbs": ["look", "examine"]},
             {"name": "white marble altar", "description": "The center of worship, draped in cloth of gold.", "keywords": ["altar"], "verbs": ["look", "pray"]},
@@ -37,6 +50,11 @@
         "description": {
             "default": "In contrast to the golden grandeur of the Nave, this long side chamber feels humble and grounded. It smells of yeast, strong soap, and the bitter tang of medicinal salves. Sturdy trestle tables line the center of the room, flanked by rows of simple cots where the infirm rest under heavy wool blankets. The plaster walls are vibrant with frescoes in ochre and gold, depicting Aethelion walking among the wounded, his hands glowing with a restorative, celestial fire."
         },
+        "ambient_events": [
+            { "type": "periodic", "chance": 0.2, "message": "A patient on one of the cots coughs weakly." },
+            { "type": "periodic", "chance": 0.15, "message": "An acolyte hurries past with fresh bandages." },
+            { "type": "periodic", "chance": 0.1, "message": "The smell of baking bread wafts in from the kitchens." }
+        ],
         "objects": [
             {"name": "frescoes", "description": "Paintings depicting the god Aethelion tending to wounded soldiers.", "keywords": ["fresco", "painting", "wall"], "verbs": ["look"]},
             {"name": "loaf of bread", "item_id": "temple_bread", "is_item": true, "keywords": ["bread", "loaf"], "verbs": ["get", "eat"]}
