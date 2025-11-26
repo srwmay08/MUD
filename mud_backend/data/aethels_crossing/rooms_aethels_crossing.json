@@ -154,24 +154,6 @@
         ]
     },
     {
-        "room_id": "temple_of_light",
-        "name": "Temple of Aethelion - Sanctuary",
-        "x": 2, "y": 0, "z": 0,
-        "interior_id": "temple",
-        "description": {
-            "default": "The sanctuary is vast and filled with light. A central **crystal prism** catches the sun, directing beams onto the **white marble altar**. Along the walls, **golden sun-discs** are mounted to reflect the light. **Brass braziers** stand ready to be lit in the corners. The **marble steps** leading to the altar are worn smooth by many feet."
-        },
-        "objects": [
-            {"name": "High Priest", "is_npc": true, "quest_giver_ids": ["aethelion_duties"], "keywords": ["priest", "high priest"], "description": "The High Priest of Aethelion."},
-            {"name": "golden sun-disc", "keywords": ["disc", "sun-disc"], "description": "A large golden disc meant to reflect light. It looks a bit tarnished."},
-            {"name": "brass brazier", "keywords": ["brazier"], "description": "A heavy brass brazier for holding holy fire."},
-            {"name": "white marble altar", "keywords": ["altar"], "description": "The center of worship."},
-            {"name": "crystal prism", "keywords": ["prism"], "description": "A massive crystal suspended from the ceiling."},
-            {"name": "marble steps", "keywords": ["steps"], "description": "White marble steps that get muddy easily."}
-        ],
-        "exits": { "out": "ts_east" }
-    },
-    {
         "room_id": "ts_west",
         "name": "Guildsman's Walk (East)",
         "x": -1,
