@@ -1,5 +1,4 @@
 # mud_backend/core/db.py
-# STRICT MODE: No Mocks. Fails immediately if DB is unreachable.
 import socket 
 import json
 import os
@@ -60,18 +59,25 @@ def ensure_initial_data():
     database = get_db()
 
     print("[DB INIT] Syncing JSON data to Database...")
-    try:
-        data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-        json_files = glob.glob(os.path.join(data_dir, '**/rooms_*.json'), recursive=True)
-        
-        if not json_files:
-            print("[DB ERROR] No 'rooms_*.json' files found in data/ directory.")
-            return
+    
+    data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+    json_files = glob.glob(os.path.join(data_dir, '**/rooms_*.json'), recursive=True)
+    
+    if not json_files:
+        print("[DB ERROR] No 'rooms_*.json' files found in data/ directory.")
+        return
 
-        upsert_count = 0
-        for file_path in json_files:
+    upsert_count = 0
+    # --- FIX: Moved Try/Except INSIDE the loop ---
+    for file_path in json_files:
+        try:
             with open(file_path, 'r') as f:
-                room_data_list = json.load(f)
+                # Check if file is empty before loading
+                content = f.read()
+                if not content.strip():
+                    print(f"[DB WARN] Skipping empty file: {file_path}")
+                    continue
+                room_data_list = json.loads(content)
             
             for room_data in room_data_list:
                 room_id = room_data.get("room_id")
@@ -83,12 +89,14 @@ def ensure_initial_data():
                     upsert=True
                 )
                 if result.upserted_id: upsert_count += 1
-        
-        if upsert_count > 0:
-             print(f"[DB INIT] JSON sync complete. Inserted {upsert_count} new rooms.")
-             
-    except Exception as e:
-        print(f"[DB ERROR] An error occurred loading rooms: {e}")
+        except json.JSONDecodeError as e:
+            print(f"[DB ERROR] Invalid JSON in {file_path}: {e}")
+        except Exception as e:
+            print(f"[DB ERROR] Failed to load {file_path}: {e}")
+    # ---------------------------------------------
+    
+    if upsert_count > 0:
+            print(f"[DB INIT] JSON sync complete. Inserted {upsert_count} new rooms.")
 
     # 2. Test Player 'Alice'
     if database.players.count_documents({"name": "Alice"}) == 0:

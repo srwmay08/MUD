@@ -148,6 +148,8 @@ FACTION_RELATIONSHIPS = {
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
+    "u": "up", "up": "up",         # <--- ADDED
+    "d": "down", "down": "down",   # <--- ADDED
     "north": "north", "south": "south", "east": "east", "west": "west",
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }
