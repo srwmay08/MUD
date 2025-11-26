@@ -1,0 +1,162 @@
+[
+    {
+        "room_id": "temple_of_light",
+        "name": "The Dawn Gate",
+        "x": 2, "y": 0, "z": 0,
+        "interior_id": "temple",
+        "description": {
+            "default": "You stand in the vestibule of the Temple of Aethelion, facing the massive Dawn Gate. The floor is a mosaic sun-dial, time told by the shadow of a central eagle statue. To the west lies the city; to the east, the grand Nave of the Firstborn."
+        },
+        "objects": [
+            {"name": "bronze doors", "description": "Massive doors of gilded bronze depicting a rising sun.", "keywords": ["door", "doors"], "verbs": ["look", "open"]},
+            {"name": "sun-dial mosaic", "description": "A complex floor mosaic. A shadow cast by the eagle statue indicates the time of day.", "keywords": ["mosaic", "floor", "dial"], "verbs": ["look", "examine"]},
+            {"name": "eagle statue", "description": "A bronze eagle with spread wings.", "keywords": ["statue", "eagle"], "verbs": ["look"]}
+        ],
+        "exits": { "out": "ts_east", "east": "temple_nave" }
+    },
+    {
+        "room_id": "temple_nave",
+        "name": "Nave of the Firstborn",
+        "x": 3, "y": 0, "z": 0,
+        "interior_id": "temple",
+        "description": {
+            "default": "The main worship hall is bathed in light from a crystal dome overhead. Rows of polished white pews face a white marble altar. Behind it, a massive golden bowl—the Ever-Burning Brazier—holds a flame that never wavers. Staircases lead UP and DOWN."
+        },
+        "objects": [
+            {"name": "ever-burning brazier", "description": "A massive golden bowl holding a magical, heatless flame representing eternal vigilance.", "keywords": ["brazier", "fire", "flame"], "verbs": ["look", "examine"]},
+            {"name": "white marble altar", "description": "The center of worship, draped in cloth of gold.", "keywords": ["altar"], "verbs": ["look", "pray"]},
+            {"name": "crystal dome", "description": "A magnificent architectural feat that magnifies sunlight.", "keywords": ["dome", "ceiling"], "verbs": ["look"]}
+        ],
+        "exits": { "west": "temple_of_light", "north": "temple_almonry", "south": "temple_vestry", "up": "temple_upper_hall", "down": "temple_undercroft_hall" }
+    },
+    {
+        "room_id": "temple_almonry",
+        "name": "The Almonry",
+        "x": 3, "y": 1, "z": 0,
+        "interior_id": "temple",
+        "description": {
+            "default": "The smell of fresh bread and medicinal salves fills this room. Long tables are set up for food distribution, and cots line the walls for the sick. Frescoes of Aethelion healing the wounded adorn the walls."
+        },
+        "objects": [
+            {"name": "frescoes", "description": "Paintings depicting the god Aethelion tending to wounded soldiers.", "keywords": ["fresco", "painting", "wall"], "verbs": ["look"]},
+            {"name": "loaf of bread", "item_id": "temple_bread", "is_item": true, "keywords": ["bread", "loaf"], "verbs": ["get", "eat"]}
+        ],
+        "exits": { "south": "temple_nave" }
+    },
+    {
+        "room_id": "temple_vestry",
+        "name": "The Vestry of Light",
+        "x": 3, "y": -1, "z": 0,
+        "interior_id": "temple",
+        "description": {
+            "default": "The air here is thick with frankincense. Wardrobes stand open, revealing white and gold vestments. A table holds various holy oils and censers."
+        },
+        "objects": [
+            {"name": "wardrobe", "description": "Filled with ceremonial robes.", "keywords": ["wardrobe", "closet"], "verbs": ["look", "open"]},
+            {"name": "gold censer", "item_id": "censer", "is_item": true, "keywords": ["censer"], "verbs": ["get", "swing"]}
+        ],
+        "exits": { "north": "temple_nave" }
+    },
+    {
+        "room_id": "temple_upper_hall",
+        "name": "Upper Gallery",
+        "x": 3, "y": 0, "z": 1,
+        "interior_id": "temple",
+        "description": {
+            "default": "A quiet gallery overlooking the Nave below. Sunlight streams in from the skylights. Doors lead north, south, and east."
+        },
+        "exits": { "down": "temple_nave", "north": "temple_scriptorium", "south": "temple_chapterhouse", "east": "temple_solar" }
+    },
+    {
+        "room_id": "temple_chapterhouse",
+        "name": "Chapterhouse of the Sol-Forgers",
+        "x": 3, "y": -1, "z": 1,
+        "interior_id": "temple",
+        "description": {
+            "default": "The meeting room for the temple's militant wing. A round table of light-colored ash wood dominates the room, its surface carved with a tactical map of the region."
+        },
+        "objects": [
+            {"name": "round table", "description": "The table surface is a relief map of the surrounding lands, marked with locations of known undead activity.", "keywords": ["table", "map"], "verbs": ["look", "examine"]},
+            {"name": "Paladin Commander", "is_npc": true, "keywords": ["paladin", "commander"], "description": "A stern warrior in plate armor polished to a mirror sheen.", "verbs": ["look", "talk to"]}
+        ],
+        "exits": { "north": "temple_upper_hall" }
+    },
+    {
+        "room_id": "temple_scriptorium",
+        "name": "Scriptorium of Truth",
+        "x": 3, "y": 1, "z": 1,
+        "interior_id": "temple",
+        "description": {
+            "default": "The only sound here is the scratching of quills. Scribes hunch over desks copying holy texts. A large desk near the window features a peculiar mounted lens."
+        },
+        "objects": [
+            {"name": "lens of scrutiny", "description": "A magical magnifying glass fixed to a desk. Looking through it reveals faint magical auras.", "keywords": ["lens", "glass"], "verbs": ["look", "use"]},
+            {"name": "scroll of truth", "item_id": "scroll_truth", "is_item": true, "keywords": ["scroll"], "verbs": ["get", "read"]}
+        ],
+        "exits": { "south": "temple_upper_hall" }
+    },
+    {
+        "room_id": "temple_solar",
+        "name": "High Priest's Solar",
+        "x": 4, "y": 0, "z": 1,
+        "interior_id": "temple",
+        "description": {
+            "default": "The private quarters of the High Priest. It is surprisingly modest, though it features a private balcony overlooking the Nave. The High Priest is usually found here."
+        },
+        "objects": [
+            {"name": "High Priest", "is_npc": true, "quest_giver_ids": ["aethelion_duties"], "keywords": ["priest", "high priest"], "description": "The High Priest of Aethelion, radiating a calm aura.", "verbs": ["look", "talk to", "give"]},
+            {"name": "balcony", "description": "You can look down upon the worshippers in the Nave.", "keywords": ["balcony"], "verbs": ["look"]}
+        ],
+        "exits": { "west": "temple_upper_hall" }
+    },
+    {
+        "room_id": "temple_undercroft_hall",
+        "name": "Undercroft Hall",
+        "x": 3, "y": 0, "z": -1,
+        "interior_id": "temple",
+        "description": {
+            "default": "The air turns cool and still. The stone walls are unadorned. To the north lies the Crypt; to the south, a heavy iron vault door; to the east, a dark cell."
+        },
+        "exits": { "up": "temple_nave", "north": "temple_crypt", "south": "temple_sun_vault", "east": "temple_cell" }
+    },
+    {
+        "room_id": "temple_crypt",
+        "name": "Crypt of the Honorable",
+        "x": 3, "y": 1, "z": -1,
+        "interior_id": "temple",
+        "description": {
+            "default": "A silent chamber for past heroes. The sarcophagi here are not stone, but heavy glass, preserving the bodies inside in a state of perfect repose."
+        },
+        "objects": [
+            {"name": "glass sarcophagus", "description": "Through the glass, the warrior inside looks as if they are merely sleeping.", "keywords": ["sarcophagus", "glass", "tomb"], "verbs": ["look", "examine"]}
+        ],
+        "exits": { "south": "temple_undercroft_hall" }
+    },
+    {
+        "room_id": "temple_sun_vault",
+        "name": "The Sun-Vault",
+        "x": 3, "y": -1, "z": -1,
+        "interior_id": "temple",
+        "description": {
+            "default": "A heavily fortified treasury. Gold and silver tithes are stacked here, but the centerpiece is a pedestal bathed in magical light, seemingly waiting for a weapon."
+        },
+        "objects": [
+            {"name": "stone pedestal", "description": "A pedestal engraved with the warning: 'Only the worthy may touch, lest the False Dawn take them.'", "keywords": ["pedestal"], "verbs": ["look"]},
+            {"name": "gold coin", "item_id": "gold_coin", "is_item": true, "keywords": ["gold", "coin"], "verbs": ["get"]}
+        ],
+        "exits": { "north": "temple_undercroft_hall" }
+    },
+    {
+        "room_id": "temple_cell",
+        "name": "The Penitent's Cell",
+        "x": 4, "y": 0, "z": -1,
+        "interior_id": "temple",
+        "description": {
+            "default": "A stark, windowless room. It is completely dark, save for a single tiny hole in the ceiling designed to let in a beam of light for exactly one hour at noon."
+        },
+        "objects": [
+            {"name": "tiny hole", "description": "A masterwork of engineering, aligning with the sun only at its zenith.", "keywords": ["hole", "ceiling"], "verbs": ["look"]}
+        ],
+        "exits": { "west": "temple_undercroft_hall" }
+    }
+]
