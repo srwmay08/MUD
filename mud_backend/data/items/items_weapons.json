@@ -5,6 +5,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "edged_weapons",
+    "weight": 3,
+    "base_speed": 2,
+    "enchantment": 0,
     "keywords": [
       "sword",
       "short sword"
@@ -29,6 +32,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "brawling",
+    "weight": 1,
+    "base_speed": 1,
+    "enchantment": 0,
     "keywords": [
       "knuckle dusters",
       "dusters"
@@ -48,6 +54,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "small_edged",
+    "weight": 1,
+    "base_speed": 1,
+    "enchantment": 0,
     "keywords": [
       "dagger",
       "iron dagger"
@@ -88,6 +97,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "edged_weapons",
+    "weight": 3,
+    "base_speed": 2,
+    "enchantment": 0,
     "keywords": [
       "sword",
       "short sword",
@@ -127,6 +139,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "two_handed_edged",
+    "weight": 6,
+    "base_speed": 4,
+    "enchantment": 0,
     "keywords": [
       "sword",
       "bastard sword",
@@ -152,6 +167,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "small_blunt",
+    "weight": 2,
+    "base_speed": 2,
+    "enchantment": 0,
     "keywords": [
       "club",
       "wooden club"
@@ -171,6 +189,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "blunt_weapons",
+    "weight": 3,
+    "base_speed": 2,
+    "enchantment": 0,
     "keywords": [
       "mace",
       "iron mace"
@@ -209,6 +230,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "two_handed_blunt",
+    "weight": 6,
+    "base_speed": 5,
+    "enchantment": 0,
     "keywords": [
       "greatclub",
       "club",
@@ -234,6 +258,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "polearms",
+    "weight": 4,
+    "base_speed": 4,
+    "enchantment": 0,
     "keywords": [
       "spear",
       "iron spear"
@@ -253,6 +280,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "bows",
+    "weight": 2,
+    "base_speed": 1,
+    "enchantment": 0,
     "keywords": [
       "bow",
       "short bow"
@@ -272,6 +302,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "crossbows",
+    "weight": 5,
+    "base_speed": 5,
+    "enchantment": 0,
     "keywords": [
       "crossbow",
       "light crossbow"
@@ -291,6 +324,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "small_thrown",
+    "weight": 1,
+    "base_speed": 1,
+    "enchantment": 0,
     "keywords": [
       "knife",
       "throwing knife",
@@ -311,6 +347,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "large_thrown",
+    "weight": 2,
+    "base_speed": 2,
+    "enchantment": 0,
     "keywords": [
       "javelin",
       "iron javelin"
@@ -330,6 +369,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "slings",
+    "weight": 1,
+    "base_speed": 1,
+    "enchantment": 0,
     "keywords": [
       "sling",
       "leather sling"
@@ -349,6 +391,9 @@
     "item_type": "weapon",
     "wearable_slot": "mainhand",
     "skill": "staves",
+    "weight": 3,
+    "base_speed": 3,
+    "enchantment": 0,
     "keywords": [
       "staff",
       "wooden staff"

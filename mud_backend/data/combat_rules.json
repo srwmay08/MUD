@@ -1,37 +1,69 @@
 {
-    "stance_modifiers": {
-        "offensive": {"as_mod": 1.15, "ds_mod": 0.70},
-        "advance":   {"as_mod": 1.10, "ds_mod": 0.80},
-        "forward":   {"as_mod": 1.05, "ds_mod": 0.90},
-        "neutral":   {"as_mod": 1.00, "ds_mod": 1.00},
-        "guarded":   {"as_mod": 0.90, "ds_mod": 1.10},
-        "defensive": {"as_mod": 0.75, "ds_mod": 1.25},
-        "creature":  {"as_mod": 1.00, "ds_mod": 1.00}
+  "stance_modifiers": {
+    "offensive": { "percent": 0, "weapon_skill_factor": 1.0, "description": "Drops all defense..." },
+    "advance": { "percent": 20, "weapon_skill_factor": 0.9, "description": "Moves into an aggressive..." },
+    "forward": { "percent": 40, "weapon_skill_factor": 0.8, "description": "Switches to a slightly..." },
+    "neutral": { "percent": 60, "weapon_skill_factor": 0.7, "description": "Falls back into a..." },
+    "guarded": { "percent": 80, "weapon_skill_factor": 0.6, "description": "Moves into a defensive..." },
+    "defensive": { "percent": 100, "weapon_skill_factor": 0.5, "description": "Moves into a defensive..." },
+    "creature": { "percent": 50, "weapon_skill_factor": 1.0, "description": "Moves aggressively." }
+  },
+  "ranged_rules": {
+    "as_stance_modifiers": {
+      "offensive": 1.00, "advance": 0.90, "forward": 0.80,
+      "neutral": 0.70, "guarded": 0.60, "defensive": 0.50
     },
-    "posture_modifiers": {
-        "standing":  {"as_mod": 1.0, "ds_mod": 1.0},
-        "sitting":   {"as_mod": 0.5, "ds_mod": 0.5},
-        "kneeling":  {"as_mod": 0.75, "ds_mod": 0.75},
-        "prone":     {"as_mod": 0.3, "ds_mod": 0.9}
+    "crossbow_kneeling_bonus": {
+      "offensive": 30, "advance": 27, "forward": 24,
+      "neutral": 21, "guarded": 18, "defensive": 15
     },
-    "posture_percentage": {
-        "standing":  1.00,
-        "sitting":   0.50,
-        "kneeling":  0.75,
-        "prone":     0.90
+    "ds_stance_modifiers": {
+      "bow": {
+        "offensive": 0.15, "advance": 0.21, "forward": 0.27,
+        "neutral": 0.33, "guarded": 0.39, "defensive": 0.45
+      },
+      "crossbow": {
+        "offensive": 0.12, "advance": 0.17, "forward": 0.22,
+        "neutral": 0.27, "guarded": 0.32, "defensive": 0.37
+      }
     },
-    "shield_data": {
-        "small_wooden_shield": {
-            "size": "small",
-            "factor": 1.0,
-            "size_penalty_melee": 0,
-            "size_mod_melee": 1.0,
-            "size_mod_ranged": 1.2,
-            "size_bonus_ranged": 10
-        }
+    "ds_stance_bonus": {
+      "offensive": 0, "advance": 10, "forward": 20,
+      "neutral": 30, "guarded": 40, "defensive": 50
+    }
+  },
+  "polearm_rules": {
+    "1h_grip": {
+      "modifiers": { "offensive": 0.20, "advance": 0.30, "forward": 0.40, "neutral": 0.50, "guarded": 0.60, "defensive": 0.70 },
+      "bonuses": { "offensive": 0, "advance": 10, "forward": 20, "neutral": 30, "guarded": 40, "defensive": 50 }
     },
-    "hit_locations": [
-        "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
-        "right_leg", "left_leg", "right_arm", "left_arm", "right_hand", "left_hand"
-    ]
+    "2h_grip": {
+      "modifiers": { "offensive": 0.27, "advance": 0.41, "forward": 0.54, "neutral": 0.68, "guarded": 0.81, "defensive": 0.94 },
+      "bonuses": { "offensive": 15, "advance": 28, "forward": 41, "neutral": 54, "guarded": 67, "defensive": 80 }
+    }
+  },
+  "posture_modifiers": {
+    "standing": { "ds_penalty": 0, "defense_factor": 1.0 },
+    "sitting": { "ds_penalty": -50, "defense_factor": 0.75 },
+    "kneeling": { "ds_penalty": -50, "defense_factor": 0.75 },
+    "prone": { "ds_penalty": -50, "defense_factor": 0.50 }
+  },
+  "environmental_modifiers": {
+    "average": 0, "bright": -10, "dark": 20, "foggy": 30
+  },
+  "status_modifiers": {
+    "stunned": { "ds_penalty": -20, "defense_factor": 0.50 },
+    "immobilized": { "ds_penalty": -50, "defense_factor": 0.0 },
+    "webbed": { "ds_penalty": -50, "defense_factor": 0.0 }
+  },
+  "shield_data": {
+    "small_wooden_shield": {
+      "size": "small", "factor": 1.0, "size_penalty_melee": 0,
+      "size_mod_melee": 1.0, "size_mod_ranged": 1.2, "size_bonus_ranged": 10
+    }
+  },
+  "hit_locations": [
+    "head", "neck", "chest", "abdomen", "back", "right_eye", "left_eye",
+    "right_leg", "left_leg", "right_arm", "left_arm", "right_hand", "left_hand"
+  ]
 }
