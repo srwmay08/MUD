@@ -5,7 +5,7 @@
         "x": 2, "y": 0, "z": 0,
         "interior_id": "temple",
         "description": {
-            "default": "You stand in the vestibule of the Temple of Aethelion, facing the massive Dawn Gate. The floor is a mosaic sun-dial, time told by the shadow of a central eagle statue. To the west lies the city; to the east, the grand Nave of the Firstborn."
+            "default": "A colossal archway of pale limestone dominates the view, positioned to swallow the first rays of the morning sun. The double doors are heavy timber plated in burnished bronze, embossed with a relief of a rising sun that seems to radiate a faint warmth even in the dead of night. The air here is crisp and carries the sharp, metallic scent of a brewing storm mixed with morning dew. Underfoot, a terrazzo mosaic spirals outward from a central eagle statue, its shadow creeping across the floor like the hand of a divine clock."
         },
         "objects": [
             {"name": "bronze doors", "description": "Massive doors of gilded bronze depicting a rising sun.", "keywords": ["door", "doors"], "verbs": ["look", "open"]},
@@ -20,7 +20,7 @@
         "x": 3, "y": 0, "z": 0,
         "interior_id": "temple",
         "description": {
-            "default": "The main worship hall is bathed in light from a crystal dome overhead. Rows of polished white pews face a white marble altar. Behind it, a massive golden bowl—the Ever-Burning Brazier—holds a flame that never wavers. Staircases lead UP and DOWN."
+            "default": "The vastness of this chamber presses down with a holy weight, a symphony of white marble and golden accents. Rows of high-backed pews carved from bleached ash wood stretch toward the dais, their surfaces worn smooth by generations of prayer. Above, the ceiling opens into a magnificent faceted crystal dome, splitting the natural light into dancing ribbons of color that wash over the congregation. The air is still and thick with the smell of beeswax and the silent hum of the Ever-Burning Brazier."
         },
         "objects": [
             {"name": "ever-burning brazier", "description": "A massive golden bowl holding a magical, heatless flame representing eternal vigilance.", "keywords": ["brazier", "fire", "flame"], "verbs": ["look", "examine"]},
@@ -35,7 +35,7 @@
         "x": 3, "y": 1, "z": 0,
         "interior_id": "temple",
         "description": {
-            "default": "The smell of fresh bread and medicinal salves fills this room. Long tables are set up for food distribution, and cots line the walls for the sick. Frescoes of Aethelion healing the wounded adorn the walls."
+            "default": "In contrast to the golden grandeur of the Nave, this long side chamber feels humble and grounded. It smells of yeast, strong soap, and the bitter tang of medicinal salves. Sturdy trestle tables line the center of the room, flanked by rows of simple cots where the infirm rest under heavy wool blankets. The plaster walls are vibrant with frescoes in ochre and gold, depicting Aethelion walking among the wounded, his hands glowing with a restorative, celestial fire."
         },
         "objects": [
             {"name": "frescoes", "description": "Paintings depicting the god Aethelion tending to wounded soldiers.", "keywords": ["fresco", "painting", "wall"], "verbs": ["look"]},
@@ -49,7 +49,7 @@
         "x": 3, "y": -1, "z": 0,
         "interior_id": "temple",
         "description": {
-            "default": "The air here is thick with frankincense. Wardrobes stand open, revealing white and gold vestments. A table holds various holy oils and censers."
+            "default": "In contrast to the golden grandeur of the Nave, this long side chamber feels humble and grounded. It smells of yeast, strong soap, and the bitter tang of medicinal salves. Sturdy trestle tables line the center of the room, flanked by rows of simple cots where the infirm rest under heavy wool blankets. The plaster walls are vibrant with frescoes in ochre and gold, depicting Aethelion walking among the wounded, his hands glowing with a restorative, celestial fire."
         },
         "objects": [
             {"name": "wardrobe", "description": "Filled with ceremonial robes.", "keywords": ["wardrobe", "closet"], "verbs": ["look", "open"]},
@@ -73,7 +73,7 @@
         "x": 3, "y": -1, "z": 1,
         "interior_id": "temple",
         "description": {
-            "default": "The meeting room for the temple's militant wing. A round table of light-colored ash wood dominates the room, its surface carved with a tactical map of the region."
+            "default": "This chamber radiates a martial austerity, the stone walls hung with tattered banners from crusades long past. The centerpiece is a massive, circular table hewn from a single slice of an ancient Ironwood tree, its surface scarred by the points of daggers used to mark maps of the realm. The chairs are banded in cold iron, and the room smells of oiled steel, leather, and the faint, coppery tang of old blood scrubbed from armor."
         },
         "objects": [
             {"name": "round table", "description": "The table surface is a relief map of the surrounding lands, marked with locations of known undead activity.", "keywords": ["table", "map"], "verbs": ["look", "examine"]},
@@ -87,7 +87,7 @@
         "x": 3, "y": 1, "z": 1,
         "interior_id": "temple",
         "description": {
-            "default": "The only sound here is the scratching of quills. Scribes hunch over desks copying holy texts. A large desk near the window features a peculiar mounted lens."
+            "default": "A reverent silence reigns here, defined by the scratching of quills and the turning of dry, cracking parchment. Floor-to-ceiling shelves groan under the weight of leather-bound tomes and scroll cases, accessible by rolling ladders of brass. Rows of slanted desks provide workspace for the scribes, illuminated not by candles, but by drifting orbs of trapped starlight that hover near the ceiling, ensuring no shadow ever falls across the holy texts."
         },
         "objects": [
             {"name": "lens of scrutiny", "description": "A magical magnifying glass fixed to a desk. Looking through it reveals faint magical auras.", "keywords": ["lens", "glass"], "verbs": ["look", "use"]},
@@ -101,7 +101,7 @@
         "x": 4, "y": 0, "z": 1,
         "interior_id": "temple",
         "description": {
-            "default": "The private quarters of the High Priest. It is surprisingly modest, though it features a private balcony overlooking the Nave. The High Priest is usually found here."
+            "default": "This suite is a sanctuary of comfort amidst the stone, featuring plush rugs from distant, sun-drenched lands and a hearth that burns with glowing, smokeless embers. A large mahogany desk sits before a wall of private journals, but the room’s true secret lies behind a heavy velvet curtain. When drawn back, it reveals a hidden balcony offering a god’s-eye view of the Nave below, allowing the High Priest to watch the faithful with the silent scrutiny of a hawk."
         },
         "objects": [
             {"name": "High Priest", "is_npc": true, "quest_giver_ids": ["aethelion_duties"], "keywords": ["priest", "high priest"], "description": "The High Priest of Aethelion, radiating a calm aura.", "verbs": ["look", "talk to", "give"]},
@@ -138,7 +138,7 @@
         "x": 3, "y": -1, "z": -1,
         "interior_id": "temple",
         "description": {
-            "default": "A heavily fortified treasury. Gold and silver tithes are stacked here, but the centerpiece is a pedestal bathed in magical light, seemingly waiting for a weapon."
+            "default": "Secured behind a door of solid adamantine with no keyhole, this vault vibrates with a low, magical thrum. It is not a chaotic pile of loot, but a gallery of pedestals displaying golden chalices, jeweled reliquaries, and tithed gemstones that refract the room's defensive energies. The floor is etched with warning runes that pulse with a dull, red light, and the air tastes of charred air and static, hinting at the radiant fury waiting to be unleashed upon a thief."
         },
         "objects": [
             {"name": "stone pedestal", "description": "A pedestal engraved with the warning: 'Only the worthy may touch, lest the False Dawn take them.'", "keywords": ["pedestal"], "verbs": ["look"]},
@@ -152,7 +152,7 @@
         "x": 4, "y": 0, "z": -1,
         "interior_id": "temple",
         "description": {
-            "default": "A stark, windowless room. It is completely dark, save for a single tiny hole in the ceiling designed to let in a beam of light for exactly one hour at noon."
+            "default": "This chamber is an oppressive void, constructed of sound-dampening black basalt that seems to drink the light from your torch. There is no furniture and no warmth; only the cold stone floor and the crushing weight of absolute isolation. The ceiling is a seamless arch save for a single, finger-width bore-hole, magically aligned to admit a blinding, singular beam of sunlight only at high noon—a fleeting, cruel reminder of the warmth the prisoner has forfeited."
         },
         "objects": [
             {"name": "tiny hole", "description": "A masterwork of engineering, aligning with the sun only at its zenith.", "keywords": ["hole", "ceiling"], "verbs": ["look"]}

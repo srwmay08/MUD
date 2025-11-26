@@ -240,7 +240,7 @@ class Help(BaseVerb):
         # ---
         # --- MODIFIED: Added new aliases
         # ---
-        if target_topic in ["go", "n", "s", "e", "w"]:
+        if target_topic in ["go", "n", "s", "e", "w", "u", "up", "d", "down"]: # <--- UPDATED
             target_topic = "move"
         if target_topic == "take":
             target_topic = "get"

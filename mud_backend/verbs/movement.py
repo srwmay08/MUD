@@ -595,7 +595,12 @@ class Climb(BaseVerb):
         
         _set_action_roundtime(self.player, rt)
 
-@VerbRegistry.register(["move", "go", "n", "north", "s", "south", "e", "east", "w", "west", "ne", "northeast", "nw", "northwest", "se", "southeast", "sw", "southwest"])
+@VerbRegistry.register([
+    "move", "go", 
+    "n", "north", "s", "south", "e", "east", "w", "west", 
+    "ne", "northeast", "nw", "northwest", "se", "southeast", "sw", "southwest",
+    "u", "up", "d", "down"
+])
 class Move(BaseVerb):
     """
     Handles all directional movement.
