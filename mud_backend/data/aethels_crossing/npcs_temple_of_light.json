@@ -1,0 +1,106 @@
+[
+    {
+        "description": "The High Priest of Aethelion, radiating a calm aura.",
+        "faction": "Townsfolk",
+        "is_npc": true,
+        "keywords": [
+            "priest",
+            "high priest"
+        ],
+        "monster_id": "high_priest",
+        "name": "the High Priest",
+        "quest_giver_ids": [
+            "temple_social_1",
+            "temple_cartographer_1",
+            "temple_burden_1",
+            "aethelion_duties"
+        ],
+        "verbs": [
+            "look",
+            "talk to",
+            "give"
+        ],
+        "attack_attributes": [
+            ""
+        ],
+        "skills": {
+            "new_1": ""
+        },
+        "equipped": {},
+        "known_spells": [
+            "heal_1",
+            "spirit_shield"
+        ]
+    },
+    {
+        "description": "A stern warrior in plate armor polished to a mirror sheen.",
+        "faction": "Townsfolk",
+        "is_npc": true,
+        "keywords": [
+            "paladin",
+            "commander"
+        ],
+        "monster_id": "paladin_commander",
+        "name": "the Paladin Commander",
+        "quest_giver_ids": [
+            "temple_syntax_kill_1",
+            "temple_ghost_walk_1"
+        ],
+        "verbs": [
+            "look",
+            "talk to"
+        ],
+        "known_spells": [
+            "heal_1",
+            "spirit_shield"
+        ]
+    },
+    {
+        "description": "A man huddled in a blanket, staring blankly at the wall.",
+        "faction": "Townsfolk",
+        "is_npc": true,
+        "keywords": [
+            "refugee",
+            "man"
+        ],
+        "monster_id": "desperate_refugee",
+        "name": "a desperate refugee",
+        "social_difficulty": 40,
+        "stats": {
+            "DIS": 80,
+            "WIS": 20
+        },
+        "verbs": [
+            "look",
+            "talk to",
+            "plead",
+            "bribe"
+        ]
+    },
+    {
+        "defense_attributes": [
+            "non-corporeal"
+        ],
+        "description": "A flickering shadow that chills the air around it.",
+        "faction": "Undead",
+        "hp": 50,
+        "is_aggressive": true,
+        "is_monster": true,
+        "is_non_corporeal": true,
+        "is_undead": true,
+        "keywords": [
+            "shade",
+            "shadow",
+            "ghost"
+        ],
+        "level": 5,
+        "max_hp": 50,
+        "monster_id": "crypt_shade",
+        "name": "a crypt shade",
+        "verbs": [
+            "look",
+            "attack",
+            "cast"
+        ]
+    }
+]

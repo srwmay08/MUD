@@ -1,0 +1,24 @@
+{
+    "lead_reliquary": {
+        "name": "a lead reliquary",
+        "description": "A small but incredibly heavy box made of lead. It hums with a suppressive magic.",
+        "item_type": "quest",
+        "wearable_slot": "hands",
+        "weight": 10,
+        "flags": ["HEAVY", "NO_PORTAL"],
+        "keywords": ["reliquary", "box", "lead box"],
+        "base_value": 0
+    },
+    "boots_of_silence": {
+        "name": "soft velvet boots",
+        "description": "Boots made of midnight-blue velvet that seem to absorb sound.",
+        "item_type": "armor",
+        "armor_type": "cloth",
+        "wearable_slot": "feet",
+        "keywords": ["boots", "velvet boots"],
+        "base_value": 500,
+        "stats": {
+            "stealth": 10
+        }
+    }
+}

@@ -24,7 +24,8 @@ def list_files():
         "items": [],
         "nodes": [],
         "loot": [],
-        "spells": [] # Added spells
+        "spells": [],
+        "quests": [] # Added quests category
     }
     
     def scan(pattern, cat):
@@ -33,10 +34,12 @@ def list_files():
             categories[cat].append(rel)
 
     scan("monsters*.json", "monsters")
+    scan("npcs*.json", "monsters") # Also scan NPCs into monsters category
     scan("items_*.json", "items")
     scan("nodes*.json", "nodes")
     scan("loot*.json", "loot")
-    scan("spells*.json", "spells") # Scan for spells
+    scan("spells*.json", "spells")
+    scan("quests*.json", "quests") # Now scanning quests
         
     return jsonify(categories)
 
@@ -119,6 +122,7 @@ def save_file():
     path = os.path.join(DATA_DIR, filename)
     
     try:
+        # Create backup
         if os.path.exists(path):
             with open(path + ".bak", 'w', encoding='utf-8') as f:
                 json.dump(json.load(open(path)), f, indent=4)
