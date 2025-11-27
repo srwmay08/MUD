@@ -71,8 +71,21 @@ def _handle_room_enter_event(world, player: Player, room_id: str, **kwargs):
         if forbidden_detection:
             # Check if player is sneaking (flag handled in movement/stealth)
             is_sneaking = player.flags.get("sneaking", "off") == "on"
-            # If room has mobs and player isn't sneaking -> Fail
+            
+            # --- FIX: SAFELY GET ROOM ---
+            # If the room hasn't been hydrated by movement.py yet, we force it here.
             room = world.get_active_room_safe(room_id)
+            if not room:
+                # This call forces the RoomManager to load/hydrate the room into memory
+                world.get_room(room_id)
+                # Now try getting the object again
+                room = world.get_active_room_safe(room_id)
+            
+            if not room:
+                # If it's still None, something is wrong with the room ID, skip logic
+                continue
+            # -----------------------------
+
             has_mobs = any(obj.get("is_monster") for obj in room.objects)
             
             if has_mobs and not is_sneaking:
@@ -116,7 +129,7 @@ def _handle_craft_event(world, player: Player, item_id: str, **kwargs):
 
 def _is_quest_available(player: Player, quest_data: Dict, check_prereqs_only: bool = False) -> bool:
     """Helper to check if a quest is active/available for the player."""
-    # --- FIX: Prefer 'id' if injected, fallback to 'name' but beware of conflicts ---
+    # Prefer 'id' if injected, fallback to 'name' but beware of conflicts
     quest_id = quest_data.get("id", quest_data.get("name"))
     if not quest_id: return False
     

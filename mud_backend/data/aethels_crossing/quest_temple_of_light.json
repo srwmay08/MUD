@@ -27,6 +27,7 @@
         "talk_prompt": "There is a refugee in the Almonry who refuses to eat, believing himself forsaken. Words of kindness are needed, not miracles. PLEAD with him to restore his hope.",
         "progress_prompt": "He still despairs. You must reach his heart.",
         "reward_xp": 500,
+        "reward_xp_type": "instant",
         "reward_message": "The High Priest smiles warmly. 'He has taken bread. You have saved a soul today.'"
     },
     "temple_burden_1": {

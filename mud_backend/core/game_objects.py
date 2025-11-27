@@ -284,7 +284,11 @@ class Player(GameEntity):
         if saturation > 0.25: return "clear"
         return "fresh and clear"
 
-    def grant_experience(self, nominal_amount: int, source: str = "combat"):
+    def grant_experience(self, nominal_amount: int, source: str = "combat", instant: bool = False):
+        """
+        Grants experience to the player (and their band).
+        If 'instant' is True, XP is added directly to total experience, skipping field absorption.
+        """
         if self.death_sting_points > 0:
             original_nominal = nominal_amount
             nominal_amount = math.trunc(original_nominal * 0.25)
@@ -303,7 +307,14 @@ class Player(GameEntity):
             num_members = len(band.get("members", []))
             if num_members > 0:
                 share = math.trunc(nominal_amount / num_members)
-                self.add_field_exp(share, is_band_share=True)
+                
+                if instant:
+                     self.experience += share
+                     self.send_message(f"You gain {share} experience from your band (Instant).")
+                     self._check_for_level_up()
+                else:
+                     self.add_field_exp(share, is_band_share=True)
+
                 for member_key in band.get("members", []):
                     if member_key == self.name.lower(): continue 
                     member_obj = self.world.get_player_obj(member_key)
@@ -312,12 +323,25 @@ class Player(GameEntity):
                             member_obj.band_xp_bank += share
                             member_obj.mark_dirty()
                         else:
-                            member_obj.add_field_exp(share, is_band_share=True)
+                            if instant:
+                                member_obj.experience += share
+                                member_obj.send_message(f"You gain {share} experience from your band (Instant).")
+                                member_obj._check_for_level_up()
+                                member_obj.mark_dirty()
+                            else:
+                                member_obj.add_field_exp(share, is_band_share=True)
                     else:
+                        # Note: Instant update to offline players not fully supported via event bus yet for direct XP
+                        # Fallback to bank for offline
                         self.world.event_bus.emit("update_band_xp", player_name=member_key, amount=share)
                 return 
         
-        self.add_field_exp(nominal_amount)
+        if instant:
+            self.experience += nominal_amount
+            self.send_message(f"You gain {nominal_amount} experience.")
+            self._check_for_level_up()
+        else:
+            self.add_field_exp(nominal_amount)
 
     def add_field_exp(self, nominal_amount: int, is_band_share: bool = False):
         pool_cap = self.field_exp_capacity

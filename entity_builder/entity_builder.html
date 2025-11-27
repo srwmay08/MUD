@@ -561,6 +561,9 @@
 
         // Rewards & Text
         container.appendChild(createInput("Reward XP", quest.reward_xp || 0, (v) => updateField("reward_xp", parseInt(v))));
+        // --- NEW: XP Type Dropdown ---
+        container.appendChild(createSelect("Reward XP Type", quest.reward_xp_type || "field", ["field", "instant"], (v) => updateField("reward_xp_type", v)));
+        // -----------------------------
         container.appendChild(createInput("Reward Silver", quest.reward_silver || 0, (v) => updateField("reward_silver", parseInt(v))));
         container.appendChild(createInput("Reward Item", quest.reward_item || "", (v) => updateField("reward_item", v), "dl-items"));
         
