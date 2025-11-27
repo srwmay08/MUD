@@ -68,7 +68,6 @@ def ensure_initial_data():
         return
 
     upsert_count = 0
-    # --- FIX: Moved Try/Except INSIDE the loop ---
     for file_path in json_files:
         try:
             with open(file_path, 'r') as f:
@@ -93,7 +92,6 @@ def ensure_initial_data():
             print(f"[DB ERROR] Invalid JSON in {file_path}: {e}")
         except Exception as e:
             print(f"[DB ERROR] Failed to load {file_path}: {e}")
-    # ---------------------------------------------
     
     if upsert_count > 0:
             print(f"[DB INIT] JSON sync complete. Inserted {upsert_count} new rooms.")
@@ -184,9 +182,7 @@ def delete_band(band_id: str):
     get_db().bands.delete_one({"id": band_id})
     
 def fetch_all_bands(database) -> Dict[str, Dict[str, Any]]:
-    # --- FIX: Check explicitly for None ---
     db_ref = database if database is not None else get_db()
-    # --------------------------------------
     bands_dict = {}
     for band_data in db_ref.bands.find():
         band_id = band_data.get("id")
@@ -242,7 +238,6 @@ def fetch_all_monsters() -> dict:
     monster_templates = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
     
-    # --- NEW: Load both monsters*.json AND npcs*.json ---
     search_patterns = ['**/monsters*.json', '**/npcs*.json']
     
     for pattern in search_patterns:
@@ -292,7 +287,30 @@ def fetch_all_criticals() -> dict:
     return _load_json_data("criticals.json")
 
 def fetch_all_quests() -> dict:
-    return _load_json_data("quests.json")
+    """
+    Loads all quest definitions from data/**/quests*.json.
+    """
+    quests = {}
+    data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+    
+    # Load main quests file
+    quests.update(_load_json_data("quests.json"))
+
+    # Recursively load other quest files
+    for file_path in glob.glob(os.path.join(data_dir, '**/quests*.json'), recursive=True):
+        # Skip the main file to avoid double loading (optional, update handles it)
+        if os.path.basename(file_path) == "quests.json":
+             continue
+
+        with open(file_path, 'r') as f:
+            try:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    quests.update(data)
+            except json.JSONDecodeError:
+                print(f"[DB ERROR] Invalid JSON in {file_path}")
+    
+    return quests
 
 def fetch_all_nodes() -> dict:
     return _load_json_data("nodes.json")
@@ -304,9 +322,6 @@ def fetch_all_races() -> dict:
     return _load_json_data("races.json")
 
 def fetch_all_spells() -> dict:
-    """
-    Loads all spell definitions from data/spells/*.json.
-    """
     spells = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
     
@@ -330,7 +345,6 @@ def fetch_all_spells() -> dict:
     return spells
 
 def fetch_all_deities() -> dict:
-    """Loads deity definitions."""
     try:
         json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lore', 'deities.json')
         if os.path.exists(json_path):
@@ -341,7 +355,6 @@ def fetch_all_deities() -> dict:
     return {}
 
 def fetch_all_guilds() -> dict:
-    """Loads guild definitions."""
     try:
         json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lore', 'guilds.json')
         if os.path.exists(json_path):

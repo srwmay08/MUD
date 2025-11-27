@@ -56,6 +56,7 @@
             { "type": "periodic", "chance": 0.1, "message": "The smell of baking bread wafts in from the kitchens." }
         ],
         "objects": [
+            {"monster_id": "desperate_refugee"},
             {"name": "frescoes", "description": "Paintings depicting the god Aethelion tending to wounded soldiers.", "keywords": ["fresco", "painting", "wall"], "verbs": ["look"]},
             {"name": "loaf of bread", "item_id": "temple_bread", "is_item": true, "keywords": ["bread", "loaf"], "verbs": ["get", "eat"]}
         ],
@@ -95,7 +96,7 @@
         },
         "objects": [
             {"name": "round table", "description": "The table surface is a relief map of the surrounding lands, marked with locations of known undead activity.", "keywords": ["table", "map"], "verbs": ["look", "examine"]},
-            {"name": "Paladin Commander", "is_npc": true, "keywords": ["paladin", "commander"], "description": "A stern warrior in plate armor polished to a mirror sheen.", "verbs": ["look", "talk to"]}
+            {"monster_id": "paladin_commander"}
         ],
         "exits": { "north": "temple_upper_hall" }
     },
@@ -122,7 +123,7 @@
             "default": "This suite is a sanctuary of comfort amidst the stone, featuring plush rugs from distant, sun-drenched lands and a hearth that burns with glowing, smokeless embers. A large mahogany desk sits before a wall of private journals, but the room’s true secret lies behind a heavy velvet curtain. When drawn back, it reveals a hidden balcony offering a god’s-eye view of the Nave below, allowing the High Priest to watch the faithful with the silent scrutiny of a hawk."
         },
         "objects": [
-            {"name": "High Priest", "is_npc": true, "quest_giver_ids": ["aethelion_duties"], "keywords": ["priest", "high priest"], "description": "The High Priest of Aethelion, radiating a calm aura.", "verbs": ["look", "talk to", "give"]},
+            {"monster_id": "high_priest"},
             {"name": "balcony", "description": "You can look down upon the worshippers in the Nave.", "keywords": ["balcony"], "verbs": ["look"]}
         ],
         "exits": { "west": "temple_upper_hall" }
