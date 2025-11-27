@@ -288,7 +288,7 @@ def fetch_all_criticals() -> dict:
 
 def fetch_all_quests() -> dict:
     """
-    Loads all quest definitions from data/**/quests*.json and injects 'id'.
+    Loads all quest definitions from data/**/quest*.json and injects 'id'.
     """
     quests = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -302,7 +302,8 @@ def fetch_all_quests() -> dict:
         quests.update(main_quests)
 
     # Recursively load other quest files
-    for file_path in glob.glob(os.path.join(data_dir, '**/quests*.json'), recursive=True):
+    # UPDATED PATTERN: '**/quest*.json' catches both "quest_temple..." and "quests_temple..."
+    for file_path in glob.glob(os.path.join(data_dir, '**/quest*.json'), recursive=True):
         if os.path.basename(file_path) == "quests.json":
              continue
 
