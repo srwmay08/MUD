@@ -288,17 +288,21 @@ def fetch_all_criticals() -> dict:
 
 def fetch_all_quests() -> dict:
     """
-    Loads all quest definitions from data/**/quests*.json.
+    Loads all quest definitions from data/**/quests*.json and injects 'id'.
     """
     quests = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
     
     # Load main quests file
-    quests.update(_load_json_data("quests.json"))
+    main_quests = _load_json_data("quests.json")
+    if isinstance(main_quests, dict):
+        # Inject ID
+        for k, v in main_quests.items():
+            v["id"] = k
+        quests.update(main_quests)
 
     # Recursively load other quest files
     for file_path in glob.glob(os.path.join(data_dir, '**/quests*.json'), recursive=True):
-        # Skip the main file to avoid double loading (optional, update handles it)
         if os.path.basename(file_path) == "quests.json":
              continue
 
@@ -306,6 +310,9 @@ def fetch_all_quests() -> dict:
             try:
                 data = json.load(f)
                 if isinstance(data, dict):
+                    # Inject ID here too
+                    for k, v in data.items():
+                        v["id"] = k
                     quests.update(data)
             except json.JSONDecodeError:
                 print(f"[DB ERROR] Invalid JSON in {file_path}")

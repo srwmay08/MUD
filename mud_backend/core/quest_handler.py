@@ -116,7 +116,8 @@ def _handle_craft_event(world, player: Player, item_id: str, **kwargs):
 
 def _is_quest_available(player: Player, quest_data: Dict, check_prereqs_only: bool = False) -> bool:
     """Helper to check if a quest is active/available for the player."""
-    quest_id = quest_data.get("name") # Assuming name is ID for now, ideally separate field
+    # --- FIX: Prefer 'id' if injected, fallback to 'name' but beware of conflicts ---
+    quest_id = quest_data.get("id", quest_data.get("name"))
     if not quest_id: return False
     
     # If checking for active updates, we only care if it's NOT complete
