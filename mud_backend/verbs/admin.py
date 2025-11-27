@@ -12,6 +12,21 @@ class Teleport(BaseVerb):
             self.player.send_message("Usage: TELEPORT <room_id> | <player_name>")
             return
         
+        # --- Check NO_PORTAL flag ---
+        for item_id in self.player.inventory:
+            item = self.world.game_items.get(item_id)
+            if item and "NO_PORTAL" in item.get("flags", []):
+                self.player.send_message(f"The {item['name']} anchors you to this plane! You cannot teleport.")
+                return
+        
+        for slot, item_id in self.player.worn_items.items():
+            if item_id:
+                item = self.world.game_items.get(item_id)
+                if item and "NO_PORTAL" in item.get("flags", []):
+                    self.player.send_message(f"The {item['name']} anchors you to this plane! You cannot teleport.")
+                    return
+        # ----------------------------
+        
         target = " ".join(self.args)
         
         # 1. Try Room ID
@@ -166,7 +181,7 @@ class Advance(BaseVerb):
             old_level = target.level
             target.level = max(0, target.level + amount)
             
-            # --- FIX: Calculate TPs for gained levels ---
+            # Calculate TPs for gained levels
             if target.level > old_level:
                 levels_gained = target.level - old_level
                 ptps, mtps, stps = target._calculate_tps_per_level()
@@ -176,7 +191,6 @@ class Advance(BaseVerb):
                 target.send_message(f"You have been adjusted to level {target.level}. (Gained TPs for {levels_gained} levels)")
             else:
                 target.send_message(f"You have been adjusted to level {target.level}.")
-            # --------------------------------------------
             
         elif adv_type == "ptp":
             target.ptps += amount

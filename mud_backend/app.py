@@ -24,6 +24,7 @@ from mud_backend.core.game_loop import monster_ai
 from mud_backend import config
 from mud_backend.core.room_handler import _handle_npc_idle_dialogue
 from mud_backend.core.worker import WorkerManager
+from mud_backend.core import quest_handler # <--- Added import
 
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'static'))
@@ -65,6 +66,11 @@ def persistence_task(world_instance: World):
 
 def game_loop_task(world_instance: World):
     print("[SERVER START] Game Loop task started.")
+    
+    # --- NEW: Initialize Quest Listeners ---
+    quest_handler.initialize_quest_listeners(world_instance)
+    # ---------------------------------------
+
     with app.app_context():
         while True:
             # 1. Process Event Queue

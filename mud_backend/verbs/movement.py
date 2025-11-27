@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from mud_backend.core.game_state import World
     from mud_backend.core.game_objects import Player
 
-# ... (GOTO_MAP, _clean_name, _check_toll_gate, _find_path remain unchanged) ...
 # --- GOTO Target Map ---
 GOTO_MAP = {
     "townhall": "town_hall",
@@ -106,7 +105,6 @@ def _handle_group_move(
     skill_dc: int = 0,
     leave_msg_suffix: str = "leaves." 
 ):
-    # ... (Logic unchanged, pasted for completeness) ...
     group = world.get_group(leader_player.group_id)
     if not group or group["leader"] != leader_player.name.lower():
         return 
@@ -485,11 +483,9 @@ class Enter(BaseVerb):
 
         new_room_data = self.world.get_room(target_room_id)
         
-        # --- FIX: Safe Room Load ---
         if not new_room_data:
              self.player.send_message("You cannot seem to go that way (Target room is Void).")
              return
-        # ---------------------------
 
         new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(self.player, new_room)
@@ -584,11 +580,9 @@ class Climb(BaseVerb):
         )
 
         new_room_data = self.world.get_room(target_room_id)
-        # --- FIX: Safe Room Load ---
         if not new_room_data:
              self.player.send_message("You climb into... nothingness. (Void Error)")
              return
-        # ---------------------------
         
         new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(self.player, new_room)
@@ -603,7 +597,7 @@ class Climb(BaseVerb):
 ])
 class Move(BaseVerb):
     """
-    Handles all directional movement.
+    Handles all directional movement with 'Burden' checks and Event Emission.
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="move"):
@@ -623,14 +617,33 @@ class Move(BaseVerb):
             return
 
         normalized_direction = DIRECTION_MAP.get(target_name, target_name)
-        
         target_room_id = self.room.exits.get(normalized_direction)
         
         if target_room_id:
+            # --- NEW: THE BURDEN CHECK ---
+            burden_level = 0
+            for item_id in self.player.inventory:
+                item = self.world.game_items.get(item_id)
+                if item and "HEAVY" in item.get("flags", []):
+                    burden_level += 1
+            
+            # Check worn/hands too
+            for slot, item_id in self.player.worn_items.items():
+                if item_id:
+                    item = self.world.game_items.get(item_id)
+                    if item and "HEAVY" in item.get("flags", []):
+                        burden_level += 1
+
+            # Apply Burden Penalty
+            base_rt = 0.0
+            if burden_level > 0:
+                self.player.send_message(f"The heavy burden slows you down... (Burden Level: {burden_level})")
+                base_rt = 2.0 * burden_level
+            # -----------------------------
+
             current_posture = self.player.posture
             move_msg = ""
             leave_suffix = ""
-            rt = 0.0 
             
             if current_posture == "standing":
                 move_msg = f"You move {normalized_direction}..."
@@ -655,6 +668,10 @@ class Move(BaseVerb):
             original_room_id = self.room.room_id
             self.player.move_to_room(target_room_id, move_msg)
             
+            # --- NEW: EMIT ROOM ENTER EVENT ---
+            self.world.event_bus.emit("room_enter", player=self.player, room_id=target_room_id)
+            # ----------------------------------
+            
             _handle_group_move(
                 self.world, self.player, original_room_id, target_room_id,
                 move_msg, normalized_direction, skill_dc=0, leave_msg_suffix=leave_suffix
@@ -662,11 +679,9 @@ class Move(BaseVerb):
 
             new_room_data = self.world.get_room(target_room_id)
             
-            # --- FIX: Safe Room Load ---
             if not new_room_data:
                  self.player.send_message("You cannot go that way. (Void Error)")
                  return
-            # ---------------------------
             
             new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
             show_room_to_player(self.player, new_room)
@@ -682,8 +697,8 @@ class Move(BaseVerb):
                     )
                     self.player.completed_quests.append("intro_give_clerk")
 
-            if rt > 0:
-                _set_action_roundtime(self.player, rt)
+            if base_rt > 0:
+                _set_action_roundtime(self.player, base_rt, rt_type="hard")
             return
 
         enterable_object = None
@@ -749,11 +764,9 @@ class Exit(BaseVerb):
 
                 new_room_data = self.world.get_room(target_room_id)
                 
-                # --- FIX: Safe Room Load ---
                 if not new_room_data:
                      self.player.send_message("You cannot go out. (Void Error)")
                      return
-                # ---------------------------
                 
                 new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
                 show_room_to_player(self.player, new_room)

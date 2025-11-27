@@ -44,6 +44,7 @@
             <option value="spells">Magic Spells</option>
             <option value="nodes">Gathering Nodes</option>
             <option value="loot">Loot Tables</option>
+            <option value="quests">Quests</option>
         </select>
     </div>
 
@@ -202,6 +203,8 @@
 
         if (currentCategory === 'loot') {
             renderLootFields(container, entity);
+        } else if (currentCategory === 'quests') {
+            renderQuestFields(container, entity);
         } else {
             // Common
             container.appendChild(createInput("Name", entity.name || "", (v) => updateField("name", v)));
@@ -245,6 +248,10 @@
         } else if (currentCategory === 'loot') {
             newKey = "loot_" + Date.now();
             currentData[newKey] = [];
+        } else if (currentCategory === 'quests') {
+            newKey = "quest_" + Date.now();
+            newObj.archetype = "standard";
+            currentData[newKey] = newObj;
         }
         
         if (!isDictStructure && currentCategory !== 'monsters') {
@@ -491,6 +498,75 @@
         };
         wrapper.querySelector('button').onclick=()=>{ lootList.push({item_id:"", chance:1.0, quantity:1}); render(); };
         render(); container.appendChild(wrapper);
+    }
+
+    function renderQuestFields(container, quest) {
+        // Common Fields
+        const grid = document.createElement('div');
+        grid.className = "grid grid-cols-2 gap-4 mb-2";
+        grid.appendChild(createInput("Quest Name", quest.name || "", (v) => updateField("name", v)));
+        grid.appendChild(createSelect("Archetype", quest.archetype || "standard", 
+            ["standard", "syntax_kill", "social_duel", "cartographer", "burden", "crafting"], 
+            (v) => { updateField("archetype", v); loadEntity(activeEntityId); } // Reload to show specific fields
+        ));
+        container.appendChild(grid);
+
+        // Specific Fields based on Archetype
+        const archetype = quest.archetype || "standard";
+        const specificsDiv = document.createElement('div');
+        specificsDiv.className = "bg-gray-800 p-2 rounded border border-gray-600 mb-2";
+        
+        specificsDiv.innerHTML = `<div class="text-xs text-amber-500 font-bold uppercase mb-2">${archetype.replace('_',' ')} Config</div>`;
+
+        if (archetype === "syntax_kill") {
+            // Syntax Kill Config
+            specificsDiv.appendChild(createInput("Target Monster ID", quest.monster_id || "", (v) => updateField("monster_id", v)));
+            specificsDiv.appendChild(createInput("Req. Counter Key", quest.req_counter || "", (v) => updateField("req_counter", v)));
+            specificsDiv.appendChild(createInput("Required Kill Source (physical/spell)", quest.required_kill_method?.source || "", (v) => {
+                let m = quest.required_kill_method || {}; m.source = v; updateField("required_kill_method", m);
+            }));
+            specificsDiv.appendChild(createInput("Required Source ID (item/spell ID)", quest.required_kill_method?.id || "", (v) => {
+                let m = quest.required_kill_method || {}; m.id = v; updateField("required_kill_method", m);
+            }));
+        } 
+        else if (archetype === "social_duel") {
+            // Social Duel Config
+            specificsDiv.appendChild(createInput("Target NPC Name/ID", quest.social_target_id || "", (v) => updateField("social_target_id", v)));
+            specificsDiv.appendChild(createSelect("Required Action", quest.social_action_type || "bribe", 
+                ["bribe", "threaten", "plead", "flatter"], 
+                (v) => updateField("social_action_type", v)));
+            specificsDiv.appendChild(createInput("Successes Needed", quest.req_counter_value || 1, (v) => updateField("req_counter_value", parseInt(v))));
+        }
+        else if (archetype === "cartographer") {
+            // Cartographer Config
+            specificsDiv.appendChild(createListEditor("Room IDs to Visit", quest.required_rooms_visited || [], (v) => updateField("required_rooms_visited", v)));
+        }
+        else if (archetype === "burden") {
+            // Burden Config
+            specificsDiv.appendChild(createInput("Burden Item ID", quest.burden_item_id || "", (v) => updateField("burden_item_id", v)));
+            specificsDiv.appendChild(createInput("Destination Room ID", quest.destination_room_id || "", (v) => updateField("destination_room_id", v)));
+        }
+        else if (archetype === "crafting") {
+             specificsDiv.appendChild(createInput("Crafted Item ID", quest.crafted_item_id || "", (v) => updateField("crafted_item_id", v)));
+             specificsDiv.appendChild(createInput("Quantity", quest.crafted_item_quantity || 1, (v) => updateField("crafted_item_quantity", parseInt(v))));
+        }
+        else {
+            // Standard Fetch/Kill
+            specificsDiv.appendChild(createInput("Item Needed", quest.item_needed || "", (v) => updateField("item_needed", v), "dl-items"));
+            specificsDiv.appendChild(createInput("Quantity", quest.item_quantity || 1, (v) => updateField("item_quantity", parseInt(v))));
+            specificsDiv.appendChild(createInput("Give Target (NPC Name)", quest.give_target_name || "", (v) => updateField("give_target_name", v)));
+        }
+
+        container.appendChild(specificsDiv);
+
+        // Rewards & Text
+        container.appendChild(createInput("Reward XP", quest.reward_xp || 0, (v) => updateField("reward_xp", parseInt(v))));
+        container.appendChild(createInput("Reward Silver", quest.reward_silver || 0, (v) => updateField("reward_silver", parseInt(v))));
+        container.appendChild(createInput("Reward Item", quest.reward_item || "", (v) => updateField("reward_item", v), "dl-items"));
+        
+        container.appendChild(createInput("Start/Idle Prompt", quest.idle_prompt || "", (v) => updateField("idle_prompt", v)));
+        container.appendChild(createInput("Talk Prompt", quest.talk_prompt || "", (v) => updateField("talk_prompt", v)));
+        container.appendChild(createInput("Reward Message", quest.reward_message || "", (v) => updateField("reward_message", v)));
     }
 </script>
 </body>

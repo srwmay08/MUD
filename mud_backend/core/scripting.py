@@ -3,6 +3,7 @@ import uuid
 import copy
 import random
 import traceback
+import time
 from typing import TYPE_CHECKING, Optional, Dict, Any
 
 if TYPE_CHECKING:
@@ -109,6 +110,34 @@ class ScriptAPI:
                 self.player.send_message(f"You lose {item_id}.")
                 return
 
+    # --- NEW METHODS ---
+    def start_timer(self, seconds: int, callback_script: str):
+        """
+        Starts a background timer that executes another script script when done.
+        Usage: start_timer(60, "spawn_mob('boss_orc')")
+        """
+        def timer_task():
+            self.world.socketio.sleep(seconds)
+            # We need to re-fetch objects to ensure they are valid context
+            p = self.world.get_player_obj(self.player.name.lower())
+            r = self.world.get_active_room_safe(self.room.room_id)
+            if p and r and p.current_room_id == r.room_id:
+                execute_script(self.world, p, r, callback_script)
+        
+        self.world.socketio.start_background_task(timer_task)
+
+    def fail_quest(self, quest_id: str):
+        """Marks a quest as failed via counters."""
+        self.player.quest_counters[f"{quest_id}_failed"] = 1
+        self.player.send_message(f"**Quest Failed!**")
+
+    def check_flag(self, flag_name: str) -> str:
+        """Checks a player flag (e.g. 'sneaking')."""
+        return self.player.flags.get(flag_name, "off")
+
+    def alert_room(self, message: str):
+        self.world.broadcast_to_room(self.room.room_id, f"**ALARM**: {message}", "message")
+
 # --- EXECUTION ENGINE ---
 
 def execute_script(world: 'World', player: 'Player', room: 'Room', script_string: str):
@@ -137,9 +166,14 @@ def execute_script(world: 'World', player: 'Player', room: 'Room', script_string
         "grant_xp": api.grant_xp,
         "has_item": api.has_item,
         "take_item": api.take_item,
+        "start_timer": api.start_timer,
+        "fail_quest": api.fail_quest,
+        "check_flag": api.check_flag,
+        "alert_room": api.alert_room,
         
         # Utilities
         "random": random,
+        "time": time,
         
         # Safety: Block access to dangerous internals
         "__builtins__": {
