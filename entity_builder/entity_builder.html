@@ -29,6 +29,17 @@
         
         .group-box { border: 1px solid #333; padding: 8px; border-radius: 4px; background: #181818; margin-top: 4px; }
         .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+
+        /* FM-Style Preset Grid */
+        .preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+        .preset-card { 
+            background: #1f2937; border: 1px solid #374151; padding: 8px; border-radius: 6px; 
+            cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+        .preset-card:hover { border-color: #f59e0b; background: #374151; }
+        .preset-card h4 { font-size: 0.75rem; font-weight: bold; color: #f59e0b; margin-bottom: 2px; }
+        .preset-card p { font-size: 0.65rem; color: #9ca3af; line-height: 1.1; }
+        
     </style>
 </head>
 <body>
@@ -75,15 +86,9 @@
     <div id="form-container" class="scroll-y p-6 hidden"></div>
 </div>
 
-<datalist id="dl-skills"></datalist>
 <datalist id="dl-items"></datalist>
 <datalist id="dl-loot"></datalist>
 <datalist id="dl-spells"></datalist>
-<datalist id="dl-slots">
-    <option value="mainhand"><option value="offhand"><option value="head"><option value="torso">
-    <option value="legs"><option value="feet"><option value="hands"><option value="back">
-    <option value="waist"><option value="neck"><option value="finger_right"><option value="finger_left">
-</datalist>
 
 <script>
     let currentCategory = "monsters";
@@ -91,7 +96,41 @@
     let isDictStructure = false; 
     let activeEntityId = null; 
     let activeFilename = "";
-    let refs = { skills: [], items: [], loot_tables: [], spells: [] };
+    let refs = { skills: [], items: [], loot_tables: [], spells: [], slots: [] };
+
+    // --- AI PRESETS (FM Style) ---
+    const AI_PRESETS = [
+        { 
+            name: "Aggressive Melee", 
+            desc: "Attacks anything nearby.",
+            block: { conditions: [], action: { type: "attack", value: "" } }
+        },
+        { 
+            name: "Self Preservation", 
+            desc: "Flees if HP < 20%.",
+            block: { conditions: [{ type: "health_below_percent", value: "20" }], action: { type: "flee", value: "" } }
+        },
+        { 
+            name: "Pack Healer", 
+            desc: "Casts Heal on Low HP Allies.",
+            block: { conditions: [{ type: "has_ally_low_hp", value: "50" }], action: { type: "cast", value: "heal_1" } }
+        },
+        { 
+            name: "Execute Weak", 
+            desc: "Target Low HP Enemies.",
+            block: { conditions: [{ type: "target_health_below_percent", value: "20" }], action: { type: "attack", value: "" } }
+        },
+        { 
+            name: "Defensive Caster", 
+            desc: "Buff self if not buffed.",
+            block: { conditions: [{ type: "self_status_missing", value: "shielded" }], action: { type: "cast", value: "shield_1" } }
+        },
+        { 
+            name: "Caster Assault", 
+            desc: "Casts spell at target.",
+            block: { conditions: [], action: { type: "cast", value: "shock_1" } }
+        }
+    ];
 
     window.onload = async () => { 
         await fetchReferences();
@@ -105,7 +144,6 @@
             const populate = (id, list) => {
                 document.getElementById(id).innerHTML = list.map(v => `<option value="${v}">`).join('');
             };
-            populate('dl-skills', refs.skills);
             populate('dl-items', refs.items);
             populate('dl-loot', refs.loot_tables);
             populate('dl-spells', refs.spells);
@@ -255,7 +293,7 @@
         }
         
         if (!isDictStructure && currentCategory !== 'monsters') {
-             // Fallback for lists
+             // Fallback
         } else if (!isDictStructure && currentCategory === 'monsters') {
              loadEntity(currentData.length - 1);
         } else {
@@ -345,7 +383,8 @@
         return wrapper;
     }
 
-    function createKeyValueEditor(label, dataObj, onChange, keyListId=null, valueListId=null) {
+    // --- REFACTORED: Support Key Dropdowns (Skills/Slots) ---
+    function createKeyValueEditor(label, dataObj, onChange, keyOptions=null, valueListId=null) {
         if (!dataObj) dataObj = {}; 
         const wrapper = document.createElement('div');
         wrapper.className = "group-box mb-2";
@@ -357,22 +396,76 @@
             Object.entries(dataObj).forEach(([k, v]) => {
                 const row = document.createElement('div');
                 row.className = "flex gap-1 mb-1";
-                const kInp = document.createElement('input'); kInp.className = "w-1/2 text-xs"; kInp.value = k; if(keyListId) kInp.setAttribute('list', keyListId);
-                const vInp = document.createElement('input'); vInp.className = "w-1/2 text-xs"; vInp.value = v; if(valueListId) vInp.setAttribute('list', valueListId);
-                const btn = document.createElement('button'); btn.className = "text-red-500 px-2 font-bold"; btn.innerText = "×";
+                
+                let kInp;
+                // If keyOptions (array) exists, use Select, otherwise Input
+                if (keyOptions) {
+                    kInp = document.createElement('select');
+                    kInp.className = "w-1/2 text-xs bg-[#1a1a1a] border border-[#333] text-white";
+                    keyOptions.forEach(opt => {
+                        const o = document.createElement('option');
+                        o.value = opt; o.innerText = opt;
+                        if(opt === k) o.selected = true;
+                        kInp.appendChild(o);
+                    });
+                } else {
+                    kInp = document.createElement('input'); 
+                    kInp.className = "w-1/2 text-xs"; 
+                    kInp.value = k; 
+                }
+
+                const vInp = document.createElement('input'); 
+                vInp.className = "w-1/2 text-xs"; 
+                vInp.value = v; 
+                if(valueListId) vInp.setAttribute('list', valueListId);
+                
+                const btn = document.createElement('button'); 
+                btn.className = "text-red-500 px-2 font-bold"; btn.innerText = "×";
                 
                 kInp.onchange = (e) => { 
-                    if(e.target.value && e.target.value !== k) { dataObj[e.target.value] = dataObj[k]; delete dataObj[k]; onChange(dataObj); render(); }
+                    if(e.target.value && e.target.value !== k) { 
+                        // If new key already exists, warn? Or just overwrite.
+                        if (dataObj[e.target.value] !== undefined && e.target.value !== k) {
+                            alert("That key already exists.");
+                            render(); // Reset UI
+                            return;
+                        }
+                        dataObj[e.target.value] = dataObj[k]; 
+                        delete dataObj[k]; 
+                        onChange(dataObj); 
+                        render(); 
+                    }
                 };
                 vInp.onchange = (e) => { 
-                    const val = e.target.value; dataObj[k] = isNaN(val) ? val : (val.trim()==="" ? "" : parseFloat(val)); onChange(dataObj);
+                    const val = e.target.value; 
+                    dataObj[k] = isNaN(val) ? val : (val.trim()==="" ? "" : parseFloat(val)); 
+                    onChange(dataObj);
                 };
                 btn.onclick = () => { delete dataObj[k]; onChange(dataObj); render(); };
+                
                 row.appendChild(kInp); row.appendChild(vInp); row.appendChild(btn); list.appendChild(row);
             });
         };
+        
         wrapper.querySelector('button').onclick = () => { 
-            let i=1; while(dataObj[`new_${i}`]) i++; dataObj[`new_${i}`] = ""; onChange(dataObj); render(); 
+            let initialKey = "";
+            if (keyOptions) {
+                // Find first unused key
+                initialKey = keyOptions.find(opt => dataObj[opt] === undefined) || keyOptions[0];
+            } else {
+                let i=1; while(dataObj[`new_${i}`]) i++; 
+                initialKey = `new_${i}`;
+            }
+            
+            // Check if key exists to prevent overwrite on add
+            if (dataObj[initialKey] !== undefined) {
+                alert("Cannot add more: All keys used or conflict.");
+                return;
+            }
+
+            dataObj[initialKey] = ""; 
+            onChange(dataObj); 
+            render(); 
         };
         render();
         return wrapper;
@@ -382,7 +475,27 @@
         if (!scriptArray) scriptArray = [];
         const wrapper = document.createElement('div');
         wrapper.className = "group-box mb-2 border-amber-500/50";
-        wrapper.innerHTML = `<label class="text-amber-500">${label}</label><div class="script-list space-y-2"></div><button class="btn btn-neutral text-xs mt-2">+ Add Block</button>`;
+        wrapper.innerHTML = `<label class="text-amber-500">${label}</label><div class="preset-container mb-4"></div><div class="script-list space-y-2"></div><button class="btn btn-neutral text-xs mt-2">+ Add Empty Block</button>`;
+        
+        // --- Render Presets ---
+        const presetContainer = wrapper.querySelector('.preset-container');
+        presetContainer.innerHTML = `<div class="text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Tactical Presets</div><div class="preset-grid"></div>`;
+        const grid = presetContainer.querySelector('.preset-grid');
+        
+        AI_PRESETS.forEach(preset => {
+            const card = document.createElement('div');
+            card.className = "preset-card";
+            card.innerHTML = `<h4>${preset.name}</h4><p>${preset.desc}</p>`;
+            card.onclick = () => {
+                // Deep copy the block to avoid reference issues
+                const newBlock = JSON.parse(JSON.stringify(preset.block));
+                scriptArray.push(newBlock);
+                onChange(scriptArray);
+                render();
+            };
+            grid.appendChild(card);
+        });
+
         const list = wrapper.querySelector('.script-list');
 
         const render = () => {
@@ -420,6 +533,7 @@
                             <option value="target_health_below_percent" ${c.type==='target_health_below_percent'?'selected':''}>Target HP < %</option>
                             <option value="target_status" ${c.type==='target_status'?'selected':''}>Target Status</option>
                             <option value="has_ally_low_hp" ${c.type==='has_ally_low_hp'?'selected':''}>Ally HP < %</option>
+                            <option value="self_status_missing" ${c.type==='self_status_missing'?'selected':''}>Missing Status</option>
                         </select>
                         <input class="c-val text-[10px] w-1/3 bg-gray-800 border-none" value="${c.value||''}" placeholder="Value" onchange="updateCond(${idx}, ${cIdx}, 'value', this.value)">
                         <button class="text-red-500 font-bold px-1" onclick="removeCond(${idx}, ${cIdx})">×</button>
@@ -502,7 +616,6 @@
         grid2.appendChild(createInput("Respawn Chance", entity.respawn_chance_per_tick || 0.2, (v) => updateField("respawn_chance_per_tick", parseFloat(v))));
         container.appendChild(grid2);
 
-        // --- NEW: Level Range ---
         const rangeDiv = document.createElement('div');
         rangeDiv.innerHTML = `<label>Level Range (Min, Max)</label>`;
         const rangeInp = document.createElement('input');
@@ -514,13 +627,18 @@
         container.appendChild(createInput("Spawn Arrival", entity.spawn_message_arrival || "", (v) => updateField("spawn_message_arrival", v)));
         container.appendChild(createInput("Spawn Departure", entity.spawn_message_departure || "", (v) => updateField("spawn_message_departure", v)));
 
-        // --- NEW: AI Script Editor ---
-        container.appendChild(createAIScriptEditor("AI Behavior Script", entity.ai_script || [], (v) => updateField("ai_script", v)));
+        // --- NEW: AI Script Editor with Presets ---
+        container.appendChild(createAIScriptEditor("AI Behavior Strategy", entity.ai_script || [], (v) => updateField("ai_script", v)));
 
         // Complex Editors with Dropdowns
         container.appendChild(createListEditor("Attack Attributes (Natural)", entity.attack_attributes || [], (v) => updateField("attack_attributes", v)));
-        container.appendChild(createKeyValueEditor("Skills (Name: Rank)", entity.skills || {}, (v) => updateField("skills", v), "dl-skills"));
-        container.appendChild(createKeyValueEditor("Equipped (Slot: ItemID)", entity.equipped || {}, (v) => updateField("equipped", v), "dl-slots", "dl-items"));
+        
+        // --- UPDATED: Pass refs.skills as key options ---
+        container.appendChild(createKeyValueEditor("Skills (Name: Rank)", entity.skills || {}, (v) => updateField("skills", v), refs.skills));
+        
+        // --- UPDATED: Pass refs.slots as key options, refs.items as value datalist ---
+        container.appendChild(createKeyValueEditor("Equipped (Slot: ItemID)", entity.equipped || {}, (v) => updateField("equipped", v), refs.slots, "dl-items"));
+        
         container.appendChild(createListEditor("Known Spells", entity.known_spells || [], (v) => updateField("known_spells", v), "dl-spells"));
 
         // Stats
@@ -574,7 +692,10 @@
         const grid = document.createElement('div');
         grid.className = "grid grid-cols-2 gap-4";
         grid.appendChild(createInput("Base Value", entity.base_value || 0, (v) => updateField("base_value", parseInt(v))));
-        grid.appendChild(createSelect("Slot", entity.wearable_slot || "", ["", "mainhand", "offhand", "head", "torso", "legs", "feet", "hands", "back", "waist", "neck", "finger_right", "finger_left"], (v) => updateField("wearable_slot", v)));
+        // --- UPDATED: Pass slots here too for Item wearable_slot ---
+        const slotsWithEmpty = [""].concat(refs.slots || []);
+        container.appendChild(createSelect("Slot", entity.wearable_slot || "", slotsWithEmpty, (v) => updateField("wearable_slot", v)));
+        
         container.appendChild(grid);
         if(entity.item_type === "weapon") {
             container.appendChild(createInput("Skill", entity.skill || "brawling", (v) => updateField("skill", v), "dl-skills"));
@@ -610,17 +731,16 @@
     }
 
     function renderQuestFields(container, quest) {
-        // Common Fields
+        // (This function remains unchanged from previous versions)
         const grid = document.createElement('div');
         grid.className = "grid grid-cols-2 gap-4 mb-2";
         grid.appendChild(createInput("Quest Name", quest.name || "", (v) => updateField("name", v)));
         grid.appendChild(createSelect("Archetype", quest.archetype || "standard", 
             ["standard", "syntax_kill", "social_duel", "cartographer", "burden", "crafting"], 
-            (v) => { updateField("archetype", v); loadEntity(activeEntityId); } // Reload to show specific fields
+            (v) => { updateField("archetype", v); loadEntity(activeEntityId); } 
         ));
         container.appendChild(grid);
 
-        // Specific Fields based on Archetype
         const archetype = quest.archetype || "standard";
         const specificsDiv = document.createElement('div');
         specificsDiv.className = "bg-gray-800 p-2 rounded border border-gray-600 mb-2";
@@ -628,7 +748,6 @@
         specificsDiv.innerHTML = `<div class="text-xs text-amber-500 font-bold uppercase mb-2">${archetype.replace('_',' ')} Config</div>`;
 
         if (archetype === "syntax_kill") {
-            // Syntax Kill Config
             specificsDiv.appendChild(createInput("Target Monster ID", quest.monster_id || "", (v) => updateField("monster_id", v)));
             specificsDiv.appendChild(createInput("Req. Counter Key", quest.req_counter || "", (v) => updateField("req_counter", v)));
             specificsDiv.appendChild(createInput("Required Kill Source (physical/spell)", quest.required_kill_method?.source || "", (v) => {
@@ -639,7 +758,6 @@
             }));
         } 
         else if (archetype === "social_duel") {
-            // Social Duel Config
             specificsDiv.appendChild(createInput("Target NPC Name/ID", quest.social_target_id || "", (v) => updateField("social_target_id", v)));
             specificsDiv.appendChild(createSelect("Required Action", quest.social_action_type || "bribe", 
                 ["bribe", "threaten", "plead", "flatter"], 
@@ -647,11 +765,9 @@
             specificsDiv.appendChild(createInput("Successes Needed", quest.req_counter_value || 1, (v) => updateField("req_counter_value", parseInt(v))));
         }
         else if (archetype === "cartographer") {
-            // Cartographer Config
             specificsDiv.appendChild(createListEditor("Room IDs to Visit", quest.required_rooms_visited || [], (v) => updateField("required_rooms_visited", v)));
         }
         else if (archetype === "burden") {
-            // Burden Config
             specificsDiv.appendChild(createInput("Burden Item ID", quest.burden_item_id || "", (v) => updateField("burden_item_id", v)));
             specificsDiv.appendChild(createInput("Destination Room ID", quest.destination_room_id || "", (v) => updateField("destination_room_id", v)));
         }
@@ -660,7 +776,6 @@
              specificsDiv.appendChild(createInput("Quantity", quest.crafted_item_quantity || 1, (v) => updateField("crafted_item_quantity", parseInt(v))));
         }
         else {
-            // Standard Fetch/Kill
             specificsDiv.appendChild(createInput("Item Needed", quest.item_needed || "", (v) => updateField("item_needed", v), "dl-items"));
             specificsDiv.appendChild(createInput("Quantity", quest.item_quantity || 1, (v) => updateField("item_quantity", parseInt(v))));
             specificsDiv.appendChild(createInput("Give Target (NPC Name)", quest.give_target_name || "", (v) => updateField("give_target_name", v)));
@@ -668,11 +783,8 @@
 
         container.appendChild(specificsDiv);
 
-        // Rewards & Text
         container.appendChild(createInput("Reward XP", quest.reward_xp || 0, (v) => updateField("reward_xp", parseInt(v))));
-        // --- NEW: XP Type Dropdown ---
         container.appendChild(createSelect("Reward XP Type", quest.reward_xp_type || "field", ["field", "instant"], (v) => updateField("reward_xp_type", v)));
-        // -----------------------------
         container.appendChild(createInput("Reward Silver", quest.reward_silver || 0, (v) => updateField("reward_silver", parseInt(v))));
         container.appendChild(createInput("Reward Item", quest.reward_item || "", (v) => updateField("reward_item", v), "dl-items"));
         

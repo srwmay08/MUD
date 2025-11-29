@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import glob
 from flask import Flask, render_template, request, jsonify
@@ -7,6 +8,21 @@ from flask import Flask, render_template, request, jsonify
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_backend', 'data'))
 STATIC_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_frontend', 'static'))
+
+# --- DYNAMIC IMPORT ---
+# Add the project root to sys.path to allow importing mud_backend modules
+project_root = os.path.abspath(os.path.join(BASE_DIR, '..'))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+try:
+    from mud_backend import config
+    # Load slots dynamically from the main config
+    EQUIPMENT_SLOTS = list(config.EQUIPMENT_SLOTS.keys())
+    print(f"[ENTITY BUILDER] Successfully loaded {len(EQUIPMENT_SLOTS)} slots from config.")
+except ImportError as e:
+    print(f"[ENTITY BUILDER] WARNING: Could not import mud_backend.config. Using fallback slots. Error: {e}")
+    EQUIPMENT_SLOTS = ["mainhand", "offhand", "head", "torso", "legs", "feet", "hands", "back"]
 
 app = Flask(__name__, template_folder='.', static_folder=STATIC_DIR)
 
@@ -25,21 +41,22 @@ def list_files():
         "nodes": [],
         "loot": [],
         "spells": [],
-        "quests": [] # Added quests category
+        "quests": []
     }
     
     def scan(pattern, cat):
         for f in glob.glob(os.path.join(DATA_DIR, "**", pattern), recursive=True):
+            # Use forward slashes for consistency across OS
             rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
             categories[cat].append(rel)
 
     scan("monsters*.json", "monsters")
-    scan("npcs*.json", "monsters") # Also scan NPCs into monsters category
+    scan("npcs*.json", "monsters")
     scan("items_*.json", "items")
     scan("nodes*.json", "nodes")
     scan("loot*.json", "loot")
     scan("spells*.json", "spells")
-    scan("quests*.json", "quests") # Now scanning quests
+    scan("quests*.json", "quests")
         
     return jsonify(categories)
 
@@ -50,7 +67,8 @@ def get_references():
         "skills": [],
         "items": [],
         "loot_tables": [],
-        "spells": []
+        "spells": [],
+        "slots": EQUIPMENT_SLOTS
     }
 
     # 1. Skills (List of Dicts)
@@ -90,7 +108,8 @@ def get_references():
         except: pass
     
     # Sort for UI
-    for k in refs: refs[k].sort()
+    for k in refs: 
+        if k != "slots": refs[k].sort()
 
     return jsonify(refs)
 

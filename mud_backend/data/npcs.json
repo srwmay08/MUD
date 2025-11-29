@@ -47,7 +47,8 @@
         },
         "quest_giver_ids": ["trip_quest_1"],
         "all_quests_done_message": "The warrior nods at you. 'You've got the hang of it. Now go practice on something... uglier.'"
-    }{
+    },
+    {
         "monster_id": "temple_paladin",
         "name": "a temple paladin",
         "keywords": ["paladin", "guard", "temple paladin"],
@@ -106,4 +107,3 @@
         "all_quests_done_message": "The cleric pauses. 'The Priest in the embassy outside handles the wounded. We deal with study and prayer here.'"
     }
 ]
-}
