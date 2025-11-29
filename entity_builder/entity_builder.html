@@ -56,7 +56,7 @@
             <option value="nodes">Gathering Nodes</option>
             <option value="loot">Loot Tables</option>
             <option value="quests">Quests</option>
-        </select>
+            <option value="global">Global Config</option> </select>
     </div>
 
     <div class="mb-4 flex-grow flex flex-col">
@@ -96,7 +96,7 @@
     let isDictStructure = false; 
     let activeEntityId = null; 
     let activeFilename = "";
-    let refs = { skills: [], items: [], loot_tables: [], spells: [], slots: [] };
+    let refs = { skills: [], items: [], loot_tables: [], spells: [], slots: [], factions: [] };
 
     // --- AI PRESETS (FM Style) ---
     const AI_PRESETS = [
@@ -243,6 +243,9 @@
             renderLootFields(container, entity);
         } else if (currentCategory === 'quests') {
             renderQuestFields(container, entity);
+        } else if (currentCategory === 'global') {
+            // Generic JSON Editor for Globals
+            renderGlobalFields(container, entity);
         } else {
             // Common
             container.appendChild(createInput("Name", entity.name || "", (v) => updateField("name", v)));
@@ -290,6 +293,9 @@
             newKey = "quest_" + Date.now();
             newObj.archetype = "standard";
             currentData[newKey] = newObj;
+        } else if (currentCategory === 'global') {
+            newKey = "new_global_" + Date.now();
+            currentData[newKey] = {};
         }
         
         if (!isDictStructure && currentCategory !== 'monsters') {
@@ -383,7 +389,6 @@
         return wrapper;
     }
 
-    // --- REFACTORED: Support Key Dropdowns (Skills/Slots) ---
     function createKeyValueEditor(label, dataObj, onChange, keyOptions=null, valueListId=null) {
         if (!dataObj) dataObj = {}; 
         const wrapper = document.createElement('div');
@@ -398,7 +403,6 @@
                 row.className = "flex gap-1 mb-1";
                 
                 let kInp;
-                // If keyOptions (array) exists, use Select, otherwise Input
                 if (keyOptions) {
                     kInp = document.createElement('select');
                     kInp.className = "w-1/2 text-xs bg-[#1a1a1a] border border-[#333] text-white";
@@ -424,7 +428,6 @@
                 
                 kInp.onchange = (e) => { 
                     if(e.target.value && e.target.value !== k) { 
-                        // If new key already exists, warn? Or just overwrite.
                         if (dataObj[e.target.value] !== undefined && e.target.value !== k) {
                             alert("That key already exists.");
                             render(); // Reset UI
@@ -457,7 +460,6 @@
                 initialKey = `new_${i}`;
             }
             
-            // Check if key exists to prevent overwrite on add
             if (dataObj[initialKey] !== undefined) {
                 alert("Cannot add more: All keys used or conflict.");
                 return;
@@ -477,7 +479,6 @@
         wrapper.className = "group-box mb-2 border-amber-500/50";
         wrapper.innerHTML = `<label class="text-amber-500">${label}</label><div class="preset-container mb-4"></div><div class="script-list space-y-2"></div><button class="btn btn-neutral text-xs mt-2">+ Add Empty Block</button>`;
         
-        // --- Render Presets ---
         const presetContainer = wrapper.querySelector('.preset-container');
         presetContainer.innerHTML = `<div class="text-[10px] text-gray-500 mb-1 uppercase tracking-wide">Tactical Presets</div><div class="preset-grid"></div>`;
         const grid = presetContainer.querySelector('.preset-grid');
@@ -487,7 +488,6 @@
             card.className = "preset-card";
             card.innerHTML = `<h4>${preset.name}</h4><p>${preset.desc}</p>`;
             card.onclick = () => {
-                // Deep copy the block to avoid reference issues
                 const newBlock = JSON.parse(JSON.stringify(preset.block));
                 scriptArray.push(newBlock);
                 onChange(scriptArray);
@@ -504,11 +504,9 @@
                 const blockDiv = document.createElement('div');
                 blockDiv.className = "bg-gray-900 p-2 rounded border border-gray-700";
                 
-                // Conditions Section
                 let condHtml = `<div class="mb-1 text-xs text-gray-400">Conditions</div><div class="cond-list pl-2 border-l border-gray-600 mb-2"></div>`;
                 condHtml += `<button class="text-[10px] text-green-400 hover:text-green-300" onclick="addCond(${idx})">+ Condition</button>`;
                 
-                // Action Section
                 let actHtml = `<div class="mb-1 text-xs text-gray-400 mt-2">Action</div>`;
                 actHtml += `<div class="flex gap-1"><select class="act-type text-xs w-1/3 bg-gray-800 border-none"><option value="attack">Attack</option><option value="cast">Cast</option><option value="flee">Flee</option><option value="switch_target">Switch Target</option></select>`;
                 actHtml += `<input class="act-val text-xs w-2/3 bg-gray-800 border-none" placeholder="Value (Spell ID, etc)" value="${block.action?.value || ''}"></div>`;
@@ -522,7 +520,6 @@
                     ${actHtml}
                 `;
 
-                // Render Conditions
                 const condList = blockDiv.querySelector('.cond-list');
                 (block.conditions || []).forEach((c, cIdx) => {
                     const row = document.createElement('div');
@@ -541,7 +538,6 @@
                     condList.appendChild(row);
                 });
 
-                // Bind Action Updates
                 const actType = blockDiv.querySelector('.act-type');
                 actType.value = block.action?.type || "attack";
                 actType.onchange = (e) => { 
@@ -561,7 +557,6 @@
             });
         };
 
-        // Helper functions attached to window for inline onclicks (hacky but effective for single-file)
         window.addCond = (bIdx) => {
             if(!scriptArray[bIdx].conditions) scriptArray[bIdx].conditions = [];
             scriptArray[bIdx].conditions.push({type: "health_below_percent", value: "50"});
@@ -603,7 +598,10 @@
         grid.className = "grid grid-cols-2 gap-4 mb-2";
         grid.appendChild(createInput("Level", entity.level || 1, (v) => updateField("level", parseInt(v))));
         grid.appendChild(createInput("Max HP", entity.max_hp || 50, (v) => updateField("max_hp", parseInt(v))));
-        grid.appendChild(createInput("Faction", entity.faction || "Townsfolk", (v) => updateField("faction", v)));
+        
+        // --- UPDATED: Faction Dropdown ---
+        container.appendChild(createSelect("Faction", entity.faction || "Townsfolk", refs.factions, (v) => updateField("faction", v)));
+        
         grid.appendChild(createInput("Family", entity.family || "Human", (v) => updateField("family", v)));
         grid.appendChild(createInput("Body Type", entity.body_type || "biped", (v) => updateField("body_type", v)));
         grid.appendChild(createInput("Perception DC", entity.perception_dc || 0, (v) => updateField("perception_dc", parseInt(v))));
@@ -623,25 +621,23 @@
         rangeInp.onchange = (e) => updateField("level_range", e.target.value.split(',').map(n => parseInt(n.trim())));
         rangeDiv.appendChild(rangeInp);
         container.appendChild(rangeDiv);
+        
+        // --- NEW: Faction Adjustment Editor ---
+        container.appendChild(createKeyValueEditor("Faction Adjustments on Death", entity.faction_adjustments_on_death || {}, (v) => updateField("faction_adjustments_on_death", v), refs.factions));
 
         container.appendChild(createInput("Spawn Arrival", entity.spawn_message_arrival || "", (v) => updateField("spawn_message_arrival", v)));
         container.appendChild(createInput("Spawn Departure", entity.spawn_message_departure || "", (v) => updateField("spawn_message_departure", v)));
 
-        // --- NEW: AI Script Editor with Presets ---
         container.appendChild(createAIScriptEditor("AI Behavior Strategy", entity.ai_script || [], (v) => updateField("ai_script", v)));
 
-        // Complex Editors with Dropdowns
         container.appendChild(createListEditor("Attack Attributes (Natural)", entity.attack_attributes || [], (v) => updateField("attack_attributes", v)));
         
-        // --- UPDATED: Pass refs.skills as key options ---
         container.appendChild(createKeyValueEditor("Skills (Name: Rank)", entity.skills || {}, (v) => updateField("skills", v), refs.skills));
         
-        // --- UPDATED: Pass refs.slots as key options, refs.items as value datalist ---
         container.appendChild(createKeyValueEditor("Equipped (Slot: ItemID)", entity.equipped || {}, (v) => updateField("equipped", v), refs.slots, "dl-items"));
         
         container.appendChild(createListEditor("Known Spells", entity.known_spells || [], (v) => updateField("known_spells", v), "dl-spells"));
 
-        // Stats
         const statBox = document.createElement('div');
         statBox.className = "group-box";
         statBox.innerHTML = "<label>Stats</label><div class='stat-grid' id='stat-grid'></div>";
@@ -658,6 +654,29 @@
         });
         container.appendChild(statBox);
         container.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v), "dl-loot"));
+    }
+
+    function renderGlobalFields(container, entity) {
+        container.appendChild(createKeyValueEditor("Raw JSON Data", entity, (v) => {
+            // Update currentData directly because entity IS currentData[key] here
+            // But this KV editor modifies in place
+        }));
+        // Actually, for global config, it's best to just expose the raw JSON structure in a text area
+        // or a specialized editor. Since we don't have a schema for every global file,
+        // a simple text area fallback is safest for now.
+        const ta = document.createElement('textarea');
+        ta.className = "h-96 font-mono text-xs";
+        ta.value = JSON.stringify(entity, null, 2);
+        ta.onchange = (e) => {
+            try {
+                const parsed = JSON.parse(e.target.value);
+                // Update the object reference in currentData
+                currentData[activeEntityId] = parsed;
+            } catch(err) {
+                alert("Invalid JSON");
+            }
+        };
+        container.appendChild(ta);
     }
 
     function renderSpellFields(container, entity) {
@@ -731,7 +750,6 @@
     }
 
     function renderQuestFields(container, quest) {
-        // (This function remains unchanged from previous versions)
         const grid = document.createElement('div');
         grid.className = "grid grid-cols-2 gap-4 mb-2";
         grid.appendChild(createInput("Quest Name", quest.name || "", (v) => updateField("name", v)));

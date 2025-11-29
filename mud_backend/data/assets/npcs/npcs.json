@@ -1,0 +1,178 @@
+[
+    {
+        "action_timer_seconds": 7,
+        "all_quests_done_message": "The warrior nods at you. 'You've got the hang of it. Now go practice on something... uglier.'",
+        "areas_found": [
+            "town_square",
+            "ts_north",
+            "ts_south",
+            "ts_east",
+            "ts_west",
+            "ts_northeast",
+            "ts_northwest",
+            "ts_southeast",
+            "ts_southwest"
+        ],
+        "attack_attributes": [
+            "physical (polearms)",
+            "combat maneuvers (trip)"
+        ],
+        "bcs": true,
+        "body_type": "biped",
+        "defense_attributes": [
+            "leather armor",
+            "high defense"
+        ],
+        "description": "A grizzled old warrior paces, his eyes scanning for... something. He carries a long spear and looks like he's seen a hundred battles.",
+        "equipped": {
+            "mainhand": "iron_spear",
+            "torso": "leather_armor",
+            "finger_left": "gold_ring"
+        },
+        "faction": "Townsfolk",
+        "family": "Human",
+        "hp": 150,
+        "is_aggressive": false,
+        "is_monster": true,
+        "is_non_corporeal": false,
+        "is_npc": true,
+        "is_undead": false,
+        "keywords": [
+            "warrior",
+            "grizzled warrior",
+            "trainer"
+        ],
+        "level": 10,
+        "max_hp": 150,
+        "monster_id": "grizzled_warrior",
+        "movement_rules": {
+            "allowed_rooms": [
+                "town_square",
+                "ts_north",
+                "ts_south",
+                "ts_east",
+                "ts_west",
+                "ts_northeast",
+                "ts_northwest",
+                "ts_southeast",
+                "ts_southwest"
+            ],
+            "wander_chance": 0.8
+        },
+        "name": "a grizzled warrior",
+        "perception_dc": 0,
+        "quest_giver_ids": [
+            "trip_quest_1"
+        ],
+        "respawn_chance_per_tick": 1,
+        "respawn_time_seconds": 60,
+        "skills": {
+            "combat_maneuvers": 80,
+            "polearms": 80
+        },
+        "spawn_message_arrival": "A grizzled warrior wanders in.",
+        "spawn_message_departure": "The grizzled warrior wanders off to the {exit}.",
+        "stats": {
+            "AGI": 80,
+            "AUR": 50,
+            "CON": 80,
+            "DEX": 80,
+            "DIS": 50,
+            "ESS": 50,
+            "INF": 50,
+            "INT": 50,
+            "LOG": 50,
+            "STR": 80,
+            "WIS": 50,
+            "ZEA": 50
+        },
+        "verbs": [
+            "look",
+            "attack",
+            "talk"
+        ]
+    },
+    {
+        "all_quests_done_message": "The Paladin nods. 'If you seek to serve, speak to the High Priest in the Solar above.'",
+        "ambient_message_chance": 0.15,
+        "ambient_messages": [
+            "checks the straps of their armor.",
+            "murmurs a prayer to Aethelion.",
+            "eyes the shadows suspiciously.",
+            "polishes a smudge off their shield."
+        ],
+        "description": "A stoic warrior clad in gleaming plate mail. They patrol the temple grounds with purpose.",
+        "faction": "Townsfolk",
+        "family": "Human",
+        "hp": 100,
+        "is_aggressive": false,
+        "is_monster": true,
+        "is_npc": true,
+        "keywords": [
+            "paladin",
+            "guard",
+            "temple paladin"
+        ],
+        "level": 8,
+        "max_hp": 100,
+        "monster_id": "temple_paladin",
+        "movement_rules": {
+            "allowed_rooms": [
+                "temple_of_light",
+                "temple_nave",
+                "temple_almonry",
+                "temple_vestry",
+                "temple_upper_hall"
+            ],
+            "wander_chance": 0.2
+        },
+        "name": "a temple paladin",
+        "respawn_chance_per_tick": 0.5,
+        "respawn_time_seconds": 60,
+        "verbs": [
+            "look",
+            "talk"
+        ]
+    },
+    {
+        "all_quests_done_message": "The cleric pauses. 'The Priest in the embassy outside handles the wounded. We deal with study and prayer here.'",
+        "ambient_message_chance": 0.2,
+        "ambient_messages": [
+            "drops a scroll, then hastily picks it up.",
+            "rushes past, muttering about schedules.",
+            "adjusts their robes nervously.",
+            "dusts off a pew."
+        ],
+        "description": "A young cleric rushing about with armfuls of scrolls and bandages.",
+        "faction": "Townsfolk",
+        "family": "Human",
+        "hp": 40,
+        "is_aggressive": false,
+        "is_monster": true,
+        "is_npc": true,
+        "keywords": [
+            "cleric",
+            "acolyte",
+            "busy cleric"
+        ],
+        "level": 4,
+        "max_hp": 40,
+        "monster_id": "temple_cleric",
+        "movement_rules": {
+            "allowed_rooms": [
+                "temple_nave",
+                "temple_almonry",
+                "temple_vestry",
+                "temple_scriptorium"
+            ],
+            "wander_chance": 0.4
+        },
+        "name": "a busy cleric",
+        "respawn_chance_per_tick": 0.5,
+        "respawn_time_seconds": 60,
+        "verbs": [
+            "look",
+            "talk"
+        ]
+    }
+]

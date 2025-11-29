@@ -6,27 +6,31 @@ from flask import Flask, render_template, request, jsonify
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Root data directory
 DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_backend', 'data'))
+# Sub-directories
+GLOBAL_DIR = os.path.join(DATA_DIR, 'global')
+ASSETS_DIR = os.path.join(DATA_DIR, 'assets')
+ZONES_DIR = os.path.join(DATA_DIR, 'zones')
+
 STATIC_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_frontend', 'static'))
 
 # --- DYNAMIC IMPORT ---
-# Add the project root to sys.path to allow importing mud_backend modules
 project_root = os.path.abspath(os.path.join(BASE_DIR, '..'))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
 try:
     from mud_backend import config
-    # Load slots dynamically from the main config
     EQUIPMENT_SLOTS = list(config.EQUIPMENT_SLOTS.keys())
-    print(f"[ENTITY BUILDER] Successfully loaded {len(EQUIPMENT_SLOTS)} slots from config.")
-except ImportError as e:
-    print(f"[ENTITY BUILDER] WARNING: Could not import mud_backend.config. Using fallback slots. Error: {e}")
+    print(f"[ENTITY BUILDER] Loaded {len(EQUIPMENT_SLOTS)} slots from config.")
+except ImportError:
+    print("[ENTITY BUILDER] WARNING: Could not import config. Using fallback slots.")
     EQUIPMENT_SLOTS = ["mainhand", "offhand", "head", "torso", "legs", "feet", "hands", "back"]
 
 app = Flask(__name__, template_folder='.', static_folder=STATIC_DIR)
 
-print(f"[ENTITY BUILDER] Data Directory: {DATA_DIR}")
+print(f"[ENTITY BUILDER] Data Root: {DATA_DIR}")
 
 @app.route('/')
 def index():
@@ -34,8 +38,9 @@ def index():
 
 @app.route('/api/files', methods=['GET'])
 def list_files():
-    """Lists relevant JSON files grouped by category."""
+    """Lists JSON files grouped by category, scanning specific subfolders."""
     categories = {
+        "global": [],    # Races, Skills, Factions, Rules
         "monsters": [],
         "items": [],
         "nodes": [],
@@ -44,44 +49,71 @@ def list_files():
         "quests": []
     }
     
-    def scan(pattern, cat):
-        for f in glob.glob(os.path.join(DATA_DIR, "**", pattern), recursive=True):
-            # Use forward slashes for consistency across OS
+    # Helper to scan a specific directory for patterns
+    def scan(directory, pattern, category_key):
+        if not os.path.exists(directory): return
+        for f in glob.glob(os.path.join(directory, "**", pattern), recursive=True):
+            # Store path relative to DATA_DIR so the frontend can request it easily
             rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
-            categories[cat].append(rel)
+            categories[category_key].append(rel)
 
-    scan("monsters*.json", "monsters")
-    scan("npcs*.json", "monsters")
-    scan("items_*.json", "items")
-    scan("nodes*.json", "nodes")
-    scan("loot*.json", "loot")
-    scan("spells*.json", "spells")
-    scan("quests*.json", "quests")
+    # 1. GLOBAL DATA (In /data/global/)
+    # We just list everything in global as editable files
+    scan(GLOBAL_DIR, "*.json", "global")
+
+    # 2. ASSETS (In /data/assets/)
+    scan(ASSETS_DIR, "monsters*.json", "monsters")
+    scan(ASSETS_DIR, "npcs*.json", "monsters")
+    scan(ASSETS_DIR, "items_*.json", "items")
+    scan(ASSETS_DIR, "nodes*.json", "nodes")
+    scan(ASSETS_DIR, "loot*.json", "loot")
+    scan(ASSETS_DIR, "spells*.json", "spells")
+    scan(ASSETS_DIR, "quest*.json", "quests")
         
     return jsonify(categories)
 
 @app.route('/api/references', methods=['GET'])
 def get_references():
-    """Returns lists of IDs for skills, items, loot tables, and spells for autocomplete."""
+    """
+    Returns lists of IDs for autocomplete.
+    Scans the new directory structure to find them.
+    """
     refs = {
         "skills": [],
         "items": [],
         "loot_tables": [],
         "spells": [],
+        "factions": [],
         "slots": EQUIPMENT_SLOTS
     }
 
-    # 1. Skills (List of Dicts)
-    skills_path = os.path.join(DATA_DIR, "skills.json")
+    # 1. Skills (Global)
+    skills_path = os.path.join(GLOBAL_DIR, "skills.json")
     if os.path.exists(skills_path):
         try:
             with open(skills_path, 'r') as f:
                 data = json.load(f)
-                refs["skills"] = [s.get("skill_id") for s in data if "skill_id" in s]
+                # Handle list of dicts
+                if isinstance(data, list):
+                    refs["skills"] = [s.get("skill_id") for s in data if "skill_id" in s]
+                # Handle dict of dicts
+                elif isinstance(data, dict):
+                     refs["skills"] = list(data.keys())
         except: pass
 
-    # 2. Items (Dict of Dicts)
-    for f in glob.glob(os.path.join(DATA_DIR, "**", "items_*.json"), recursive=True):
+    # 2. Factions (Global)
+    faction_path = os.path.join(GLOBAL_DIR, "faction.json")
+    if os.path.exists(faction_path):
+        try:
+            with open(faction_path, 'r') as f:
+                data = json.load(f)
+                # Structure: { "factions": { "Name": ... } }
+                factions_data = data.get("factions", {})
+                refs["factions"] = list(factions_data.keys())
+        except: pass
+
+    # 3. Items (Assets)
+    for f in glob.glob(os.path.join(ASSETS_DIR, "**", "items_*.json"), recursive=True):
         try:
             with open(f, 'r') as file:
                 data = json.load(file)
@@ -89,8 +121,8 @@ def get_references():
                     refs["items"].extend(data.keys())
         except: pass
 
-    # 3. Loot Tables (Dict of Lists/Dicts)
-    for f in glob.glob(os.path.join(DATA_DIR, "**", "loot*.json"), recursive=True):
+    # 4. Loot Tables (Assets)
+    for f in glob.glob(os.path.join(ASSETS_DIR, "**", "loot*.json"), recursive=True):
         try:
             with open(f, 'r') as file:
                 data = json.load(file)
@@ -98,8 +130,8 @@ def get_references():
                     refs["loot_tables"].extend(data.keys())
         except: pass
 
-    # 4. Spells (Dict of Dicts)
-    for f in glob.glob(os.path.join(DATA_DIR, "**", "spells*.json"), recursive=True):
+    # 5. Spells (Assets)
+    for f in glob.glob(os.path.join(ASSETS_DIR, "**", "spells*.json"), recursive=True):
         try:
             with open(f, 'r') as file:
                 data = json.load(file)
@@ -118,6 +150,7 @@ def load_file():
     filename = request.args.get('file')
     if not filename: return jsonify({"error": "No filename"}), 400
     
+    # filename comes in relative to DATA_DIR (e.g. "global/skills.json")
     path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(path): return jsonify({"error": "Not found"}), 404
     
