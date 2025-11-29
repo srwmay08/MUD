@@ -169,7 +169,9 @@
         <div class="flex justify-end space-x-2"><button onclick="document.getElementById('modal-overlay').style.display='none'" class="btn btn-neutral">Cancel</button><button onclick="saveToServer()" class="btn btn-success">Save</button></div>
     </div>
 </div>
+
 <datalist id="dl-room-ids"></datalist>
+
 <script>
     // --- Global State ---
     let zoneRooms = [];
@@ -260,7 +262,7 @@
         else if (type === 'portal') {
              html += `
                 <input class="form-input obj-name mb-1" value="${data.name||''}" placeholder="Name (e.g. iron gate)" oninput="updateCurrentRoomState()">
-                <input class="form-input obj-target mb-1 text-amber-500" value="${data.target_room||''}" placeholder="Target Room ID" oninput="updateCurrentRoomState()">
+                <input class="form-input obj-target mb-1 text-amber-500" list="dl-room-ids" value="${data.target_room||''}" placeholder="Target Room ID" oninput="updateCurrentRoomState()">
                 <input class="form-input obj-verbs text-xs" value="${(data.verbs||['ENTER']).join(',')}" placeholder="Verbs (e.g. ENTER, CLIMB)" oninput="updateCurrentRoomState()">
             `;
         }
@@ -353,20 +355,15 @@
             else if (type === 'item') {
                 newObj.item_id = el.querySelector('.obj-ref-id').value;
                 newObj.is_item = true;
-                // Optional: Could add name override here if needed
             }
             else if (type === 'node') {
                 newObj.node_id = el.querySelector('.obj-ref-id').value;
                 newObj.is_gathering_node = true;
-                // We might need to lookup the type from assets to fill 'node_type', 
-                // but generally the backend handles hydration.
             }
             else if (type === 'portal') {
-                html += `
-                    <input class="form-input obj-name mb-1" value="${data.name||''}" placeholder="Name (e.g. iron gate)" oninput="updateCurrentRoomState()">
-                    <input class="form-input obj-target mb-1 text-amber-500" list="dl-room-ids" value="${data.target_room||''}" placeholder="Target Room ID" oninput="updateCurrentRoomState()"> 
-                    <input class="form-input obj-verbs text-xs" value="${(data.verbs||['ENTER']).join(',')}" placeholder="Verbs (e.g. ENTER, CLIMB)" oninput="updateCurrentRoomState()">
-                `;
+                newObj.name = el.querySelector('.obj-name').value;
+                newObj.target_room = el.querySelector('.obj-target').value;
+                newObj.verbs = el.querySelector('.obj-verbs').value.split(',').map(s=>s.trim()).filter(s=>s);
             }
 
             // Only add if valid
@@ -540,30 +537,31 @@
     function newZone() { if(confirm("New Zone?")) { zoneRooms=[]; createNewRoom(); document.getElementById('status-filename').innerText = "Unsaved Zone"; } }
     
     function renderRoomList() {
-    // 1. Render the sidebar list
-    const c = document.getElementById('room-list-content'); c.innerHTML = '';
-    document.getElementById('list-count').innerText = zoneRooms.length;
-    
-    // 2. Prepare the Datalist for Portals
-    const dataList = document.getElementById('dl-room-ids');
-    dataList.innerHTML = '';
+        // 1. Render the sidebar list
+        const c = document.getElementById('room-list-content'); c.innerHTML = '';
+        document.getElementById('list-count').innerText = zoneRooms.length;
+        
+        // 2. Prepare the Datalist for Portals
+        const dataList = document.getElementById('dl-room-ids');
+        dataList.innerHTML = '';
 
-    zoneRooms.forEach(r => {
-        // Add to sidebar
-        const div = document.createElement('div');
-        div.className = `room-list-item ${r.room_id===activeRoomId ? 'active' : ''}`;
-        div.innerText = `${r.room_id} (${r.x}, ${r.y})`;
-        div.onclick = () => loadRoomIntoEditor(r.room_id);
-        c.appendChild(div);
+        zoneRooms.forEach(r => {
+            // Add to sidebar
+            const div = document.createElement('div');
+            div.className = `room-list-item ${r.room_id===activeRoomId ? 'active' : ''}`;
+            div.innerText = `${r.room_id} (${r.x}, ${r.y})`;
+            div.onclick = () => loadRoomIntoEditor(r.room_id);
+            c.appendChild(div);
 
-        // Add to dropdown options
-        const opt = document.createElement('option');
-        opt.value = r.room_id;
-        // This shows "room_id (Room Name)" in the dropdown hint
-        opt.innerText = r.name; 
-        dataList.appendChild(opt);
-    });
+            // Add to dropdown options
+            const opt = document.createElement('option');
+            opt.value = r.room_id;
+            // This shows "room_id (Room Name)" in the dropdown hint
+            opt.innerText = r.name; 
+            dataList.appendChild(opt);
+        });
     }
+
     function updateStatus() {
         const r = zoneRooms.find(rm => rm.room_id === activeRoomId);
         if(r) document.getElementById('status-coords').innerText = `X:${r.x} Y:${r.y} Z:${r.z}`;

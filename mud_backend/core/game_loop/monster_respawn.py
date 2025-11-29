@@ -43,14 +43,9 @@ def process_respawns(world: 'World',
                      ):
     
     current_time_float = time.time()
-    
-    # --- FIX: Use Thread-Safe Accessor ---
-    # world.defeated_monsters is now a ShardedStore. We get a list copy.
     all_defeated = world.get_all_defeated_monsters()
-    
     respawned_entity_runtime_ids_to_remove = []
     
-    # Iterate over the snapshot
     for runtime_uid, respawn_info in all_defeated:
         entity_template_key = respawn_info.get("template_key")
         if not entity_template_key:
@@ -69,13 +64,7 @@ def process_respawns(world: 'World',
                 entity_type = respawn_info["type"]
                 is_template_unique = respawn_info.get("is_unique", False)
 
-                # --- FIX: Use Safe Room Access ---
-                # We need to modify the active room, so we get it safely
                 active_room = world.get_active_room_safe(room_id_to_respawn_in)
-                
-                # If room isn't active (no players?), we might need to hydrate it temporarily
-                # or just skip respawn until a player enters. 
-                # For now, let's hydrate it to ensure the world stays consistent.
                 if not active_room:
                     world.get_room(room_id_to_respawn_in) # Forces hydration
                     active_room = world.get_active_room_safe(room_id_to_respawn_in)
@@ -83,20 +72,14 @@ def process_respawns(world: 'World',
                 if not active_room:
                     continue
                 
-                # Acquire Fine-Grained Lock
                 with active_room.lock:
-                    # We are now working with the LIVE object list
                     current_room_objects = active_room.objects
                     
                     base_template_data = None
                     if entity_type == "monster":
                         base_template_data = world.game_monster_templates.get(entity_template_key)
                     elif entity_type == "npc":
-                        # For unique NPCs, we might need to find their definition
-                        # This logic assumes we can rebuild them from template or stored data
-                        # If template missing, skip
-                        if entity_template_key:
-                             # This assumes NPC templates are stored in monster_templates (which they are)
+                         if entity_template_key:
                              base_template_data = world.game_monster_templates.get(entity_template_key)
 
                     if not base_template_data:
@@ -119,6 +102,22 @@ def process_respawns(world: 'World',
                             new_monster_uid = uuid.uuid4().hex
                             new_entity["uid"] = new_monster_uid
                             monster_id_to_check = new_monster_uid 
+                            
+                            # --- LEVEL RANGE LOGIC ---
+                            level_range = new_entity.get("level_range")
+                            if level_range and isinstance(level_range, list) and len(level_range) == 2:
+                                min_lvl, max_lvl = level_range
+                                actual_level = random.randint(min_lvl, max_lvl)
+                                new_entity["level"] = actual_level
+                                # Scale HP: +10% per level above minimum? Or base it on template.
+                                # Simple scaling: If template HP is for level X, scale by ratio.
+                                base_level = new_entity.get("level", 1) # This is the template default
+                                if actual_level > base_level:
+                                    ratio = 1.0 + ((actual_level - base_level) * 0.1)
+                                    new_entity["max_hp"] = int(new_entity.get("max_hp", 10) * ratio)
+                                    new_entity["hp"] = new_entity["max_hp"]
+                            # -------------------------
+
                         else: # NPC
                             new_entity["uid"] = runtime_uid 
                             monster_id_to_check = runtime_uid
@@ -134,8 +133,6 @@ def process_respawns(world: 'World',
                         
                         # --- AGGRO CHECK ---
                         is_aggressive = base_template_data.get("is_aggressive", False)
-                        
-                        # --- FIX: Use Safe Player Access ---
                         players_in_world = world.get_all_players_info()
                         
                         for p_name, p_data in players_in_world:
@@ -159,12 +156,11 @@ def process_respawns(world: 'World',
                                         "next_action_time": current_time_float,
                                         "current_room_id": room_id_to_respawn_in
                                     })
-                                    world.set_monster_hp(monster_id_to_check, base_template_data.get("max_hp", 1))
+                                    world.set_monster_hp(monster_id_to_check, new_entity.get("max_hp", 50))
                                     break 
 
                         respawned_entity_runtime_ids_to_remove.append(runtime_uid)
                 
-                # Emit save event after lock release
                 world.save_room(active_room)
                 
     for runtime_uid_to_remove in respawned_entity_runtime_ids_to_remove:

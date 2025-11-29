@@ -13,7 +13,7 @@
                 "description": "A verdigris-stained bronze statue of a forgotten merchant-prince, now serving mostly as a perch for gulls. Its base is a common meeting spot for deals both public and private.",
                 "perception_dc": 0,
                 "keywords": ["statue", "merchant-prince", "bronze statue"],
-                "verbs": ["look", "examine"]
+                "verbs": ["look"]
             },
             {
                 "name": "a grizzled warrior",
@@ -52,7 +52,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "inn_front_desk",
                 "perception_dc": 0,
@@ -89,7 +89,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "library_archives",
                 "perception_dc": 0,
@@ -124,7 +124,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "temple_of_light",
                 "perception_dc": 0,
@@ -140,7 +140,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "town_hall",
                 "perception_dc": 0,
@@ -175,7 +175,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "bank_lobby",
                 "perception_dc": 0,
@@ -191,7 +191,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "theatre",
                 "perception_dc": 0,
@@ -224,7 +224,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "elementalist_study",
                 "perception_dc": 0,
@@ -240,7 +240,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "barracks",
                 "perception_dc": 0,
@@ -274,7 +274,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "armory_shop",
                 "perception_dc": 0,
@@ -308,7 +308,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "apothecary_shop",
                 "perception_dc": 0,
@@ -324,7 +324,7 @@
                 "verbs": [
                     "CLIMB",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "well_bottom",
                 "perception_dc": 0,
@@ -359,7 +359,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "furrier_shop",
                 "perception_dc": 0,
@@ -431,7 +431,7 @@
                 "verbs": [
                     "GET",
                     "LOOK",
-                    "EXAMINE",
+                    ,
                     "TAKE"
                 ],
                 "is_item": true
@@ -464,7 +464,7 @@
                 "verbs": [
                     "look",
                     "talk to",
-                    "examine",
+                    ,
                     "give"
                 ],
                 "is_npc": true,
@@ -479,7 +479,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "inn_room",
                 "perception_dc": 0,
@@ -589,7 +589,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "examine"
+                    
                 ]
             }
         ],
@@ -725,7 +725,7 @@
                 "verbs": [
                     "ENTER",
                     "look",
-                    "examine"
+                    
                 ],
                 "target_room": "armory_furnace_room",
                 "perception_dc": 0,
@@ -762,7 +762,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -831,7 +831,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -869,7 +869,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -905,7 +905,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -940,7 +940,7 @@
                     "look",
                     "talk to",
                     "give",
-                    "examine"
+                    
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [
@@ -974,7 +974,7 @@
                     "look", 
                     "talk to",
                     "give",
-                    "examine"
+                    
                 ],
                 "is_npc": true,
                 "quest_giver_ids": [

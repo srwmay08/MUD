@@ -10,6 +10,165 @@ from mud_backend.core import combat_system
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
+# --- AI BEHAVIOR LOGIC ---
+
+def _evaluate_conditions(world: 'World', monster: Dict, target: 'Player', conditions: List[Dict]) -> bool:
+    """Returns True if ALL conditions in the block are met."""
+    for cond in conditions:
+        c_type = cond.get("type")
+        c_val = cond.get("value")
+        
+        if c_type == "health_below_percent":
+            hp_pct = (monster.get("hp", 0) / monster.get("max_hp", 1)) * 100
+            if hp_pct >= int(c_val): return False
+            
+        elif c_type == "target_health_below_percent":
+            if not target: return False
+            t_hp_pct = (target.hp / target.max_hp) * 100
+            if t_hp_pct >= int(c_val): return False
+
+        elif c_type == "target_status":
+            if not target or c_val not in target.status_effects: return False
+            if c_val == "prone" and target.posture != "prone": return False
+
+        elif c_type == "self_status":
+            if c_val not in monster.get("status_effects", []): return False
+
+        elif c_type == "has_ally_low_hp":
+            # Scan room for injured faction members
+            room_id = world.mob_locations.get(monster.get("uid"))
+            if not room_id: return False
+            room = world.get_active_room_safe(room_id)
+            found = False
+            if room:
+                with room.lock:
+                    for obj in room.objects:
+                        if obj.get("uid") == monster.get("uid"): continue
+                        if obj.get("faction") == monster.get("faction"):
+                            hp_pct = (obj.get("hp", 0) / obj.get("max_hp", 1)) * 100
+                            if hp_pct < int(c_val):
+                                found = True
+                                break
+            if not found: return False
+
+    return True
+
+def _execute_behavior_tree(world: 'World', monster: Dict, current_target_id: str, room_id: str, broadcast_callback) -> Dict:
+    """
+    Evaluates the 'ai_script' list. Returns an Action Dict if one triggers.
+    Structure of ai_script: [ { "conditions": [...], "action": {...} }, ... ]
+    """
+    script = monster.get("ai_script", [])
+    if not script: return None
+
+    target_player = None
+    if current_target_id:
+        player_info = world.get_player_info(current_target_id)
+        if player_info: target_player = player_info.get("player_obj")
+
+    for block in script:
+        conditions = block.get("conditions", [])
+        if _evaluate_conditions(world, monster, target_player, conditions):
+            return block.get("action")
+            
+    return None
+
+def _perform_ai_action(world: 'World', monster: Dict, action: Dict, current_target_id: str, room_id: str, broadcast_callback):
+    """Executes the chosen action."""
+    act_type = action.get("type")
+    act_val = action.get("value")
+    monster_name = monster.get("name", "The creature")
+    monster_uid = monster.get("uid")
+
+    if act_type == "cast":
+        # Check mana
+        spell_id = act_val
+        spell = world.game_spells.get(spell_id)
+        if not spell: return
+        
+        # Simple mana check (monsters usually have infinite mana, but we can check if needed)
+        
+        # Handle Healing Ally logic specially
+        if spell.get("effect") == "heal":
+            # Find the injured ally again
+            room = world.get_active_room_safe(room_id)
+            target_ally = None
+            if room:
+                for obj in room.objects:
+                    if obj.get("faction") == monster.get("faction") and obj.get("hp", 100) < obj.get("max_hp", 100):
+                        target_ally = obj
+                        break
+            
+            if target_ally:
+                heal_amt = spell.get("base_power", 10)
+                world.modify_monster_hp(target_ally["uid"], target_ally.get("max_hp"), -heal_amt) # Negative damage = heal
+                broadcast_callback(room_id, f"{monster_name} casts {spell['name']} on {target_ally['name']}, healing them!", "combat_broadcast")
+                
+                # Apply RT
+                _apply_monster_rt(world, monster, 3.0)
+                return
+
+        # Offensive Cast
+        if current_target_id:
+            broadcast_callback(room_id, f"{monster_name} casts {spell['name']} at the target!", "combat_broadcast")
+            # We don't have a full 'cast' resolution for mobs yet in this snippet, 
+            # but we can hook into resolve_attack if we treat it as a 'magic' weapon type later.
+            # For now, simpler implementation:
+            player_info = world.get_player_info(current_target_id)
+            if player_info and player_info.get("player_obj"):
+                target = player_info["player_obj"]
+                # Calculate damage simply for BCS demo
+                damage = spell.get("base_power", 10)
+                target.hp -= damage
+                target.send_message(f"You are hit by the spell for {damage} damage!")
+                _apply_monster_rt(world, monster, 3.0)
+
+    elif act_type == "flee":
+        broadcast_callback(room_id, f"{monster_name} panics and flees!", "combat_broadcast")
+        world.remove_combat_state(monster_uid)
+        
+        # Move to random exit
+        room = world.get_room(room_id)
+        if room and room.get("exits"):
+            exit_dir, target_room = random.choice(list(room["exits"].items()))
+            world.move_object_between_rooms(monster, room_id, target_room)
+            world.update_mob_location(monster_uid, target_room)
+            broadcast_callback(target_room, f"{monster_name} rushes in, looking panicked.", "ambient")
+
+    elif act_type == "switch_target":
+        # Find new target
+        players = world.entity_manager.get_players_in_room(room_id)
+        candidates = []
+        for pname in players:
+            pinfo = world.get_player_info(pname)
+            if pinfo and pinfo.get("player_obj"):
+                p = pinfo["player_obj"]
+                if p.name.lower() != current_target_id:
+                    candidates.append(p)
+        
+        if candidates:
+            # Logic: Weakest?
+            candidates.sort(key=lambda p: p.hp)
+            new_target = candidates[0]
+            
+            # Update combat state
+            c_state = world.get_combat_state(monster_uid)
+            if c_state:
+                c_state["target_id"] = new_target.name.lower()
+                world.set_combat_state(monster_uid, c_state)
+                
+            broadcast_callback(room_id, f"{monster_name} turns its attention to {new_target.name}!", "combat_broadcast")
+            _apply_monster_rt(world, monster, 1.0) # Small delay to switch
+
+def _apply_monster_rt(world, monster, seconds):
+    uid = monster.get("uid")
+    c_state = world.get_combat_state(uid)
+    if c_state:
+        c_state["next_action_time"] = time.time() + seconds
+        world.set_combat_state(uid, c_state)
+
+# --- CORE AI LOOPS ---
+
 def _scan_for_player_targets(world: 'World', monster_data: Dict, room_id: str) -> bool:
     """
     Scans the room for players. If an aggressive or KOS player is found,
@@ -18,8 +177,13 @@ def _scan_for_player_targets(world: 'World', monster_data: Dict, room_id: str) -
     monster_uid = monster_data.get("uid")
     if not monster_uid: return False
     
-    # If already fighting, don't switch targets or spam
+    # If already fighting, don't switch targets in the scan phase
     if world.get_combat_state(monster_uid): return False
+
+    # Check status effects preventing aggression (Stun/Sleep)
+    status_effects = monster_data.get("status_effects", [])
+    if "stunned" in status_effects or "sleeping" in status_effects:
+        return False
 
     is_aggressive = monster_data.get("is_aggressive", False)
     
@@ -48,37 +212,40 @@ def _scan_for_player_targets(world: 'World', monster_data: Dict, room_id: str) -
             break
     
     if target_player:
-        current_time = time.time()
-        monster_name = monster_data.get("name", "A creature")
-        
-        # Broadcast attack
-        world.broadcast_to_room(
-            room_id, 
-            f"The {monster_name} attacks {target_player.name}!", 
-            "combat_broadcast"
-        )
-        
-        target_player.send_message(f"The {monster_name} attacks you!")
-        
-        # Calculate Reaction/Roundtime
-        monster_agi = monster_data.get("stats", {}).get("AGI", 50)
-        monster_rt = combat_system.calculate_roundtime(monster_agi)
-        
-        # Set Combat State
-        world.set_combat_state(monster_uid, {
-            "state_type": "combat",
-            "target_id": target_player.name.lower(),
-            "next_action_time": current_time + (monster_rt / 2), # Attps quickly
-            "current_room_id": room_id
-        })
-        
-        # Ensure HP is initialized
-        if world.get_monster_hp(monster_uid) is None:
-            world.set_monster_hp(monster_uid, monster_data.get("max_hp", 50))
-            
+        _initiate_combat(world, monster_data, target_player, room_id)
         return True # Combat started
 
     return False
+
+def _initiate_combat(world: 'World', monster_data: Dict, target_player: 'Player', room_id: str):
+    current_time = time.time()
+    monster_uid = monster_data.get("uid")
+    monster_name = monster_data.get("name", "A creature")
+    
+    # Broadcast attack
+    world.broadcast_to_room(
+        room_id, 
+        f"The {monster_name} attacks {target_player.name}!", 
+        "combat_broadcast"
+    )
+    
+    target_player.send_message(f"The {monster_name} attacks you!")
+    
+    # Calculate Reaction/Roundtime
+    monster_agi = monster_data.get("stats", {}).get("AGI", 50)
+    monster_rt = combat_system.calculate_roundtime(monster_agi)
+    
+    # Set Combat State
+    world.set_combat_state(monster_uid, {
+        "state_type": "combat",
+        "target_id": target_player.name.lower(),
+        "next_action_time": current_time + (monster_rt / 2), # Attacks quickly
+        "current_room_id": room_id
+    })
+    
+    # Ensure HP is initialized
+    if world.get_monster_hp(monster_uid) is None:
+        world.set_monster_hp(monster_uid, monster_data.get("max_hp", 50))
 
 def _check_and_start_npc_combat(world: 'World', npc: Dict, room_id: str):
     """Checks for hostile NPCs/Monsters in the room."""
@@ -140,26 +307,16 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
             world.unregister_mob(uid)
             continue
             
-        # Check if room is active (has players)
-        # Note: Even if room is 'inactive' in memory, we might want to process logic 
-        # if we want persistence, but for optimization we usually only process active rooms.
+        # Check room status
         with world.index_lock:
             players_in_room = world.room_players.get(room_id)
         
-        # Optimization: If no players in room, skip AI processing for this mob?
-        # But we need to process wandering into player rooms. 
-        # Let's allow processing but use safe getters.
-        
         room = world.get_active_room_safe(room_id)
         if not room:
-             # If room isn't in active memory, check if players are there (via index)
-             # If players are there, we must hydrate.
              if players_in_room:
                  world.get_room(room_id) # Hydrate
                  room = world.get_active_room_safe(room_id)
              else:
-                 # No players, room inactive. Skip complex AI to save cycles.
-                 # (You could implement 'background wander' here later)
                  continue
         
         if not room: continue
@@ -175,34 +332,56 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
             world.unregister_mob(uid)
             continue
 
-        # Hydrate template data if missing
+        # Hydrate template if missing movement rules (rare but possible on reload)
         monster_id = monster_obj.get("monster_id")
         if monster_id and "movement_rules" not in monster_obj:
              template = world.game_monster_templates.get(monster_id)
              if template: monster_obj.update(copy.deepcopy(template))
 
-        # --- AI PRIORITY 1: Combat Check ---
-        # Scan for players to attack
-        started_combat = _scan_for_player_targets(world, monster_obj, room_id)
+        # --- AI PRIORITY 1: Check Status Effects (Stun/Delimbed/Prone) ---
+        status_effects = monster_obj.get("status_effects", [])
         
-        # Scan for NPC enemies (if player check didn't start combat)
-        if not started_combat:
-            _check_and_start_npc_combat(world, monster_obj, room_id)
+        if "stunned" in status_effects:
+            # Skip all actions if stunned
+            continue
+            
+        # --- AI PRIORITY 2: Combat & Behavior Tree ---
+        combat_state = world.get_combat_state(uid)
+        in_combat = combat_state and combat_state.get("state_type") == "combat"
+        target_id = combat_state.get("target_id") if in_combat else None
 
-        # --- AI PRIORITY 2: Movement ---
-        # Only move if not in combat
-        if monster_obj.get("movement_rules"):
-            in_combat = False
-            combat_state = world.get_combat_state(uid)
-            if combat_state and combat_state.get("state_type") == "combat":
-                 in_combat = True
-                 
-            if not in_combat:
+        # 2a. Execute Behavior Script (if any)
+        # We do this even if not in combat to allow for passive behaviors like healing or buffering
+        script_action = _execute_behavior_tree(world, monster_obj, target_id, room_id, broadcast_callback)
+        
+        if script_action:
+            _perform_ai_action(world, monster_obj, script_action, target_id, room_id, broadcast_callback)
+            # If action taken, skip standard attack/move this tick
+            continue
+
+        # 2b. Standard Aggro Scan (if not fighting)
+        if not in_combat:
+            started_combat = _scan_for_player_targets(world, monster_obj, room_id)
+            if not started_combat:
+                _check_and_start_npc_combat(world, monster_obj, room_id)
+
+        # --- AI PRIORITY 3: Movement (Wander) ---
+        # Only move if not in combat and not prone/delimbed legs
+        if monster_obj.get("movement_rules") and not in_combat:
+            # Check for leg damage preventing movement
+            if monster_obj.get("delimbed_right_leg") or monster_obj.get("delimbed_left_leg"):
+                pass # Can't wander if legless
+            elif monster_obj.get("posture") == "prone":
+                # Stand up chance?
+                if random.random() < 0.5:
+                    monster_obj["posture"] = "standing"
+                    broadcast_callback(room_id, f"The {monster_obj.get('name')} struggles to its feet.", "ambient")
+            else:
                 potential_movers.append((monster_obj, room_id))
 
     moved_monster_uids = set()
 
-    # Process Movement
+    # Process Movement (Batched)
     for i, (monster, current_room_id) in enumerate(potential_movers):
         if i % 10 == 0:
             world.socketio.sleep(0)

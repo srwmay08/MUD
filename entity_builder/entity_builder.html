@@ -378,6 +378,103 @@
         return wrapper;
     }
 
+    function createAIScriptEditor(label, scriptArray, onChange) {
+        if (!scriptArray) scriptArray = [];
+        const wrapper = document.createElement('div');
+        wrapper.className = "group-box mb-2 border-amber-500/50";
+        wrapper.innerHTML = `<label class="text-amber-500">${label}</label><div class="script-list space-y-2"></div><button class="btn btn-neutral text-xs mt-2">+ Add Block</button>`;
+        const list = wrapper.querySelector('.script-list');
+
+        const render = () => {
+            list.innerHTML = '';
+            scriptArray.forEach((block, idx) => {
+                const blockDiv = document.createElement('div');
+                blockDiv.className = "bg-gray-900 p-2 rounded border border-gray-700";
+                
+                // Conditions Section
+                let condHtml = `<div class="mb-1 text-xs text-gray-400">Conditions</div><div class="cond-list pl-2 border-l border-gray-600 mb-2"></div>`;
+                condHtml += `<button class="text-[10px] text-green-400 hover:text-green-300" onclick="addCond(${idx})">+ Condition</button>`;
+                
+                // Action Section
+                let actHtml = `<div class="mb-1 text-xs text-gray-400 mt-2">Action</div>`;
+                actHtml += `<div class="flex gap-1"><select class="act-type text-xs w-1/3 bg-gray-800 border-none"><option value="attack">Attack</option><option value="cast">Cast</option><option value="flee">Flee</option><option value="switch_target">Switch Target</option></select>`;
+                actHtml += `<input class="act-val text-xs w-2/3 bg-gray-800 border-none" placeholder="Value (Spell ID, etc)" value="${block.action?.value || ''}"></div>`;
+
+                blockDiv.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold text-gray-300">Block #${idx+1}</span>
+                        <button class="text-red-500 font-bold" onclick="removeBlock(${idx})">×</button>
+                    </div>
+                    ${condHtml}
+                    ${actHtml}
+                `;
+
+                // Render Conditions
+                const condList = blockDiv.querySelector('.cond-list');
+                (block.conditions || []).forEach((c, cIdx) => {
+                    const row = document.createElement('div');
+                    row.className = "flex gap-1 mb-1";
+                    row.innerHTML = `
+                        <select class="c-type text-[10px] w-1/2 bg-gray-800 border-none" onchange="updateCond(${idx}, ${cIdx}, 'type', this.value)">
+                            <option value="health_below_percent" ${c.type==='health_below_percent'?'selected':''}>My HP < %</option>
+                            <option value="target_health_below_percent" ${c.type==='target_health_below_percent'?'selected':''}>Target HP < %</option>
+                            <option value="target_status" ${c.type==='target_status'?'selected':''}>Target Status</option>
+                            <option value="has_ally_low_hp" ${c.type==='has_ally_low_hp'?'selected':''}>Ally HP < %</option>
+                        </select>
+                        <input class="c-val text-[10px] w-1/3 bg-gray-800 border-none" value="${c.value||''}" placeholder="Value" onchange="updateCond(${idx}, ${cIdx}, 'value', this.value)">
+                        <button class="text-red-500 font-bold px-1" onclick="removeCond(${idx}, ${cIdx})">×</button>
+                    `;
+                    condList.appendChild(row);
+                });
+
+                // Bind Action Updates
+                const actType = blockDiv.querySelector('.act-type');
+                actType.value = block.action?.type || "attack";
+                actType.onchange = (e) => { 
+                    if(!block.action) block.action = {}; 
+                    block.action.type = e.target.value; 
+                    onChange(scriptArray); 
+                };
+                
+                const actVal = blockDiv.querySelector('.act-val');
+                actVal.onchange = (e) => { 
+                    if(!block.action) block.action = {}; 
+                    block.action.value = e.target.value; 
+                    onChange(scriptArray); 
+                };
+
+                list.appendChild(blockDiv);
+            });
+        };
+
+        // Helper functions attached to window for inline onclicks (hacky but effective for single-file)
+        window.addCond = (bIdx) => {
+            if(!scriptArray[bIdx].conditions) scriptArray[bIdx].conditions = [];
+            scriptArray[bIdx].conditions.push({type: "health_below_percent", value: "50"});
+            onChange(scriptArray); render();
+        };
+        window.removeCond = (bIdx, cIdx) => {
+            scriptArray[bIdx].conditions.splice(cIdx, 1);
+            onChange(scriptArray); render();
+        };
+        window.updateCond = (bIdx, cIdx, key, val) => {
+            scriptArray[bIdx].conditions[cIdx][key] = val;
+            onChange(scriptArray);
+        };
+        window.removeBlock = (bIdx) => {
+            scriptArray.splice(bIdx, 1);
+            onChange(scriptArray); render();
+        };
+
+        wrapper.querySelector('button.mt-2').onclick = () => {
+            scriptArray.push({ conditions: [], action: {type: "attack", value: ""} });
+            onChange(scriptArray); render();
+        };
+
+        render();
+        return wrapper;
+    }
+
     function renderMonsterFields(container, entity) {
         const flagDiv = document.createElement('div');
         flagDiv.className = "flex flex-wrap gap-4 mb-2";
@@ -405,11 +502,23 @@
         grid2.appendChild(createInput("Respawn Chance", entity.respawn_chance_per_tick || 0.2, (v) => updateField("respawn_chance_per_tick", parseFloat(v))));
         container.appendChild(grid2);
 
+        // --- NEW: Level Range ---
+        const rangeDiv = document.createElement('div');
+        rangeDiv.innerHTML = `<label>Level Range (Min, Max)</label>`;
+        const rangeInp = document.createElement('input');
+        rangeInp.value = (entity.level_range || []).join(', ');
+        rangeInp.onchange = (e) => updateField("level_range", e.target.value.split(',').map(n => parseInt(n.trim())));
+        rangeDiv.appendChild(rangeInp);
+        container.appendChild(rangeDiv);
+
         container.appendChild(createInput("Spawn Arrival", entity.spawn_message_arrival || "", (v) => updateField("spawn_message_arrival", v)));
         container.appendChild(createInput("Spawn Departure", entity.spawn_message_departure || "", (v) => updateField("spawn_message_departure", v)));
 
+        // --- NEW: AI Script Editor ---
+        container.appendChild(createAIScriptEditor("AI Behavior Script", entity.ai_script || [], (v) => updateField("ai_script", v)));
+
         // Complex Editors with Dropdowns
-        container.appendChild(createListEditor("Attack Attributes", entity.attack_attributes || [], (v) => updateField("attack_attributes", v)));
+        container.appendChild(createListEditor("Attack Attributes (Natural)", entity.attack_attributes || [], (v) => updateField("attack_attributes", v)));
         container.appendChild(createKeyValueEditor("Skills (Name: Rank)", entity.skills || {}, (v) => updateField("skills", v), "dl-skills"));
         container.appendChild(createKeyValueEditor("Equipped (Slot: ItemID)", entity.equipped || {}, (v) => updateField("equipped", v), "dl-slots", "dl-items"));
         container.appendChild(createListEditor("Known Spells", entity.known_spells || [], (v) => updateField("known_spells", v), "dl-spells"));
