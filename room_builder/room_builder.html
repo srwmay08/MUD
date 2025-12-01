@@ -6,7 +6,6 @@
     <title>MUD Architect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* (Keep your existing styles) */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #121212; color: #e5e5e5; height: 100vh; overflow: hidden; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -44,7 +43,7 @@
         #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal-box { background: #1e1e1e; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #444; width: 400px; max-width: 95%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         
-        /* New Styles for Object Type Selector */
+        /* Object Type Selector */
         .object-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px;}
         .obj-type-select { background: #333; color: #fff; font-size: 0.75rem; border: none; padding: 2px 5px; border-radius: 3px; }
     </style>
@@ -108,6 +107,7 @@
             <div class="mb-4">
                 <label class="form-label">Description</label>
                 <textarea id="desc_default" class="form-textarea h-24" oninput="updateCurrentRoomState()"></textarea>
+                <div class="text-[10px] text-gray-500 mt-1">Highlight text above and click 'Embed' on an object below.</div>
             </div>
 
             <div class="grid grid-cols-1 gap-4">
@@ -184,10 +184,7 @@
         const c = document.getElementById('map-container');
         panX = c.clientWidth / 2; panY = c.clientHeight / 2;
         updateMapTransform();
-        
-        // Fetch assets immediately
         await fetchAssets();
-        
         if(zoneRooms.length === 0) createNewRoom("start_room", 0, 0, 0);
     };
 
@@ -195,7 +192,6 @@
         try {
             const res = await fetch('/api/assets');
             gameAssets = await res.json();
-            console.log("Assets loaded:", gameAssets);
         } catch(e) { console.error("Failed to load assets", e); }
     }
 
@@ -210,13 +206,9 @@
         return r;
     }
 
-    // --- Object UI Builders ---
-    
-    // Builds the dropdown options for a given asset type
     function getAssetOptions(type, selectedValue) {
         let options = `<option value="">-- Select ${type} --</option>`;
         const list = gameAssets[type === 'monster' ? 'monsters' : (type === 'node' ? 'nodes' : 'items')] || [];
-        
         list.forEach(asset => {
             const isSel = asset.id === selectedValue ? 'selected' : '';
             options += `<option value="${asset.id}" ${isSel}>${asset.name} (${asset.id})</option>`;
@@ -225,8 +217,15 @@
     }
 
     function renderObjectInputs(type, data) {
+        // Common Hidden Checkbox
+        const hiddenCheck = `
+            <label class="flex items-center gap-1 mt-1 mb-2">
+                <input type="checkbox" class="obj-hidden accent-red-500" ${data.hidden ? 'checked' : ''} onchange="updateCurrentRoomState()">
+                <span class="text-[10px] text-gray-400">Hidden from List</span>
+            </label>
+        `;
+
         let html = '';
-        
         if (type === 'static') {
             html += `
                 <input class="form-input obj-name mb-1" value="${data.name||''}" placeholder="Name (e.g. tall statue)" oninput="updateCurrentRoomState()">
@@ -234,42 +233,31 @@
                 <input class="form-input obj-keys text-xs" value="${(data.keywords||[]).join(',')}" placeholder="Keywords (comma sep)" oninput="updateCurrentRoomState()">
                 <input class="form-input obj-verbs text-xs mt-1" value="${(data.verbs||['look']).join(',')}" placeholder="Verbs (e.g. look, push)" oninput="updateCurrentRoomState()">
             `;
-        } 
-        else if (type === 'monster') {
+        } else if (type === 'monster') {
             html += `
-                <select class="form-select obj-ref-id text-amber-500" onchange="updateCurrentRoomState()">
-                    ${getAssetOptions('monster', data.monster_id)}
-                </select>
+                <select class="form-select obj-ref-id text-amber-500" onchange="updateCurrentRoomState()">${getAssetOptions('monster', data.monster_id)}</select>
                 <div class="text-[10px] text-gray-500 mt-1">Refers to data/monsters.json</div>
             `;
-        }
-        else if (type === 'item') {
+        } else if (type === 'item') {
             html += `
-                <select class="form-select obj-ref-id text-green-500" onchange="updateCurrentRoomState()">
-                    ${getAssetOptions('item', data.item_id)}
-                </select>
+                <select class="form-select obj-ref-id text-green-500" onchange="updateCurrentRoomState()">${getAssetOptions('item', data.item_id)}</select>
                 <div class="text-[10px] text-gray-500 mt-1">Refers to data/items/*.json</div>
             `;
-        }
-        else if (type === 'node') {
+        } else if (type === 'node') {
             html += `
-                <select class="form-select obj-ref-id text-blue-500" onchange="updateCurrentRoomState()">
-                    ${getAssetOptions('node', data.node_id)}
-                </select>
+                <select class="form-select obj-ref-id text-blue-500" onchange="updateCurrentRoomState()">${getAssetOptions('node', data.node_id)}</select>
                 <div class="text-[10px] text-gray-500 mt-1">Refers to data/nodes.json</div>
             `;
-        }
-        else if (type === 'portal') {
+        } else if (type === 'portal') {
              html += `
                 <input class="form-input obj-name mb-1" value="${data.name||''}" placeholder="Name (e.g. iron gate)" oninput="updateCurrentRoomState()">
                 <input class="form-input obj-target mb-1 text-amber-500" list="dl-room-ids" value="${data.target_room||''}" placeholder="Target Room ID" oninput="updateCurrentRoomState()">
                 <input class="form-input obj-verbs text-xs" value="${(data.verbs||['ENTER']).join(',')}" placeholder="Verbs (e.g. ENTER, CLIMB)" oninput="updateCurrentRoomState()">
             `;
         }
-        return html;
+        return html + hiddenCheck;
     }
 
-    // Detects type based on existing JSON object
     function detectObjectType(obj) {
         if (obj.monster_id) return 'monster';
         if (obj.item_id) return 'item';
@@ -285,14 +273,17 @@
         
         div.innerHTML = `
             <div class="object-header">
-                <select class="obj-type-select" onchange="changeObjType(this)">
-                    <option value="static" ${type==='static'?'selected':''}>Static</option>
-                    <option value="monster" ${type==='monster'?'selected':''}>Monster</option>
-                    <option value="item" ${type==='item'?'selected':''}>Item</option>
-                    <option value="node" ${type==='node'?'selected':''}>Node</option>
-                    <option value="portal" ${type==='portal'?'selected':''}>Portal</option>
-                </select>
-                <button onclick="this.closest('.object-item').remove();updateCurrentRoomState()" class="text-red-500 font-bold">×</button>
+                <div class="flex items-center gap-1">
+                    <select class="obj-type-select" onchange="changeObjType(this)">
+                        <option value="static" ${type==='static'?'selected':''}>Static</option>
+                        <option value="monster" ${type==='monster'?'selected':''}>Monster</option>
+                        <option value="item" ${type==='item'?'selected':''}>Item</option>
+                        <option value="node" ${type==='node'?'selected':''}>Node</option>
+                        <option value="portal" ${type==='portal'?'selected':''}>Portal</option>
+                    </select>
+                    <button onclick="embedObject(this)" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] px-2 py-1 rounded" title="Wrap selection in description with this object's link">Embed</button>
+                </div>
+                <button onclick="this.closest('.object-item').remove();updateCurrentRoomState()" class="text-red-500 font-bold ml-2">×</button>
             </div>
             <div class="obj-content">
                 ${renderObjectInputs(type, obj)}
@@ -301,16 +292,54 @@
         document.getElementById('objects-container').appendChild(div);
     }
 
-    // Helper called when dropdown changes
     window.changeObjType = function(selectElem) {
         const type = selectElem.value;
         const contentDiv = selectElem.closest('.object-item').querySelector('.obj-content');
-        // Reset data when switching types
         contentDiv.innerHTML = renderObjectInputs(type, {});
         updateCurrentRoomState();
     }
 
-    // --- Saving Logic ---
+    window.embedObject = function(btn) {
+        const objDiv = btn.closest('.object-item');
+        const type = objDiv.querySelector('.obj-type-select').value;
+        let name = "", verbs = "look";
+
+        if (type === 'static' || type === 'portal') {
+            name = objDiv.querySelector('.obj-name').value;
+            verbs = objDiv.querySelector('.obj-verbs').value;
+        } else {
+            const refId = objDiv.querySelector('.obj-ref-id').value;
+            let list = [];
+            if(type === 'monster') { list = gameAssets.monsters; verbs = "look,attack,talk"; }
+            else if(type === 'item') { list = gameAssets.items; verbs = "get,look,examine"; }
+            else if(type === 'node') { list = gameAssets.nodes; verbs = "look,harvest,mine"; }
+            
+            const asset = list.find(a => a.id === refId);
+            name = asset ? asset.name : refId;
+        }
+
+        if (!name) return alert("Object name required for embedding.");
+
+        const descArea = document.getElementById('desc_default');
+        const start = descArea.selectionStart;
+        const end = descArea.selectionEnd;
+        const text = descArea.value;
+        
+        // If text is selected, use that as the display text, but link to the object name
+        const selectedText = start !== end ? text.substring(start, end) : name;
+        const span = `<span class="keyword" data-name="${name}" data-verbs="${verbs}">${selectedText}</span>`;
+        
+        descArea.value = text.substring(0, start) + span + text.substring(end);
+        
+        // Auto-check "Hidden" if we embed it, assuming user wants it in desc only
+        const hiddenCheck = objDiv.querySelector('.obj-hidden');
+        if(hiddenCheck && !hiddenCheck.checked) {
+            hiddenCheck.checked = true;
+        }
+        
+        updateCurrentRoomState();
+    }
+
     function updateCurrentRoomState() {
         document.getElementById('unsaved-indicator').classList.remove('hidden');
         if(!activeRoomId) return;
@@ -336,37 +365,33 @@
             if(d && t) r.exits[d] = t;
         });
 
-        // Objects (The Complex Part)
+        // Objects
         r.objects = [];
         document.querySelectorAll('.object-item').forEach(el => {
             const type = el.querySelector('.obj-type-select').value;
-            let newObj = {};
+            const hidden = el.querySelector('.obj-hidden').checked;
+            let newObj = { hidden: hidden };
 
             if (type === 'static') {
                 newObj.name = el.querySelector('.obj-name').value;
                 newObj.description = el.querySelector('.obj-desc').value;
                 newObj.keywords = el.querySelector('.obj-keys').value.split(',').map(s=>s.trim()).filter(s=>s);
                 newObj.verbs = el.querySelector('.obj-verbs').value.split(',').map(s=>s.trim()).filter(s=>s);
-            } 
-            else if (type === 'monster') {
+            } else if (type === 'monster') {
                 newObj.monster_id = el.querySelector('.obj-ref-id').value;
                 newObj.is_monster = true;
-            }
-            else if (type === 'item') {
+            } else if (type === 'item') {
                 newObj.item_id = el.querySelector('.obj-ref-id').value;
                 newObj.is_item = true;
-            }
-            else if (type === 'node') {
+            } else if (type === 'node') {
                 newObj.node_id = el.querySelector('.obj-ref-id').value;
                 newObj.is_gathering_node = true;
-            }
-            else if (type === 'portal') {
+            } else if (type === 'portal') {
                 newObj.name = el.querySelector('.obj-name').value;
                 newObj.target_room = el.querySelector('.obj-target').value;
                 newObj.verbs = el.querySelector('.obj-verbs').value.split(',').map(s=>s.trim()).filter(s=>s);
             }
 
-            // Only add if valid
             if (newObj.name || newObj.monster_id || newObj.item_id || newObj.node_id) {
                 r.objects.push(newObj);
             }
@@ -375,7 +400,7 @@
         renderMap(); renderRoomList(); updateStatus();
     }
 
-    // --- (Keep your existing QuickBuild, Load/Save, and Map Rendering functions exactly as they were) ---
+    // --- (Standard Logic) ---
     function createNewRoom(id=null, x=0, y=0, z=0) {
         const newId = id || `room_${Date.now()}`;
         const newRoom = { room_id: newId, name: "New Room", x, y, z, interior_id: "", description: { default: "" }, exits: {}, objects: [] };
@@ -400,17 +425,15 @@
         Object.entries(r.exits).forEach(([k,v]) => addExitUI(k,v));
         
         const obDiv = document.getElementById('objects-container'); obDiv.innerHTML = '';
-        r.objects.forEach(o => addObjectUI(o)); // Now uses new UI builder
+        r.objects.forEach(o => addObjectUI(o)); 
         
         renderRoomList(); renderMap(); updateStatus();
     }
 
-    // --- New Delete Functionality ---
     function deleteCurrentRoom() {
         if (!activeRoomId) return;
         if (!confirm("Delete room?")) return;
         zoneRooms = zoneRooms.filter(r => r.room_id !== activeRoomId);
-        // Cleanup links
         zoneRooms.forEach(r => {
             for(let d in r.exits) if(r.exits[d]===activeRoomId) delete r.exits[d];
         });
@@ -418,14 +441,12 @@
         else createNewRoom();
     }
 
-    // --- Exits UI (Unchanged) ---
     function addExitUI(d='', t='') {
         const div = document.createElement('div'); div.className = 'dynamic-item exit-item flex gap-1 items-center';
         div.innerHTML = `<input class="form-input exit-dir w-16" value="${d}" placeholder="Dir" oninput="updateCurrentRoomState()"><input class="form-input exit-target flex-1" value="${t}" placeholder="Target ID" oninput="updateCurrentRoomState()"><button onclick="this.parentElement.remove();updateCurrentRoomState()" class="text-red-500 font-bold px-2">×</button>`;
         document.getElementById('exits-container').appendChild(div);
     }
 
-    // --- Quick Build (Unchanged) ---
     function quickBuild(dir, dx, dy) {
         if(!activeRoomId) return;
         const cur = zoneRooms.find(r => r.room_id === activeRoomId);
@@ -452,7 +473,6 @@
         }
     }
 
-    // --- Map Renderer (Unchanged) ---
     function renderMap() {
         const ng = document.getElementById('map-nodes');
         const lg = document.getElementById('map-links');
@@ -490,7 +510,6 @@
         });
     }
 
-    // --- Viewport Handlers ---
     function updateMapTransform() { document.getElementById('map-content').setAttribute('transform', `translate(${panX}, ${panY}) scale(${scale})`); }
     function handleZoom(e) { e.preventDefault(); scale = Math.min(Math.max(0.1, scale + (e.deltaY * -0.001)), 5); updateMapTransform(); }
     function startPan(e) { isPanning=true; startPanX=e.clientX-panX; startPanY=e.clientY-panY; document.addEventListener('mousemove', doPan); document.addEventListener('mouseup', endPan); }
@@ -498,7 +517,6 @@
     function endPan() { isPanning=false; document.removeEventListener('mousemove', doPan); document.removeEventListener('mouseup', endPan); }
     function centerMapOnActive() { if(!activeRoomId) return; renderMap(); }
 
-    // --- Server Interaction ---
     async function showLoadModal() {
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.remove('hidden');
@@ -537,27 +555,18 @@
     function newZone() { if(confirm("New Zone?")) { zoneRooms=[]; createNewRoom(); document.getElementById('status-filename').innerText = "Unsaved Zone"; } }
     
     function renderRoomList() {
-        // 1. Render the sidebar list
         const c = document.getElementById('room-list-content'); c.innerHTML = '';
         document.getElementById('list-count').innerText = zoneRooms.length;
-        
-        // 2. Prepare the Datalist for Portals
         const dataList = document.getElementById('dl-room-ids');
         dataList.innerHTML = '';
-
         zoneRooms.forEach(r => {
-            // Add to sidebar
             const div = document.createElement('div');
             div.className = `room-list-item ${r.room_id===activeRoomId ? 'active' : ''}`;
             div.innerText = `${r.room_id} (${r.x}, ${r.y})`;
             div.onclick = () => loadRoomIntoEditor(r.room_id);
             c.appendChild(div);
-
-            // Add to dropdown options
             const opt = document.createElement('option');
-            opt.value = r.room_id;
-            // This shows "room_id (Room Name)" in the dropdown hint
-            opt.innerText = r.name; 
+            opt.value = r.room_id; opt.innerText = r.name; 
             dataList.appendChild(opt);
         });
     }

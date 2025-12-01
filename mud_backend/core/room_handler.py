@@ -158,6 +158,11 @@ def show_room_to_player(player: Player, room: Room):
     if room.objects:
         html_objects = []
         for obj in room.objects:
+            # --- SKIP HIDDEN OBJECTS ---
+            if obj.get("hidden", False):
+                continue
+            # ---------------------------
+            
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
                 obj_name = obj['name'] 
