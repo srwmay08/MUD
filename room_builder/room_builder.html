@@ -46,6 +46,9 @@
         /* Object Type Selector */
         .object-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px;}
         .obj-type-select { background: #333; color: #fff; font-size: 0.75rem; border: none; padding: 2px 5px; border-radius: 3px; }
+        
+        /* Interaction Styles */
+        .interaction-row { display: flex; gap: 4px; margin-top: 4px; background: #1a1a1a; padding: 4px; border-radius: 3px; border: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -216,8 +219,35 @@
         return options;
     }
 
+    // --- NEW: Interaction Helper Functions ---
+    function addInteractionRow(container, verb="", type="text", value="") {
+        const div = document.createElement('div');
+        div.className = 'interaction-row';
+        div.innerHTML = `
+            <input class="form-input w-1/4 text-[10px] ia-verb" placeholder="Verb (push)" value="${verb}" oninput="updateCurrentRoomState()">
+            <select class="form-select w-1/4 text-[10px] ia-type" onchange="updateCurrentRoomState()">
+                <option value="text" ${type==='text'?'selected':''}>Message</option>
+                <option value="move" ${type==='move'?'selected':''}>Move (RoomID)</option>
+                <option value="script" ${type==='script'?'selected':''}>Script (Code)</option>
+            </select>
+            <input class="form-input w-1/2 text-[10px] ia-value" placeholder="Value" value="${value}" oninput="updateCurrentRoomState()">
+            <button onclick="this.parentElement.remove();updateCurrentRoomState()" class="text-red-500 font-bold px-1">×</button>
+        `;
+        container.appendChild(div);
+    }
+
+    function renderInteractions(interactions) {
+        // Interactions come in as { "push": { "type": "move", "value": "room_id" }, ... }
+        let html = '';
+        if (!interactions) return '';
+        
+        // We need to render this via DOM creation in addObjectUI to bind events properly, 
+        // so this function just prepares data for the creator.
+        return ''; 
+    }
+    // -----------------------------------------
+
     function renderObjectInputs(type, data) {
-        // Common Hidden Checkbox
         const hiddenCheck = `
             <label class="flex items-center gap-1 mt-1 mb-2">
                 <input type="checkbox" class="obj-hidden accent-red-500" ${data.hidden ? 'checked' : ''} onchange="updateCurrentRoomState()">
@@ -231,7 +261,14 @@
                 <input class="form-input obj-name mb-1" value="${data.name||''}" placeholder="Name (e.g. tall statue)" oninput="updateCurrentRoomState()">
                 <textarea class="form-textarea obj-desc mb-1 h-16 text-xs" placeholder="Description" oninput="updateCurrentRoomState()">${data.description||''}</textarea>
                 <input class="form-input obj-keys text-xs" value="${(data.keywords||[]).join(',')}" placeholder="Keywords (comma sep)" oninput="updateCurrentRoomState()">
-                <input class="form-input obj-verbs text-xs mt-1" value="${(data.verbs||['look']).join(',')}" placeholder="Verbs (e.g. look, push)" oninput="updateCurrentRoomState()">
+                
+                <div class="mt-2 border-t border-gray-700 pt-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] text-gray-400 uppercase font-bold">Interactions</span>
+                        <button onclick="addInteractionToObj(this)" class="text-[10px] text-green-400">+ Add</button>
+                    </div>
+                    <div class="interactions-list"></div>
+                </div>
             `;
         } else if (type === 'monster') {
             html += `
@@ -266,6 +303,12 @@
         return 'static';
     }
 
+    window.addInteractionToObj = function(btn) {
+        const list = btn.parentElement.nextElementSibling;
+        addInteractionRow(list);
+        updateCurrentRoomState();
+    }
+
     function addObjectUI(obj={}) {
         const type = detectObjectType(obj);
         const div = document.createElement('div');
@@ -275,7 +318,7 @@
             <div class="object-header">
                 <div class="flex items-center gap-1">
                     <select class="obj-type-select" onchange="changeObjType(this)">
-                        <option value="static" ${type==='static'?'selected':''}>Static</option>
+                        <option value="static" ${type==='static'?'selected':''}>Interactive / Static</option>
                         <option value="monster" ${type==='monster'?'selected':''}>Monster</option>
                         <option value="item" ${type==='item'?'selected':''}>Item</option>
                         <option value="node" ${type==='node'?'selected':''}>Node</option>
@@ -290,6 +333,14 @@
             </div>
         `;
         document.getElementById('objects-container').appendChild(div);
+
+        // If static, populate interactions
+        if (type === 'static' && obj.interactions) {
+            const list = div.querySelector('.interactions-list');
+            Object.entries(obj.interactions).forEach(([verb, action]) => {
+                addInteractionRow(list, verb, action.type, action.value);
+            });
+        }
     }
 
     window.changeObjType = function(selectElem) {
@@ -306,7 +357,17 @@
 
         if (type === 'static' || type === 'portal') {
             name = objDiv.querySelector('.obj-name').value;
-            verbs = objDiv.querySelector('.obj-verbs').value;
+            // Collect standard verbs + interaction verbs
+            const iaVerbs = [];
+            objDiv.querySelectorAll('.ia-verb').forEach(i => iaVerbs.push(i.value.trim()));
+            
+            // For portals
+            const pVerbsInput = objDiv.querySelector('.obj-verbs');
+            if(pVerbsInput) iaVerbs.push(...pVerbsInput.value.split(','));
+            
+            if (iaVerbs.length === 0) iaVerbs.push('look');
+            verbs = iaVerbs.filter(v=>v).join(',');
+            
         } else {
             const refId = objDiv.querySelector('.obj-ref-id').value;
             let list = [];
@@ -325,13 +386,11 @@
         const end = descArea.selectionEnd;
         const text = descArea.value;
         
-        // If text is selected, use that as the display text, but link to the object name
         const selectedText = start !== end ? text.substring(start, end) : name;
         const span = `<span class="keyword" data-name="${name}" data-verbs="${verbs}">${selectedText}</span>`;
         
         descArea.value = text.substring(0, start) + span + text.substring(end);
         
-        // Auto-check "Hidden" if we embed it, assuming user wants it in desc only
         const hiddenCheck = objDiv.querySelector('.obj-hidden');
         if(hiddenCheck && !hiddenCheck.checked) {
             hiddenCheck.checked = true;
@@ -357,7 +416,6 @@
         r.is_outdoor = document.getElementById('is_outdoor').checked;
         r.description.default = document.getElementById('desc_default').value;
 
-        // Exits
         r.exits = {};
         document.querySelectorAll('.exit-item').forEach(el => {
             const d = el.querySelector('.exit-dir').value.trim().toLowerCase();
@@ -365,7 +423,6 @@
             if(d && t) r.exits[d] = t;
         });
 
-        // Objects
         r.objects = [];
         document.querySelectorAll('.object-item').forEach(el => {
             const type = el.querySelector('.obj-type-select').value;
@@ -376,7 +433,20 @@
                 newObj.name = el.querySelector('.obj-name').value;
                 newObj.description = el.querySelector('.obj-desc').value;
                 newObj.keywords = el.querySelector('.obj-keys').value.split(',').map(s=>s.trim()).filter(s=>s);
-                newObj.verbs = el.querySelector('.obj-verbs').value.split(',').map(s=>s.trim()).filter(s=>s);
+                
+                // Interactions
+                const interactions = {};
+                el.querySelectorAll('.interaction-row').forEach(row => {
+                    const verb = row.querySelector('.ia-verb').value.trim().toLowerCase();
+                    const iType = row.querySelector('.ia-type').value;
+                    const value = row.querySelector('.ia-value').value;
+                    if(verb) interactions[verb] = { type: iType, value: value };
+                });
+                if (Object.keys(interactions).length > 0) newObj.interactions = interactions;
+                
+                // Auto-generate verbs list for the context menu based on interactions + Look
+                newObj.verbs = ['look', 'examine'].concat(Object.keys(interactions));
+                
             } else if (type === 'monster') {
                 newObj.monster_id = el.querySelector('.obj-ref-id').value;
                 newObj.is_monster = true;
