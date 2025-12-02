@@ -846,6 +846,27 @@
         }
     },
     {
+        "room_id": "locker_room",
+        "name": "Town Hall Vaults",
+        "x": 2, "y": 0, "z": 1,
+        "interior_id": "economy",
+        "description": {
+            "default": "A cool, secure room lined with heavy iron lockers. The air smells of stone and cold iron. A Vault Clerk sits behind a caged desk, ready to retrieve your items."
+        },
+        "objects": [
+            { "monster_id": "vault_clerk" },
+            {
+                "name": "iron lockers",
+                "description": "Rows of secure storage lockers.",
+                "keywords": ["lockers", "locker"],
+                "verbs": ["look"]
+            }
+        ],
+        "exits": {
+            "west": "town_hall"
+        }
+    },
+    {
         "room_id": "apothecary_shop",
         "name": "The Apothecary",
         "x": 2,
@@ -986,5 +1007,47 @@
         "exits": {
             "out": "ts_west"
         }
-    }
+    },
+    {
+        "room_id": "auction_house",
+        "name": "The Auction House",
+        "x": 1, "y": -2, "z": 0,
+        "interior_id": "economy",
+        "description": {
+            "default": "Rows of wooden benches are arranged in a semi-circle facing a raised podium. The room buzzes with the energy of commerce. Traders, adventurers, and nobles whisper to one another, eyeing the goods on display. An Auctioneer stands at the podium, gavel in hand."
+        },
+        "objects": [
+            { "monster_id": "auctioneer" },
+            {
+                "name": "podium",
+                "description": "A worn wooden podium where the auctioneer presides.",
+                "keywords": ["podium", "stage"],
+                "verbs": ["look"]
+            }
+        ],
+        "exits": {
+            "out": "ts_south"
+        }
+    },
+    {
+        "room_id": "post_office",
+        "name": "Aethel's Crossing Post Office",
+        "x": -2, "y": 1, "z": 0,
+        "interior_id": "economy",
+        "description": {
+            "default": "A busy room filled with the cooing of pigeons in overhead coops and the shuffling of paper. Large sorting tables are piled high with packages. A Postmaster works tirelessly behind a counter."
+        },
+        "objects": [
+            { "monster_id": "postmaster" },
+            {
+                "name": "sorting table",
+                "description": "Piled high with mail for destinations across the realm.",
+                "keywords": ["table", "sorting table", "mail"],
+                "verbs": ["look"]
+            }
+        ],
+        "exits": {
+            "out": "ts_northwest"
+        }
+    },
 ]

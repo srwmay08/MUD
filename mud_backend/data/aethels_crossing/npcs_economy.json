@@ -1,0 +1,48 @@
+[
+    {
+        "monster_id": "auctioneer",
+        "name": "the Auctioneer",
+        "keywords": ["auctioneer", "man", "peddler", "official"],
+        "faction": "Townsfolk",
+        "is_npc": true,
+        "description": "A fast-talking man with a polished wooden gavel. He constantly scans the room, looking for the slight twitch of a finger that indicates a bid.",
+        "verbs": ["look", "talk", "auction", "bid", "list"],
+        "ambient_message_chance": 0.1,
+        "ambient_messages": [
+            "shouts, 'Going once! Going twice!'",
+            "mumbles rapidly about reserve prices.",
+            "polishes his gavel with a silk handkerchief.",
+            "shouts, 'Sold! To the lady in the back!'"
+        ]
+    },
+    {
+        "monster_id": "postmaster",
+        "name": "the Postmaster",
+        "keywords": ["postmaster", "official", "gnome", "master"],
+        "faction": "Townsfolk",
+        "is_npc": true,
+        "description": "A harried-looking gnome wearing a visor. He stamps letters with furious efficiency, barely looking up.",
+        "verbs": ["look", "talk", "mail"],
+        "ambient_message_chance": 0.1,
+        "ambient_messages": [
+            "violently stamps a package.",
+            "mutters, 'Neither rain nor snow... but they didn't mention dragons...'",
+            "sorts a stack of letters with blurring speed."
+        ]
+    },
+    {
+        "monster_id": "vault_clerk",
+        "name": "the Vault Clerk",
+        "keywords": ["clerk", "vault clerk", "official", "woman"],
+        "faction": "Townsfolk",
+        "is_npc": true,
+        "description": "A severe-looking woman with a large ring of heavy iron keys attached to her belt. She eyes you suspiciously.",
+        "verbs": ["look", "talk", "locker"],
+        "ambient_message_chance": 0.05,
+        "ambient_messages": [
+            "jingles her key ring loudly.",
+            "checks a heavy ledger.",
+            "glances at the iron lockers to ensure they are secure."
+        ]
+    }
+]
