@@ -13,3 +13,14 @@
 ## 3. INTERACTION STYLE
 * **COPY-PASTE READY:** Your output is intended to be copied directly into an IDE. It must be a single, complete, valid code block.
 * **VERBOSITY:** Prioritize completeness over conciseness in code blocks.
+
+## 4. SYNTAX & WHITESPACE INTEGRITY (CRITICAL)
+* **ONE STATEMENT PER LINE:** It is STRICTLY FORBIDDEN to combine multiple statements onto a single line. 
+    * **BAD:** `import time import uuid from stuff import thing`
+    * **GOOD:** ```python
+      import time
+      import uuid
+      from stuff import thing
+      ```
+* **DECORATORS:** Decorators (e.g., `@VerbRegistry`) must **ALWAYS** be on their own line, preceding the function or class. Never squash them into the definition line.
+* **NO MINIFICATION:** Do not remove vertical whitespace to save space. Output standard, PEP 8 compliant Python code with proper newlines between classes, methods, and imports.
