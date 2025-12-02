@@ -287,37 +287,26 @@ def fetch_all_criticals() -> dict:
     return _load_json_data("criticals.json")
 
 def fetch_all_quests() -> dict:
-    """
-    Loads all quest definitions from data/**/quest*.json and injects 'id'.
-    """
     quests = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-    
-    # Load main quests file
     main_quests = _load_json_data("quests.json")
     if isinstance(main_quests, dict):
-        # Inject ID
         for k, v in main_quests.items():
             v["id"] = k
         quests.update(main_quests)
 
-    # Recursively load other quest files
-    # UPDATED PATTERN: '**/quest*.json' catches both "quest_temple..." and "quests_temple..."
     for file_path in glob.glob(os.path.join(data_dir, '**/quest*.json'), recursive=True):
         if os.path.basename(file_path) == "quests.json":
              continue
-
         with open(file_path, 'r') as f:
             try:
                 data = json.load(f)
                 if isinstance(data, dict):
-                    # Inject ID here too
                     for k, v in data.items():
                         v["id"] = k
                     quests.update(data)
             except json.JSONDecodeError:
                 print(f"[DB ERROR] Invalid JSON in {file_path}")
-    
     return quests
 
 def fetch_all_nodes() -> dict:
@@ -332,7 +321,6 @@ def fetch_all_races() -> dict:
 def fetch_all_spells() -> dict:
     spells = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-    
     spells_dir = os.path.join(data_dir, 'spells')
     if os.path.exists(spells_dir):
         for file_path in glob.glob(os.path.join(spells_dir, '*.json')):
@@ -343,13 +331,11 @@ def fetch_all_spells() -> dict:
                         spells.update(spell_data)
                 except json.JSONDecodeError:
                     print(f"[DB ERROR] Invalid JSON in spell file: {file_path}")
-    
     root_spells_path = os.path.join(data_dir, "spells.json")
     if os.path.exists(root_spells_path):
         root_spells = _load_json_data("spells.json")
         if root_spells:
             spells.update(root_spells)
-                
     return spells
 
 def fetch_all_deities() -> dict:
@@ -374,3 +360,55 @@ def fetch_all_guilds() -> dict:
 
 def fetch_combat_rules() -> dict:
     return _load_json_data("combat_rules.json")
+
+# --- ECONOMY & MAIL EXTENSIONS ---
+
+def send_mail(mail_data: dict):
+    """Inserts a mail object."""
+    get_db().mail.insert_one(mail_data)
+
+def get_player_mail(player_name: str) -> List[dict]:
+    """Retrieves all mail for a player."""
+    return list(get_db().mail.find({"recipient": player_name, "deleted": {"$ne": True}}))
+
+def mark_mail_read(mail_id: str):
+    get_db().mail.update_one({"uid": mail_id}, {"$set": {"read": True}})
+
+def delete_mail(mail_id: str):
+    get_db().mail.update_one({"uid": mail_id}, {"$set": {"deleted": True}})
+
+def get_priority_mail(player_name: str) -> List[dict]:
+    """Used for the Courier trigger."""
+    return list(get_db().mail.find({
+        "recipient": player_name, 
+        "flags": "System_Priority", 
+        "delivered": False,
+        "deleted": {"$ne": True}
+    }))
+
+def mark_mail_delivered(mail_id: str):
+    get_db().mail.update_one({"uid": mail_id}, {"$set": {"delivered": True}})
+
+def create_auction(auction_data: dict):
+    get_db().auctions.insert_one(auction_data)
+
+def get_active_auctions() -> List[dict]:
+    return list(get_db().auctions.find({"status": "active"}))
+
+def get_auction(auction_id: str) -> Optional[dict]:
+    return get_db().auctions.find_one({"uid": auction_id})
+
+def update_auction_bid(auction_id: str, new_bid: int, high_bidder: str):
+    get_db().auctions.update_one(
+        {"uid": auction_id}, 
+        {"$set": {"current_bid": new_bid, "high_bidder": high_bidder}}
+    )
+
+def end_auction(auction_id: str, status: str = "ended"):
+    get_db().auctions.update_one({"uid": auction_id}, {"$set": {"status": status}})
+
+def update_player_locker(player_name: str, locker_data: dict):
+    get_db().players.update_one(
+        {"name": {"$regex": f"^{player_name}$", "$options": "i"}},
+        {"$set": {"locker": locker_data}}
+    )

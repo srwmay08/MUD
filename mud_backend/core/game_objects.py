@@ -101,6 +101,13 @@ class Player(GameEntity):
         self.band_id = self.data.get("band_id", None) 
         self.band_xp_bank = self.data.get("band_xp_bank", 0) 
         
+        # --- NEW: Locker ---
+        self.locker = self.data.get("locker", {
+            "capacity": 50,
+            "items": [],
+            "rent_due": 0
+        })
+        
         self.temp_leave_message = None
         self.level_xp_target = self._get_xp_target_for_level(self.level)
 
@@ -174,6 +181,49 @@ class Player(GameEntity):
         hp_avg = math.trunc(hp_bonus / 4)
         sc_avg = math.trunc(sc_bonus / 3)
         return 10 + ess_b + stat_avg + hp_avg + sc_avg
+
+    # --- NEW: Encumbrance Properties ---
+    @property
+    def body_weight(self) -> int:
+        """Returns body weight in lbs based on race."""
+        RACE_WEIGHTS = {
+            "Human": 207, "Wildborn": 210, "High Elf": 160, "Dwarf": 180,
+            "Gnome": 60, "Halfling": 90, "Dark Elf": 150, "Dark Dwarf": 190,
+            "Troll": 360, "Goblin": 100
+        }
+        return RACE_WEIGHTS.get(self.race, 180)
+
+    @property
+    def max_carry_weight(self) -> float:
+        """
+        Gemstone IV Formula:
+        (trunc((STR - 20) / 200) * body_weight) + (body_weight / 200)
+        """
+        str_stat = self.stats.get("STR", 50)
+        # TODO: Add enhancive checks here
+        
+        term_1 = math.trunc((str_stat - 20) / 200.0 * 100) / 100.0 * self.body_weight
+        term_2 = self.body_weight / 200.0
+        
+        return max(5.0, term_1 + term_2) # Minimum 5lbs
+
+    @property
+    def current_encumbrance(self) -> float:
+        """Calculates total weight of items in inventory and worn."""
+        total_weight = 0.0
+        # Inventory
+        for item_id in self.inventory:
+            item = self.world.game_items.get(item_id)
+            if item: total_weight += item.get("weight", 1) # Default 1lb if missing
+            
+        # Worn
+        for slot, item_id in self.worn_items.items():
+            if item_id:
+                item = self.world.game_items.get(item_id)
+                if item: total_weight += item.get("weight", 1)
+        
+        return total_weight
+    # --------------------------------
 
     @property
     def hp(self): return self._hp
@@ -506,7 +556,8 @@ class Player(GameEntity):
             "group_id": self.group_id,
             "band_id": self.band_id,
             "band_xp_bank": self.band_xp_bank,
-            "is_admin": self.is_admin
+            "is_admin": self.is_admin,
+            "locker": self.locker # --- NEW ---
         })
         return data
 
@@ -560,7 +611,7 @@ class Room(GameEntity):
         self.triggers: Dict[str, str] = self.data.get("triggers", {})
         self.objects: List[Dict[str, Any]] = []
         self.lock = threading.RLock()
-        self.ambient_events = self.data.get("ambient_events", []) # <--- NEW: Load ambient events
+        self.ambient_events = self.data.get("ambient_events", [])
         
         raw_objects = self.data.get("objects", [])
         for obj_stub in raw_objects:
@@ -577,7 +628,7 @@ class Room(GameEntity):
                 "objects": self.objects,
                 "exits": self.exits,
                 "triggers": self.triggers,
-                "ambient_events": self.ambient_events # <--- NEW: Persist ambient events
+                "ambient_events": self.ambient_events 
             }
             if self.uid and not self.uid.startswith("room_"):
                  data["_id"] = self.uid 

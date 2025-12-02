@@ -103,6 +103,11 @@ def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_t
     world.last_game_tick_time = current_time
     world.game_tick_counter += 1
     
+    # --- NEW: Auction Tick ---
+    # We call this every minute (2 ticks) to be safe/simple
+    if world.game_tick_counter % 2 == 0:
+        world.auction_manager.tick()
+    
     temp_active_players = {}
     active_players_list = []
     active_players_list = world.get_all_players_info()
@@ -128,9 +133,7 @@ def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_t
         broadcast_callback=broadcast_callback
     )
     
-    # --- NEW: Process Room Ambiance ---
     environment.process_room_periodic_events(world)
-    # ----------------------------------
 
     monster_respawn.process_respawns(
         world=world,

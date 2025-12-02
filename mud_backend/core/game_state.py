@@ -7,7 +7,9 @@ from typing import Dict, Any, Optional, List, Tuple, Set
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.asset_manager import AssetManager 
 from mud_backend.core.events import EventBus 
-from mud_backend.core.managers import ConnectionManager, RoomManager, EntityManager # New imports
+from mud_backend.core.managers import ConnectionManager, RoomManager, EntityManager
+from mud_backend.core.mail_manager import MailManager
+from mud_backend.core.auction_manager import AuctionManager
 
 class ShardedStore:
     """Thread-safe dictionary store with sharded locks."""
@@ -49,11 +51,12 @@ class World:
         self.assets = AssetManager() 
         self.event_bus = EventBus()
         
-        # --- NEW: Managers ---
+        # Managers
         self.connection_manager = ConnectionManager(self)
         self.room_manager = RoomManager(self)
         self.entity_manager = EntityManager(self)
-        # ---------------------
+        self.mail_manager = MailManager(self) # NEW
+        self.auction_manager = AuctionManager(self) # NEW
 
         self.player_directory_lock = threading.RLock()
         self.active_players: Dict[str, Dict[str, Any]] = {}
@@ -62,7 +65,7 @@ class World:
         self.runtime_monster_hp = ShardedStore(num_shards=16)
         self.defeated_monsters = ShardedStore(num_shards=8)
         self.combat_state = ShardedStore(num_shards=32)
-        self.defeated_lock = threading.RLock() # Backward compat for direct lock access
+        self.defeated_lock = threading.RLock()
         
         self.trade_lock = threading.RLock()
         self.pending_trades: Dict[str, Dict[str, Any]] = {}
@@ -91,7 +94,6 @@ class World:
         self.connection_manager.socketio = value
 
     # --- BACKWARD COMPATIBILITY PROPERTIES ---
-    # These expose manager internals so old code (like verbs) doesn't break immediately
     @property
     def room_directory_lock(self): return self.room_manager.directory_lock
     @property
@@ -136,7 +138,6 @@ class World:
     def game_races(self): return self.assets.races
 
     def load_all_data(self, data_source):
-        """Loads all data using the provided data_source (the db module)."""
         if data_source is None:
             print("[WORLD ERROR] DataSource is None. Cannot load data.")
             return
@@ -158,6 +159,12 @@ class World:
 
     def add_player_to_room_index(self, player_name: str, room_id: str):
         self.entity_manager.add_player_to_room(player_name, room_id)
+        
+        # --- NEW: Check for Courier ---
+        # We need a player object to pass to mail manager
+        p_obj = self.get_player_obj(player_name)
+        if p_obj:
+            self.mail_manager.check_for_courier(p_obj)
 
     def remove_player_from_room_index(self, player_name: str, room_id: str):
         self.entity_manager.remove_player_from_room(player_name, room_id)
@@ -180,8 +187,6 @@ class World:
             return all_rooms
 
     def move_object_between_rooms(self, obj_to_move: Dict, from_room_id: str, to_room_id: str) -> bool:
-        # Complex logic, keeping it here or moving to Entity Manager later.
-        # For now, using room_manager to get rooms.
         with self.room_manager.directory_lock:
             source_room = self.room_manager.active_rooms.get(from_room_id)
             dest_room = self.room_manager.active_rooms.get(to_room_id)
@@ -194,7 +199,6 @@ class World:
                 dest_room = self.room_manager.active_rooms.get(to_room_id)
             if not source_room or not dest_room: return False
 
-        # Fine-grained locking
         first_lock = source_room if from_room_id < to_room_id else dest_room
         second_lock = dest_room if from_room_id < to_room_id else source_room
 
@@ -221,7 +225,7 @@ class World:
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
         self.connection_manager.broadcast_to_room(room_id, message, msg_type, skip_sid)
 
-    # --- Player Management (Still in World for now, requires own manager later) ---
+    # --- Player Management ---
     def get_player_info(self, player_name_lower: str) -> Optional[Dict[str, Any]]:
         with self.player_directory_lock:
             return self.active_players.get(player_name_lower)
@@ -249,10 +253,7 @@ class World:
         with self.player_directory_lock:
             return list(self.active_players.items())
 
-    # --- Groups/Bands/Combat (Keep in World for now) ---
-    # (Previous implementations of _handle_player_disconnect_group, get_group, get_band,
-    #  get_combat_state, set_monster_hp, etc. remain here unchanged)
-    
+    # --- Groups/Bands/Combat ---
     def _handle_player_disconnect_group(self, player_obj, player_name_lower):
         group = self.get_group(player_obj.group_id)
         if group:
