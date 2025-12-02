@@ -622,15 +622,25 @@ class Move(BaseVerb):
         if target_room_id:
             # --- NEW: THE BURDEN CHECK ---
             burden_level = 0
-            for item_id in self.player.inventory:
-                item = self.world.game_items.get(item_id)
+            for item_ref in self.player.inventory:
+                item = None
+                if isinstance(item_ref, dict):
+                    item = item_ref
+                else:
+                    item = self.world.game_items.get(item_ref)
+                
                 if item and "HEAVY" in item.get("flags", []):
                     burden_level += 1
             
             # Check worn/hands too
-            for slot, item_id in self.player.worn_items.items():
-                if item_id:
-                    item = self.world.game_items.get(item_id)
+            for slot, item_ref in self.player.worn_items.items():
+                if item_ref:
+                    item = None
+                    if isinstance(item_ref, dict):
+                        item = item_ref
+                    else:
+                        item = self.world.game_items.get(item_ref)
+
                     if item and "HEAVY" in item.get("flags", []):
                         burden_level += 1
 
