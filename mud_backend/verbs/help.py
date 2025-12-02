@@ -280,40 +280,28 @@ class Help(BaseVerb):
         target_topic = " ".join(self.args).lower()
         
         # --- ALIASES ---
-        if target_topic in ["go", "n", "s", "e", "w", "u", "up", "d", "down"]:
-            target_topic = "move"
-        if target_topic == "take":
-            target_topic = "get"
-        if target_topic == "put":
-            target_topic = "stow"
-        if target_topic == "inv":
-            target_topic = "inventory"
-        if target_topic == "goto":
-            target_topic = "goto"
-        if target_topic in ["buy", "order"]:
-            target_topic = "buy"
-        if target_topic == "sell":
-            target_topic = "sell"
-        if target_topic == "forage":
-            target_topic = "forage"
-        if target_topic == "attack":
-            target_topic = "attack"
-        if target_topic == "stance":
-            target_topic = "stance"
-        if target_topic in ["wealth", "bank", "balance"]:
-            target_topic = "wealth"
-        if target_topic in ["join", "leave", "disband", "hold"]:
-            target_topic = "group"
-        if target_topic == "bt":
-            target_topic = "band"
-        if target_topic == "whisper":
-            target_topic = "whisper"
-        if target_topic in ["bid", "list auctions"]:
-            target_topic = "auction"
-        if target_topic in ["post", "send"]:
-            target_topic = "mail"
-        if target_topic == "vault":
-            target_topic = "locker"
+        aliases = {
+            "go": "move", "n": "move", "s": "move", "e": "move", "w": "move", 
+            "u": "move", "up": "move", "d": "move", "down": "move",
+            "take": "get", 
+            "put": "stow", 
+            "inv": "inventory",
+            "goto": "goto",
+            "buy": "buy", "order": "buy",
+            "sell": "sell",
+            "forage": "forage",
+            "attack": "attack",
+            "stance": "stance",
+            "wealth": "wealth", "bank": "wealth", "balance": "wealth",
+            "join": "group", "leave": "group", "disband": "group", "hold": "group",
+            "bt": "band",
+            "whisper": "whisper",
+            "bid": "auction", "list auctions": "auction",
+            "post": "mail", "send": "mail",
+            "vault": "locker"
+        }
+        
+        target_topic = aliases.get(target_topic, target_topic)
 
         # Stat aliases
         if target_topic in [

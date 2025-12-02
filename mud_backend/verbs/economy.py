@@ -289,11 +289,18 @@ class MailVerb(BaseVerb):
             # Move from inventory to draft buffer
             item_data = None
             if isinstance(item_id, dict):
+                # Basic check for quest items that shouldn't be mailed
+                if "NO_PORTAL" in item_id.get("flags", []):
+                     self.player.send_message(f"The {item_id['name']} refuses to leave your person.")
+                     return
                 item_data = item_id
                 self.player.inventory.remove(item_id)
             else:
                 template = self.world.game_items.get(item_id)
                 if template:
+                    if "NO_PORTAL" in template.get("flags", []):
+                         self.player.send_message(f"The {template['name']} refuses to leave your person.")
+                         return
                     item_data = template.copy()
                     if "uid" not in item_data: item_data["uid"] = uuid.uuid4().hex
                 self.player.inventory.remove(item_id)
