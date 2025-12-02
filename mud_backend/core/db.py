@@ -275,21 +275,26 @@ def fetch_all_items() -> dict:
     return items
 
 def fetch_all_levels() -> list:
-    return _load_json_data("leveling.json")
+    # Updated path: data/global/leveling.json
+    return _load_json_data(os.path.join("global", "leveling.json"))
 
 def fetch_all_skills() -> dict:
-    skill_list = _load_json_data("skills.json")
+    # Updated path: data/global/skills.json
+    skill_list = _load_json_data(os.path.join("global", "skills.json"))
     if isinstance(skill_list, list):
         return {s["skill_id"]: s for s in skill_list if isinstance(s, dict) and s.get("skill_id")}
     return {}
 
 def fetch_all_criticals() -> dict:
-    return _load_json_data("criticals.json")
+    # Updated path: data/global/criticals.json
+    return _load_json_data(os.path.join("global", "criticals.json"))
 
 def fetch_all_quests() -> dict:
     quests = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-    main_quests = _load_json_data("quests.json")
+    
+    # Updated path: data/assets/quests/quests.json
+    main_quests = _load_json_data(os.path.join("assets", "quests", "quests.json"))
     if isinstance(main_quests, dict):
         for k, v in main_quests.items():
             v["id"] = k
@@ -310,18 +315,23 @@ def fetch_all_quests() -> dict:
     return quests
 
 def fetch_all_nodes() -> dict:
-    return _load_json_data("nodes.json")
+    # Updated path: data/assets/nodes/nodes.json
+    return _load_json_data(os.path.join("assets", "nodes", "nodes.json"))
 
 def fetch_all_factions() -> dict:
-    return _load_json_data("faction.json")
+    # Updated path: data/global/faction.json
+    return _load_json_data(os.path.join("global", "faction.json"))
 
 def fetch_all_races() -> dict:
-    return _load_json_data("races.json")
+    # Updated path: data/global/races.json
+    return _load_json_data(os.path.join("global", "races.json"))
 
 def fetch_all_spells() -> dict:
     spells = {}
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-    spells_dir = os.path.join(data_dir, 'spells')
+    
+    # Search in assets/spells
+    spells_dir = os.path.join(data_dir, 'assets', 'spells')
     if os.path.exists(spells_dir):
         for file_path in glob.glob(os.path.join(spells_dir, '*.json')):
             with open(file_path, 'r') as f:
@@ -331,16 +341,20 @@ def fetch_all_spells() -> dict:
                         spells.update(spell_data)
                 except json.JSONDecodeError:
                     print(f"[DB ERROR] Invalid JSON in spell file: {file_path}")
-    root_spells_path = os.path.join(data_dir, "spells.json")
+    
+    # Fallback to assets/spells/spells.json if explicit
+    root_spells_path = os.path.join(data_dir, "assets", "spells", "spells.json")
     if os.path.exists(root_spells_path):
-        root_spells = _load_json_data("spells.json")
+        root_spells = _load_json_data(os.path.join("assets", "spells", "spells.json"))
         if root_spells:
             spells.update(root_spells)
+                
     return spells
 
 def fetch_all_deities() -> dict:
+    # Updated path: data/global/lore/deities.json
     try:
-        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lore', 'deities.json')
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'global', 'lore', 'deities.json')
         if os.path.exists(json_path):
             with open(json_path, 'r') as f:
                 return json.load(f)
@@ -349,8 +363,9 @@ def fetch_all_deities() -> dict:
     return {}
 
 def fetch_all_guilds() -> dict:
+    # Updated path: data/global/lore/guilds.json
     try:
-        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lore', 'guilds.json')
+        json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'global', 'lore', 'guilds.json')
         if os.path.exists(json_path):
             with open(json_path, 'r') as f:
                 return json.load(f)
@@ -359,7 +374,8 @@ def fetch_all_guilds() -> dict:
     return {}
 
 def fetch_combat_rules() -> dict:
-    return _load_json_data("combat_rules.json")
+    # Updated path: data/global/combat_rules.json
+    return _load_json_data(os.path.join("global", "combat_rules.json"))
 
 # --- ECONOMY & MAIL EXTENSIONS ---
 

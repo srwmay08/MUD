@@ -4,7 +4,7 @@ import uuid
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
-from mud_backend.verbs.item_actions import _find_item_in_inventory, _get_item_data
+from mud_backend.verbs.item_actions import _find_item_in_inventory, _find_item_in_hands, _get_item_data
 
 @VerbRegistry.register(["auction"])
 class AuctionVerb(BaseVerb):
@@ -81,24 +81,50 @@ class AuctionVerb(BaseVerb):
                 self.player.send_message("Price must be a number.")
                 return
 
-            item_id = _find_item_in_inventory(self.player, self.world.game_items, item_name)
+            # --- FIX: Check Hands FIRST, then Inventory ---
+            item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, item_name)
+            item_id_inv = None
+            
+            item_source = None # "hand" or "inventory"
+            item_id = None
+            
+            if item_id_hand:
+                item_id = item_id_hand
+                item_source = "hand"
+            else:
+                item_id_inv = _find_item_in_inventory(self.player, self.world.game_items, item_name)
+                if item_id_inv:
+                    item_id = item_id_inv
+                    item_source = "inventory"
+
             if not item_id:
-                self.player.send_message(f"You don't have '{item_name}' in your inventory.")
+                self.player.send_message(f"You don't have '{item_name}' in your hands or inventory.")
                 return
 
-            # Handle item logic (dict vs str ID)
+            # Handle item logic (dict vs str ID) and removal
             item_data = None
+            
             if isinstance(item_id, dict):
+                # Dynamic item
                 item_data = item_id
-                self.player.inventory.remove(item_id)
+                if item_source == "hand":
+                    self.player.worn_items[hand_slot] = None
+                else:
+                    self.player.inventory.remove(item_id)
             else:
-                # Resolve template to full data for storage
+                # Static item ID - hydrate full data for auction storage
                 template = self.world.game_items.get(item_id)
                 if template:
                     item_data = template.copy()
+                    # Ensure it has a unique ID if it didn't before
                     if "uid" not in item_data:
                         item_data["uid"] = uuid.uuid4().hex
-                self.player.inventory.remove(item_id)
+                
+                # Remove from source
+                if item_source == "hand":
+                    self.player.worn_items[hand_slot] = None
+                else:
+                    self.player.inventory.remove(item_id)
             
             if item_data:
                 self.world.auction_manager.create_auction(self.player, item_data, price)
@@ -136,8 +162,22 @@ class LockerVerb(BaseVerb):
             if len(locker["items"]) >= locker["capacity"]:
                 self.player.send_message("Your locker is full.")
                 return
-                
-            item_id = _find_item_in_inventory(self.player, self.world.game_items, target)
+            
+            # Check hands first for lockers too
+            item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, target)
+            item_id_inv = None
+            item_id = None
+            item_source = None
+
+            if item_id_hand:
+                item_id = item_id_hand
+                item_source = "hand"
+            else:
+                item_id_inv = _find_item_in_inventory(self.player, self.world.game_items, target)
+                if item_id_inv:
+                    item_id = item_id_inv
+                    item_source = "inventory"
+
             if not item_id:
                 self.player.send_message("You don't have that.")
                 return
@@ -146,12 +186,16 @@ class LockerVerb(BaseVerb):
             item_data = None
             if isinstance(item_id, dict):
                 item_data = item_id
-                self.player.inventory.remove(item_id)
             else:
                 template = self.world.game_items.get(item_id)
                 if template:
                     item_data = template.copy()
                     if "uid" not in item_data: item_data["uid"] = uuid.uuid4().hex
+
+            # Remove from player
+            if item_source == "hand":
+                self.player.worn_items[hand_slot] = None
+            else:
                 self.player.inventory.remove(item_id)
 
             if item_data:
@@ -281,20 +325,33 @@ class MailVerb(BaseVerb):
                 self.player.send_message("No draft open.")
                 return
             item_name = " ".join(self.args[1:])
-            item_id = _find_item_in_inventory(self.player, self.world.game_items, item_name)
+            
+            # Check hands first, then inventory for attachments
+            item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, item_name)
+            item_id_inv = None
+            item_id = None
+            item_source = None
+
+            if item_id_hand:
+                item_id = item_id_hand
+                item_source = "hand"
+            else:
+                item_id_inv = _find_item_in_inventory(self.player, self.world.game_items, item_name)
+                if item_id_inv:
+                    item_id = item_id_inv
+                    item_source = "inventory"
+
             if not item_id:
                 self.player.send_message("You don't have that.")
                 return
             
-            # Move from inventory to draft buffer
+            # Remove and Attach
             item_data = None
             if isinstance(item_id, dict):
-                # Basic check for quest items that shouldn't be mailed
                 if "NO_PORTAL" in item_id.get("flags", []):
                      self.player.send_message(f"The {item_id['name']} refuses to leave your person.")
                      return
                 item_data = item_id
-                self.player.inventory.remove(item_id)
             else:
                 template = self.world.game_items.get(item_id)
                 if template:
@@ -303,6 +360,11 @@ class MailVerb(BaseVerb):
                          return
                     item_data = template.copy()
                     if "uid" not in item_data: item_data["uid"] = uuid.uuid4().hex
+
+            # Remove from source
+            if item_source == "hand":
+                self.player.worn_items[hand_slot] = None
+            else:
                 self.player.inventory.remove(item_id)
             
             if item_data:
