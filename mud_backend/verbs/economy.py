@@ -297,7 +297,6 @@ class MailVerb(BaseVerb):
                 self.player.send_message("No draft to post.")
                 return
             
-            # FREE POSTAGE (Updated per request)
             if self.player.wealth["silvers"] < draft["gold"]:
                 self.player.send_message(f"You don't have enough silver for the enclosure.")
                 return
@@ -317,3 +316,58 @@ class MailVerb(BaseVerb):
             
             self.player.send_message("Mail sent successfully!")
             del self.player.temp_data["mail_draft"]
+
+@VerbRegistry.register(["locker"])
+class LockerVerb(BaseVerb):
+    """
+    Handles locker management.
+    LOCKER LIST
+    LOCKER UPGRADE / BUY
+    """
+    def execute(self):
+        # Must be in locker room
+        if "vault" not in self.room.name.lower() and "locker" not in self.room.name.lower():
+             self.player.send_message("You must be at the Town Hall Vaults to access your locker.")
+             return
+
+        if not self.args:
+             self._show_status()
+             return
+        
+        sub = self.args[0].lower()
+        
+        if sub == "list":
+            self._show_status()
+        
+        elif sub == "upgrade" or sub == "buy":
+            cost = 1000
+            upgrade_amount = 10
+            
+            if self.player.wealth["silvers"] < cost:
+                self.player.send_message(f"You need {cost} silver to upgrade your locker size.")
+                return
+            
+            self.player.wealth["silvers"] -= cost
+            self.player.locker["capacity"] += upgrade_amount
+            
+            # Save
+            db.update_player_locker(self.player.name, self.player.locker)
+            
+            self.player.send_message(f"You pay {cost} silver to the clerk.")
+            self.player.send_message(f"Your locker capacity has been increased to {self.player.locker['capacity']} items.")
+        
+        else:
+            self.player.send_message("Usage: LOCKER LIST, LOCKER BUY (Costs 1000s for +10 slots)")
+
+    def _show_status(self):
+        locker = self.player.locker
+        items = locker.get("items", [])
+        capacity = locker.get("capacity", 50)
+        self.player.send_message(f"--- Your Locker ({len(items)}/{capacity}) ---")
+        if not items: 
+            self.player.send_message("  (Empty)")
+        else:
+            for item in items:
+                self.player.send_message(f"- {item.get('name', 'Unknown item')}")
+        self.player.send_message("---")
+        self.player.send_message("Type 'LOCKER BUY' to add 10 slots for 1000 silver.")
