@@ -4,7 +4,7 @@ import uuid
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
-from mud_backend.verbs.item_actions import _find_item_in_inventory, _find_item_in_hands, _get_item_data
+from mud_backend.verbs.item_actions import _find_item_in_inventory, _find_item_in_hands
 
 @VerbRegistry.register(["auction"])
 class AuctionVerb(BaseVerb):
@@ -81,11 +81,11 @@ class AuctionVerb(BaseVerb):
                 self.player.send_message("Price must be a number.")
                 return
 
-            # --- FIX: Check Hands FIRST, then Inventory ---
+            # Check Hands FIRST
             item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, item_name)
             item_id_inv = None
             
-            item_source = None # "hand" or "inventory"
+            item_source = None
             item_id = None
             
             if item_id_hand:
@@ -132,115 +132,35 @@ class AuctionVerb(BaseVerb):
             else:
                 self.player.send_message("Error finding item data.")
 
-@VerbRegistry.register(["locker"])
-class LockerVerb(BaseVerb):
-    def execute(self):
-        # Basic check for being in a locker-compatible room
-        room_name = self.room.name.lower()
-        if "vault" not in room_name and "locker" not in room_name:
-             self.player.send_message("You must be at the Town Hall Vaults to access your locker.")
-             return
-             
-        if not self.args:
-            self.player.send_message("Usage: LOCKER LIST, LOCKER GET <item>, LOCKER PUT <item>")
-            return
-            
-        sub = self.args[0].lower()
-        locker = self.player.locker
-        
-        if sub == "list":
-            items = locker.get("items", [])
-            capacity = locker.get("capacity", 50)
-            self.player.send_message(f"--- Your Locker ({len(items)}/{capacity}) ---")
-            if not items:
-                self.player.send_message("  (Empty)")
-            for item in items:
-                self.player.send_message(f"- {item['name']}")
-                
-        elif sub == "put":
-            target = " ".join(self.args[1:])
-            if len(locker["items"]) >= locker["capacity"]:
-                self.player.send_message("Your locker is full.")
-                return
-            
-            # Check hands first for lockers too
-            item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, target)
-            item_id_inv = None
-            item_id = None
-            item_source = None
-
-            if item_id_hand:
-                item_id = item_id_hand
-                item_source = "hand"
-            else:
-                item_id_inv = _find_item_in_inventory(self.player, self.world.game_items, target)
-                if item_id_inv:
-                    item_id = item_id_inv
-                    item_source = "inventory"
-
-            if not item_id:
-                self.player.send_message("You don't have that.")
-                return
-                
-            # Move to locker
-            item_data = None
-            if isinstance(item_id, dict):
-                item_data = item_id
-            else:
-                template = self.world.game_items.get(item_id)
-                if template:
-                    item_data = template.copy()
-                    if "uid" not in item_data: item_data["uid"] = uuid.uuid4().hex
-
-            # Remove from player
-            if item_source == "hand":
-                self.player.worn_items[hand_slot] = None
-            else:
-                self.player.inventory.remove(item_id)
-
-            if item_data:
-                locker["items"].append(item_data)
-                db.update_player_locker(self.player.name, locker)
-                self.player.send_message(f"You put {item_data['name']} in your locker.")
-
-        elif sub == "get":
-            target = " ".join(self.args[1:]).lower()
-            found_item = None
-            found_idx = -1
-            
-            for i, item in enumerate(locker["items"]):
-                if target in item["name"].lower() or target in item.get("keywords", []):
-                    found_item = item
-                    found_idx = i
-                    break
-            
-            if not found_item:
-                self.player.send_message("You don't see that in your locker.")
-                return
-            
-            # Weight Check
-            weight = found_item.get("weight", 1)
-            if self.player.current_encumbrance + weight > self.player.max_carry_weight:
-                self.player.send_message("That is too heavy for you to carry right now.")
-                return
-                
-            locker["items"].pop(found_idx)
-            self.player.inventory.append(found_item) 
-            db.update_player_locker(self.player.name, locker)
-            self.player.send_message(f"You get {found_item['name']} from your locker.")
 
 @VerbRegistry.register(["collect", "interact"])
 class CollectVerb(BaseVerb):
     def execute(self):
         # Interaction with Courier
         found_courier = False
+        courier_obj = None
         for obj in self.room.objects:
             if obj.get("is_courier") and obj.get("target_player") == self.player.name:
-                self.world.mail_manager.collect_mail(self.player, obj)
+                courier_obj = obj
                 found_courier = True
-                return
+                break
+        
         if not found_courier:
             self.player.send_message("There is no courier here for you.")
+            return
+
+        # Parse Options (COLLECT BANK, COLLECT LOCKER)
+        dest_gold = "wallet"
+        dest_items = "inventory"
+        
+        args_str = " ".join(self.args).lower()
+        if "bank" in args_str:
+            dest_gold = "bank"
+        if "locker" in args_str:
+            dest_items = "locker"
+            
+        self.world.mail_manager.collect_mail(self.player, courier_obj, dest_gold, dest_items)
+
 
 @VerbRegistry.register(["mail"])
 class MailVerb(BaseVerb):
@@ -377,13 +297,13 @@ class MailVerb(BaseVerb):
                 self.player.send_message("No draft to post.")
                 return
             
-            cost = 50
-            if self.player.wealth["silvers"] < (cost + draft["gold"]):
-                self.player.send_message(f"You cannot afford the postage (50s) plus the enclosed coins.")
+            # FREE POSTAGE (Updated per request)
+            if self.player.wealth["silvers"] < draft["gold"]:
+                self.player.send_message(f"You don't have enough silver for the enclosure.")
                 return
                 
-            # Deduct funds
-            self.player.wealth["silvers"] -= (cost + draft["gold"])
+            # Deduct funds (Only the enclosed amount)
+            self.player.wealth["silvers"] -= draft["gold"]
             
             # Send via manager
             self.world.mail_manager.send_system_mail(
