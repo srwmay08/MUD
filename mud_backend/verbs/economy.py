@@ -1,5 +1,6 @@
 # mud_backend/verbs/economy.py
 import time
+import uuid
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
@@ -8,8 +9,8 @@ from mud_backend.verbs.item_actions import _find_item_in_inventory, _get_item_da
 @VerbRegistry.register(["auction"])
 class AuctionVerb(BaseVerb):
     def execute(self):
-        # Restriction: Must be in same room as Auctioneer
-        # (Assuming 'auctioneer' keyword on NPC in room)
+        # Restriction: Must be in same room as Auctioneer for ACTIONS, but LIST is global
+        # Check keywords of objects in room
         has_auctioneer = False
         for obj in self.room.objects:
             if "auctioneer" in obj.get("keywords", []):
@@ -23,10 +24,7 @@ class AuctionVerb(BaseVerb):
         sub = self.args[0].lower()
         
         if sub == "list":
-            if not has_auctioneer:
-                self.player.send_message("You need to find an Auctioneer to see the listings.")
-                return
-
+            # Global access allowed for listing
             auctions = db.get_active_auctions()
             if not auctions:
                 self.player.send_message("No active auctions.")
@@ -57,8 +55,8 @@ class AuctionVerb(BaseVerb):
                 self.player.send_message("Invalid amount.")
                 return
 
-            # Find full ID
             auctions = db.get_active_auctions()
+            # Simple suffix match for ID
             full_auc = next((a for a in auctions if a['uid'].endswith(target_id_short)), None)
             
             if not full_auc:
@@ -72,8 +70,6 @@ class AuctionVerb(BaseVerb):
             if not has_auctioneer:
                 self.player.send_message("You need to find an Auctioneer to sell items.")
                 return
-            # Syntax: AUCTION SELL <item> <price>
-            # Needs parsing logic to separate item name from price
             if len(self.args) < 3:
                 self.player.send_message("Usage: AUCTION SELL <item> <start_price>")
                 return
@@ -87,29 +83,36 @@ class AuctionVerb(BaseVerb):
 
             item_id = _find_item_in_inventory(self.player, self.world.game_items, item_name)
             if not item_id:
-                self.player.send_message(f"You don't have '{item_name}'.")
+                self.player.send_message(f"You don't have '{item_name}' in your inventory.")
                 return
 
-            # Remove item (handle dict vs str ID)
+            # Handle item logic (dict vs str ID)
             item_data = None
             if isinstance(item_id, dict):
                 item_data = item_id
                 self.player.inventory.remove(item_id)
             else:
-                item_data = self.world.game_items.get(item_id)
+                # Resolve template to full data for storage
+                template = self.world.game_items.get(item_id)
+                if template:
+                    item_data = template.copy()
+                    if "uid" not in item_data:
+                        item_data["uid"] = uuid.uuid4().hex
                 self.player.inventory.remove(item_id)
             
-            self.world.auction_manager.create_auction(self.player, item_data, price)
-            self.player.send_message("Auction created!")
+            if item_data:
+                self.world.auction_manager.create_auction(self.player, item_data, price)
+                self.player.send_message(f"You listed {item_data['name']} for {price} silver.")
+            else:
+                self.player.send_message("Error finding item data.")
 
 @VerbRegistry.register(["locker"])
 class LockerVerb(BaseVerb):
     def execute(self):
-        # Check room flag "LOCKER" or "BANK"
-        # For prototype, assume room name contains 'Bank' or 'Town Hall'
+        # Basic check for being in a locker-compatible room
         room_name = self.room.name.lower()
-        if "bank" not in room_name and "hall" not in room_name:
-             self.player.send_message("You must be at the bank or town hall to access your locker.")
+        if "vault" not in room_name and "locker" not in room_name:
+             self.player.send_message("You must be at the Town Hall Vaults to access your locker.")
              return
              
         if not self.args:
@@ -123,6 +126,8 @@ class LockerVerb(BaseVerb):
             items = locker.get("items", [])
             capacity = locker.get("capacity", 50)
             self.player.send_message(f"--- Your Locker ({len(items)}/{capacity}) ---")
+            if not items:
+                self.player.send_message("  (Empty)")
             for item in items:
                 self.player.send_message(f"- {item['name']}")
                 
@@ -138,12 +143,21 @@ class LockerVerb(BaseVerb):
                 return
                 
             # Move to locker
-            item_data = _get_item_data(item_id, self.world.game_items)
-            locker["items"].append(item_data)
-            self.player.inventory.remove(item_id)
-            
-            db.update_player_locker(self.player.name, locker)
-            self.player.send_message(f"You put {item_data['name']} in your locker.")
+            item_data = None
+            if isinstance(item_id, dict):
+                item_data = item_id
+                self.player.inventory.remove(item_id)
+            else:
+                template = self.world.game_items.get(item_id)
+                if template:
+                    item_data = template.copy()
+                    if "uid" not in item_data: item_data["uid"] = uuid.uuid4().hex
+                self.player.inventory.remove(item_id)
+
+            if item_data:
+                locker["items"].append(item_data)
+                db.update_player_locker(self.player.name, locker)
+                self.player.send_message(f"You put {item_data['name']} in your locker.")
 
         elif sub == "get":
             target = " ".join(self.args[1:]).lower()
@@ -167,7 +181,7 @@ class LockerVerb(BaseVerb):
                 return
                 
             locker["items"].pop(found_idx)
-            self.player.inventory.append(found_item) # Add as dynamic object
+            self.player.inventory.append(found_item) 
             db.update_player_locker(self.player.name, locker)
             self.player.send_message(f"You get {found_item['name']} from your locker.")
 
@@ -183,3 +197,134 @@ class CollectVerb(BaseVerb):
                 return
         if not found_courier:
             self.player.send_message("There is no courier here for you.")
+
+@VerbRegistry.register(["mail"])
+class MailVerb(BaseVerb):
+    """
+    Handles player-to-player mail sending at a Post Office.
+    States: draft_recipient, draft_body, etc. stored in player.temp_data
+    """
+    def execute(self):
+        # Check if in post office (simple string match for prototype)
+        if "post office" not in self.room.name.lower():
+            self.player.send_message("You must be at a Post Office to send mail.")
+            return
+
+        # Initialize temp storage for draft if missing
+        if not hasattr(self.player, "temp_data"): self.player.temp_data = {}
+        
+        if not self.args:
+            self.player.send_message("Usage: MAIL SEND <player> <subject>, MAIL CHECK")
+            return
+            
+        sub = self.args[0].lower()
+        
+        if sub == "check":
+            # Check for inbox items in DB
+            my_mail = db.get_player_mail(self.player.name)
+            # Count undelivered mail
+            unread = [m for m in my_mail if not m.get("delivered")]
+            
+            if not unread:
+                self.player.send_message("You have no pending mail.")
+            else:
+                self.player.send_message(f"You have {len(unread)} pending parcels. A courier should find you soon in town.")
+                
+        elif sub == "send":
+            if len(self.args) < 3:
+                self.player.send_message("Usage: MAIL SEND <player_name> <subject>")
+                return
+            
+            recipient = self.args[1]
+            subject = " ".join(self.args[2:])
+            
+            # Verify recipient exists
+            target_data = db.fetch_player_data(recipient)
+            if not target_data:
+                self.player.send_message(f"Player '{recipient}' not found.")
+                return
+                
+            self.player.temp_data["mail_draft"] = {
+                "recipient": target_data["name"], 
+                "subject": subject,
+                "body": "",
+                "gold": 0,
+                "items": []
+            }
+            self.player.send_message(f"Draft started for {target_data['name']}. Subject: {subject}")
+            self.player.send_message("Use 'MAIL BODY <text>' to write, 'MAIL ATTACH <item>', 'MAIL COIN <amount>', and 'MAIL POST' to send.")
+
+        elif sub == "body":
+            if "mail_draft" not in self.player.temp_data:
+                self.player.send_message("You have no draft open. Use MAIL SEND <player> <subject> first.")
+                return
+            body_text = " ".join(self.args[1:])
+            self.player.temp_data["mail_draft"]["body"] = body_text
+            self.player.send_message("Body text updated.")
+
+        elif sub == "coin":
+            if "mail_draft" not in self.player.temp_data:
+                self.player.send_message("No draft open.")
+                return
+            try:
+                amt = int(self.args[1])
+                if amt > self.player.wealth["silvers"]:
+                    self.player.send_message("You don't have that much silver.")
+                    return
+                self.player.temp_data["mail_draft"]["gold"] = amt
+                self.player.send_message(f"Draft will enclose {amt} silver.")
+            except:
+                self.player.send_message("Invalid amount.")
+
+        elif sub == "attach":
+            if "mail_draft" not in self.player.temp_data:
+                self.player.send_message("No draft open.")
+                return
+            item_name = " ".join(self.args[1:])
+            item_id = _find_item_in_inventory(self.player, self.world.game_items, item_name)
+            if not item_id:
+                self.player.send_message("You don't have that.")
+                return
+            
+            # Move from inventory to draft buffer
+            item_data = None
+            if isinstance(item_id, dict):
+                item_data = item_id
+                self.player.inventory.remove(item_id)
+            else:
+                template = self.world.game_items.get(item_id)
+                if template:
+                    item_data = template.copy()
+                    if "uid" not in item_data: item_data["uid"] = uuid.uuid4().hex
+                self.player.inventory.remove(item_id)
+            
+            if item_data:
+                self.player.temp_data["mail_draft"]["items"].append(item_data)
+                self.player.send_message(f"Attached {item_data['name']}.")
+
+        elif sub == "post":
+            draft = self.player.temp_data.get("mail_draft")
+            if not draft:
+                self.player.send_message("No draft to post.")
+                return
+            
+            cost = 50
+            if self.player.wealth["silvers"] < (cost + draft["gold"]):
+                self.player.send_message(f"You cannot afford the postage (50s) plus the enclosed coins.")
+                return
+                
+            # Deduct funds
+            self.player.wealth["silvers"] -= (cost + draft["gold"])
+            
+            # Send via manager
+            self.world.mail_manager.send_system_mail(
+                recipient_name=draft["recipient"],
+                subject=f"From {self.player.name}: {draft['subject']}",
+                body=draft["body"],
+                gold=draft["gold"],
+                items=draft["items"],
+                flags=["System_Priority"] # Triggers courier
+            )
+            
+            self.player.send_message("Mail sent successfully!")
+            del self.player.temp_data["mail_draft"]

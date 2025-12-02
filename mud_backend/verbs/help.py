@@ -1,10 +1,7 @@
 # mud_backend/verbs/help.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core.registry import VerbRegistry # <--- ADD THIS
+from mud_backend.core.registry import VerbRegistry
 
-# ---
-# --- MODIFIED: Added GROUP, BAND, WHISPER help
-# ---
 HELP_TEXT = {
     "look": """
 <span class='room-title'>--- Help: LOOK ---</span>
@@ -15,6 +12,8 @@ LOOK is the most basic of commands. Almost everything can be the target of this 
 * **LOOK {character}**: Displays the description of the person, what they're carrying, what they're wearing, and any wounds or scars they may possess.
 * **LOOK {creature}**: Displays what a creature is carrying, what they're wearing, and any wounds or scars they may possess.
 * **LOOK {at|on|in|inside|into|under|behind|beneath} {object}**: Displays information pertaining to where you looked or what you looked at.
+* **LOOK IN {container}**: Shows the contents of a container.
+* **LOOK IN LOCKER**: Specific command to view your locker storage at the Town Hall.
 * **LOOK {up|star|constellation|sky}**: Displays the sky and any adverse weather conditions.
 """,
 
@@ -108,7 +107,7 @@ When at a shop, use LIST to see what the merchant is selling.
 """,
 
     "buy": """
-<span class'room-title'>--- Help: BUY ---</span>
+<span class='room-title'>--- Help: BUY ---</span>
 When at a shop, use BUY to purchase an item. (You can also use ORDER).
 
 **Usage:**
@@ -117,7 +116,7 @@ When at a shop, use BUY to purchase an item. (You can also use ORDER).
 """,
 
     "sell": """
-<span class'room-title'>--- Help: SELL ---</span>
+<span class='room-title'>--- Help: SELL ---</span>
 When at a shop, use SELL to sell an item *from your hands* to the merchant.
 
 **Usage:**
@@ -126,7 +125,7 @@ When at a shop, use SELL to sell an item *from your hands* to the merchant.
 """,
 
     "forage": """
-<span class'room-title'>--- Help: FORAGE ---</span>
+<span class='room-title'>--- Help: FORAGE ---</span>
 FORAGE allows you to search the area for harvestable herbs and plants. This costs roundtime.
 
 **Usage:**
@@ -134,16 +133,16 @@ FORAGE allows you to search the area for harvestable herbs and plants. This cost
 """,
 
     "attack": """
-<span class'room-title'>--- Help: ATTACK ---</span>
+<span class='room-title'>--- Help: ATTACK ---</span>
 ATTACK initiates combat with a target. This command will continue to swing at your target automatically until you or the target is defeated, or you `FLEE`.
 
 **Usage:**
 * **ATTACK {target}**: Begins combat.
-* **FLEE**: (Not yet implemented) Stops combat and attempts to move to a random room.
+* **FLEE**: Stops combat and attempts to move to a random room.
 """,
 
     "stance": """
-<span class'room-title'>--- Help: STANCE ---</span>
+<span class='room-title'>--- Help: STANCE ---</span>
 STANCE allows you to change your combat footing to be more offensive or defensive.
 
 **Usage:**
@@ -218,12 +217,56 @@ Sends a private message to a player or your group.
 * **WHISPER {player} {message}**: Sends a private message to {player}.
 * **WHISPER GROUP {message}**: Sends a private message to all group members.
 * **WHISPER OOC GROUP {message}**: Sends a private OOC message to all group members.
+""",
+
+    "auction": """
+<span class='room-title'>--- Help: AUCTION ---</span>
+The Auction House allows players to buy and sell items asynchronously. You must be at the Auction House (South Market) to SELL or BID, but you can view listings from anywhere using AUCTION LIST.
+
+**Usage:**
+* **AUCTION LIST**: Shows all active auctions, current bids, and time remaining.
+* **AUCTION BID {id} {amount}**: Places a bid on an item. Money is deducted immediately (held in escrow).
+* **AUCTION SELL {item} {price}**: Lists an item for sale. Duration is 3 days.
+* **AUCTION BUY {id}**: Instantly purchases an item if it has a buyout price set.
+""",
+
+    "locker": """
+<span class='room-title'>--- Help: LOCKER ---</span>
+Lockers provide permanent storage for items you don't want to carry. You can access your locker at the **Town Hall Vaults**.
+
+**Usage:**
+* **LOCKER LIST**: Shows contents and capacity.
+* **LOOK IN LOCKER**: Alternate way to list contents.
+* **LOCKER PUT {item}**: Moves an item from your inventory to your locker.
+* **LOCKER GET {item}**: Moves an item from your locker to your inventory.
+* **Note**: Lockers ignore item weight, but you must be able to carry the item to retrieve it.
+""",
+
+    "mail": """
+<span class='room-title'>--- Help: MAIL ---</span>
+The Post Office allows you to send messages, silver, and items to other players.
+**Receiving Mail:** If you have pending mail, a **Courier** will find you when you enter a town area. Use **COLLECT** to receive it.
+
+**Usage (At Post Office):**
+* **MAIL CHECK**: Checks your inbox status.
+* **MAIL SEND {player} {subject}**: Starts a new message draft.
+* **MAIL BODY {text}**: Writes the content of your letter.
+* **MAIL ATTACH {item}**: Attaches an item from your inventory.
+* **MAIL COIN {amount}**: Encloses silver coins.
+* **MAIL POST**: Finalizes and sends the message (Cost: 50 silver).
+""",
+
+    "collect": """
+<span class='room-title'>--- Help: COLLECT ---</span>
+Used to interact with a **Courier** NPC to receive your auction winnings or mail.
+
+**Usage:**
+* **COLLECT**: Interacts with a courier in the room to accept your delivery.
+* **INTERACT COURIER**: Alternate syntax.
 """
 }
-# --- END NEW ---
 
 @VerbRegistry.register(["help"]) 
-
 class Help(BaseVerb):
     """
     Handles the 'help' command.
@@ -231,16 +274,13 @@ class Help(BaseVerb):
     
     def execute(self):
         if not self.args:
-            self.player.send_message("What do you need help with? (e.g., HELP LOOK, HELP GET, HELP STATS, HELP GROUP, HELP BAND)")
-            # TODO: List all available help topics
+            self.player.send_message("What do you need help with? (e.g., HELP LOOK, HELP GET, HELP STATS, HELP AUCTION, HELP MAIL)")
             return
 
         target_topic = " ".join(self.args).lower()
         
-        # ---
-        # --- MODIFIED: Added new aliases
-        # ---
-        if target_topic in ["go", "n", "s", "e", "w", "u", "up", "d", "down"]: # <--- UPDATED
+        # --- ALIASES ---
+        if target_topic in ["go", "n", "s", "e", "w", "u", "up", "d", "down"]:
             target_topic = "move"
         if target_topic == "take":
             target_topic = "get"
@@ -260,29 +300,27 @@ class Help(BaseVerb):
             target_topic = "attack"
         if target_topic == "stance":
             target_topic = "stance"
-        if target_topic == "wealth":
+        if target_topic in ["wealth", "bank", "balance"]:
             target_topic = "wealth"
-            
-        # Grouping Aliases
         if target_topic in ["join", "leave", "disband", "hold"]:
             target_topic = "group"
-        # Band Aliases
         if target_topic == "bt":
             target_topic = "band"
-        # Whisper Alias
         if target_topic == "whisper":
             target_topic = "whisper"
-        # ---
-        # --- END MODIFIED
-        # ---
-            
-        # --- NEW: Aliases for all 12 stats ---
+        if target_topic in ["bid", "list auctions"]:
+            target_topic = "auction"
+        if target_topic in ["post", "send"]:
+            target_topic = "mail"
+        if target_topic == "vault":
+            target_topic = "locker"
+
+        # Stat aliases
         if target_topic in [
             "str", "con", "dex", "agi", "log", "int", "wis", "inf",
             "zea", "ess", "dis", "aur", "attributes", "statistics"
         ]:
             target_topic = "stats"
-        # --- END NEW ---
 
         help_content = HELP_TEXT.get(target_topic)
         
