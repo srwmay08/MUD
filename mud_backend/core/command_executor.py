@@ -94,6 +94,40 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             player.group_id = world.get_player_group_id_on_load(player.name.lower())
             world.add_player_to_room_index(player.name.lower(), player.current_room_id)
 
+    # --- NEW: Command Stacking & Aliases ---
+    
+    # 1. Handle Stacking (;)
+    if ";" in command_line:
+        # Split into segments
+        stacked_cmds = [cmd.strip() for cmd in command_line.split(";") if cmd.strip()]
+        if not stacked_cmds:
+             # User typed ';;;' or just ';'
+             pass
+        else:
+             # The first command is executed now
+             command_line = stacked_cmds[0]
+             # The rest are queued
+             if len(stacked_cmds) > 1:
+                 player.command_queue.extend(stacked_cmds[1:])
+    
+    # 2. Handle Aliases
+    first_word = command_line.split()[0].lower() if command_line else ""
+    if first_word and first_word in player.aliases:
+        # Simple substitution: Replace alias key with alias value
+        # E.g. alias "k" -> "kill"
+        # Input "k goblin" -> "kill goblin"
+        # Input "k" -> "kill"
+        
+        alias_val = player.aliases[first_word]
+        # Split command line to preserve arguments
+        cmd_parts = command_line.split()
+        args = cmd_parts[1:] if len(cmd_parts) > 1 else []
+        
+        # Reconstruct
+        command_line = f"{alias_val} {' '.join(args)}".strip()
+        
+    # --- END NEW ---
+
     # Check Freeze
     if player.flags.get("frozen", "off") == "on":
         if command_line.strip().lower() not in ['quit', 'help']:
@@ -139,7 +173,6 @@ def execute_command(world: 'World', player_name: str, command_line: str, sid: st
             handle_chargen_input(player, command_line)
 
     elif player.game_state == "training":
-        # --- FIXED: Added 'levelup' and 'level' to allowed training commands ---
         if command in ["list", "train", "done", "check", "checkin", "levelup", "level"]:
              _run_verb(world, player, room, command, args)
         elif command == "look":

@@ -22,7 +22,7 @@ const gaugeTexts = {
 
 // --- MODIFIED: Renamed mapPanel to leftPanel ---
 const leftPanel = document.getElementById('left-panel');
-const panelToggleButton = document.getElementById('panel-toggle-button'); // MODIFIED
+const panelToggleButton = document.getElementById('panel-toggle-button'); 
 const mapSvg = document.getElementById('map-svg');
 const mapRoomName = document.getElementById('map-room-name');
 const mapRoomExits = document.getElementById('map-room-exits');
@@ -55,6 +55,18 @@ let historyIndex = -1;
 let rtEndTime = 0;
 let rtTimer = null;
 
+// --- NEW: Tab Completion Dictionary ---
+const COMMON_COMMANDS = [
+    "attack", "cast", "look", "inventory", "get", "take", "drop", "put", "stow",
+    "north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest",
+    "up", "down", "out", "enter", "exit", "go",
+    "say", "whisper", "shout", "yell", "group", "band",
+    "health", "stats", "skills", "spells", "info", "score",
+    "help", "quit", "save", "alias", "unalias", "stand", "sit", "kneel", "prone",
+    "buy", "sell", "list", "order", "appraise",
+    "forage", "harvest", "mine", "chop", "fish", "skin", "search"
+];
+// ---
 
 // --- Helper: Send Command to Backend (Unchanged) ---
 function sendCommand(command) {
@@ -82,7 +94,6 @@ function addMessage(message, messageClass = null) {
 // ---
 
 function updateRtDisplay() {
-    // (This function is unchanged)
     const now = Date.now();
     const timeLeft = rtEndTime - now;
 
@@ -113,7 +124,6 @@ function updateRtDisplay() {
 }
 
 function startRtTimer(duration_ms, end_time_ms, rt_type = "hard") {
-    // (This function is unchanged)
     rtEndTime = end_time_ms;
 
     if (rtTimer) {
@@ -141,7 +151,6 @@ function startRtTimer(duration_ms, end_time_ms, rt_type = "hard") {
 function updateVitals(vitals) {
     if (!vitals) return;
     
-    // --- NEW: Store vitals globally ---
     currentVitals = vitals;
 
     // 1. Update Gauges
@@ -174,54 +183,35 @@ function updateVitals(vitals) {
         startRtTimer(vitals.rt_duration_ms, vitals.rt_end_time_ms, vitals.rt_type || 'hard');
     }
     
-    // --- NEW: 4. Update GUI Panels ---
+    // 4. Update GUI Panels
     updateGuiPanels(vitals);
 }
 
-// ---
-// --- NEW: Wound Marker Creation
-// ---
-
-// ---
-// --- THIS IS THE FIX
-// ---
-// New coordinates mapped to the "0 0 16 16" viewBox of the bi-person-standing icon.
 const WOUND_COORDS = {
     "head":       { x: 8, y: 1.5, r: 1.5 },
     "neck":       { x: 8, y: 3.5, r: 0.5 },
     "chest":      { x: 8, y: 6, r: 2 },
     "abdomen":    { x: 8, y: 8.5, r: 2 },
-    "back":       { x: 8, y: 7, r: 2 }, // Slightly offset from chest
+    "back":       { x: 8, y: 7, r: 2 }, 
     "right_eye":  { x: 7.5, y: 1.2, r: 0.5 },
     "left_eye":   { x: 8.5, y: 1.2, r: 0.5 },
-    "right_arm":  { x: 5.5, y: 8, r: 1.5 }, // Player's right, SVG's left
-    "left_arm":   { x: 10.5, y: 8, r: 1.5 }, // Player's left, SVG's right
+    "right_arm":  { x: 5.5, y: 8, r: 1.5 }, 
+    "left_arm":   { x: 10.5, y: 8, r: 1.5 }, 
     "right_hand": { x: 5, y: 9.5, r: 1 },
     "left_hand":  { x: 11, y: 9.5, r: 1 },
     "right_leg":  { x: 6.75, y: 12.5, r: 2 },
     "left_leg":   { x: 9.25, y: 12.5, r: 2 }
 };
-// --- END FIX ---
 
 function createWoundMarker(x, y, rank) {
     const circle = document.createElementNS(svgNS, 'circle');
     circle.setAttribute('cx', x);
     circle.setAttribute('cy', y);
-    // --- THIS IS THE FIX ---
-    // Use a smaller, 1px radius to fit the new 16x16 coordinate system
     circle.setAttribute('r', 1); 
-    // --- END FIX ---
     circle.classList.add('wound-marker');
-    
-    // You could vary size/color based on rank
-    // circle.setAttribute('r', 0.5 + (rank * 0.5)); 
-    
     injurySvg.appendChild(circle);
 }
 
-// ---
-// --- NEW: Main GUI Panel Update Function
-// ---
 function updateGuiPanels(vitals) {
     if (!vitals) return;
     
@@ -233,7 +223,6 @@ function updateGuiPanels(vitals) {
     }
 
     // 2. Update Injuries Widget
-    // Clear old wounds
     injurySvg.querySelectorAll('.wound-marker').forEach(m => m.remove());
     if (vitals.wounds) {
         for (const [location, rank] of Object.entries(vitals.wounds)) {
@@ -269,10 +258,6 @@ function updateGuiPanels(vitals) {
     }
 }
 
-
-// ---
-// --- MAP DRAWING FUNCTION (THIS IS THE FIX)
-// ---
 const ROOM_SIZE = 24;
 const ROOM_GAP = 12; 
 const ROOM_CENTER = ROOM_SIZE / 2;
@@ -280,15 +265,9 @@ const TOTAL_CELL_SIZE = ROOM_SIZE + ROOM_GAP;
 const ARROW_LEN = 6; 
 
 function drawMap(mapData, currentRoomId) {
-    // ---
-    // --- THIS IS THE FIX: Clear map elements *before* checking for the room
-    // ---
     mapSvg.innerHTML = ''; 
     mapRoomName.innerText = 'Loading...';
     mapRoomExits.innerText = '...';
-    // ---
-    // --- END FIX
-    // ---
     
     const currentRoom = mapData[currentRoomId];
     if (!currentRoom || currentRoom.x === undefined || currentRoom.y === undefined) {
@@ -296,13 +275,7 @@ function drawMap(mapData, currentRoomId) {
         return;
     }
 
-    // ---
-    // --- THIS IS THE FIX: Set the room name *before* the drawing loop
-    // ---
     mapRoomName.innerText = currentRoom.name || "Unknown";
-    // ---
-    // --- END FIX
-    // ---
     
     const svgRect = mapSvg.getBoundingClientRect();
     const svgWidth = svgRect.width;
@@ -396,19 +369,11 @@ function drawMap(mapData, currentRoomId) {
         mapSvg.appendChild(g);
     }
 
-    // ---
-    // --- THIS IS THE FIX: Set exits at the end
-    // ---
     mapRoomExits.innerText = Array.from(allExits).join(', ') || 'None';
-    // ---
-    // --- END FIX
-    // ---
 }
 
 
-// ---
-// --- WEBSOCKET EVENT LISTENERS (Unchanged logic, just calls new func)
-// ---
+// --- WEBSOCKET EVENT LISTENERS ---
 
 socket.on('command_response', (data) => {
     currentClientState = "in_game"; 
@@ -422,7 +387,7 @@ socket.on('command_response', (data) => {
     }
     
     if (data.vitals) {
-        updateVitals(data.vitals); // This will now call updateGuiPanels
+        updateVitals(data.vitals);
     }
     
     if (data.map_data && data.vitals && data.vitals.current_room_id) {
@@ -433,20 +398,15 @@ socket.on('command_response', (data) => {
 socket.on('message', (message) => {
     addMessage(message);
 });
-// ---
-// --- NEW: Added listeners for group/band chat
-// ---
 socket.on('group_chat', (message) => {
-    addMessage(message, 'group-chat'); // You'll need to add a 'group-chat' style
+    addMessage(message, 'group-chat'); 
 });
 socket.on('group_chat_ooc', (message) => {
-    addMessage(message, 'group-chat-ooc'); // You'll need to add a 'group-chat-ooc' style
+    addMessage(message, 'group-chat-ooc'); 
 });
 socket.on('band_chat', (message) => {
-    addMessage(message, 'band-chat'); // You'll need to add a 'band-chat' style
+    addMessage(message, 'band-chat'); 
 });
-// --- END NEW ---
-
 
 socket.on('tick', () => {
     if (currentClientState === "in_game" && currentGameState === "playing" && !rtTimer) {
@@ -456,12 +416,10 @@ socket.on('tick', () => {
 
 socket.on('update_vitals', (data) => {
     if (data) {
-        updateVitals(data); // This will now call updateGuiPanels
+        updateVitals(data);
     }
 });
 
-// (All login/auth flow listeners are unchanged)
-// ...
 socket.on('connect', () => {
     console.log("Connected to server with ID:", socket.id);
 });
@@ -518,13 +476,29 @@ socket.on('char_invalid', (message) => {
     addMessage(message);
 });
 
-// ---
-// --- INPUT LISTENERS
-// ---
+// --- INPUT LISTENERS ---
 
-// (Input 'keydown' listener for Enter/ArrowUp/ArrowDown is unchanged)
-// ...
 input.addEventListener('keydown', async function(event) {
+    // --- NEW: Tab Completion ---
+    if (event.key === 'Tab') {
+        event.preventDefault(); // Stop focus change
+        
+        const currentText = input.value;
+        if (!currentText) return;
+        
+        // Simple strategy: Match against COMMON_COMMANDS
+        const matches = COMMON_COMMANDS.filter(cmd => cmd.startsWith(currentText.toLowerCase()));
+        
+        if (matches.length === 1) {
+            input.value = matches[0] + " ";
+        } else if (matches.length > 1) {
+            // Just pick the first match that is strictly longer for simplicity
+            input.value = matches[0] + " ";
+        }
+        return;
+    }
+    // --- END NEW ---
+
     if (event.key === 'Enter') {
         const commandText = input.value;
         if (!commandText && currentClientState !== 'login_pass') return;
@@ -565,9 +539,6 @@ input.addEventListener('keydown', async function(event) {
     }
 });
 
-
-// (All click listeners for context menu and output are unchanged)
-// ...
 output.addEventListener('click', function(event) {
     const target = event.target;
     if (target.classList.contains('keyword')) {
@@ -615,11 +586,6 @@ contextMenu.addEventListener('click', function(event) {
     }
 });
 
-// ---
-// --- NEW: WIDGET AND PANEL EVENT LISTENERS
-// ---
-
-// --- Panel Toggle Button ---
 panelToggleButton.addEventListener('click', () => {
     leftPanel.classList.toggle('collapsed');
     if (leftPanel.classList.contains('collapsed')) {
@@ -629,15 +595,11 @@ panelToggleButton.addEventListener('click', () => {
     }
 });
 
-// --- Widget Minimize ---
 leftPanel.addEventListener('click', (e) => {
-    // Check if the click was on the header's pseudo-element (::after)
-    // We do this by checking click position relative to the header's right edge
     const header = e.target.closest('.widget-header');
     if (header) {
         const rect = header.getBoundingClientRect();
         const clickX = e.clientX;
-        // If click is on the "button" area (last 30px)
         if (clickX > rect.right - 30) {
             e.preventDefault();
             e.stopPropagation();
@@ -646,13 +608,11 @@ leftPanel.addEventListener('click', (e) => {
     }
 });
 
-// --- Widget Drag and Drop ---
 let draggedWidget = null;
 
 leftPanel.addEventListener('dragstart', (e) => {
     if (e.target.classList.contains('widget-header')) {
         draggedWidget = e.target.closest('.widget');
-        // Check if the widget is minimized, if so, don't allow drag
         if (draggedWidget.classList.contains('minimized')) {
             draggedWidget = null;
             e.preventDefault();
@@ -671,25 +631,21 @@ leftPanel.addEventListener('dragend', (e) => {
 });
 
 leftPanel.addEventListener('dragover', (e) => {
-    e.preventDefault(); // Necessary to allow drop
+    e.preventDefault(); 
     
     const targetWidget = e.target.closest('.widget');
     if (targetWidget && draggedWidget && targetWidget !== draggedWidget) {
         const rect = targetWidget.getBoundingClientRect();
-        // Get mouse position relative to the target widget
         const offsetY = e.clientY - rect.top;
         
-        // If dragging over the top half, insert before, else insert after
         if (offsetY < rect.height / 2) {
             leftPanel.insertBefore(draggedWidget, targetWidget);
         } else {
-            // insertAfter
             leftPanel.insertBefore(draggedWidget, targetWidget.nextSibling);
         }
     }
 });
 
-// --- Combat Widget Actions ---
 stanceSelect.addEventListener('change', (e) => {
     sendCommand(`stance ${e.target.value}`);
 });
@@ -698,7 +654,6 @@ stowMainhandBtn.addEventListener('click', (e) => {
     e.preventDefault();
     if (currentVitals && currentVitals.worn_items.mainhand) {
         const itemName = currentVitals.worn_items.mainhand.name;
-        // --- FIX: Use REMOVE command to stow ---
         sendCommand(`remove ${itemName.toLowerCase()}`);
     } else {
         addMessage("You are not holding anything in your main hand.");
@@ -709,15 +664,12 @@ stowOffhandBtn.addEventListener('click', (e) => {
     e.preventDefault();
     if (currentVitals && currentVitals.worn_items.offhand) {
         const itemName = currentVitals.worn_items.offhand.name;
-        // --- FIX: Use REMOVE command to stow ---
         sendCommand(`remove ${itemName.toLowerCase()}`);
     } else {
         addMessage("You are not holding anything in your off hand.");
     }
 });
 
-
-// --- Initialize GUI on load (Unchanged) ---
 updateVitals({
     hp: 0, max_hp: 0,
     mana: 0, max_mana: 0,
@@ -727,7 +679,6 @@ updateVitals({
     status_effects: [],
     rt_end_time_ms: 0,
     rt_type: "hard",
-    // --- NEW: Add defaults for new GUI ---
     stance: "neutral",
     wounds: {},
     exp_to_next: 0,

@@ -24,7 +24,7 @@ from mud_backend.core.game_loop import monster_ai
 from mud_backend import config
 from mud_backend.core.room_handler import _handle_npc_idle_dialogue
 from mud_backend.core.worker import WorkerManager
-from mud_backend.core import quest_handler # <--- Added import
+from mud_backend.core import quest_handler 
 
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'static'))
@@ -67,9 +67,7 @@ def persistence_task(world_instance: World):
 def game_loop_task(world_instance: World):
     print("[SERVER START] Game Loop task started.")
     
-    # --- NEW: Initialize Quest Listeners ---
     quest_handler.initialize_quest_listeners(world_instance)
-    # ---------------------------------------
 
     with app.app_context():
         while True:
@@ -167,13 +165,11 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
         if new_room_id and old_room_id and old_room_id != new_room_id:
             world.socketio.server.leave_room(sid, old_room_id)
             
-            # --- FIX: Use custom leave message if present ---
             leave_msg = result_data.get("leave_message")
             if not leave_msg:
                 leave_msg = "leaves."
             
             world.broadcast_to_room(old_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> {leave_msg}', "message") 
-            # ------------------------------------------------
             
             world.socketio.server.enter_room(sid, new_room_id)
             world.broadcast_to_room(new_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> arrives.', "message", skip_sid=sid)
@@ -267,13 +263,28 @@ def handle_command_event(data):
             return
         session['player_name'] = char_name
         session['state'] = 'in_game'
+        
+        # --- EXECUTE LOGIN ---
+        # 1. Execute 'look' to initialize session
         result_data = execute_command(world, char_name, "look", sid)
+        
+        # 2. Fetch Player Object to get history
         player_info = world.get_player_info(char_name.lower())
         if player_info:
+            player_obj = player_info.get("player_obj")
             room_id = player_info.get("current_room_id")
+            
+            # 3. Send History (Inject into result_data or send separately)
+            # Prepend history to the look output for seamlessness
+            if player_obj and player_obj.message_history:
+                # We prepend history, excluding the last few if they duplicate the 'look' output
+                # Just dumping it is usually fine
+                result_data["messages"] = player_obj.message_history + result_data["messages"]
+
             if room_id:
                 join_room(room_id, sid=sid)
                 world.broadcast_to_room(room_id, f"{char_name} arrives.", "message", skip_sid=sid)
+                
         emit("command_response", result_data, to=sid)
 
     elif state == 'in_game':

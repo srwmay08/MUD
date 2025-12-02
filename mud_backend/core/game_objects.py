@@ -30,6 +30,12 @@ class Player(GameEntity):
             self.is_admin = True
         
         self.messages = [] 
+        
+        # --- NEW: QoL Storage ---
+        self.aliases = self.data.get("aliases", {})
+        self.message_history = self.data.get("message_history", [])
+        # ------------------------
+
         self._is_dirty = False
         self._last_save_time = time.time()
         self.command_queue: List[str] = [] 
@@ -101,7 +107,6 @@ class Player(GameEntity):
         self.band_id = self.data.get("band_id", None) 
         self.band_xp_bank = self.data.get("band_xp_bank", 0) 
         
-        # --- NEW: Locker ---
         self.locker = self.data.get("locker", {
             "capacity": 50,
             "items": [],
@@ -182,10 +187,8 @@ class Player(GameEntity):
         sc_avg = math.trunc(sc_bonus / 3)
         return 10 + ess_b + stat_avg + hp_avg + sc_avg
 
-    # --- NEW: Encumbrance Properties ---
     @property
     def body_weight(self) -> int:
-        """Returns body weight in lbs based on race."""
         RACE_WEIGHTS = {
             "Human": 207, "Wildborn": 210, "High Elf": 160, "Dwarf": 180,
             "Gnome": 60, "Halfling": 90, "Dark Elf": 150, "Dark Dwarf": 190,
@@ -195,35 +198,22 @@ class Player(GameEntity):
 
     @property
     def max_carry_weight(self) -> float:
-        """
-        Gemstone IV Formula:
-        (trunc((STR - 20) / 200) * body_weight) + (body_weight / 200)
-        """
         str_stat = self.stats.get("STR", 50)
-        # TODO: Add enhancive checks here
-        
         term_1 = math.trunc((str_stat - 20) / 200.0 * 100) / 100.0 * self.body_weight
         term_2 = self.body_weight / 200.0
-        
-        return max(5.0, term_1 + term_2) # Minimum 5lbs
+        return max(5.0, term_1 + term_2)
 
     @property
     def current_encumbrance(self) -> float:
-        """Calculates total weight of items in inventory and worn."""
         total_weight = 0.0
-        # Inventory
         for item_id in self.inventory:
             item = self.world.game_items.get(item_id)
-            if item: total_weight += item.get("weight", 1) # Default 1lb if missing
-            
-        # Worn
+            if item: total_weight += item.get("weight", 1) 
         for slot, item_id in self.worn_items.items():
             if item_id:
                 item = self.world.game_items.get(item_id)
                 if item: total_weight += item.get("weight", 1)
-        
         return total_weight
-    # --------------------------------
 
     @property
     def hp(self): return self._hp
@@ -335,10 +325,6 @@ class Player(GameEntity):
         return "fresh and clear"
 
     def grant_experience(self, nominal_amount: int, source: str = "combat", instant: bool = False):
-        """
-        Grants experience to the player (and their band).
-        If 'instant' is True, XP is added directly to total experience, skipping field absorption.
-        """
         if self.death_sting_points > 0:
             original_nominal = nominal_amount
             nominal_amount = math.trunc(original_nominal * 0.25)
@@ -381,8 +367,6 @@ class Player(GameEntity):
                             else:
                                 member_obj.add_field_exp(share, is_band_share=True)
                     else:
-                        # Note: Instant update to offline players not fully supported via event bus yet for direct XP
-                        # Fallback to bank for offline
                         self.world.event_bus.emit("update_band_xp", player_name=member_key, amount=share)
                 return 
         
@@ -476,6 +460,12 @@ class Player(GameEntity):
 
     def send_message(self, message: str):
         self.messages.append(message)
+        # --- NEW: Update History ---
+        self.message_history.append(message)
+        # Keep last 100 messages
+        if len(self.message_history) > 100:
+            self.message_history = self.message_history[-100:]
+        # ---------------------------
 
     def get_equipped_item_data(self, slot: str) -> Optional[dict]:
         item_id = self.worn_items.get(slot) 
@@ -557,7 +547,11 @@ class Player(GameEntity):
             "band_id": self.band_id,
             "band_xp_bank": self.band_xp_bank,
             "is_admin": self.is_admin,
-            "locker": self.locker # --- NEW ---
+            "locker": self.locker,
+            # --- NEW: Save QoL Data ---
+            "aliases": self.aliases,
+            "message_history": self.message_history
+            # --------------------------
         })
         return data
 
