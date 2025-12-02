@@ -1,7 +1,7 @@
 # mud_backend/verbs/whisper.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.core.registry import VerbRegistry # <-- Added missing import
+from mud_backend.core.registry import VerbRegistry
 
 @VerbRegistry.register(["whisper"])
 class Whisper(BaseVerb):
@@ -32,13 +32,24 @@ class Whisper(BaseVerb):
                 self.player.send_message("You are not in a group.")
                 return
             
-            # Send to all members, including self
             group_id = self.player.group_id
-            self.world.send_message_to_group(
-                group_id,
-                f"{self.player.name} whispers to the group, \"{message}\"",
-                msg_type="group_chat"
-            )
+            # Send to all members, skipping ignores logic is complex for groups.
+            # Usually groups imply trust, so we might skip ignore checks, 
+            # OR we manually iterate members. Let's iterate.
+            
+            full_msg = f"{self.player.name} whispers to the group, \"{message}\""
+            
+            for member_key in group["members"]:
+                # Self
+                if member_key == self.player.name.lower():
+                    self.player.send_message(full_msg)
+                    continue
+
+                member_obj = self.world.get_player_obj(member_key)
+                if member_obj:
+                    if member_obj.is_ignoring(self.player.name):
+                        continue
+                    member_obj.send_message(full_msg, "group_chat")
             
         elif target == "ooc":
             # --- WHISPER OOC GROUP ---
@@ -56,12 +67,18 @@ class Whisper(BaseVerb):
                 self.player.send_message("You are not in a group.")
                 return
 
-            group_id = self.player.group_id
-            self.world.send_message_to_group(
-                group_id,
-                f"OOC [Group] {self.player.name}: {message}",
-                msg_type="group_chat_ooc"
-            )
+            full_msg = f"OOC [Group] {self.player.name}: {message}"
+            
+            for member_key in group["members"]:
+                if member_key == self.player.name.lower():
+                    self.player.send_message(full_msg, "group_chat_ooc")
+                    continue
+                    
+                member_obj = self.world.get_player_obj(member_key)
+                if member_obj:
+                    if member_obj.is_ignoring(self.player.name):
+                        continue
+                    member_obj.send_message(full_msg, "group_chat_ooc")
 
         else:
             # --- WHISPER <player> ---
@@ -72,6 +89,13 @@ class Whisper(BaseVerb):
             
             if target_player.name.lower() == self.player.name.lower():
                 self.player.send_message("You mumble to yourself.")
+                return
+
+            # Check Ignore
+            if target_player.is_ignoring(self.player.name):
+                # Standard behavior: Don't tell the sender they are ignored, just drop it.
+                # Or tell them "They are not listening."
+                self.player.send_message(f"You whisper to {target_player.name}, \"{message}\"")
                 return
 
             # Send to target

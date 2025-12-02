@@ -1,5 +1,6 @@
 # mud_backend/verbs/communication.py
 import time
+from collections import deque
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.registry import VerbRegistry
@@ -24,6 +25,7 @@ class Yell(BaseVerb):
     """
     Broadcasts a message to rooms within a 3-movement radius.
     Outdoor <-> Indoor transitions reduce the range by 1.
+    Ignores apply.
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="speak"):
@@ -38,14 +40,51 @@ class Yell(BaseVerb):
         # Feedback to self
         self.player.send_message(f"You {self.command} loudly, \"{message}\"")
         
-        # Broadcast via Manager (3 room radius)
-        self.world.connection_manager.broadcast_to_radius(
-            start_room_id=self.player.current_room_id,
-            radius=3,
-            message=f"{self.player.name} {self.command}s, \"{message}\"",
-            msg_type="message", 
-            skip_player_name=self.player.name
-        )
+        # BFS to find rooms in range (Radius 3)
+        radius = 3
+        start_room_id = self.player.current_room_id
+        rooms_in_range = set()
+        queue = deque([(start_room_id, 0)])
+        visited_costs = {start_room_id: 0}
+        
+        while queue:
+            curr_id, curr_cost = queue.popleft()
+            if curr_cost <= radius: rooms_in_range.add(curr_id)
+            if curr_cost >= radius: continue
+
+            curr_room = self.world.room_manager.get_room(curr_id)
+            if not curr_room: continue
+            is_curr_outdoor = curr_room.get("is_outdoor", False)
+            
+            for direction, next_room_id in curr_room.get("exits", {}).items():
+                next_room = self.world.room_manager.get_room(next_room_id)
+                if not next_room: continue
+                is_next_outdoor = next_room.get("is_outdoor", False)
+                move_cost = 1
+                if is_curr_outdoor != is_next_outdoor: move_cost += 1
+                new_total_cost = curr_cost + move_cost
+                
+                if next_room_id not in visited_costs or new_total_cost < visited_costs[next_room_id]:
+                    visited_costs[next_room_id] = new_total_cost
+                    queue.append((next_room_id, new_total_cost))
+
+        # Broadcast with Ignore Check
+        all_players = self.world.get_all_players_info()
+        sender_name = self.player.name
+        
+        for p_name, p_info in all_players:
+            if p_name == sender_name.lower(): continue
+            
+            p_room_id = p_info.get("current_room_id")
+            if p_room_id in rooms_in_range:
+                player_obj = p_info.get("player_obj")
+                # Check Ignore
+                if player_obj and player_obj.is_ignoring(sender_name):
+                    continue
+                    
+                sid = p_info.get("sid")
+                if sid:
+                    self.world.socketio.emit("message", f"{sender_name} {self.command}s, \"{message}\"", to=sid)
         
         # Yelling is exhausting
         _set_action_roundtime(self.player, 2.0, rt_type="soft")
@@ -57,16 +96,10 @@ CHANNELS = ["General", "Trade", "Newbie", "OOC", "Guild"]
 
 @VerbRegistry.register(["twist"])
 class Twist(BaseVerb):
-    """
-    Mechanic: TWIST RING
-    Activates the ring.
-    """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
-        
-        # Validate they are targeting the ring
         if "ring" not in target_name and "signet" not in target_name:
             self.player.send_message("Twist what?")
             return
@@ -90,20 +123,14 @@ class Twist(BaseVerb):
             "message", 
             skip_sid=self.player.uid
         )
-        
         _set_action_roundtime(self.player, 1.0)
 
 @VerbRegistry.register(["tap"])
 class Tap(BaseVerb):
-    """
-    Mechanic: TAP RING
-    Deactivates the ring.
-    """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
-        
         if "ring" not in target_name and "signet" not in target_name:
             self.player.send_message("Tap what?")
             return
@@ -123,10 +150,6 @@ class Tap(BaseVerb):
 
 @VerbRegistry.register(["turn"])
 class Turn(BaseVerb):
-    """
-    Mechanic: TURN RING
-    Cycles the active channel.
-    """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"): return
 
@@ -146,7 +169,6 @@ class Turn(BaseVerb):
         self.player.flags['comm_channel_idx'] = next_idx
         
         channel_name = CHANNELS[next_idx]
-        
         self.player.send_message(f"You turn the dial on your signet. It locks onto the **{channel_name}** frequency.")
         _set_action_roundtime(self.player, 0.5)
 
@@ -155,7 +177,7 @@ class Turn(BaseVerb):
 class Focus(BaseVerb):
     """
     Mechanic: FOCUS <message>
-    Sends a message to the global channel if the ring is active.
+    Sends a message to the global channel. Ignores apply.
     """
     def execute(self):
         # 1. Check if wearing ring
@@ -178,36 +200,37 @@ class Focus(BaseVerb):
         idx = self.player.flags.get('comm_channel_idx', 0)
         if idx >= len(CHANNELS): idx = 0
         channel = CHANNELS[idx]
-
         message = " ".join(self.args)
-        
+        sender_name = self.player.name
+
         # --- Special Handling for Guild Channel ---
         if channel == "Guild":
-            # Only send to members of the same group/band/guild
-            # Since we don't have a formal "Guild" object separate from Band/Group yet, 
-            # we will treat "Guild" channel as Band Chat for now.
             if not self.player.band_id:
                 self.player.send_message("You focus on the Guild frequency, but you aren't in a Band (Guild).")
                 return
-            
             self.world.send_message_to_band(
                 self.player.band_id,
-                f"[Guild] {self.player.name}: {message}",
+                f"[Guild] {sender_name}: {message}",
                 msg_type="band_chat"
             )
             self.player.send_message(f"You focus on the ring (Guild): \"{message}\"")
             _set_action_roundtime(self.player, 1.0, rt_type="soft")
             return
 
-        # --- Global Broadcast for other channels ---
-        
-        # Format: [General] Player: Message
-        formatted_msg = f"<span class='comm-channel'>[{channel}]</span> <span class='comm-name'>{self.player.name}</span>: {message}"
-        
+        # --- Global Broadcast with Ignore Check ---
+        formatted_msg = f"<span class='comm-channel'>[{channel}]</span> <span class='comm-name'>{sender_name}</span>: {message}"
         self.player.send_message(f"You focus on the ring ({channel}): \"{message}\"")
         
-        # 5. Broadcast Global
-        self.world.connection_manager.broadcast_to_world(formatted_msg, "global_chat")
+        all_players = self.world.get_all_players_info()
+        for p_name, p_info in all_players:
+            if p_name == sender_name.lower(): continue
+            
+            player_obj = p_info.get("player_obj")
+            if player_obj and player_obj.is_ignoring(sender_name):
+                continue
+                
+            sid = p_info.get("sid")
+            if sid:
+                self.world.socketio.emit("global_chat", formatted_msg, to=sid)
         
-        # Anti-spam RT
         _set_action_roundtime(self.player, 1.0, rt_type="soft")

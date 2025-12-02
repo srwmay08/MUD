@@ -31,10 +31,14 @@ class Player(GameEntity):
         
         self.messages = [] 
         
-        # --- NEW: QoL Storage ---
+        # --- QoL Storage ---
         self.aliases = self.data.get("aliases", {})
         self.message_history = self.data.get("message_history", [])
-        # ------------------------
+        
+        # --- NEW: Social Lists ---
+        self.friends = self.data.get("friends", [])
+        self.ignored = self.data.get("ignored", [])
+        # -------------------------
 
         self._is_dirty = False
         self._last_save_time = time.time()
@@ -117,6 +121,12 @@ class Player(GameEntity):
         self.level_xp_target = self._get_xp_target_for_level(self.level)
 
     def mark_dirty(self): self._is_dirty = True
+
+    def is_ignoring(self, other_name: str) -> bool:
+        return other_name.lower() in self.ignored
+
+    def is_friend(self, other_name: str) -> bool:
+        return other_name.lower() in self.friends
 
     @property
     def race(self) -> str: 
@@ -460,7 +470,7 @@ class Player(GameEntity):
 
     def send_message(self, message: str):
         self.messages.append(message)
-        # --- NEW: Update History ---
+        # --- Update History ---
         self.message_history.append(message)
         # Keep last 100 messages
         if len(self.message_history) > 100:
@@ -548,10 +558,12 @@ class Player(GameEntity):
             "band_xp_bank": self.band_xp_bank,
             "is_admin": self.is_admin,
             "locker": self.locker,
-            # --- NEW: Save QoL Data ---
             "aliases": self.aliases,
-            "message_history": self.message_history
-            # --------------------------
+            "message_history": self.message_history,
+            # --- NEW: Save Social Lists ---
+            "friends": self.friends,
+            "ignored": self.ignored
+            # ------------------------------
         })
         return data
 
