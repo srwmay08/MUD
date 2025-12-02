@@ -1,6 +1,15 @@
-# AI BEHAVIOR RULES
+# AI CODING STANDARDS & BEHAVIOR
 
-1. **NO TRUNCATION:** When asked to modify, fix, or generate a file, you MUST provide the **FULL** content of the file from start to finish.
-2. **NO PLACEHOLDERS:** Do not use comments like `# ... existing code ...`, `# ... rest of file ...`, or `// ... unchanged code`.
-3. **COPY-PASTE READY:** The output must be a single, complete code block that can be copied and pasted directly into the file to overwrite it entirely.
-4. **STRICT ENFORCEMENT:** Even if the file is long, output the whole thing. If the response limit is reached, stop explicitly and ask to continue.
+## 1. ABSOLUTE OUTPUT FORMAT
+* **FULL FILES ONLY:** When asked to modify, create, or fix a file, you must output the **ENTIRE** file content from the very first import to the very last line.
+* **NO TRUNCATION:** Never shorten the output. Do not stop halfway. If the response length limit is hit, stop explicitly and ask to continue in the next message.
+* **NO PLACEHOLDERS:** The use of `...`, `# ... existing code ...`, `# ... rest of file ...`, or similar placeholders is **STRICTLY FORBIDDEN**. You must rewrite every single line of code, even if it hasn't changed.
+
+## 2. CODE FORMATTING
+* **STRICT LINE BREAKS:** Do not squash multiple statements onto a single line. Each import and each statement must be on its own line.
+* **PEP 8 COMPLIANCE:** Follow standard Python indentation (4 spaces) and formatting rules.
+* **READABILITY:** The output must be clean, readable, and identical in structure to a professional source file.
+
+## 3. INTERACTION STYLE
+* **COPY-PASTE READY:** Your output is intended to be copied directly into an IDE. It must be a single, complete, valid code block.
+* **VERBOSITY:** Prioritize completeness over conciseness in code blocks.
