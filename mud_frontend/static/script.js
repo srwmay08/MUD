@@ -1,3 +1,4 @@
+// mud_frontend/static/script.js
 // --- Get HTML elements ---
 const output = document.getElementById('output');
 const input = document.getElementById('command-input');
@@ -20,7 +21,6 @@ const gaugeTexts = {
 };
 // --- END NEW ---
 
-// --- MODIFIED: Renamed mapPanel to leftPanel ---
 const leftPanel = document.getElementById('left-panel');
 const panelToggleButton = document.getElementById('panel-toggle-button'); 
 const mapSvg = document.getElementById('map-svg');
@@ -28,7 +28,6 @@ const mapRoomName = document.getElementById('map-room-name');
 const mapRoomExits = document.getElementById('map-room-exits');
 const svgNS = "http://www.w3.org/2000/svg"; 
 
-// --- NEW: Get new Widget elements ---
 const stanceSelect = document.getElementById('stance-select');
 const stowMainhandBtn = document.getElementById('stow-mainhand-btn');
 const stowOffhandBtn = document.getElementById('stow-offhand-btn');
@@ -37,9 +36,7 @@ const expLabel = document.getElementById('exp-label');
 const expFill = document.getElementById('exp-fill');
 const injurySvg = document.getElementById('injury-svg');
 const wornItemsList = document.getElementById('worn-items-list');
-// --- END NEW ---
 
-// --- NEW: Initialize Socket.IO connection ---
 const socket = io();
 
 // --- Client-side state ---
@@ -47,15 +44,12 @@ let activeKeyword = null;
 let playerName = null; 
 let currentGameState = "login"; 
 let currentClientState = "login_user"; 
-// --- NEW: Client-side vitals cache ---
 let currentVitals = null;
-// ---
 let commandHistory = [];
 let historyIndex = -1;
 let rtEndTime = 0;
 let rtTimer = null;
 
-// --- NEW: Tab Completion Dictionary ---
 const COMMON_COMMANDS = [
     "attack", "cast", "look", "inventory", "get", "take", "drop", "put", "stow",
     "north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest",
@@ -66,16 +60,13 @@ const COMMON_COMMANDS = [
     "buy", "sell", "list", "order", "appraise",
     "forage", "harvest", "mine", "chop", "fish", "skin", "search"
 ];
-// ---
 
-// --- Helper: Send Command to Backend (Unchanged) ---
 function sendCommand(command) {
     socket.emit('command', {
         command: command
     });
 }
 
-// --- Helper: Add Message to Output (Unchanged) ---
 function addMessage(message, messageClass = null) {
     let formattedMessage = message;
     formattedMessage = formattedMessage.replace(
@@ -88,10 +79,6 @@ function addMessage(message, messageClass = null) {
     output.innerHTML += `\n${formattedMessage}`;
     output.scrollTop = output.scrollHeight;
 }
-
-// ---
-// --- GUI Update Functions
-// ---
 
 function updateRtDisplay() {
     const now = Date.now();
@@ -153,7 +140,6 @@ function updateVitals(vitals) {
     
     currentVitals = vitals;
 
-    // 1. Update Gauges
     const gauges = ['health', 'mana', 'stamina', 'spirit'];
     gauges.forEach(type => {
         const current = vitals[type] || 0;
@@ -171,76 +157,113 @@ function updateVitals(vitals) {
         }
     });
 
-    // 2. Update Posture & Status
     let statusText = vitals.posture || "Unknown";
     if (vitals.status_effects && vitals.status_effects.length > 0) {
         statusText += ` (${vitals.status_effects.join(', ')})`;
     }
     postureStatusEl.innerText = statusText;
 
-    // 3. Update Roundtime
     if (vitals.rt_end_time_ms > Date.now()) {
         startRtTimer(vitals.rt_duration_ms, vitals.rt_end_time_ms, vitals.rt_type || 'hard');
     }
     
-    // 4. Update GUI Panels
     updateGuiPanels(vitals);
 }
 
 const WOUND_COORDS = {
     "head":       { x: 8, y: 1.5, r: 1.5 },
-    "neck":       { x: 8, y: 3.5, r: 0.5 },
-    "chest":      { x: 8, y: 6, r: 2 },
-    "abdomen":    { x: 8, y: 8.5, r: 2 },
-    "back":       { x: 8, y: 7, r: 2 }, 
-    "right_eye":  { x: 7.5, y: 1.2, r: 0.5 },
-    "left_eye":   { x: 8.5, y: 1.2, r: 0.5 },
-    "right_arm":  { x: 5.5, y: 8, r: 1.5 }, 
-    "left_arm":   { x: 10.5, y: 8, r: 1.5 }, 
+    "neck":       { x: 8, y: 3.5, r: 1 }, // Increased R for text visibility
+    "chest":      { x: 8, y: 6, r: 1.5 },
+    "abdomen":    { x: 8, y: 9, r: 1.5 },
+    "back":       { x: 8, y: 7, r: 1.5 }, 
+    "right_eye":  { x: 7, y: 1.5, r: 0.8 },
+    "left_eye":   { x: 9, y: 1.5, r: 0.8 },
+    "right_arm":  { x: 5.5, y: 8, r: 1.2 }, 
+    "left_arm":   { x: 10.5, y: 8, r: 1.2 }, 
     "right_hand": { x: 5, y: 9.5, r: 1 },
     "left_hand":  { x: 11, y: 9.5, r: 1 },
-    "right_leg":  { x: 6.75, y: 12.5, r: 2 },
-    "left_leg":   { x: 9.25, y: 12.5, r: 2 }
+    "right_leg":  { x: 6.75, y: 12.5, r: 1.2 },
+    "left_leg":   { x: 9.25, y: 12.5, r: 1.2 },
+    
+    // Special mappings
+    "spirit":     { x: 11, y: 12.5, r: 1 }, // Over Heart icon
+    "heart":      { x: 11, y: 12.5, r: 1 }, 
+    "nerves":     { x: 3, y: 12.5, r: 1 }, // Over Lightning icon
+    "nervous":    { x: 3, y: 12.5, r: 1 }
 };
 
-function createWoundMarker(x, y, rank) {
+// --- UPDATED: Function to create circle AND text ---
+function createMarker(x, y, rank, isScar=false) {
+    const group = document.createElementNS(svgNS, 'g');
+    
     const circle = document.createElementNS(svgNS, 'circle');
     circle.setAttribute('cx', x);
     circle.setAttribute('cy', y);
-    circle.setAttribute('r', 1); 
-    circle.classList.add('wound-marker');
-    injurySvg.appendChild(circle);
+    // Fixed size for readability
+    circle.setAttribute('r', 1.2); 
+    circle.classList.add(isScar ? 'scar-marker' : 'wound-marker');
+    
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', x);
+    text.setAttribute('y', y);
+    text.classList.add('marker-text');
+    if (isScar) text.classList.add('scar');
+    text.textContent = rank;
+    
+    group.appendChild(circle);
+    group.appendChild(text);
+    
+    injurySvg.appendChild(group);
 }
 
 function updateGuiPanels(vitals) {
     if (!vitals) return;
     
-    // 1. Update Experience Widget
     if (vitals.exp_to_next !== undefined) {
         expValue.innerText = vitals.exp_to_next.toLocaleString();
         expLabel.innerText = vitals.exp_label || "until next level";
         expFill.style.width = `${vitals.exp_percent || 0}%`;
     }
 
-    // 2. Update Injuries Widget
-    injurySvg.querySelectorAll('.wound-marker').forEach(m => m.remove());
-    if (vitals.wounds) {
-        for (const [location, rank] of Object.entries(vitals.wounds)) {
-            const coords = WOUND_COORDS[location];
-            if (coords) {
-                createWoundMarker(coords.x, coords.y, rank);
+    // --- UPDATED: Handle Wounds AND Scars ---
+    injurySvg.querySelectorAll('.wound-marker, .scar-marker, .marker-text').forEach(m => m.parentElement.remove());
+    
+    // Draw Scars first (underneath)
+    if (vitals.scars) {
+        for (const [location, rank] of Object.entries(vitals.scars)) {
+            const coords = WOUND_COORDS[location.toLowerCase()] || WOUND_COORDS[location.replace(" ", "_")];
+            if (coords && rank > 0) {
+                // Slight offset if wound exists? For now, simple overlay.
+                // If both exist, maybe we shift x?
+                let x = coords.x;
+                if (vitals.wounds && vitals.wounds[location]) {
+                     x -= 1.0; // Shift left if wound exists
+                }
+                createMarker(x, coords.y, rank, true);
             }
         }
     }
 
-    // 3. Update Combat Widget
+    // Draw Wounds
+    if (vitals.wounds) {
+        for (const [location, rank] of Object.entries(vitals.wounds)) {
+            const coords = WOUND_COORDS[location.toLowerCase()] || WOUND_COORDS[location.replace(" ", "_")];
+            if (coords && rank > 0) {
+                let x = coords.x;
+                 if (vitals.scars && vitals.scars[location]) {
+                     x += 1.0; // Shift right if scar exists
+                }
+                createMarker(x, coords.y, rank, false);
+            }
+        }
+    }
+
     if (vitals.stance) {
         stanceSelect.value = vitals.stance;
     }
 
-    // 4. Update Inventory Widget
     if (vitals.worn_items) {
-        wornItemsList.innerHTML = ''; // Clear list
+        wornItemsList.innerHTML = ''; 
         const items = Object.values(vitals.worn_items);
         
         if (items.length === 0) {
@@ -277,6 +300,7 @@ function drawMap(mapData, currentRoomId) {
 
     mapRoomName.innerText = currentRoom.name || "Unknown";
     
+    // Use the explicit width/height from CSS/HTML attributes for calculation
     const svgRect = mapSvg.getBoundingClientRect();
     const svgWidth = svgRect.width;
     const svgHeight = svgRect.height;
@@ -371,9 +395,6 @@ function drawMap(mapData, currentRoomId) {
 
     mapRoomExits.innerText = Array.from(allExits).join(', ') || 'None';
 }
-
-
-// --- WEBSOCKET EVENT LISTENERS ---
 
 socket.on('command_response', (data) => {
     currentClientState = "in_game"; 
@@ -476,28 +497,22 @@ socket.on('char_invalid', (message) => {
     addMessage(message);
 });
 
-// --- INPUT LISTENERS ---
-
 input.addEventListener('keydown', async function(event) {
-    // --- NEW: Tab Completion ---
     if (event.key === 'Tab') {
-        event.preventDefault(); // Stop focus change
+        event.preventDefault(); 
         
         const currentText = input.value;
         if (!currentText) return;
         
-        // Simple strategy: Match against COMMON_COMMANDS
         const matches = COMMON_COMMANDS.filter(cmd => cmd.startsWith(currentText.toLowerCase()));
         
         if (matches.length === 1) {
             input.value = matches[0] + " ";
         } else if (matches.length > 1) {
-            // Just pick the first match that is strictly longer for simplicity
             input.value = matches[0] + " ";
         }
         return;
     }
-    // --- END NEW ---
 
     if (event.key === 'Enter') {
         const commandText = input.value;
@@ -681,6 +696,7 @@ updateVitals({
     rt_type: "hard",
     stance: "neutral",
     wounds: {},
+    scars: {},
     exp_to_next: 0,
     exp_label: "...",
     exp_percent: 0,

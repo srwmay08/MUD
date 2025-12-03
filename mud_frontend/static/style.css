@@ -21,52 +21,46 @@ body {
     margin-bottom: 5px;
 }
 
-/* --- MODIFIED: Map Panel is now Left Panel --- */
 #left-panel {
     width: 250px;
     flex-shrink: 0;
-    /* --- NEW: Use flex for widgets --- */
     display: flex;
     flex-direction: column;
-    overflow-y: auto; /* Allow widgets to scroll */
+    overflow-y: auto; 
     overflow-x: hidden;
-    /* --- END NEW --- */
     transition: width 0.2s ease-out, padding 0.2s ease-out, min-width 0.2s ease-out;
     position: relative;
     border: 1px solid #333;
-    background: #000; /* Background for the panel itself */
+    background: #000; 
 }
 
-/* --- NEW: Left Panel Widgets --- */
 .widget {
     background: #0a0a0a;
     border-bottom: 1px solid #333;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Hide content when minimized */
-    /* --- NEW: Don't let widgets shrink --- */
+    overflow: hidden; 
     flex-shrink: 0;
 }
 
 .widget-header {
     padding: 5px 8px;
     background: #1a1a1a;
-    color: #f0c674; /* Yellow */
+    color: #f0c674; 
     font-weight: bold;
     flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    cursor: grab; /* For drag/drop */
+    cursor: grab; 
 }
 .widget-header:active {
     cursor: grabbing;
 }
 
-/* Add a minimize button */
 .widget-header::after {
-    content: '−'; /* Minus sign */
+    content: '−'; 
     font-size: 1.2em;
     font-weight: bold;
     color: #888;
@@ -78,42 +72,32 @@ body {
 }
 
 .widget-content {
-    /* --- MODIFIED: Use flex --- */
     padding: 8px;
     flex-grow: 1;
     display: flex; 
     flex-direction: column;
-    overflow-y: auto; /* Allow content to scroll if needed */
-    /* --- NEW: Limit max height for most widgets --- */
+    overflow-y: auto; 
     max-height: 250px; 
 }
 
-/* Minimized state */
 .widget.minimized .widget-content {
     display: none;
 }
 .widget.minimized .widget-header {
-    border-bottom: none; /* No border when minimized */
+    border-bottom: none; 
 }
 .widget.minimized .widget-header::after {
-    content: '+'; /* Plus sign */
+    content: '+'; 
 }
 
-/* --- NEW: Drag-in-progress style --- */
 .widget.dragging {
     opacity: 0.4;
     background: #333;
 }
-.drag-over {
-    /* This class is a placeholder, you can add a border */
-    /* border-top: 2px dashed #f0c674 !important; */
-}
 
-/* --- Specific Widget Styles --- */
-
-/* Experience */
+/* --- Experience Widget --- */
 #exp-widget .widget-content {
-    max-height: 50px; /* This one is short */
+    max-height: 50px; 
 }
 #exp-bar {
     width: 100%;
@@ -123,9 +107,9 @@ body {
     box-sizing: border-box;
 }
 #exp-fill {
-    width: 0%; /* 0% = 0 exp, 100% = next level */
+    width: 0%; 
     height: 100%;
-    background: #182fa3; /* Blue */
+    background: #182fa3; 
     transition: width 0.2s ease-out;
 }
 #exp-text {
@@ -137,7 +121,7 @@ body {
 #exp-value { color: #FFF; font-weight: bold; }
 #exp-label { color: #aaa; }
 
-/* Injuries */
+/* --- Injuries Widget --- */
 #injuries-widget .widget-content {
     padding: 0;
     align-items: center;
@@ -145,30 +129,45 @@ body {
     min-height: 200px;
 }
 #injury-svg {
-    width: 56%; /* Was 80% */
+    width: 56%; 
     height: auto;
 }
 #body-outline {
-    fill: none;       /* This makes the shape hollow */
-    stroke: #777;     /* This is the line color */
-    stroke-width: 0.5; /* This makes the line very thin (on a 16x16 viewbox) */
+    fill: none;       
+    stroke: #777;     
+    stroke-width: 0.5; 
 }
-
-/* --- NEW: Style for the new static icons --- */
 .body-icon {
-    fill: #555; /* A slightly lighter gray than the fill */
-    stroke: none; /* No stroke for these */
+    fill: #555; 
+    stroke: none; 
 }
-/* --- END NEW --- */
 
+/* -- NEW: Wound & Scar Markers -- */
 .wound-marker {
-    fill: #a00000; /* Red */
-    stroke: #F00;
-    stroke-width: 0.25; /* Thinner stroke for the smaller icon */
-    opacity: 0.8;
+    fill: #a00000; /* Dark Red */
+    stroke: #F00;  /* Bright Red Outline */
+    stroke-width: 0.25; 
+}
+.scar-marker {
+    fill: #ffdab9; /* Peach/Skin tone */
+    stroke: #8b4513; /* Brown outline */
+    stroke-width: 0.25;
+}
+.marker-text {
+    font-family: sans-serif;
+    font-size: 1.5px; /* Very small relative to 16x16 SVG coord system */
+    font-weight: bold;
+    fill: #fff; /* White text for red wounds */
+    pointer-events: none;
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+.marker-text.scar {
+    fill: #000; /* Black text for peach scars */
 }
 
-/* Combat */
+
+/* --- Combat Widget --- */
 #combat-widget .widget-content {
     max-height: 120px;
 }
@@ -196,7 +195,7 @@ body {
     margin-left: 10px;
 }
 
-/* Inventory */
+/* --- Inventory Widget --- */
 #inventory-widget .widget-content {
     max-height: 200px;
     font-size: 0.9em;
@@ -204,45 +203,40 @@ body {
 }
 .worn-item-slot {
     color: #aaa;
-    width: 100px; /* Align names */
+    width: 100px; 
     flex-shrink: 0;
     display: inline-block;
 }
 .worn-item-name {
-    color: #f0c674; /* Yellow */
+    color: #f0c674; 
 }
 
-/* Map Widget */
+/* --- Map Widget --- */
 #map-widget {
-    flex-grow: 1; /* This widget will expand */
-    min-height: 150px; /* Don't let it get too small */
+    flex-grow: 0; /* Don't auto expand too much if content is fixed */
 }
 #map-widget .widget-content {
     padding: 0;
-    max-height: none; /* Map content can be as tall as it needs */
+    display: flex;
+    justify-content: center;
+    background: #000;
 }
-/* END Specific Widget Styles */
 
-
-/* --- MODIFIED: Renamed map-header/footer --- */
 #map-room-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* MODIFIED: Renamed toggle button */
 #panel-toggle-button {
     font-size: 1.2em;
     font-weight: bold;
     color: #888;
     cursor: pointer;
     padding: 0 5px;
-    
-    /* NEW: Position it outside the panel */
     position: absolute;
     top: 0px;
-    right: -24px; /* Move it outside the panel */
+    right: -24px; 
     background: #1a1a1a;
     border: 1px solid #333;
     border-left: none;
@@ -255,7 +249,10 @@ body {
 }
 
 #map-svg {
-    flex-grow: 1;
+    /* Modified to responsive width but respecting the viewBox usually handled by JS */
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1; /* Force Square */
     background: #000;
 }
 
@@ -270,35 +267,29 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-/* --- END MODIFIED --- */
 
-
-/* --- MODIFIED: Collapsed State --- */
 #left-panel.collapsed {
-    /* --- NEW: Use min-width for transition --- */
     width: 0px;
     min-width: 0px; 
     border-left: none;
     border-right: none;
 }
 #left-panel.collapsed .widget {
-    display: none; /* Hide all widgets */
+    display: none; 
 }
 
 #left-panel.collapsed #panel-toggle-button {
-    right: -24px; /* Position remains the same */
+    right: -24px; 
 }
-/* --- END MODIFIED --- */
 
-
-/* --- NEW: Map SVG Styles (Unchanged) --- */
+/* --- Map SVG Internal Styles --- */
 .map-room rect {
     fill: #2a2a2a;
     stroke: #555;
     stroke-width: 1;
 }
 .map-room.current rect {
-    fill: #f0c674; /* Yellow */
+    fill: #f0c674; 
     stroke: #FFF;
     stroke-width: 2;
 }
@@ -323,9 +314,9 @@ body {
     font-weight: bold;
     text-anchor: middle;
 }
-.map-special-exit.up { fill: #8f8; } /* Green */
-.map-special-exit.down { fill: #f88; } /* Red */
-.map-special-exit.inout { fill: #88f; } /* Blue */
+.map-special-exit.up { fill: #8f8; } 
+.map-special-exit.down { fill: #f88; } 
+.map-special-exit.inout { fill: #88f; } 
 
 
 #output {
@@ -341,13 +332,12 @@ body {
     background: #0a0a0a;
 }
 
-/* --- (All other styles for output, input, gauges, and context-menu are unchanged) --- */
 .room-title {
-    color: #61bfff; /* Bright Blue */
+    color: #61bfff; 
     font-weight: bold;
 }
 .keyword {
-    color: #f0c674; /* Yellow/Gold */
+    color: #f0c674; 
     text-decoration: underline;
     cursor: pointer;
 }
@@ -384,11 +374,11 @@ body {
     transition: background-color 0.1s ease;
 }
 .rt-box.active.hard {
-    background-color: #800000; /* Dark Red */
+    background-color: #800000; 
     border-color: #F00;
 }
 .rt-box.active.soft {
-    background-color: #000080; /* Dark Blue */
+    background-color: #000080; 
     border-color: #00F;
 }
 #input-line > span {

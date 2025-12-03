@@ -83,7 +83,12 @@ class Player(GameEntity):
         self.death_sting_points = self.data.get("death_sting_points", 0)
         self.con_lost = self.data.get("con_lost", 0)
         self.con_recovery_pool = self.data.get("con_recovery_pool", 0)
+        
+        # --- WOUNDS & SCARS ---
         self.wounds = self.data.get("wounds", {})
+        self.scars = self.data.get("scars", {})
+        # ----------------------
+
         self.next_mana_pulse_time = self.data.get("next_mana_pulse_time", 0.0)
         self.mana_pulse_used = self.data.get("mana_pulse_used", False)
         self.last_spellup_use_time = self.data.get("last_spellup_use_time", 0.0)
@@ -542,6 +547,9 @@ class Player(GameEntity):
             "con_lost": self.con_lost,
             "con_recovery_pool": self.con_recovery_pool,
             "wounds": self.wounds,
+            # --- NEW: Scars ---
+            "scars": self.scars,
+            # ------------------
             "next_mana_pulse_time": self.next_mana_pulse_time,
             "mana_pulse_used": self.mana_pulse_used,
             "last_spellup_use_time": self.last_spellup_use_time,
@@ -560,10 +568,8 @@ class Player(GameEntity):
             "locker": self.locker,
             "aliases": self.aliases,
             "message_history": self.message_history,
-            # --- NEW: Save Social Lists ---
             "friends": self.friends,
             "ignored": self.ignored
-            # ------------------------------
         })
         return data
 
@@ -597,6 +603,9 @@ class Player(GameEntity):
             "current_room_id": self.current_room_id,
             "stance": self.stance,
             "wounds": self.wounds,
+            # --- NEW: Send Scars ---
+            "scars": self.scars,
+            # -----------------------
             "worn_items": worn_data,
             "exp_to_next": self.level_xp_target - self.experience,
             "exp_percent": (self.experience / self.level_xp_target) * 100,

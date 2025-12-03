@@ -91,6 +91,7 @@ class Restore(BaseVerb):
         target.stamina = target.max_stamina
         target.spirit = target.max_spirit
         target.wounds = {}
+        target.scars = {} # Clear scars too
         target.status_effects = []
         target.con_lost = 0
         target.death_sting_points = 0
@@ -98,6 +99,7 @@ class Restore(BaseVerb):
         target.send_message("You feel a divine energy fully restore you.")
         if target != self.player:
             self.player.send_message(f"You restored {target.name}.")
+        target.mark_dirty()
 
 @VerbRegistry.register(["force"], admin_only=True)
 class Force(BaseVerb):
@@ -233,3 +235,67 @@ class Snoop(BaseVerb):
         
         target.flags["snooped_by"].append(self.player.name.lower())
         self.player.send_message(f"You are now snooping {target.name}.")
+
+@VerbRegistry.register(["injure", "scar"], admin_only=True)
+class Injure(BaseVerb):
+    """
+    Applies injuries or scars to a player for testing purposes.
+    Usage: INJURE <target> <location> <rank>
+           SCAR <target> <location> <rank>
+    Locations: head, neck, chest, abdomen, back, right_arm, left_arm, 
+               right_hand, left_hand, right_leg, left_leg, right_eye, left_eye,
+               nerves (spirit), spirit (heart)
+    """
+    def execute(self):
+        if len(self.args) < 3:
+            self.player.send_message(f"Usage: {self.command.upper()} <target> <location> <rank>")
+            return
+
+        target_name = self.args[0].lower()
+        
+        # Handle multi-word locations (e.g. "right eye" -> "right_eye")
+        # Rank is always the last argument
+        try:
+            rank = int(self.args[-1])
+            # Join everything between target and rank
+            location_raw = " ".join(self.args[1:-1]).lower()
+            location = location_raw.replace(" ", "_")
+        except ValueError:
+            self.player.send_message("Rank must be a number (e.g. 1, 2, 3).")
+            return
+            
+        if not location:
+            self.player.send_message(f"Usage: {self.command.upper()} <target> <location> <rank>")
+            return
+
+        if target_name == "self" or target_name == "me":
+            target = self.player
+        else:
+            target = self.world.get_player_obj(target_name)
+        
+        if not target:
+            self.player.send_message("Target not found.")
+            return
+
+        is_scar = self.command.lower() == "scar"
+        
+        if is_scar:
+            if rank <= 0:
+                if location in target.scars: del target.scars[location]
+                self.player.send_message(f"Removed scar on {location} for {target.name}.")
+            else:
+                target.scars[location] = rank
+                self.player.send_message(f"Applied rank {rank} scar to {location} on {target.name}.")
+        else:
+            if rank <= 0:
+                if location in target.wounds: del target.wounds[location]
+                self.player.send_message(f"Healed wound on {location} for {target.name}.")
+            else:
+                target.wounds[location] = rank
+                self.player.send_message(f"Applied rank {rank} wound to {location} on {target.name}.")
+        
+        target.mark_dirty()
+        
+        # Send update immediately
+        if target.name != self.player.name:
+            target.send_message(f"An admin has modified your body state ({self.command}).")
