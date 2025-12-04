@@ -8,646 +8,804 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #121212; color: #e5e5e5; height: 100vh; overflow: hidden; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #1e1e1e; }
-        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #666; }
         
         #main-container { display: flex; height: 100vh; }
-        #editor-panel { width: 450px; flex-shrink: 0; overflow-y: auto; padding: 1.5rem; border-right: 1px solid #333; background: #1e1e1e; display: flex; flex-direction: column; gap: 1.5rem; }
-        #visual-panel { flex-grow: 1; display: flex; flex-direction: column; background: #0a0a0a; position: relative; }
-        #map-container { flex-grow: 1; overflow: hidden; cursor: grab; position: relative; background-image: radial-gradient(#2a2a2a 1px, transparent 1px); background-size: 20px 20px; }
+        #editor-panel { width: 420px; flex-shrink: 0; overflow-y: auto; padding: 1rem; border-right: 1px solid #333; background: #1a1a1a; display: flex; flex-direction: column; gap: 1rem; }
+        #visual-panel { flex-grow: 1; display: flex; flex-direction: column; background: #0f0f0f; position: relative; }
+        
+        /* Map Canvas */
+        #map-container { flex-grow: 1; overflow: hidden; cursor: grab; position: relative; 
+                         background-image: radial-gradient(#2a2a2a 1px, transparent 1px); background-size: 20px 20px; }
         #map-container:active { cursor: grabbing; }
         #map-content { transform-origin: 0 0; transition: transform 0.1s ease-out; }
+        
+        /* Room Nodes */
         .map-room rect { fill: #333; stroke: #555; stroke-width: 1; transition: fill 0.1s; cursor: pointer; }
         .map-room:hover rect { fill: #444; stroke: #888; }
         .map-room.current rect { fill: #f59e0b; stroke: #fff; stroke-width: 2; }
-        .map-room text { font-size: 8px; fill: #888; text-anchor: middle; pointer-events: none; font-family: monospace; user-select: none; }
-        .map-room.current text { fill: #000; font-weight: bold; }
-        .map-link { stroke: #444; stroke-width: 1; pointer-events: none; }
-        .form-label { display: block; font-size: 0.75rem; color: #aaa; margin-bottom: 0.2rem; font-weight: 600; text-transform: uppercase; }
-        .form-input, .form-textarea, .form-select { width: 100%; background: #121212; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.9rem; transition: border-color 0.2s; font-family: monospace; }
-        .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: #f59e0b; }
-        .dynamic-item { background: #252525; padding: 0.5rem; border-radius: 0.25rem; border: 1px solid #333; margin-bottom: 0.5rem; font-size: 0.85rem; }
-        .btn { padding: 0.4rem 0.8rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
-        .btn:hover { filter: brightness(1.1); }
+        .map-room text { font-size: 8px; fill: #aaa; text-anchor: middle; pointer-events: none; font-family: monospace; user-select: none; }
+        
+        /* Links */
+        .map-link { stroke: #555; stroke-width: 1; pointer-events: none; marker-end: url(#arrowhead); }
+        .map-link.cross-zone { stroke: #3b82f6; stroke-width: 2; stroke-dasharray: 4; marker-end: url(#arrowhead-blue); }
+
+        /* Zone Groups */
+        .zone-group rect.zone-bg { fill: rgba(50, 50, 50, 0.05); stroke: #444; stroke-width: 1; stroke-dasharray: 4; rx: 8; }
+        .zone-group text.zone-label { fill: #555; font-size: 12px; font-weight: bold; opacity: 0.5; pointer-events: none; }
+        .zone-group:hover rect.zone-bg { stroke: #666; fill: rgba(60, 60, 60, 0.1); cursor: move; }
+        
+        /* UI Elements */
+        .form-label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 0.2rem; font-weight: 600; text-transform: uppercase; }
+        .form-input, .form-textarea, .form-select { width: 100%; background: #222; border: 1px solid #333; color: #fff; padding: 0.4rem; border-radius: 0.25rem; font-size: 0.85rem; font-family: monospace; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #f59e0b; }
+        
+        .btn { padding: 0.3rem 0.6rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; cursor: pointer; transition: all 0.1s; }
+        .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
         .btn-primary { background: #f59e0b; color: #000; }
         .btn-danger { background: #ef4444; color: #fff; }
-        .btn-secondary { background: #3b82f6; color: #fff; }
         .btn-neutral { background: #374151; color: #fff; border: 1px solid #4b5563; }
         .btn-success { background: #10b981; color: #fff; }
-        #room-list-overlay { position: absolute; top: 10px; right: 10px; width: 220px; max-height: 400px; background: rgba(20, 20, 20, 0.95); border: 1px solid #333; border-radius: 0.5rem; overflow-y: auto; padding: 0.5rem; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        .room-list-item { padding: 6px 8px; cursor: pointer; font-size: 0.8rem; border-radius: 4px; color: #ccc; margin-bottom: 2px; }
-        .room-list-item:hover { background: #333; color: #fff; }
-        .room-list-item.active { background: #f59e0b; color: #000; font-weight: bold; }
-        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal-box { background: #1e1e1e; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #444; width: 400px; max-width: 95%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+
+        /* Object & Interaction Cards */
+        .object-card { background: #252525; border: 1px solid #444; border-radius: 4px; padding: 6px; margin-bottom: 6px; }
+        .interaction-row { display: flex; gap: 4px; margin-top: 4px; background: #1a1a1a; padding: 4px; border-radius: 3px; border: 1px solid #333; align-items: center; }
+
+        /* Context Menu */
+        #context-menu { position: absolute; display: none; background: #222; border: 1px solid #444; border-radius: 4px; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .ctx-item { padding: 8px 12px; cursor: pointer; font-size: 0.8rem; color: #ccc; }
+        .ctx-item:hover { background: #3b82f6; color: white; }
+        .ctx-divider { height: 1px; background: #333; margin: 4px 0; }
+
+        /* Zone List Overlay */
+        #zone-list { position: absolute; top: 10px; left: 10px; background: rgba(20,20,20,0.9); border: 1px solid #333; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; width: 200px; }
+        .zone-entry { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 4px; align-items: center; color: #aaa; }
         
-        /* Object Type Selector */
-        .object-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px;}
-        .obj-type-select { background: #333; color: #fff; font-size: 0.75rem; border: none; padding: 2px 5px; border-radius: 3px; }
-        
-        /* Interaction Styles */
-        .interaction-row { display: flex; gap: 4px; margin-top: 4px; background: #1a1a1a; padding: 4px; border-radius: 3px; border: 1px solid #333; }
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-box { background: #1e1e1e; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #444; width: 400px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
 <div id="main-container">
     <div id="editor-panel">
-        <div class="flex flex-col gap-2 mb-4 bg-black/20 p-3 rounded border border-white/5">
-            <div class="flex justify-between items-center">
-                <h1 class="text-lg font-bold text-amber-500">Room Architect</h1>
-                <span id="unsaved-indicator" class="text-xs text-red-400 hidden">● Unsaved</span>
-            </div>
-            <div class="grid grid-cols-5 gap-2">
-                <button onclick="showLoadModal()" class="btn btn-neutral" title="Load Zone">📂</button>
-                <button onclick="showSaveModal()" class="btn btn-neutral" title="Save Zone">💾</button>
-                <button onclick="deleteCurrentRoom()" class="btn btn-danger border border-red-800" title="Delete Room">✕</button>
-                <button onclick="newZone()" class="btn btn-danger" title="New Zone">🗑️ All</button>
-                <button onclick="createNewRoom()" class="btn btn-secondary" title="New Room">➕</button>
+        <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-2">
+            <h1 class="text-amber-500 font-bold">Room Architect</h1>
+            <div class="flex gap-2">
+                <button onclick="openLoadModal()" class="btn btn-neutral">Load Zone</button>
+                <button onclick="saveAllZones()" class="btn btn-success">Save All</button>
             </div>
         </div>
 
         <form id="room-form" onsubmit="return false;">
-            <div class="bg-black/20 p-3 rounded border border-white/5 mb-4">
-                <div class="grid grid-cols-1 gap-2 mb-2">
-                    <label class="form-label">ID</label>
-                    <input type="text" id="room_id" class="form-input text-amber-500 font-bold" oninput="updateCurrentRoomState()">
-                    <label class="form-label">Name</label>
-                    <input type="text" id="name" class="form-input" oninput="updateCurrentRoomState()">
+            <div id="no-selection" class="text-gray-500 text-center text-sm py-10">Select a room to edit</div>
+            
+            <div id="room-editor" class="hidden space-y-4">
+                <div class="bg-black/20 p-3 rounded border border-white/5">
+                    <div class="grid grid-cols-1 gap-2 mb-2">
+                        <div>
+                            <label class="form-label">Room ID</label>
+                            <input type="text" id="room_id" class="form-input text-amber-500 font-bold" oninput="updateRoomData()">
+                        </div>
+                        <div>
+                            <label class="form-label">Name</label>
+                            <input type="text" id="name" class="form-input" oninput="updateRoomData()">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><label class="form-label">X</label><input type="number" id="x" class="form-input text-center" oninput="updateRoomData()"></div>
+                        <div><label class="form-label">Y</label><input type="number" id="y" class="form-input text-center" oninput="updateRoomData()"></div>
+                        <div><label class="form-label">Z</label><input type="number" id="z" class="form-input text-center" oninput="updateRoomData()"></div>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between">
+                        <div id="file-badge" class="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-1 rounded truncate max-w-[150px]"></div>
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateRoomData()">
+                            <span class="text-xs text-gray-400">Outdoor</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-blue-900/10 border border-blue-900/30 p-2 rounded">
+                    <h2 class="text-[10px] font-bold text-blue-400 uppercase mb-1">Quick Build</h2>
+                    <div class="grid grid-cols-3 gap-1 text-xs">
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('northwest', -1, 1)">NW</button>
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('north', 0, 1)">N</button>
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('northeast', 1, 1)">NE</button>
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('west', -1, 0)">W</button>
+                        <button class="btn btn-neutral h-6 bg-blue-600 text-white" onclick="quickBuild('up', 0, 0, 1)">▲ Up</button>
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('east', 1, 0)">E</button>
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('southwest', -1, -1)">SW</button>
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('south', 0, -1)">S</button>
+                        <button class="btn btn-neutral h-6" onclick="quickBuild('southeast', 1, -1)">SE</button>
+                        <button class="btn btn-neutral h-6 col-start-2" onclick="quickBuild('down', 0, 0, -1)">▼ Dn</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Description</label>
+                    <textarea id="desc" class="form-textarea h-24" oninput="updateRoomData()"></textarea>
                 </div>
                 
-                <div class="grid grid-cols-4 gap-2">
-                    <div class="col-span-1"><label class="form-label">X</label><input type="number" id="x" class="form-input text-center" oninput="updateCurrentRoomState()"></div>
-                    <div class="col-span-1"><label class="form-label">Y</label><input type="number" id="y" class="form-input text-center" oninput="updateCurrentRoomState()"></div>
-                    <div class="col-span-1"><label class="form-label">Z</label><input type="number" id="z" class="form-input text-center" oninput="updateCurrentRoomState()"></div>
-                    <div class="col-span-1"><label class="form-label">Zone</label><input type="text" id="interior_id" class="form-input text-center text-xs" oninput="updateCurrentRoomState()"></div>
-                </div>
-                <div class="mt-2 flex gap-2">
-                     <label class="flex items-center gap-1 cursor-pointer">
-                        <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateCurrentRoomState()">
-                        <span class="text-xs text-gray-400">Outdoor</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="bg-blue-900/10 border border-blue-900/30 p-3 rounded mb-4">
-                <h2 class="text-xs font-bold text-blue-400 uppercase mb-2">Quick Build</h2>
-                <div class="grid grid-cols-3 gap-1 text-xs">
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('northwest', -1, 1)">NW</button>
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('north', 0, 1)">N</button>
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('northeast', 1, 1)">NE</button>
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('west', -1, 0)">W</button>
-                    <button class="btn btn-primary h-8" onclick="centerMapOnActive()">Find</button>
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('east', 1, 0)">E</button>
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('southwest', -1, -1)">SW</button>
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('south', 0, -1)">S</button>
-                    <button class="btn btn-neutral h-8" onclick="quickBuild('southeast', 1, -1)">SE</button>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <label class="form-label">Description</label>
-                <textarea id="desc_default" class="form-textarea h-24" oninput="updateCurrentRoomState()"></textarea>
-                <div class="text-[10px] text-gray-500 mt-1">Highlight text above and click 'Embed' on an object below.</div>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4">
                 <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="form-label">Exits</label>
-                        <button type="button" onclick="addExitUI()" class="text-xs text-amber-500 hover:text-white">+ Add</button>
-                    </div>
-                    <div id="exits-container" class="space-y-1"></div>
+                    <div class="flex justify-between items-center mb-1"><label class="form-label">Exits</label><button onclick="addExitRow()" class="text-xs text-green-400 hover:text-white">+ Add</button></div>
+                    <div id="exits-list" class="space-y-1"></div>
                 </div>
+
                 <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="form-label">Objects</label>
-                        <button type="button" onclick="addObjectUI()" class="text-xs text-amber-500 hover:text-white">+ Add</button>
-                    </div>
-                    <div id="objects-container" class="space-y-1"></div>
+                    <div class="flex justify-between items-center mb-1"><label class="form-label">Objects</label><button onclick="addObjectRow()" class="text-xs text-green-400 hover:text-white">+ Add</button></div>
+                    <div id="objects-list"></div>
                 </div>
-            </div>
-            
-             <div class="flex justify-center mt-8 pb-10">
-                <button type="button" onclick="downloadZoneJSON()" class="btn btn-secondary w-full">Download JSON</button>
+                
+                <button onclick="deleteRoom()" class="btn btn-danger w-full mt-4">Delete Room</button>
             </div>
         </form>
     </div>
 
     <div id="visual-panel">
-        <div id="room-list-overlay">
-            <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
-                <h3 class="text-xs font-bold text-gray-400 uppercase">Rooms</h3>
-                <span id="list-count" class="text-xs text-gray-500">0</span>
-            </div>
-            <div id="room-list-content"></div>
+        <div id="zone-list">
+            <div class="text-[10px] uppercase font-bold text-gray-500 border-b border-gray-700 mb-1 pb-1">Loaded Zones</div>
+            <div id="loaded-files-container"></div>
+            <button onclick="createNewZoneFile()" class="text-[10px] text-blue-400 mt-2 hover:text-white w-full text-left">+ New Zone File</button>
         </div>
 
-        <div id="map-container" onwheel="handleZoom(event)" onmousedown="startPan(event)">
+        <div class="absolute top-2 right-2 flex gap-1 z-10">
+            <button class="btn btn-neutral text-xs" id="btn-2d" onclick="setIsoMode(false)">2D</button>
+            <button class="btn btn-neutral text-xs" id="btn-3d" onclick="setIsoMode(true)">3D</button>
+        </div>
+        
+        <div class="absolute bottom-2 right-2 z-10 flex items-center bg-black/60 rounded p-1">
+             <span class="text-[10px] text-gray-400 mr-2">Level</span>
+             <input type="range" id="z-level-slider" min="-5" max="5" step="1" value="0" class="w-24 accent-amber-500" oninput="updateZDisplay()">
+             <span id="z-display" class="text-xs font-mono w-8 text-center text-amber-500">0</span>
+        </div>
+
+        <div id="map-container" onmousedown="startPan(event)" onwheel="handleZoom(event)" oncontextmenu="return false;">
             <svg id="map-svg" width="100%" height="100%">
-                <g id="map-content">
-                    <g id="map-links"></g>
-                    <g id="map-nodes"></g>
-                </g>
+                <defs>
+                    <marker id="arrowhead" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                        <polygon points="0 0, 5 2.5, 0 5" fill="#555"/>
+                    </marker>
+                    <marker id="arrowhead-blue" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                        <polygon points="0 0, 5 2.5, 0 5" fill="#3b82f6"/>
+                    </marker>
+                </defs>
+                <g id="map-content"></g>
             </svg>
         </div>
-        <div class="bg-black p-2 text-xs text-gray-500 flex justify-between border-t border-gray-800">
-            <span id="status-filename" class="font-mono">Unsaved Zone</span>
-            <span id="status-coords" class="font-mono text-amber-500"></span>
-        </div>
     </div>
+</div>
+
+<div id="context-menu">
+    <div class="ctx-item" onclick="actionConnect()">Connect to...</div>
+    <div class="ctx-item" onclick="actionAddInterior()">Add Building/Interior</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item text-red-400" onclick="deleteRoom()">Delete Room</div>
 </div>
 
 <div id="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
     <div id="load-modal" class="modal-box hidden">
-        <h2 class="text-lg font-bold text-white mb-4">Load Zone</h2>
+        <h2 class="text-lg font-bold text-white mb-4">Load Zone File</h2>
         <select id="server-file-list" class="form-select mb-4 text-sm h-64" size="10"></select>
-        <div class="flex justify-end space-x-2"><button onclick="document.getElementById('modal-overlay').style.display='none'" class="btn btn-neutral">Cancel</button><button onclick="loadFromServer()" class="btn btn-primary">Load</button></div>
+        <div class="flex justify-end gap-2">
+            <button onclick="closeModal()" class="btn btn-neutral">Cancel</button>
+            <button onclick="loadSelectedFile()" class="btn btn-primary">Load</button>
+        </div>
     </div>
-    <div id="save-modal" class="modal-box hidden">
-        <h2 class="text-lg font-bold text-white mb-4">Save Zone</h2>
-        <input type="text" id="save-filename" class="form-input mb-4 text-amber-500" placeholder="zones/new_zone.json">
-        <div class="flex justify-end space-x-2"><button onclick="document.getElementById('modal-overlay').style.display='none'" class="btn btn-neutral">Cancel</button><button onclick="saveToServer()" class="btn btn-success">Save</button></div>
+    
+    <div id="interior-modal" class="modal-box hidden">
+        <h2 class="text-lg font-bold text-amber-500 mb-2">Create Interior</h2>
+        <p class="text-xs text-gray-400 mb-4">Creates a new file and links it to the selected room.</p>
+        <label class="form-label">New Filename</label>
+        <input id="int-filename" class="form-input mb-2" placeholder="zones/shops/inn.json">
+        <label class="form-label">Interior ID</label>
+        <input id="int-id" class="form-input mb-2" placeholder="inn">
+        <label class="form-label">Entry Room Name</label>
+        <input id="int-room-name" class="form-input mb-4" placeholder="Inn Lobby">
+        <div class="flex justify-end gap-2">
+            <button onclick="closeModal()" class="btn btn-neutral">Cancel</button>
+            <button onclick="confirmAddInterior()" class="btn btn-success">Create</button>
+        </div>
     </div>
 </div>
 
-<datalist id="dl-room-ids"></datalist>
+<datalist id="dl-monsters"></datalist>
+<datalist id="dl-items"></datalist>
+<datalist id="dl-nodes"></datalist>
 
 <script>
-    // --- Global State ---
-    let zoneRooms = [];
-    let activeRoomId = null;
-    let gameAssets = { monsters: [], items: [], nodes: [], loot_tables: [] };
-    let scale = 1, panX = 0, panY = 0, isPanning = false, startPanX = 0, startPanY = 0;
+    // --- STATE ---
+    let projectData = {}; // { "filename": { rooms: [], offset: {x:0, y:0} } }
+    let activeRoom = null; // { file: "filename", index: 0 }
+    let gameAssets = { monsters: [], items: [], nodes: [] };
+    
+    // Viewport
+    let scale = 1.0;
+    let pan = { x: 0, y: 0 };
+    let isDraggingMap = false;
+    let isDraggingZone = false;
+    let dragStart = { x: 0, y: 0 };
+    let activeZoneDrag = null; 
+    let isoMode = false;
+    let currentZ = 0;
+    let contextTarget = null; 
 
-    // --- Init ---
+    const ROOM_SIZE = 24;
+    const CELL_SIZE = 40;
+    
     window.onload = async () => {
-        const c = document.getElementById('map-container');
-        panX = c.clientWidth / 2; panY = c.clientHeight / 2;
-        updateMapTransform();
+        const container = document.getElementById('map-container');
+        pan.x = container.clientWidth / 2;
+        pan.y = container.clientHeight / 2;
+        updateTransform();
+        
         await fetchAssets();
-        if(zoneRooms.length === 0) createNewRoom("start_room", 0, 0, 0);
+        
+        if (Object.keys(projectData).length === 0) {
+            createZone("unsaved_zone.json");
+        }
+        renderMap();
     };
 
+    // --- ASSETS ---
     async function fetchAssets() {
         try {
             const res = await fetch('/api/assets');
             gameAssets = await res.json();
-        } catch(e) { console.error("Failed to load assets", e); }
+            
+            const populate = (id, list) => {
+                document.getElementById(id).innerHTML = list.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+            };
+            populate('dl-monsters', gameAssets.monsters);
+            populate('dl-items', gameAssets.items);
+            populate('dl-nodes', gameAssets.nodes);
+        } catch(e) { console.error("Asset load failed", e); }
     }
 
-    // --- Helpers ---
-    function normalizeRoom(r) {
-        r.x = parseInt(r.x)||0; r.y = parseInt(r.y)||0; r.z = parseInt(r.z)||0;
-        r.room_id = String(r.room_id || `room_${Date.now()}`);
-        r.name = String(r.name || "Unnamed");
-        if(!r.description) r.description = {default:""};
-        if(!r.exits) r.exits = {};
-        if(!r.objects) r.objects = [];
-        return r;
+    // --- CORE LOGIC ---
+    function createZone(filename) {
+        if (projectData[filename]) return;
+        projectData[filename] = {
+            rooms: [],
+            offset: { x: Object.keys(projectData).length * 200, y: 0 }
+        };
+        createRoom(filename, 0, 0, 0);
+        updateFileList();
     }
 
-    function getAssetOptions(type, selectedValue) {
-        let options = `<option value="">-- Select ${type} --</option>`;
-        const list = gameAssets[type === 'monster' ? 'monsters' : (type === 'node' ? 'nodes' : 'items')] || [];
-        list.forEach(asset => {
-            const isSel = asset.id === selectedValue ? 'selected' : '';
-            options += `<option value="${asset.id}" ${isSel}>${asset.name} (${asset.id})</option>`;
+    function createRoom(filename, x, y, z, name="New Room") {
+        const zone = projectData[filename];
+        const newId = `room_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+        const newRoom = {
+            room_id: newId, name: name, x, y, z,
+            interior_id: filename.includes('/') ? filename.split('/').pop().replace('.json','') : "",
+            description: { default: "" },
+            exits: {},
+            objects: []
+        };
+        zone.rooms.push(newRoom);
+        setActiveRoom(filename, zone.rooms.length - 1);
+        renderMap();
+    }
+
+    function setActiveRoom(filename, index) {
+        activeRoom = { file: filename, index: index };
+        const room = projectData[filename].rooms[index];
+        
+        document.getElementById('no-selection').classList.add('hidden');
+        document.getElementById('room-editor').classList.remove('hidden');
+        
+        // Populate fields
+        document.getElementById('room_id').value = room.room_id;
+        document.getElementById('name').value = room.name;
+        document.getElementById('x').value = room.x;
+        document.getElementById('y').value = room.y;
+        document.getElementById('z').value = room.z;
+        document.getElementById('desc').value = room.description.default || "";
+        document.getElementById('file-badge').innerText = filename;
+        document.getElementById('is_outdoor').checked = !!room.is_outdoor;
+
+        renderLists(room);
+        renderMap();
+    }
+
+    function getActiveRoomObj() {
+        if (!activeRoom) return null;
+        return projectData[activeRoom.file].rooms[activeRoom.index];
+    }
+
+    // --- LIST RENDERING (OBJECTS & EXITS) ---
+
+    function renderLists(room) {
+        // Exits
+        const exList = document.getElementById('exits-list');
+        exList.innerHTML = '';
+        Object.entries(room.exits || {}).forEach(([dir, target]) => {
+            exList.appendChild(createExitRow(dir, target));
         });
-        return options;
+
+        // Objects
+        const obList = document.getElementById('objects-list');
+        obList.innerHTML = '';
+        (room.objects || []).forEach(obj => {
+            obList.appendChild(createObjectCard(obj));
+        });
     }
 
-    // --- NEW: Interaction Helper Functions ---
-    function addInteractionRow(container, verb="", type="text", value="") {
+    function createExitRow(dir='', target='') {
+        const div = document.createElement('div');
+        div.className = 'exit-row flex gap-1 items-center';
+        div.innerHTML = `
+            <input class="form-input exit-dir w-16 text-xs" value="${dir}" placeholder="Dir" onchange="updateRoomData()">
+            <input class="form-input exit-target flex-1 text-xs text-blue-400" value="${target}" placeholder="Room ID" onchange="updateRoomData()">
+            <button onclick="this.parentElement.remove();updateRoomData()" class="text-red-500 font-bold px-2">×</button>
+        `;
+        return div;
+    }
+
+    function createObjectCard(obj={}) {
+        const div = document.createElement('div');
+        div.className = 'object-card object-row';
+        
+        // Detect Type
+        let type = 'static';
+        let val = obj.name || "";
+        if (obj.monster_id) { type = 'monster'; val = obj.monster_id; }
+        else if (obj.item_id) { type = 'item'; val = obj.item_id; }
+        else if (obj.node_id) { type = 'node'; val = obj.node_id; }
+
+        const isRef = type !== 'static';
+
+        div.innerHTML = `
+            <div class="flex justify-between mb-2 border-b border-gray-700 pb-1">
+                <select class="obj-type bg-transparent text-xs font-bold text-amber-500 border-none p-0 cursor-pointer" onchange="changeObjType(this)">
+                    <option value="static" ${type==='static'?'selected':''}>Static</option>
+                    <option value="monster" ${type==='monster'?'selected':''}>Monster</option>
+                    <option value="item" ${type==='item'?'selected':''}>Item</option>
+                    <option value="node" ${type==='node'?'selected':''}>Node</option>
+                </select>
+                <button onclick="this.closest('.object-row').remove();updateRoomData()" class="text-red-500 font-bold text-xs">×</button>
+            </div>
+            
+            <div class="obj-body">
+                ${renderObjectBody(type, val, obj)}
+            </div>
+        `;
+        return div;
+    }
+
+    function renderObjectBody(type, val, obj) {
+        if (type === 'static') {
+            // Interactions HTML generator
+            const interactionsHtml = Object.entries(obj.interactions || {}).map(([verb, data]) => `
+                <div class="interaction-row">
+                    <span class="text-[10px] text-gray-400 w-8 font-mono">${verb}</span>
+                    <select class="form-select text-[10px] h-5 p-0 w-16 bg-black ia-type" onchange="updateRoomData()">
+                        <option value="text" ${data.type==='text'?'selected':''}>Msg</option>
+                        <option value="move" ${data.type==='move'?'selected':''}>Move</option>
+                        <option value="script" ${data.type==='script'?'selected':''}>Code</option>
+                    </select>
+                    <input class="form-input text-[10px] h-5 p-0 px-1 flex-1 bg-black ia-value" value="${data.value||''}" onchange="updateRoomData()">
+                    <button onclick="this.parentElement.remove();updateRoomData()" class="text-red-500 font-bold px-1 text-[10px]">×</button>
+                </div>
+            `).join('');
+
+            return `
+                <input class="form-input text-xs mb-1 obj-id-name" value="${val}" placeholder="Name (e.g. rusty lever)" onchange="updateRoomData()">
+                <input class="form-input text-xs mb-1 obj-keys" value="${(obj.keywords||[]).join(',')}" placeholder="Keywords (lever, rusty)" onchange="updateRoomData()">
+                <textarea class="form-textarea text-xs h-10 mb-1 obj-desc" placeholder="Description" onchange="updateRoomData()">${obj.description||''}</textarea>
+                <div class="mt-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] text-gray-500">INTERACTIONS</span>
+                        <button onclick="addInteractionRow(this)" class="text-[10px] text-blue-400">+ Add</button>
+                    </div>
+                    <div class="interactions-list space-y-1">${interactionsHtml}</div>
+                </div>
+            `;
+        } else {
+            // Reference Types (Monster/Item/Node)
+            const listId = `dl-${type}s`;
+            return `
+                <label class="form-label">Asset ID</label>
+                <input class="form-input text-xs obj-id-name text-green-400" list="${listId}" value="${val}" placeholder="Search ${type}..." onchange="updateRoomData()">
+            `;
+        }
+    }
+
+    window.changeObjType = function(select) {
+        const type = select.value;
+        const body = select.closest('.object-card').querySelector('.obj-body');
+        body.innerHTML = renderObjectBody(type, "", {});
+        updateRoomData();
+    };
+
+    window.addInteractionRow = function(btn) {
+        const container = btn.parentElement.nextElementSibling;
         const div = document.createElement('div');
         div.className = 'interaction-row';
         div.innerHTML = `
-            <input class="form-input w-1/4 text-[10px] ia-verb" placeholder="Verb (push)" value="${verb}" oninput="updateCurrentRoomState()">
-            <select class="form-select w-1/4 text-[10px] ia-type" onchange="updateCurrentRoomState()">
-                <option value="text" ${type==='text'?'selected':''}>Message</option>
-                <option value="move" ${type==='move'?'selected':''}>Move (RoomID)</option>
-                <option value="script" ${type==='script'?'selected':''}>Script (Code)</option>
+            <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" placeholder="verb" onchange="updateRoomData()">
+            <select class="form-select text-[10px] h-5 p-0 w-16 bg-black ia-type" onchange="updateRoomData()">
+                <option value="text">Msg</option>
+                <option value="move">Move</option>
+                <option value="script">Code</option>
             </select>
-            <input class="form-input w-1/2 text-[10px] ia-value" placeholder="Value" value="${value}" oninput="updateCurrentRoomState()">
-            <button onclick="this.parentElement.remove();updateCurrentRoomState()" class="text-red-500 font-bold px-1">×</button>
+            <input class="form-input text-[10px] h-5 p-0 px-1 flex-1 bg-black ia-value" placeholder="Value" onchange="updateRoomData()">
+            <button onclick="this.parentElement.remove();updateRoomData()" class="text-red-500 font-bold px-1 text-[10px]">×</button>
         `;
         container.appendChild(div);
+    };
+
+    function addExitRow() {
+        document.getElementById('exits-list').appendChild(createExitRow());
+    }
+    
+    function addObjectRow() {
+        document.getElementById('objects-list').appendChild(createObjectCard({name:""}));
     }
 
-    function renderInteractions(interactions) {
-        // Interactions come in as { "push": { "type": "move", "value": "room_id" }, ... }
-        let html = '';
-        if (!interactions) return '';
+    // --- SAVING DATA ---
+
+    function updateRoomData() {
+        const r = getActiveRoomObj();
+        if (!r) return;
         
-        // We need to render this via DOM creation in addObjectUI to bind events properly, 
-        // so this function just prepares data for the creator.
-        return ''; 
-    }
-    // -----------------------------------------
-
-    function renderObjectInputs(type, data) {
-        const hiddenCheck = `
-            <label class="flex items-center gap-1 mt-1 mb-2">
-                <input type="checkbox" class="obj-hidden accent-red-500" ${data.hidden ? 'checked' : ''} onchange="updateCurrentRoomState()">
-                <span class="text-[10px] text-gray-400">Hidden from List</span>
-            </label>
-        `;
-
-        let html = '';
-        if (type === 'static') {
-            html += `
-                <input class="form-input obj-name mb-1" value="${data.name||''}" placeholder="Name (e.g. tall statue)" oninput="updateCurrentRoomState()">
-                <textarea class="form-textarea obj-desc mb-1 h-16 text-xs" placeholder="Description" oninput="updateCurrentRoomState()">${data.description||''}</textarea>
-                <input class="form-input obj-keys text-xs" value="${(data.keywords||[]).join(',')}" placeholder="Keywords (comma sep)" oninput="updateCurrentRoomState()">
-                
-                <div class="mt-2 border-t border-gray-700 pt-1">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] text-gray-400 uppercase font-bold">Interactions</span>
-                        <button onclick="addInteractionToObj(this)" class="text-[10px] text-green-400">+ Add</button>
-                    </div>
-                    <div class="interactions-list"></div>
-                </div>
-            `;
-        } else if (type === 'monster') {
-            html += `
-                <select class="form-select obj-ref-id text-amber-500" onchange="updateCurrentRoomState()">${getAssetOptions('monster', data.monster_id)}</select>
-                <div class="text-[10px] text-gray-500 mt-1">Refers to data/monsters.json</div>
-            `;
-        } else if (type === 'item') {
-            html += `
-                <select class="form-select obj-ref-id text-green-500" onchange="updateCurrentRoomState()">${getAssetOptions('item', data.item_id)}</select>
-                <div class="text-[10px] text-gray-500 mt-1">Refers to data/items/*.json</div>
-            `;
-        } else if (type === 'node') {
-            html += `
-                <select class="form-select obj-ref-id text-blue-500" onchange="updateCurrentRoomState()">${getAssetOptions('node', data.node_id)}</select>
-                <div class="text-[10px] text-gray-500 mt-1">Refers to data/nodes.json</div>
-            `;
-        } else if (type === 'portal') {
-             html += `
-                <input class="form-input obj-name mb-1" value="${data.name||''}" placeholder="Name (e.g. iron gate)" oninput="updateCurrentRoomState()">
-                <input class="form-input obj-target mb-1 text-amber-500" list="dl-room-ids" value="${data.target_room||''}" placeholder="Target Room ID" oninput="updateCurrentRoomState()">
-                <input class="form-input obj-verbs text-xs" value="${(data.verbs||['ENTER']).join(',')}" placeholder="Verbs (e.g. ENTER, CLIMB)" oninput="updateCurrentRoomState()">
-            `;
-        }
-        return html + hiddenCheck;
-    }
-
-    function detectObjectType(obj) {
-        if (obj.monster_id) return 'monster';
-        if (obj.item_id) return 'item';
-        if (obj.node_id) return 'node';
-        if (obj.target_room) return 'portal';
-        return 'static';
-    }
-
-    window.addInteractionToObj = function(btn) {
-        const list = btn.parentElement.nextElementSibling;
-        addInteractionRow(list);
-        updateCurrentRoomState();
-    }
-
-    function addObjectUI(obj={}) {
-        const type = detectObjectType(obj);
-        const div = document.createElement('div');
-        div.className = 'dynamic-item object-item';
-        
-        div.innerHTML = `
-            <div class="object-header">
-                <div class="flex items-center gap-1">
-                    <select class="obj-type-select" onchange="changeObjType(this)">
-                        <option value="static" ${type==='static'?'selected':''}>Interactive / Static</option>
-                        <option value="monster" ${type==='monster'?'selected':''}>Monster</option>
-                        <option value="item" ${type==='item'?'selected':''}>Item</option>
-                        <option value="node" ${type==='node'?'selected':''}>Node</option>
-                        <option value="portal" ${type==='portal'?'selected':''}>Portal</option>
-                    </select>
-                    <button onclick="embedObject(this)" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] px-2 py-1 rounded" title="Wrap selection in description with this object's link">Embed</button>
-                </div>
-                <button onclick="this.closest('.object-item').remove();updateCurrentRoomState()" class="text-red-500 font-bold ml-2">×</button>
-            </div>
-            <div class="obj-content">
-                ${renderObjectInputs(type, obj)}
-            </div>
-        `;
-        document.getElementById('objects-container').appendChild(div);
-
-        // If static, populate interactions
-        if (type === 'static' && obj.interactions) {
-            const list = div.querySelector('.interactions-list');
-            Object.entries(obj.interactions).forEach(([verb, action]) => {
-                addInteractionRow(list, verb, action.type, action.value);
-            });
-        }
-    }
-
-    window.changeObjType = function(selectElem) {
-        const type = selectElem.value;
-        const contentDiv = selectElem.closest('.object-item').querySelector('.obj-content');
-        contentDiv.innerHTML = renderObjectInputs(type, {});
-        updateCurrentRoomState();
-    }
-
-    window.embedObject = function(btn) {
-        const objDiv = btn.closest('.object-item');
-        const type = objDiv.querySelector('.obj-type-select').value;
-        let name = "", verbs = "look";
-
-        if (type === 'static' || type === 'portal') {
-            name = objDiv.querySelector('.obj-name').value;
-            // Collect standard verbs + interaction verbs
-            const iaVerbs = [];
-            objDiv.querySelectorAll('.ia-verb').forEach(i => iaVerbs.push(i.value.trim()));
-            
-            // For portals
-            const pVerbsInput = objDiv.querySelector('.obj-verbs');
-            if(pVerbsInput) iaVerbs.push(...pVerbsInput.value.split(','));
-            
-            if (iaVerbs.length === 0) iaVerbs.push('look');
-            verbs = iaVerbs.filter(v=>v).join(',');
-            
-        } else {
-            const refId = objDiv.querySelector('.obj-ref-id').value;
-            let list = [];
-            if(type === 'monster') { list = gameAssets.monsters; verbs = "look,attack,talk"; }
-            else if(type === 'item') { list = gameAssets.items; verbs = "get,look,examine"; }
-            else if(type === 'node') { list = gameAssets.nodes; verbs = "look,harvest,mine"; }
-            
-            const asset = list.find(a => a.id === refId);
-            name = asset ? asset.name : refId;
-        }
-
-        if (!name) return alert("Object name required for embedding.");
-
-        const descArea = document.getElementById('desc_default');
-        const start = descArea.selectionStart;
-        const end = descArea.selectionEnd;
-        const text = descArea.value;
-        
-        const selectedText = start !== end ? text.substring(start, end) : name;
-        const span = `<span class="keyword" data-name="${name}" data-verbs="${verbs}">${selectedText}</span>`;
-        
-        descArea.value = text.substring(0, start) + span + text.substring(end);
-        
-        const hiddenCheck = objDiv.querySelector('.obj-hidden');
-        if(hiddenCheck && !hiddenCheck.checked) {
-            hiddenCheck.checked = true;
-        }
-        
-        updateCurrentRoomState();
-    }
-
-    function updateCurrentRoomState() {
-        document.getElementById('unsaved-indicator').classList.remove('hidden');
-        if(!activeRoomId) return;
-        const r = zoneRooms.find(rm => rm.room_id === activeRoomId);
-        if(!r) return;
-
-        const formId = document.getElementById('room_id').value;
-        if(formId && formId !== activeRoomId) { r.room_id = formId; activeRoomId = formId; }
-
+        r.room_id = document.getElementById('room_id').value;
         r.name = document.getElementById('name').value;
-        r.x = parseInt(document.getElementById('x').value)||0;
-        r.y = parseInt(document.getElementById('y').value)||0;
-        r.z = parseInt(document.getElementById('z').value)||0;
-        r.interior_id = document.getElementById('interior_id').value.trim();
+        r.x = parseInt(document.getElementById('x').value) || 0;
+        r.y = parseInt(document.getElementById('y').value) || 0;
+        r.z = parseInt(document.getElementById('z').value) || 0;
+        r.description.default = document.getElementById('desc').value;
         r.is_outdoor = document.getElementById('is_outdoor').checked;
-        r.description.default = document.getElementById('desc_default').value;
-
+        
+        // Save Exits
         r.exits = {};
-        document.querySelectorAll('.exit-item').forEach(el => {
-            const d = el.querySelector('.exit-dir').value.trim().toLowerCase();
-            const t = el.querySelector('.exit-target').value.trim();
-            if(d && t) r.exits[d] = t;
+        document.querySelectorAll('.exit-row').forEach(row => {
+            const dir = row.querySelector('.exit-dir').value.trim();
+            const target = row.querySelector('.exit-target').value.trim();
+            if (dir && target) r.exits[dir] = target;
         });
 
+        // Save Objects
         r.objects = [];
-        document.querySelectorAll('.object-item').forEach(el => {
-            const type = el.querySelector('.obj-type-select').value;
-            const hidden = el.querySelector('.obj-hidden').checked;
-            let newObj = { hidden: hidden };
+        document.querySelectorAll('.object-row').forEach(row => {
+            const type = row.querySelector('.obj-type').value;
+            const val = row.querySelector('.obj-id-name').value.trim();
+            if (!val) return;
 
+            let newObj = {};
             if (type === 'static') {
-                newObj.name = el.querySelector('.obj-name').value;
-                newObj.description = el.querySelector('.obj-desc').value;
-                newObj.keywords = el.querySelector('.obj-keys').value.split(',').map(s=>s.trim()).filter(s=>s);
+                newObj.name = val;
+                newObj.description = row.querySelector('.obj-desc').value;
+                const keys = row.querySelector('.obj-keys').value;
+                newObj.keywords = keys ? keys.split(',') : val.toLowerCase().split(' ');
+                newObj.verbs = ["look"];
                 
                 // Interactions
                 const interactions = {};
-                el.querySelectorAll('.interaction-row').forEach(row => {
-                    const verb = row.querySelector('.ia-verb').value.trim().toLowerCase();
-                    const iType = row.querySelector('.ia-type').value;
-                    const value = row.querySelector('.ia-value').value;
-                    if(verb) interactions[verb] = { type: iType, value: value };
+                row.querySelectorAll('.interaction-row').forEach(ir => {
+                    const v = ir.querySelector('.ia-verb')?.value || ir.querySelector('span')?.innerText; // Handle both input and span cases
+                    const t = ir.querySelector('.ia-type').value;
+                    const d = ir.querySelector('.ia-value').value;
+                    if (v) {
+                        interactions[v] = { type: t, value: d };
+                        newObj.verbs.push(v);
+                    }
                 });
                 if (Object.keys(interactions).length > 0) newObj.interactions = interactions;
-                
-                // Auto-generate verbs list for the context menu based on interactions + Look
-                newObj.verbs = ['look', 'examine'].concat(Object.keys(interactions));
-                
-            } else if (type === 'monster') {
-                newObj.monster_id = el.querySelector('.obj-ref-id').value;
-                newObj.is_monster = true;
-            } else if (type === 'item') {
-                newObj.item_id = el.querySelector('.obj-ref-id').value;
-                newObj.is_item = true;
-            } else if (type === 'node') {
-                newObj.node_id = el.querySelector('.obj-ref-id').value;
-                newObj.is_gathering_node = true;
-            } else if (type === 'portal') {
-                newObj.name = el.querySelector('.obj-name').value;
-                newObj.target_room = el.querySelector('.obj-target').value;
-                newObj.verbs = el.querySelector('.obj-verbs').value.split(',').map(s=>s.trim()).filter(s=>s);
+            } else {
+                if (type === 'monster') { newObj.monster_id = val; newObj.is_monster = true; }
+                else if (type === 'item') { newObj.item_id = val; newObj.is_item = true; }
+                else if (type === 'node') { newObj.node_id = val; newObj.is_gathering_node = true; }
             }
-
-            if (newObj.name || newObj.monster_id || newObj.item_id || newObj.node_id) {
-                r.objects.push(newObj);
-            }
+            r.objects.push(newObj);
         });
 
-        renderMap(); renderRoomList(); updateStatus();
+        renderMap();
     }
 
-    // --- (Standard Logic) ---
-    function createNewRoom(id=null, x=0, y=0, z=0) {
-        const newId = id || `room_${Date.now()}`;
-        const newRoom = { room_id: newId, name: "New Room", x, y, z, interior_id: "", description: { default: "" }, exits: {}, objects: [] };
-        zoneRooms.push(normalizeRoom(newRoom));
-        loadRoomIntoEditor(newId);
-    }
-
-    function loadRoomIntoEditor(id) {
-        activeRoomId = id;
-        const r = zoneRooms.find(rm => rm.room_id === id);
-        if (!r) return;
-        document.getElementById('room_id').value = r.room_id;
-        document.getElementById('name').value = r.name;
-        document.getElementById('x').value = r.x;
-        document.getElementById('y').value = r.y;
-        document.getElementById('z').value = r.z;
-        document.getElementById('interior_id').value = r.interior_id || "";
-        document.getElementById('is_outdoor').checked = !!r.is_outdoor;
-        document.getElementById('desc_default').value = r.description.default || "";
-        
-        const exDiv = document.getElementById('exits-container'); exDiv.innerHTML = '';
-        Object.entries(r.exits).forEach(([k,v]) => addExitUI(k,v));
-        
-        const obDiv = document.getElementById('objects-container'); obDiv.innerHTML = '';
-        r.objects.forEach(o => addObjectUI(o)); 
-        
-        renderRoomList(); renderMap(); updateStatus();
-    }
-
-    function deleteCurrentRoom() {
-        if (!activeRoomId) return;
-        if (!confirm("Delete room?")) return;
-        zoneRooms = zoneRooms.filter(r => r.room_id !== activeRoomId);
-        zoneRooms.forEach(r => {
-            for(let d in r.exits) if(r.exits[d]===activeRoomId) delete r.exits[d];
-        });
-        if(zoneRooms.length) loadRoomIntoEditor(zoneRooms[zoneRooms.length-1].room_id);
-        else createNewRoom();
-    }
-
-    function addExitUI(d='', t='') {
-        const div = document.createElement('div'); div.className = 'dynamic-item exit-item flex gap-1 items-center';
-        div.innerHTML = `<input class="form-input exit-dir w-16" value="${d}" placeholder="Dir" oninput="updateCurrentRoomState()"><input class="form-input exit-target flex-1" value="${t}" placeholder="Target ID" oninput="updateCurrentRoomState()"><button onclick="this.parentElement.remove();updateCurrentRoomState()" class="text-red-500 font-bold px-2">×</button>`;
-        document.getElementById('exits-container').appendChild(div);
-    }
-
-    function quickBuild(dir, dx, dy) {
-        if(!activeRoomId) return;
-        const cur = zoneRooms.find(r => r.room_id === activeRoomId);
-        const nx = (parseInt(cur.x)||0) + dx;
-        const ny = (parseInt(cur.y)||0) + dy;
-        const nz = (parseInt(cur.z)||0);
-        const zone = cur.interior_id || "";
-        const exist = zoneRooms.find(r => r.x===nx && r.y===ny && r.z===nz && (r.interior_id||"")===zone);
-        const backMap = {'north':'south','south':'north','east':'west','west':'east','northeast':'southwest','southwest':'northeast','northwest':'southeast','southeast':'northwest'};
-        const backDir = backMap[dir.toLowerCase()];
-
-        if(exist) {
-            addExitUI(dir, exist.room_id);
-            updateCurrentRoomState();
-            if(backDir && !exist.exits[backDir]) exist.exits[backDir] = cur.room_id;
-        } else {
-            const nid = `room_${nx}_${ny}_${nz}`;
-            addExitUI(dir, nid);
-            updateCurrentRoomState();
-            const newR = { room_id: nid, name: "New Room", x: nx, y: ny, z: nz, interior_id: zone, description:{default:""}, exits:{}, objects:[] };
-            if(backDir) newR.exits[backDir] = cur.room_id;
-            zoneRooms.push(normalizeRoom(newR));
-            loadRoomIntoEditor(nid);
-        }
-    }
-
+    // --- MAP RENDERING ---
     function renderMap() {
-        const ng = document.getElementById('map-nodes');
-        const lg = document.getElementById('map-links');
-        ng.innerHTML = ''; lg.innerHTML = '';
-        const CELL = 30, GAP = 15, UNIT = CELL+GAP;
-        const active = zoneRooms.find(r => r.room_id === activeRoomId);
-        if (!active) return;
-        const showZ = parseInt(active.z);
-        const showZone = (active.interior_id||"").trim();
-        const roomCoords = {};
+        const svg = document.getElementById('map-content');
+        svg.innerHTML = '';
         
-        zoneRooms.forEach(r => {
-            if(parseInt(r.z) !== showZ || (r.interior_id||"").trim() !== showZone) return;
-            const rx = r.x * UNIT; const ry = -r.y * UNIT;
-            roomCoords[r.room_id] = { x: rx + CELL/2, y: ry + CELL/2 };
-            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            g.setAttribute("class", `map-room ${r.room_id === activeRoomId ? 'current' : ''}`);
-            g.onclick = () => loadRoomIntoEditor(r.room_id);
-            g.innerHTML = `<rect x="${rx}" y="${ry}" width="${CELL}" height="${CELL}" rx="4"></rect><text x="${rx+CELL/2}" y="${ry+CELL/2+3}">${r.room_id.substring(0,3)}</text>`;
-            ng.appendChild(g);
+        // Draw Links First (Background)
+        Object.values(projectData).forEach(zone => {
+            zone.rooms.forEach(r => {
+                if (!isoMode && r.z !== currentZ) return;
+                const start = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                
+                Object.entries(r.exits).forEach(([dir, targetId]) => {
+                    const targetInfo = findRoomGlobal(targetId);
+                    if (targetInfo) {
+                        if (!isoMode && targetInfo.room.z !== currentZ) return;
+                        const end = getScreenCoords(targetInfo.room.x, targetInfo.room.y, targetInfo.room.z, targetInfo.zone.offset);
+                        drawLink(svg, start, end, targetInfo.file !== activeRoom?.file);
+                    }
+                });
+            });
         });
-        
-        zoneRooms.forEach(r => {
-            const start = roomCoords[r.room_id];
-            if(!start) return;
-            for(let d in r.exits) {
-                const end = roomCoords[r.exits[d]];
-                if(end) {
-                    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                    l.setAttribute("x1", start.x); l.setAttribute("y1", start.y); l.setAttribute("x2", end.x); l.setAttribute("y2", end.y);
-                    l.setAttribute("class", "map-link");
-                    lg.appendChild(l);
+
+        // Draw Zones & Rooms
+        Object.entries(projectData).forEach(([filename, zone]) => {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.classList.add('zone-group');
+            
+            // Zone Background for Dragging
+            if (zone.rooms.length > 0) {
+                let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+                let hasVisibleRooms = false;
+                zone.rooms.forEach(r => {
+                    if (!isoMode && r.z !== currentZ) return;
+                    hasVisibleRooms = true;
+                    const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                    minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
+                    minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
+                });
+
+                if (hasVisibleRooms) {
+                    const pad = 30;
+                    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    bg.setAttribute("x", minX - pad); bg.setAttribute("y", minY - pad);
+                    bg.setAttribute("width", maxX - minX + pad*2 + ROOM_SIZE);
+                    bg.setAttribute("height", maxY - minY + pad*2 + ROOM_SIZE);
+                    bg.classList.add("zone-bg");
+                    bg.onmousedown = (e) => startZoneDrag(e, filename);
+                    
+                    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    label.setAttribute("x", minX - pad); label.setAttribute("y", minY - pad - 5);
+                    label.textContent = filename;
+                    label.classList.add("zone-label");
+                    
+                    g.appendChild(bg); g.appendChild(label);
                 }
             }
+
+            // Rooms
+            zone.rooms.forEach((r, i) => {
+                if (!isoMode && r.z !== currentZ) return;
+                const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                
+                const rg = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                rg.classList.add("map-room");
+                if (activeRoom?.file === filename && activeRoom?.index === i) rg.classList.add("current");
+                
+                rg.onclick = (e) => { e.stopPropagation(); setActiveRoom(filename, i); };
+                rg.oncontextmenu = (e) => { e.preventDefault(); openContextMenu(e, r, filename); };
+
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", c.x); rect.setAttribute("y", c.y);
+                rect.setAttribute("width", ROOM_SIZE); rect.setAttribute("height", ROOM_SIZE);
+                
+                // Simple ISO depth effect
+                if (isoMode) {
+                    const depth = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    depth.setAttribute("d", `M ${c.x} ${c.y+ROOM_SIZE} L ${c.x} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE} Z`);
+                    depth.setAttribute("fill", "#222");
+                    rg.appendChild(depth);
+                }
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", c.x + ROOM_SIZE/2); text.setAttribute("y", c.y + ROOM_SIZE/2 + 3);
+                text.textContent = r.room_id.substring(0, 3);
+
+                rg.appendChild(rect); rg.appendChild(text);
+                g.appendChild(rg);
+            });
+            svg.appendChild(g);
         });
     }
 
-    function updateMapTransform() { document.getElementById('map-content').setAttribute('transform', `translate(${panX}, ${panY}) scale(${scale})`); }
-    function handleZoom(e) { e.preventDefault(); scale = Math.min(Math.max(0.1, scale + (e.deltaY * -0.001)), 5); updateMapTransform(); }
-    function startPan(e) { isPanning=true; startPanX=e.clientX-panX; startPanY=e.clientY-panY; document.addEventListener('mousemove', doPan); document.addEventListener('mouseup', endPan); }
-    function doPan(e) { if(!isPanning) return; panX=e.clientX-startPanX; panY=e.clientY-startPanY; updateMapTransform(); }
-    function endPan() { isPanning=false; document.removeEventListener('mousemove', doPan); document.removeEventListener('mouseup', endPan); }
-    function centerMapOnActive() { if(!activeRoomId) return; renderMap(); }
+    function getScreenCoords(x, y, z, offset) {
+        let sx, sy;
+        if (isoMode) {
+            sx = (x - y) * (CELL_SIZE * 0.8);
+            sy = (x + y) * (CELL_SIZE * 0.4) - (z * CELL_SIZE * 1.5);
+        } else {
+            sx = x * CELL_SIZE;
+            sy = -y * CELL_SIZE;
+        }
+        return { x: sx + offset.x, y: sy + offset.y };
+    }
 
-    async function showLoadModal() {
+    function drawLink(parent, p1, p2, isCross) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", p1.x + ROOM_SIZE/2); line.setAttribute("y1", p1.y + ROOM_SIZE/2);
+        line.setAttribute("x2", p2.x + ROOM_SIZE/2); line.setAttribute("y2", p2.y + ROOM_SIZE/2);
+        line.classList.add("map-link");
+        if (isCross) line.classList.add("cross-zone");
+        parent.insertBefore(line, parent.firstChild);
+    }
+
+    function findRoomGlobal(id) {
+        for (const [file, data] of Object.entries(projectData)) {
+            const r = data.rooms.find(r => r.room_id === id);
+            if (r) return { room: r, file: file, zone: data };
+        }
+        return null;
+    }
+
+    // --- INTERACTION ---
+    function startPan(e) {
+        if (e.target.tagName !== 'svg') return;
+        isDraggingMap = true;
+        dragStart = { x: e.clientX, y: e.clientY };
+        document.body.style.cursor = "grabbing";
+        
+        const move = (ev) => {
+            pan.x += ev.clientX - dragStart.x;
+            pan.y += ev.clientY - dragStart.y;
+            dragStart = { x: ev.clientX, y: ev.clientY };
+            updateTransform();
+        };
+        const up = () => {
+            isDraggingMap = false;
+            document.body.style.cursor = "default";
+            window.removeEventListener('mousemove', move);
+            window.removeEventListener('mouseup', up);
+        };
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
+    }
+
+    function startZoneDrag(e, filename) {
+        e.stopPropagation();
+        dragStart = { x: e.clientX, y: e.clientY };
+        
+        const move = (ev) => {
+            projectData[filename].offset.x += (ev.clientX - dragStart.x) / scale;
+            projectData[filename].offset.y += (ev.clientY - dragStart.y) / scale;
+            dragStart = { x: ev.clientX, y: ev.clientY };
+            renderMap();
+        };
+        const up = () => {
+            window.removeEventListener('mousemove', move);
+            window.removeEventListener('mouseup', up);
+        };
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
+    }
+
+    function handleZoom(e) {
+        e.preventDefault();
+        scale *= e.deltaY > 0 ? 0.9 : 1.1;
+        updateTransform();
+    }
+    
+    function updateTransform() {
+        document.getElementById('map-content').setAttribute('transform', `translate(${pan.x}, ${pan.y}) scale(${scale})`);
+    }
+
+    // --- UTILS ---
+    function quickBuild(dir, dx, dy, dz=0) {
+        if (!activeRoom) return;
+        const r = getActiveRoomObj();
+        const zone = projectData[activeRoom.file];
+        
+        const tx = r.x+dx, ty = r.y+dy, tz = r.z+dz;
+        let target = zone.rooms.find(xr => xr.x===tx && xr.y===ty && xr.z===tz);
+        
+        if (!target) {
+            createRoom(activeRoom.file, tx, ty, tz);
+            target = zone.rooms[zone.rooms.length-1];
+        }
+        
+        r.exits[dir] = target.room_id;
+        const backMap = {north:'south',south:'north',east:'west',west:'east',northeast:'southwest',southwest:'northeast',northwest:'southeast',southeast:'northwest',up:'down',down:'up'};
+        if (backMap[dir]) target.exits[backMap[dir]] = r.room_id;
+        
+        updateRoomData();
+        setActiveRoom(activeRoom.file, activeRoom.index);
+    }
+
+    function setIsoMode(val) {
+        isoMode = val;
+        document.getElementById('btn-2d').classList.toggle('active', !val);
+        document.getElementById('btn-3d').classList.toggle('active', val);
+        document.getElementById('z-level-slider').disabled = val;
+        renderMap();
+    }
+
+    function updateZDisplay() {
+        currentZ = parseInt(document.getElementById('z-level-slider').value);
+        document.getElementById('z-display').innerText = currentZ;
+        renderMap();
+    }
+
+    function openContextMenu(e, room, filename) {
+        contextTarget = { room, filename };
+        const m = document.getElementById('context-menu');
+        m.style.display = 'block';
+        m.style.left = e.clientX + 'px'; m.style.top = e.clientY + 'px';
+        const hide = () => { m.style.display = 'none'; window.removeEventListener('click', hide); };
+        window.addEventListener('click', hide);
+    }
+
+    function actionAddInterior() {
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('load-modal').classList.add('hidden');
+        document.getElementById('interior-modal').classList.remove('hidden');
+        const rid = contextTarget.room.room_id;
+        document.getElementById('int-filename').value = `zones/interiors/${rid}_int.json`;
+        document.getElementById('int-id').value = `${rid}_inside`;
+    }
+
+    function confirmAddInterior() {
+        const fname = document.getElementById('int-filename').value;
+        const intId = document.getElementById('int-id').value;
+        const rName = document.getElementById('int-room-name').value;
+        
+        createZone(fname);
+        const newZone = projectData[fname];
+        const newRoom = newZone.rooms[0];
+        newRoom.name = rName;
+        newRoom.interior_id = intId;
+        newRoom.room_id = `${intId}_entry`;
+        
+        const source = contextTarget.room;
+        source.exits[`enter ${intId}`] = newRoom.room_id;
+        newRoom.exits["out"] = source.room_id;
+        
+        // Position new zone
+        const srcZone = projectData[contextTarget.filename];
+        newZone.offset.x = srcZone.offset.x + 200;
+        newZone.offset.y = srcZone.offset.y + 50;
+        
+        closeModal();
+        renderMap();
+        updateRoomData();
+    }
+
+    // --- IO ---
+    function openLoadModal() {
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.remove('hidden');
-        document.getElementById('save-modal').classList.add('hidden');
-        try {
-            const res = await fetch('/api/zones');
-            const files = await res.json();
-            const s = document.getElementById('server-file-list'); s.innerHTML = '';
-            files.forEach(f => s.innerHTML += `<option value="${f}">${f}</option>`);
-        } catch(e) { alert(e); }
-    }
-    async function loadFromServer() {
-        const f = document.getElementById('server-file-list').value;
-        if(!f) return;
-        const res = await fetch(`/api/load?file=${encodeURIComponent(f)}`);
-        const data = await res.json();
-        zoneRooms = data.map(normalizeRoom);
-        document.getElementById('modal-overlay').style.display = 'none';
-        document.getElementById('status-filename').innerText = f;
-        if(zoneRooms.length) loadRoomIntoEditor(zoneRooms[0].room_id);
-    }
-    function showSaveModal() {
-        document.getElementById('modal-overlay').style.display = 'flex';
-        document.getElementById('save-modal').classList.remove('hidden');
-        document.getElementById('load-modal').classList.add('hidden');
-    }
-    async function saveToServer() {
-        const f = document.getElementById('save-filename').value;
-        if(!f) return alert("Filename required");
-        await fetch('/api/save', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename:f, rooms:zoneRooms}) });
-        document.getElementById('modal-overlay').style.display = 'none';
-        document.getElementById('unsaved-indicator').classList.add('hidden');
-        document.getElementById('status-filename').innerText = f;
-        alert("Saved!");
-    }
-    function newZone() { if(confirm("New Zone?")) { zoneRooms=[]; createNewRoom(); document.getElementById('status-filename').innerText = "Unsaved Zone"; } }
-    
-    function renderRoomList() {
-        const c = document.getElementById('room-list-content'); c.innerHTML = '';
-        document.getElementById('list-count').innerText = zoneRooms.length;
-        const dataList = document.getElementById('dl-room-ids');
-        dataList.innerHTML = '';
-        zoneRooms.forEach(r => {
-            const div = document.createElement('div');
-            div.className = `room-list-item ${r.room_id===activeRoomId ? 'active' : ''}`;
-            div.innerText = `${r.room_id} (${r.x}, ${r.y})`;
-            div.onclick = () => loadRoomIntoEditor(r.room_id);
-            c.appendChild(div);
-            const opt = document.createElement('option');
-            opt.value = r.room_id; opt.innerText = r.name; 
-            dataList.appendChild(opt);
+        document.getElementById('interior-modal').classList.add('hidden');
+        fetch('/api/zones').then(r=>r.json()).then(files => {
+            document.getElementById('server-file-list').innerHTML = files.map(f => `<option value="${f}">${f}</option>`).join('');
         });
     }
+    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
 
-    function updateStatus() {
-        const r = zoneRooms.find(rm => rm.room_id === activeRoomId);
-        if(r) document.getElementById('status-coords').innerText = `X:${r.x} Y:${r.y} Z:${r.z}`;
+    async function loadSelectedFile() {
+        const file = document.getElementById('server-file-list').value;
+        if (!file) return;
+        const res = await fetch(`/api/load?file=${encodeURIComponent(file)}`);
+        const data = await res.json();
+        projectData[file] = { rooms: data, offset: { x: Object.keys(projectData).length*250, y:50 } };
+        updateFileList(); renderMap(); closeModal();
+        if (data.length) setActiveRoom(file, 0);
     }
-    function downloadZoneJSON() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(zoneRooms, null, 2));
-        const a = document.createElement('a'); a.href = dataStr; a.download = "zone.json"; document.body.appendChild(a); a.click(); a.remove();
+
+    async function saveAllZones() {
+        const payload = {};
+        Object.entries(projectData).forEach(([f, d]) => payload[f] = d.rooms);
+        const res = await fetch('/api/save_batch', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({files:payload}) });
+        const ret = await res.json();
+        alert(ret.results.join('\n'));
+    }
+
+    function updateFileList() {
+        const c = document.getElementById('loaded-files-container');
+        c.innerHTML = Object.keys(projectData).map(f => `
+            <div class="zone-entry">
+                <span title="${f}">${f}</span>
+                <span class="text-[10px] bg-gray-800 px-1 rounded">${projectData[f].rooms.length}</span>
+            </div>
+        `).join('');
+    }
+    
+    function createNewZoneFile() {
+        const name = prompt("Filename:");
+        if(name) createZone(name);
+    }
+    
+    function deleteRoom() {
+        if(!activeRoom) return;
+        const z = projectData[activeRoom.file];
+        z.rooms.splice(activeRoom.index, 1);
+        activeRoom = null;
+        document.getElementById('room-editor').classList.add('hidden');
+        renderMap();
     }
 </script>
 </body>

@@ -1,0 +1,16 @@
+[
+    {
+        "room_id": "golden_square",
+        "name": "The Golden Square",
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "interior_id": "",
+        "description": {
+            "default": ""
+        },
+        "exits": {},
+        "objects": [],
+        "is_outdoor": false
+    }
+]

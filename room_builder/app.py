@@ -10,27 +10,15 @@ STATIC_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_frontend', 'stati
 
 app = Flask(__name__, template_folder='.', static_folder=STATIC_DIR)
 
-def load_json_files(pattern):
-    """Helper to recursively find and load JSON files."""
-    results = []
-    files = glob.glob(os.path.join(DATA_DIR, pattern), recursive=True)
-    for f in files:
-        try:
-            with open(f, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-                results.append(data)
-        except Exception as e:
-            print(f"[ERROR] Failed to load {f}: {e}")
-    return results
-
 @app.route('/')
 def index():
     return render_template('room_builder.html')
 
 @app.route('/api/zones', methods=['GET'])
 def list_zones():
+    """Lists all zone files recursively."""
     json_files = []
-    search_path = os.path.join(DATA_DIR, '**', 'rooms_*.json') # Scan specifically for rooms_*.json
+    search_path = os.path.join(DATA_DIR, '**', 'rooms_*.json')
     for filepath in glob.glob(search_path, recursive=True):
         rel_path = os.path.relpath(filepath, DATA_DIR)
         json_files.append(rel_path.replace('\\', '/'))
@@ -38,11 +26,14 @@ def list_zones():
 
 @app.route('/api/load', methods=['GET'])
 def load_zone():
+    """Loads a single zone file."""
     filename = request.args.get('file')
     if not filename: return jsonify({"error": "No filename"}), 400
     safe_path = os.path.normpath(os.path.join(DATA_DIR, filename))
+    
     if not safe_path.startswith(DATA_DIR) or not os.path.exists(safe_path):
         return jsonify({"error": "Invalid file"}), 403
+        
     try:
         with open(safe_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -50,69 +41,66 @@ def load_zone():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/save', methods=['POST'])
-def save_zone():
+@app.route('/api/save_batch', methods=['POST'])
+def save_batch():
+    """Saves multiple zone files at once."""
     payload = request.json
-    filename = payload.get('filename')
-    rooms = payload.get('rooms')
-    if not filename or not rooms: return jsonify({"error": "Missing data"}), 400
-    safe_path = os.path.normpath(os.path.join(DATA_DIR, filename))
-    if not safe_path.startswith(DATA_DIR): return jsonify({"error": "Invalid path"}), 403
+    updates = payload.get('files', {}) # Dict of filename: room_list
     
-    os.makedirs(os.path.dirname(safe_path), exist_ok=True)
-    try:
-        with open(safe_path, 'w', encoding='utf-8') as f:
-            json.dump(rooms, f, indent=4)
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    results = []
+    
+    for filename, rooms in updates.items():
+        if not filename.endswith('.json'): 
+            filename += '.json'
+            
+        safe_path = os.path.normpath(os.path.join(DATA_DIR, filename))
+        if not safe_path.startswith(DATA_DIR): 
+            results.append(f"Skipped {filename} (Invalid path)")
+            continue
+            
+        # Ensure directory exists (for new interiors)
+        os.makedirs(os.path.dirname(safe_path), exist_ok=True)
+        
+        try:
+            # Create backup
+            if os.path.exists(safe_path):
+                with open(safe_path + ".bak", 'w', encoding='utf-8') as f:
+                    json.dump(json.load(open(safe_path, 'r', encoding='utf-8')), f, indent=4)
+
+            with open(safe_path, 'w', encoding='utf-8') as f:
+                json.dump(rooms, f, indent=4)
+            results.append(f"Saved {filename}")
+        except Exception as e:
+            results.append(f"Error saving {filename}: {str(e)}")
+
+    return jsonify({"results": results})
 
 @app.route('/api/assets', methods=['GET'])
 def get_assets():
-    """
-    Aggregates all game assets into simple lists for the frontend dropdowns.
-    """
-    assets = {
-        "monsters": [],
-        "items": [],
-        "nodes": [],
-        "loot_tables": []
-    }
+    """Aggregates assets for dropdowns."""
+    assets = { "monsters": [], "items": [], "nodes": [], "loot_tables": [] }
+    
+    def scan_assets(pattern, type_key, id_key="id", name_key="name"):
+        for f in glob.glob(os.path.join(DATA_DIR, pattern), recursive=True):
+            try:
+                with open(f, 'r', encoding='utf-8') as file:
+                    content = json.load(file)
+                    if isinstance(content, list):
+                        for item in content:
+                            if id_key in item:
+                                assets[type_key].append({"id": item[id_key], "name": item.get(name_key, item[id_key])})
+                    elif isinstance(content, dict):
+                        for k, v in content.items():
+                             assets[type_key].append({"id": k, "name": v.get(name_key, k)})
+            except: pass
 
-    # 1. Load Monsters (List of Dicts)
-    monster_files = load_json_files('**/monsters*.json')
-    for file_content in monster_files:
-        if isinstance(file_content, list):
-            for m in file_content:
-                if "monster_id" in m:
-                    assets["monsters"].append({"id": m["monster_id"], "name": m.get("name", "Unknown")})
+    scan_assets('**/monsters*.json', 'monsters', 'monster_id')
+    scan_assets('**/npcs*.json', 'monsters', 'monster_id')
+    scan_assets('**/items*.json', 'items', 'id', 'name') # Dict based
+    scan_assets('**/nodes.json', 'nodes', 'id', 'name')  # Dict based
+    scan_assets('**/loot*.json', 'loot_tables', 'id', 'name') # Dict based
 
-    # 2. Load Items (Dict of Dicts)
-    item_files = load_json_files('**/items*.json')
-    for file_content in item_files:
-        if isinstance(file_content, dict):
-            for k, v in file_content.items():
-                assets["items"].append({"id": k, "name": v.get("name", k)})
-
-    # 3. Load Nodes (Dict of Dicts)
-    node_files = load_json_files('**/nodes.json') # Usually just one, but generic is fine
-    for file_content in node_files:
-        if isinstance(file_content, dict):
-            for k, v in file_content.items():
-                # Add node_type so we can filter in UI if needed
-                assets["nodes"].append({"id": k, "name": v.get("name", k), "type": v.get("node_type", "unknown")})
-
-    # 4. Load Loot Tables (Dict of Dicts/Lists)
-    loot_files = load_json_files('**/loot*.json')
-    for file_content in loot_files:
-        if isinstance(file_content, dict):
-            for k, v in file_content.items():
-                assets["loot_tables"].append({"id": k, "name": k}) # Loot tables usually don't have human names
-
-    # Sort them for easier reading
-    for key in assets:
-        assets[key].sort(key=lambda x: x["name"])
-
+    for k in assets: assets[k].sort(key=lambda x: x['name'])
     return jsonify(assets)
 
 if __name__ == '__main__':
