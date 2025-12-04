@@ -5,11 +5,9 @@ from mud_backend.core import loot_system
 from typing import Dict, Any
 from mud_backend.core import db 
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-# --- NEW: Import math and config ---
 import time
 import math
 from mud_backend import config
-# --- END NEW ---
 
 @VerbRegistry.register(["search"]) 
 @VerbRegistry.register(["skin", "butcher"])
@@ -43,40 +41,49 @@ def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] 
 
     return None
 
-def _spill_item_into_room(world: 'World', room_objects: list, item_id: str) -> str | None:
+def _spill_item_into_room(world: 'World', room_objects: list, item_data_or_id) -> str | None:
     """
     Creates an item object and adds it to the room's object list.
-    Returns the item's name if successful.
+    Handles both ID string (static loot) and Dict (dynamic loot).
     """
-    item_data = world.game_items.get(item_id)
-    if not item_data:
-        print(f"[LOOT_SYSTEM] WARNING: Could not find item_id '{item_id}' in GAME_ITEMS.")
-        return None
+    item_data = None
     
-    item_name = item_data.get("name", "an unknown item")
-    item_keywords = [
-        item_name.lower(), 
-        item_id.lower()
-    ] + item_name.lower().split()
+    if isinstance(item_data_or_id, str):
+        item_data = world.game_items.get(item_data_or_id)
+        if not item_data:
+            print(f"[LOOT_SYSTEM] WARNING: Could not find item_id '{item_data_or_id}' in GAME_ITEMS.")
+            return None
+        
+        # Create instance from template
+        item_name = item_data.get("name", "an unknown item")
+        item_keywords = [item_name.lower(), item_data_or_id.lower()] + item_name.lower().split()
 
-    new_item_obj = {
-        "name": item_name,
-        "description": item_data.get("description", "It's an item."),
-        "keywords": list(set(item_keywords)),
-        "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
-        "is_item": True,
-        "item_id": item_id,
-        "perception_dc": 0
-    }
-    
-    room_objects.append(new_item_obj)
-    return item_name
+        new_item_obj = {
+            "name": item_name,
+            "description": item_data.get("description", "It's an item."),
+            "keywords": list(set(item_keywords)),
+            "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+            "is_item": True,
+            "item_id": item_data_or_id,
+            "perception_dc": 0
+        }
+        room_objects.append(new_item_obj)
+        return item_name
+        
+    elif isinstance(item_data_or_id, dict):
+        # It's already an instance (dynamic loot)
+        item_obj = item_data_or_id
+        room_objects.append(item_obj)
+        return item_obj.get("name", "an item")
+
+    return None
 
 
 class Search(BaseVerb):
     """
     Handles the 'search' command.
-    Searches a corpse for items, spilling them onto the ground, and removes the corpse.
+    Searches a corpse for items (generating dynamic loot if needed), 
+    spilling them onto the ground, and removes the corpse.
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"):
@@ -94,8 +101,6 @@ class Search(BaseVerb):
             self.player.send_message(f"You don't see a **{target_name}** here to search.")
             return
 
-        # Note: We do NOT change this RT per user request.
-        # This is the "search" action, not the "looting" action.
         _set_action_roundtime(self.player, 5.0, rt_type="hard") 
 
         if corpse_obj.get("searched_and_emptied", False):
@@ -105,11 +110,25 @@ class Search(BaseVerb):
             self.world.save_room(self.room)
             return
 
+        # --- NEW: Dynamic Loot Generation ---
+        if not corpse_obj.get("dynamic_loot_generated", False):
+             original_template = corpse_obj.get("original_template")
+             if original_template:
+                 # Generate Dynamic Loot based on Treasure System
+                 dynamic_loot = self.world.treasure_manager.generate_dynamic_loot(original_template)
+                 if dynamic_loot:
+                     if "items" not in corpse_obj: corpse_obj["items"] = []
+                     corpse_obj["items"].extend(dynamic_loot)
+                 
+                 # Mark as generated
+                 corpse_obj["dynamic_loot_generated"] = True
+        # ------------------------------------
+
         corpse_obj["searched_and_emptied"] = True
         
-        item_ids_to_drop = corpse_obj.get("inventory", [])
+        items_to_drop = corpse_obj.get("items", [])
         
-        if not item_ids_to_drop:
+        if not items_to_drop:
             self.player.send_message(f"You search the {corpse_obj['name']} but find nothing.")
             
             if corpse_obj in self.room.objects:
@@ -120,15 +139,15 @@ class Search(BaseVerb):
         self.player.send_message(f"You search the {corpse_obj['name']} and find:")
         
         found_items_names = []
-        for item_id in item_ids_to_drop:
-            item_name = _spill_item_into_room(self.world, self.room.objects, item_id)
+        for item_data in items_to_drop:
+            item_name = _spill_item_into_room(self.world, self.room.objects, item_data)
             if item_name:
                 found_items_names.append(item_name)
         
         for name in found_items_names:
             self.player.send_message(f"- {name}")
 
-        corpse_obj["inventory"] = []
+        corpse_obj["items"] = [] # Empty it
         if corpse_obj in self.room.objects:
             self.room.objects.remove(corpse_obj)
         
@@ -164,19 +183,12 @@ class Skin(BaseVerb):
             self.player.send_message(f"The {corpse_obj['name']} has already been skinned.")
             return
 
-        # ---
-        # --- MODIFIED: Variable RT for Skinning
-        # ---
-        # Using 'survival' skill as the basis for skinning
         survival_skill = self.player.skills.get("survival", 0)
-        # --- THIS IS THE FIX: Read base RT from config ---
-        base_rt = getattr(config, 'SKINNING_BASE_RT', 15.0) # Skinning is a complex task
-        # --- END FIX ---
-        rt_reduction = survival_skill / 10.0 # 1s off per 10 ranks
-        rt = max(3.0, base_rt - rt_reduction) # 3s minimum RT
+        base_rt = getattr(config, 'SKINNING_BASE_RT', 15.0) 
+        rt_reduction = survival_skill / 10.0
+        rt = max(3.0, base_rt - rt_reduction)
         
         _set_action_roundtime(self.player, rt, rt_type="hard")
-        # --- END MODIFIED ---
 
         corpse_obj["skinned"] = True
         
@@ -192,7 +204,6 @@ class Skin(BaseVerb):
             self.world.save_room(self.room)
             return
 
-        # Using 'survival' skill for the roll
         player_skill = self.player.skills.get("survival", 0)
         
         item_ids_to_drop = loot_system.generate_skinning_loot(

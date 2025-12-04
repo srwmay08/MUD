@@ -90,8 +90,13 @@ class Attack(BaseVerb):
                 resolve_data["messages"].append(consequence_msg)
                 resolve_data["combat_continues"] = False 
                 
-                # --- UPDATE QUEST COUNTERS ---
+                # --- NEW: Treasure System Pressure ---
                 monster_id = target_monster_data.get("monster_id")
+                if monster_id:
+                    self.world.treasure_manager.register_kill(monster_id)
+                # -------------------------------------
+
+                # --- UPDATE QUEST COUNTERS ---
                 monster_family = target_monster_data.get("family")
                 
                 if monster_id:

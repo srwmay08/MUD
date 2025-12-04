@@ -103,10 +103,13 @@ def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_t
     world.last_game_tick_time = current_time
     world.game_tick_counter += 1
     
-    # --- NEW: Auction Tick ---
-    # We call this every minute (2 ticks) to be safe/simple
+    # --- Auction Tick ---
     if world.game_tick_counter % 2 == 0:
         world.auction_manager.tick()
+        
+    # --- NEW: Treasure Pressure Decay ---
+    # Decay pressure slightly every tick to simulate recovery over time
+    world.treasure_manager.decay_pressure()
     
     temp_active_players = {}
     active_players_list = []

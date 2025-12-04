@@ -1,0 +1,32 @@
+  {
+    "wooden_strongbox": {
+    "name": "a sturdy wooden strongbox",
+    "description": "A heavy box reinforced with iron bands. It rattles when shaken.",
+    "item_type": "treasure_chest",
+    "is_container": true,
+    "is_closed": true,
+    "keywords": [
+      "box",
+      "strongbox",
+      "chest",
+      "wooden strongbox"
+    ],
+    "base_value": 50,
+    "weight": 10
+  },
+  "iron_coffer": {
+    "name": "a rusted iron coffer",
+    "description": "A heavy, rusted iron box. It looks incredibly durable.",
+    "item_type": "treasure_chest",
+    "is_container": true,
+    "is_closed": true,
+    "keywords": [
+      "box",
+      "coffer",
+      "chest",
+      "iron coffer"
+    ],
+    "base_value": 100,
+    "weight": 20
+  }
+}

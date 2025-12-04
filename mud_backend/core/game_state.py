@@ -10,6 +10,7 @@ from mud_backend.core.events import EventBus
 from mud_backend.core.managers import ConnectionManager, RoomManager, EntityManager
 from mud_backend.core.mail_manager import MailManager
 from mud_backend.core.auction_manager import AuctionManager
+from mud_backend.core.loot_system import TreasureManager # <--- NEW
 
 class ShardedStore:
     """Thread-safe dictionary store with sharded locks."""
@@ -55,8 +56,9 @@ class World:
         self.connection_manager = ConnectionManager(self)
         self.room_manager = RoomManager(self)
         self.entity_manager = EntityManager(self)
-        self.mail_manager = MailManager(self) # NEW
-        self.auction_manager = AuctionManager(self) # NEW
+        self.mail_manager = MailManager(self) 
+        self.auction_manager = AuctionManager(self)
+        self.treasure_manager = TreasureManager(self) # <--- NEW
 
         self.player_directory_lock = threading.RLock()
         self.active_players: Dict[str, Dict[str, Any]] = {}
@@ -145,6 +147,11 @@ class World:
         self.assets.load_all_assets(data_source)
         print("[WORLD INIT] Loading active adventuring bands...")
         self.active_bands = data_source.fetch_all_bands(data_source.get_db())
+        
+        # Initialize Treasure Tiers
+        print("[WORLD INIT] Initializing Treasure System...")
+        self.treasure_manager.initialize_caches()
+        
         print("[WORLD INIT] Initialization complete.")
 
     # --- DELEGATED METHODS (Spatial/Index) ---
@@ -160,8 +167,7 @@ class World:
     def add_player_to_room_index(self, player_name: str, room_id: str):
         self.entity_manager.add_player_to_room(player_name, room_id)
         
-        # --- NEW: Check for Courier ---
-        # We need a player object to pass to mail manager
+        # Check for Courier
         p_obj = self.get_player_obj(player_name)
         if p_obj:
             self.mail_manager.check_for_courier(p_obj)
