@@ -1,0 +1,53 @@
+[
+    {
+        "description": {
+            "default": "You are in the common room of The Broken Sextant. It's loud, smoky, and smells of cheap ale. Mercenaries and sailors of all races eye you suspiciously. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands behind a bar, polishing a mug. A door leads back to your room, and the main exit leads OUT to the South Market."
+        },
+        "exits": {
+            "out": "ts_south"
+        },
+        "interior_id": "inn",
+        "name": "The Broken Sextant - Common Room",
+        "objects": [
+            {
+                "all_quests_done_message": "The Innkeeper nods. 'The Syndicate's Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'",
+                "description": "A portly, surprisingly cheerful-looking man who seems unfazed by his dangerous clientele. He spots you and waves you over.",
+                "is_npc": true,
+                "keywords": [
+                    "innkeeper",
+                    "man",
+                    "portly man",
+                    "an innkeeper"
+                ],
+                "name": "an innkeeper",
+                "quest_giver_ids": [
+                    "innkeeper_quest_1"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            },
+            {
+                "description": "A simple wooden door leading back to your rented room.",
+                "keywords": [
+                    "door",
+                    "room",
+                    "inn room"
+                ],
+                "name": "door",
+                "perception_dc": 0,
+                "target_room": "inn_room",
+                "verbs": [
+                    "ENTER",
+                    "look"
+                ]
+            }
+        ],
+        "room_id": "inn_front_desk",
+        "x": 0,
+        "y": -2,
+        "z": 0
+    }
+]

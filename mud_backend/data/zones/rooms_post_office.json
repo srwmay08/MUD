@@ -1,0 +1,33 @@
+[
+    {
+        "description": {
+            "default": "A busy room filled with the cooing of pigeons in overhead coops and the shuffling of paper. Large sorting tables are piled high with packages. A Postmaster works tirelessly behind a counter."
+        },
+        "exits": {
+            "out": "ts_northwest"
+        },
+        "interior_id": "economy",
+        "name": "Aethel's Crossing Post Office",
+        "objects": [
+            {
+                "monster_id": "postmaster"
+            },
+            {
+                "description": "Piled high with mail for destinations across the realm.",
+                "keywords": [
+                    "table",
+                    "sorting table",
+                    "mail"
+                ],
+                "name": "sorting table",
+                "verbs": [
+                    "look"
+                ]
+            }
+        ],
+        "room_id": "post_office",
+        "x": -2,
+        "y": 1,
+        "z": 0
+    }
+]

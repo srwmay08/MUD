@@ -1,0 +1,255 @@
+[
+    {
+        "description": {
+            "default": "A cluttered workshop smelling of oil and iron. A large stone worktable sits in the center, and a deep stone sink is set against the wall. The heat from the north is intense."
+        },
+        "exits": {
+            "north": "armory_furnace_room",
+            "south": "armory_shop"
+        },
+        "interior_id": "armory",
+        "name": "Armory Workshop",
+        "objects": [
+            {
+                "description": "A heavy table scarred by heavy tools. It looks perfect for crushing ore.",
+                "keywords": [
+                    "table",
+                    "worktable"
+                ],
+                "name": "stone worktable",
+                "verbs": [
+                    "look",
+                    "crush"
+                ]
+            },
+            {
+                "description": "A deep sink filled with murky water, used for washing ore.",
+                "keywords": [
+                    "sink",
+                    "basin"
+                ],
+                "name": "stone sink",
+                "verbs": [
+                    "look",
+                    "wash"
+                ]
+            }
+        ],
+        "room_id": "armory_workshop",
+        "x": -2,
+        "y": 2,
+        "z": 0
+    },
+    {
+        "description": {
+            "default": "The heat here is sweltering. A massive stone bloomery furnace dominates the room, its chimney rising through the roof. Bellows are attached to the side, and a slag tap is near the bottom. An anvil sits nearby for shingling blooms."
+        },
+        "exits": {
+            "out": "armory_exterior_backyard",
+            "south": "armory_workshop"
+        },
+        "interior_id": "armory",
+        "name": "The Furnace Room",
+        "objects": [
+            {
+                "description": "A massive furnace for smelting ore. You can CHARGE it with fuel and ore, BELLOW to heat it, VENT to control air, and TAP to release slag.",
+                "keywords": [
+                    "furnace",
+                    "bloomery"
+                ],
+                "name": "a stone blast furnace",
+                "state": {
+                    "air_flow": 50,
+                    "contents": [],
+                    "flux": 0,
+                    "fuel": 0,
+                    "ore": 0,
+                    "slag": 0,
+                    "temp": 20
+                },
+                "verbs": [
+                    "look",
+                    "charge",
+                    "bellow",
+                    "vent",
+                    "tap",
+                    "extract",
+                    "assess"
+                ]
+            },
+            {
+                "description": "A large iron anvil used for hammering hot metal.",
+                "keywords": [
+                    "anvil"
+                ],
+                "name": "heavy anvil",
+                "verbs": [
+                    "look",
+                    "shingle"
+                ]
+            }
+        ],
+        "room_id": "armory_furnace_room",
+        "x": -2,
+        "y": 3,
+        "z": 0
+    },
+    {
+        "description": {
+            "default": "A quiet clearing. You see a copper vein here."
+        },
+        "exits": {},
+        "is_outdoor": true,
+        "name": "Armory Backyard",
+        "objects": [
+            {
+                "node_id": "copper_vein",
+                "node_type": "mining"
+            },
+            {
+                "is_item": true,
+                "item_id": "mining_hammer",
+                "keywords": [
+                    "hammer"
+                ],
+                "name": "a mining hammer",
+                "verbs": [
+                    "get"
+                ]
+            },
+            {
+                "is_item": true,
+                "item_id": "tongs",
+                "keywords": [
+                    "tongs"
+                ],
+                "name": "iron tongs",
+                "verbs": [
+                    "get"
+                ]
+            },
+            {
+                "is_item": true,
+                "item_id": "flux_bag",
+                "keywords": [
+                    "flux"
+                ],
+                "name": "a bag of flux",
+                "verbs": [
+                    "get"
+                ]
+            },
+            {
+                "is_item": true,
+                "item_id": "coal",
+                "keywords": [
+                    "coal"
+                ],
+                "name": "a lump of coal",
+                "verbs": [
+                    "get"
+                ]
+            },
+            {
+                "description": "A heavy oak door with a sigil of an anvil and hammer. This is the town armory.",
+                "keywords": [
+                    "door",
+                    "oak door",
+                    "armory"
+                ],
+                "name": "door",
+                "perception_dc": 0,
+                "target_room": "armory_furnace_room",
+                "verbs": [
+                    "ENTER",
+                    "look"
+                ]
+            }
+        ],
+        "room_id": "armory_exterior_backyard",
+        "x": 1,
+        "y": 2,
+        "z": 0
+    },
+    {
+        "description": {
+            "default": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow."
+        },
+        "exits": {
+            "north": "armory_workshop",
+            "out": "ts_northwest"
+        },
+        "interior_id": "armory",
+        "name": "The Town Armory",
+        "objects": [
+            {
+                "all_quests_done_message": "The Blacksmith is busy at his forge.",
+                "description": "A large, muscular man with soot on his face. He nods at you.",
+                "is_npc": true,
+                "keywords": [
+                    "armorer",
+                    "man",
+                    "shopkeep",
+                    "blacksmith",
+                    "an armorer"
+                ],
+                "name": "an armorer",
+                "quest_giver_ids": [
+                    "clerk_quest_1"
+                ],
+                "shop_data": {
+                    "inventory": [
+                        "knuckle_dusters",
+                        "iron_dagger",
+                        "iron_short_sword",
+                        "iron_bastard_sword",
+                        "wooden_club",
+                        "iron_mace",
+                        "heavy_greatclub",
+                        "iron_spear",
+                        "simple_short_bow",
+                        "light_crossbow",
+                        "iron_throwing_knife",
+                        "iron_javelin",
+                        "leather_sling",
+                        "wooden_staff",
+                        "leather_armor",
+                        "small_wooden_shield"
+                    ],
+                    "type": "armory",
+                    "will_buy": [
+                        "knuckle_dusters",
+                        "iron_dagger",
+                        "iron_short_sword",
+                        "iron_bastard_sword",
+                        "wooden_club",
+                        "iron_mace",
+                        "heavy_greatclub",
+                        "iron_spear",
+                        "simple_short_bow",
+                        "light_crossbow",
+                        "iron_throwing_knife",
+                        "iron_javelin",
+                        "leather_sling",
+                        "wooden_staff",
+                        "leather_armor",
+                        "small_wooden_shield"
+                    ]
+                },
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "list",
+                    "buy",
+                    "sell",
+                    "appraise",
+                    "give"
+                ]
+            }
+        ],
+        "room_id": "armory_shop",
+        "x": -2,
+        "y": 1,
+        "z": 0
+    }
+]

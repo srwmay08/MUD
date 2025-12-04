@@ -74,8 +74,7 @@
         "exits": {
             "east": "ts_southeast",
             "north": "town_square",
-            "west": "ts_southwest",
-            "south": "room_1764878618721_900"
+            "west": "ts_southwest"
         },
         "is_outdoor": true,
         "name": "South Market",
@@ -590,6 +589,87 @@
     },
     {
         "description": {
+            "default": "The walls of this shop are lined with racks of basic weapons and armor. An armorer stands by a large anvil, wiping his brow."
+        },
+        "exits": {
+            "north": "armory_workshop",
+            "out": "ts_northwest"
+        },
+        "interior_id": "armory",
+        "name": "The Town Armory",
+        "objects": [
+            {
+                "all_quests_done_message": "The Blacksmith is busy at his forge.",
+                "description": "A large, muscular man with soot on his face. He nods at you.",
+                "is_npc": true,
+                "keywords": [
+                    "armorer",
+                    "man",
+                    "shopkeep",
+                    "blacksmith",
+                    "an armorer"
+                ],
+                "name": "an armorer",
+                "quest_giver_ids": [
+                    "clerk_quest_1"
+                ],
+                "shop_data": {
+                    "inventory": [
+                        "knuckle_dusters",
+                        "iron_dagger",
+                        "iron_short_sword",
+                        "iron_bastard_sword",
+                        "wooden_club",
+                        "iron_mace",
+                        "heavy_greatclub",
+                        "iron_spear",
+                        "simple_short_bow",
+                        "light_crossbow",
+                        "iron_throwing_knife",
+                        "iron_javelin",
+                        "leather_sling",
+                        "wooden_staff",
+                        "leather_armor",
+                        "small_wooden_shield"
+                    ],
+                    "type": "armory",
+                    "will_buy": [
+                        "knuckle_dusters",
+                        "iron_dagger",
+                        "iron_short_sword",
+                        "iron_bastard_sword",
+                        "wooden_club",
+                        "iron_mace",
+                        "heavy_greatclub",
+                        "iron_spear",
+                        "simple_short_bow",
+                        "light_crossbow",
+                        "iron_throwing_knife",
+                        "iron_javelin",
+                        "leather_sling",
+                        "wooden_staff",
+                        "leather_armor",
+                        "small_wooden_shield"
+                    ]
+                },
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "list",
+                    "buy",
+                    "sell",
+                    "appraise",
+                    "give"
+                ]
+            }
+        ],
+        "room_id": "armory_shop",
+        "x": -2,
+        "y": 1,
+        "z": 0
+    },
+    {
+        "description": {
             "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
         },
         "exits": {
@@ -849,6 +929,37 @@
     },
     {
         "description": {
+            "default": "A busy room filled with the cooing of pigeons in overhead coops and the shuffling of paper. Large sorting tables are piled high with packages. A Postmaster works tirelessly behind a counter."
+        },
+        "exits": {
+            "out": "ts_northwest"
+        },
+        "interior_id": "economy",
+        "name": "Aethel's Crossing Post Office",
+        "objects": [
+            {
+                "monster_id": "postmaster"
+            },
+            {
+                "description": "Piled high with mail for destinations across the realm.",
+                "keywords": [
+                    "table",
+                    "sorting table",
+                    "mail"
+                ],
+                "name": "sorting table",
+                "verbs": [
+                    "look"
+                ]
+            }
+        ],
+        "room_id": "post_office",
+        "x": -2,
+        "y": 1,
+        "z": 0
+    },
+    {
+        "description": {
             "default": "A cool, secure room lined with heavy iron lockers. The air smells of stone and cold iron. A Vault Clerk sits behind a caged desk, ready to retrieve your items."
         },
         "exits": {
@@ -876,35 +987,5 @@
         "x": 2,
         "y": 0,
         "z": 1
-    },
-    {
-        "room_id": "room_1764878618721_900",
-        "name": "New Room",
-        "x": 0,
-        "y": -2,
-        "z": 0,
-        "interior_id": "rooms_aethels_crossing",
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "south": "room_1764878622020_681"
-        },
-        "objects": [],
-        "is_outdoor": false
-    },
-    {
-        "room_id": "room_1764878622020_681",
-        "name": "New Room",
-        "x": 0,
-        "y": -3,
-        "z": 0,
-        "interior_id": "rooms_aethels_crossing",
-        "description": {
-            "default": ""
-        },
-        "exits": {},
-        "objects": [],
-        "is_outdoor": false
     }
 ]

@@ -51,7 +51,7 @@
         .interaction-row { display: flex; gap: 4px; margin-top: 4px; background: #1a1a1a; padding: 4px; border-radius: 3px; border: 1px solid #333; align-items: center; }
 
         /* Context Menu */
-        #context-menu { position: absolute; display: none; background: #222; border: 1px solid #444; border-radius: 4px; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        #context-menu { position: absolute; display: none; background: #222; border: 1px solid #444; border-radius: 4px; z-index: 100; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .ctx-item { padding: 8px 12px; cursor: pointer; font-size: 0.8rem; color: #ccc; }
         .ctx-item:hover { background: #3b82f6; color: white; }
         .ctx-divider { height: 1px; background: #333; margin: 4px 0; }
@@ -97,7 +97,7 @@
                         <div><label class="form-label">Z</label><input type="number" id="z" class="form-input text-center" oninput="updateRoomData()"></div>
                     </div>
                     <div class="mt-2 flex items-center justify-between">
-                        <div id="file-badge" class="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-1 rounded truncate max-w-[150px]"></div>
+                        <div id="file-badge" class="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-1 rounded truncate max-w-[150px] cursor-pointer hover:bg-blue-800" onclick="openMoveModal()" title="Click to Move Room"></div>
                         <label class="flex items-center gap-1 cursor-pointer">
                             <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateRoomData()">
                             <span class="text-xs text-gray-400">Outdoor</span>
@@ -145,7 +145,7 @@
         <div id="zone-list">
             <div class="text-[10px] uppercase font-bold text-gray-500 border-b border-gray-700 mb-1 pb-1">Loaded Zones</div>
             <div id="loaded-files-container"></div>
-            <button onclick="createNewZoneFile()" class="text-[10px] text-blue-400 mt-2 hover:text-white w-full text-left">+ New Zone File</button>
+            <button onclick="openNewZoneModal()" class="text-[10px] text-blue-400 mt-2 hover:text-white w-full text-left">+ New Zone File</button>
         </div>
 
         <div class="absolute top-2 right-2 flex gap-1 z-10">
@@ -177,6 +177,7 @@
 
 <div id="context-menu">
     <div class="ctx-item" onclick="actionConnect()">Connect to...</div>
+    <div class="ctx-item" onclick="openMoveModal()">Move to Zone...</div>
     <div class="ctx-item" onclick="actionAddInterior()">Add Building/Interior</div>
     <div class="ctx-divider"></div>
     <div class="ctx-item text-red-400" onclick="deleteRoom()">Delete Room</div>
@@ -189,6 +190,27 @@
         <div class="flex justify-end gap-2">
             <button onclick="closeModal()" class="btn btn-neutral">Cancel</button>
             <button onclick="loadSelectedFile()" class="btn btn-primary">Load</button>
+        </div>
+    </div>
+    
+    <div id="new-zone-modal" class="modal-box hidden">
+        <h2 class="text-lg font-bold text-white mb-2">New Zone File</h2>
+        <label class="form-label">Filename</label>
+        <input id="new-zone-name" class="form-input mb-4" placeholder="zones/my_new_area.json">
+        <div class="flex justify-end gap-2">
+            <button onclick="closeModal()" class="btn btn-neutral">Cancel</button>
+            <button onclick="confirmNewZone()" class="btn btn-primary">Create</button>
+        </div>
+    </div>
+
+    <div id="move-modal" class="modal-box hidden">
+        <h2 class="text-lg font-bold text-white mb-2">Move Room to Zone</h2>
+        <p class="text-xs text-gray-400 mb-4">Move the selected room(s) to another file.</p>
+        <label class="form-label">Target Zone</label>
+        <select id="move-target-zone" class="form-select mb-4"></select>
+        <div class="flex justify-end gap-2">
+            <button onclick="closeModal()" class="btn btn-neutral">Cancel</button>
+            <button onclick="confirmMoveRoom()" class="btn btn-primary">Move</button>
         </div>
     </div>
     
@@ -241,7 +263,9 @@
         await fetchAssets();
         
         if (Object.keys(projectData).length === 0) {
-            createZone("unsaved_zone.json");
+            // Don't auto create 'unsaved_zone.json' if we want the user to load explicitly,
+            // but helpful for quick start.
+            createZone("unsaved_zone.json"); 
         }
         renderMap();
     };
@@ -262,14 +286,15 @@
     }
 
     // --- CORE LOGIC ---
-    function createZone(filename) {
+    window.createZone = function(filename) {
+        if (!filename.endsWith('.json')) filename += '.json';
         if (projectData[filename]) return;
         projectData[filename] = {
             rooms: [],
-            offset: { x: Object.keys(projectData).length * 200, y: 0 }
+            offset: { x: Object.keys(projectData).length * 250, y: 50 }
         };
-        createRoom(filename, 0, 0, 0);
         updateFileList();
+        return filename;
     }
 
     function createRoom(filename, x, y, z, name="New Room") {
@@ -313,17 +338,14 @@
         return projectData[activeRoom.file].rooms[activeRoom.index];
     }
 
-    // --- LIST RENDERING (OBJECTS & EXITS) ---
-
+    // --- LIST RENDERING ---
     function renderLists(room) {
-        // Exits
         const exList = document.getElementById('exits-list');
         exList.innerHTML = '';
         Object.entries(room.exits || {}).forEach(([dir, target]) => {
             exList.appendChild(createExitRow(dir, target));
         });
 
-        // Objects
         const obList = document.getElementById('objects-list');
         obList.innerHTML = '';
         (room.objects || []).forEach(obj => {
@@ -346,14 +368,11 @@
         const div = document.createElement('div');
         div.className = 'object-card object-row';
         
-        // Detect Type
         let type = 'static';
         let val = obj.name || "";
         if (obj.monster_id) { type = 'monster'; val = obj.monster_id; }
         else if (obj.item_id) { type = 'item'; val = obj.item_id; }
         else if (obj.node_id) { type = 'node'; val = obj.node_id; }
-
-        const isRef = type !== 'static';
 
         div.innerHTML = `
             <div class="flex justify-between mb-2 border-b border-gray-700 pb-1">
@@ -365,20 +384,16 @@
                 </select>
                 <button onclick="this.closest('.object-row').remove();updateRoomData()" class="text-red-500 font-bold text-xs">×</button>
             </div>
-            
-            <div class="obj-body">
-                ${renderObjectBody(type, val, obj)}
-            </div>
+            <div class="obj-body">${renderObjectBody(type, val, obj)}</div>
         `;
         return div;
     }
 
     function renderObjectBody(type, val, obj) {
         if (type === 'static') {
-            // Interactions HTML generator
             const interactionsHtml = Object.entries(obj.interactions || {}).map(([verb, data]) => `
                 <div class="interaction-row">
-                    <span class="text-[10px] text-gray-400 w-8 font-mono">${verb}</span>
+                    <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" value="${verb}" onchange="updateRoomData()">
                     <select class="form-select text-[10px] h-5 p-0 w-16 bg-black ia-type" onchange="updateRoomData()">
                         <option value="text" ${data.type==='text'?'selected':''}>Msg</option>
                         <option value="move" ${data.type==='move'?'selected':''}>Move</option>
@@ -391,7 +406,7 @@
 
             return `
                 <input class="form-input text-xs mb-1 obj-id-name" value="${val}" placeholder="Name (e.g. rusty lever)" onchange="updateRoomData()">
-                <input class="form-input text-xs mb-1 obj-keys" value="${(obj.keywords||[]).join(',')}" placeholder="Keywords (lever, rusty)" onchange="updateRoomData()">
+                <input class="form-input text-xs mb-1 obj-keys" value="${(obj.keywords||[]).join(',')}" placeholder="Keywords" onchange="updateRoomData()">
                 <textarea class="form-textarea text-xs h-10 mb-1 obj-desc" placeholder="Description" onchange="updateRoomData()">${obj.description||''}</textarea>
                 <div class="mt-1">
                     <div class="flex justify-between items-center">
@@ -402,7 +417,6 @@
                 </div>
             `;
         } else {
-            // Reference Types (Monster/Item/Node)
             const listId = `dl-${type}s`;
             return `
                 <label class="form-label">Asset ID</label>
@@ -411,6 +425,7 @@
         }
     }
 
+    // --- GLOBAL HELPERS ---
     window.changeObjType = function(select) {
         const type = select.value;
         const body = select.closest('.object-card').querySelector('.obj-body');
@@ -435,15 +450,13 @@
         container.appendChild(div);
     };
 
-    function addExitRow() {
+    window.addExitRow = function() {
         document.getElementById('exits-list').appendChild(createExitRow());
-    }
+    };
     
-    function addObjectRow() {
+    window.addObjectRow = function() {
         document.getElementById('objects-list').appendChild(createObjectCard({name:""}));
-    }
-
-    // --- SAVING DATA ---
+    };
 
     function updateRoomData() {
         const r = getActiveRoomObj();
@@ -457,7 +470,7 @@
         r.description.default = document.getElementById('desc').value;
         r.is_outdoor = document.getElementById('is_outdoor').checked;
         
-        // Save Exits
+        // Exits
         r.exits = {};
         document.querySelectorAll('.exit-row').forEach(row => {
             const dir = row.querySelector('.exit-dir').value.trim();
@@ -465,7 +478,7 @@
             if (dir && target) r.exits[dir] = target;
         });
 
-        // Save Objects
+        // Objects
         r.objects = [];
         document.querySelectorAll('.object-row').forEach(row => {
             const type = row.querySelector('.obj-type').value;
@@ -480,10 +493,9 @@
                 newObj.keywords = keys ? keys.split(',') : val.toLowerCase().split(' ');
                 newObj.verbs = ["look"];
                 
-                // Interactions
                 const interactions = {};
                 row.querySelectorAll('.interaction-row').forEach(ir => {
-                    const v = ir.querySelector('.ia-verb')?.value || ir.querySelector('span')?.innerText; // Handle both input and span cases
+                    const v = ir.querySelector('.ia-verb').value.trim();
                     const t = ir.querySelector('.ia-type').value;
                     const d = ir.querySelector('.ia-value').value;
                     if (v) {
@@ -508,7 +520,6 @@
         const svg = document.getElementById('map-content');
         svg.innerHTML = '';
         
-        // Draw Links First (Background)
         Object.values(projectData).forEach(zone => {
             zone.rooms.forEach(r => {
                 if (!isoMode && r.z !== currentZ) return;
@@ -525,12 +536,10 @@
             });
         });
 
-        // Draw Zones & Rooms
         Object.entries(projectData).forEach(([filename, zone]) => {
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
             g.classList.add('zone-group');
             
-            // Zone Background for Dragging
             if (zone.rooms.length > 0) {
                 let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
                 let hasVisibleRooms = false;
@@ -560,7 +569,6 @@
                 }
             }
 
-            // Rooms
             zone.rooms.forEach((r, i) => {
                 if (!isoMode && r.z !== currentZ) return;
                 const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
@@ -576,7 +584,6 @@
                 rect.setAttribute("x", c.x); rect.setAttribute("y", c.y);
                 rect.setAttribute("width", ROOM_SIZE); rect.setAttribute("height", ROOM_SIZE);
                 
-                // Simple ISO depth effect
                 if (isoMode) {
                     const depth = document.createElementNS("http://www.w3.org/2000/svg", "path");
                     depth.setAttribute("d", `M ${c.x} ${c.y+ROOM_SIZE} L ${c.x} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE} Z`);
@@ -720,9 +727,12 @@
         window.addEventListener('click', hide);
     }
 
+    // --- ACTION: ADD INTERIOR ---
     function actionAddInterior() {
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.add('hidden');
+        document.getElementById('move-modal').classList.add('hidden');
+        document.getElementById('new-zone-modal').classList.add('hidden');
         document.getElementById('interior-modal').classList.remove('hidden');
         const rid = contextTarget.room.room_id;
         document.getElementById('int-filename').value = `zones/interiors/${rid}_int.json`;
@@ -734,9 +744,11 @@
         const intId = document.getElementById('int-id').value;
         const rName = document.getElementById('int-room-name').value;
         
+        if (!fname) return;
+
         createZone(fname);
         const newZone = projectData[fname];
-        const newRoom = newZone.rooms[0];
+        const newRoom = newZone.rooms[0]; // Auto-created by createZone
         newRoom.name = rName;
         newRoom.interior_id = intId;
         newRoom.room_id = `${intId}_entry`;
@@ -745,7 +757,7 @@
         source.exits[`enter ${intId}`] = newRoom.room_id;
         newRoom.exits["out"] = source.room_id;
         
-        // Position new zone
+        // Offset visual
         const srcZone = projectData[contextTarget.filename];
         newZone.offset.x = srcZone.offset.x + 200;
         newZone.offset.y = srcZone.offset.y + 50;
@@ -755,25 +767,94 @@
         updateRoomData();
     }
 
+    // --- ACTION: NEW ZONE ---
+    function openNewZoneModal() {
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('load-modal').classList.add('hidden');
+        document.getElementById('interior-modal').classList.add('hidden');
+        document.getElementById('move-modal').classList.add('hidden');
+        document.getElementById('new-zone-modal').classList.remove('hidden');
+    }
+    function confirmNewZone() {
+        const name = document.getElementById('new-zone-name').value;
+        if(name) createZone(name);
+        closeModal();
+    }
+
+    // --- ACTION: MOVE ROOM ---
+    function openMoveModal() {
+        if (!contextTarget && !activeRoom) return;
+        if (!contextTarget) {
+            const r = getActiveRoomObj();
+            contextTarget = { room: r, filename: activeRoom.file };
+        }
+
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('load-modal').classList.add('hidden');
+        document.getElementById('interior-modal').classList.add('hidden');
+        document.getElementById('new-zone-modal').classList.add('hidden');
+        document.getElementById('move-modal').classList.remove('hidden');
+
+        const sel = document.getElementById('move-target-zone');
+        sel.innerHTML = Object.keys(projectData)
+            .filter(f => f !== contextTarget.filename)
+            .map(f => `<option value="${f}">${f}</option>`)
+            .join('');
+        
+        sel.innerHTML += `<option value="__NEW__">+ Create New Zone</option>`;
+    }
+
+    function confirmMoveRoom() {
+        let targetFile = document.getElementById('move-target-zone').value;
+        if (targetFile === "__NEW__") {
+            targetFile = prompt("New filename (e.g. zones/my_shop.json):");
+            if (!targetFile) return;
+            createZone(targetFile);
+        }
+        
+        const sourceFile = contextTarget.filename;
+        const roomToMove = contextTarget.room;
+        
+        // Find index to splice
+        const idx = projectData[sourceFile].rooms.indexOf(roomToMove);
+        if (idx > -1) {
+            projectData[sourceFile].rooms.splice(idx, 1);
+            projectData[targetFile].rooms.push(roomToMove);
+        }
+
+        closeModal();
+        updateFileList();
+        activeRoom = null; // Deselect
+        document.getElementById('room-editor').classList.add('hidden');
+        renderMap();
+    }
+
     // --- IO ---
     function openLoadModal() {
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.remove('hidden');
         document.getElementById('interior-modal').classList.add('hidden');
+        document.getElementById('new-zone-modal').classList.add('hidden');
+        document.getElementById('move-modal').classList.add('hidden');
+
         fetch('/api/zones').then(r=>r.json()).then(files => {
             document.getElementById('server-file-list').innerHTML = files.map(f => `<option value="${f}">${f}</option>`).join('');
         });
     }
-    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; contextTarget=null; }
 
     async function loadSelectedFile() {
         const file = document.getElementById('server-file-list').value;
         if (!file) return;
         const res = await fetch(`/api/load?file=${encodeURIComponent(file)}`);
         const data = await res.json();
-        projectData[file] = { rooms: data, offset: { x: Object.keys(projectData).length*250, y:50 } };
-        updateFileList(); renderMap(); closeModal();
-        if (data.length) setActiveRoom(file, 0);
+        if (res.ok) {
+            projectData[file] = { rooms: data, offset: { x: Object.keys(projectData).length*250, y:50 } };
+            updateFileList(); renderMap(); closeModal();
+            if (data.length) setActiveRoom(file, 0);
+        } else {
+            alert(data.error);
+        }
     }
 
     async function saveAllZones() {
@@ -794,13 +875,8 @@
         `).join('');
     }
     
-    function createNewZoneFile() {
-        const name = prompt("Filename:");
-        if(name) createZone(name);
-    }
-    
     function deleteRoom() {
-        if(!activeRoom) return;
+        if(!activeRoom || !confirm("Delete this room?")) return;
         const z = projectData[activeRoom.file];
         z.rooms.splice(activeRoom.index, 1);
         activeRoom = null;
