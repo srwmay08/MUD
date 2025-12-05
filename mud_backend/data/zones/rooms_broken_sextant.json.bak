@@ -4,7 +4,8 @@
             "default": "You are in the common room of The Broken Sextant. It's loud, smoky, and smells of cheap ale. Mercenaries and sailors of all races eye you suspiciously. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands behind a bar, polishing a mug. A door leads back to your room, and the main exit leads OUT to the South Market."
         },
         "exits": {
-            "out": "ts_south"
+            "out": "ts_south",
+            "south": "room_1764899535979_920"
         },
         "interior_id": "inn",
         "name": "The Broken Sextant - Common Room",
@@ -49,5 +50,34 @@
         "x": 0,
         "y": -2,
         "z": 0
+    },
+    {
+        "room_id": "room_1764899535979_920",
+        "name": "New Room",
+        "x": 0,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_broken_sextant",
+        "description": {
+            "default": "The tap room with tables"
+        },
+        "exits": {},
+        "objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_outdoor": false
     }
 ]

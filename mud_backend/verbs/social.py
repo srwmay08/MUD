@@ -85,3 +85,70 @@ class SocialCombat(BaseVerb):
                 # Trigger combat logic here if desired
 
         _set_action_roundtime(self.player, 3.0, rt_type="soft")
+
+@VerbRegistry.register(["invite"])
+class Invite(BaseVerb):
+    """
+    Allows players at a private table to invite others in.
+    Usage: INVITE <PLAYER> or INVITE GROUP <PLAYER>
+    """
+    def execute(self):
+        if not getattr(self.room, "is_table", False):
+            self.player.send_message("You are not at a private table.")
+            return
+            
+        if not self.args:
+            self.player.send_message("Invite whom? (e.g. INVITE <PLAYER> or INVITE GROUP <PLAYER>)")
+            return
+            
+        invite_group = False
+        target_name = ""
+        
+        if self.args[0].lower() == "group" and len(self.args) > 1:
+            invite_group = True
+            target_name = " ".join(self.args[1:]).lower()
+        else:
+            target_name = " ".join(self.args).lower()
+            
+        # Look for player in the room the table exits to (usually 'out')
+        outside_room_id = self.room.exits.get("out")
+        if not outside_room_id:
+            self.player.send_message("There is no one nearby to invite.")
+            return
+            
+        # Check players in outside room
+        target_player = None
+        players_outside_names = self.world.room_players.get(outside_room_id, set())
+        
+        # Simple fuzzy match for name
+        for name in players_outside_names:
+            if name.lower() == target_name or target_name in name.lower().split():
+                target_player = self.world.get_player_obj(name)
+                break
+        
+        if not target_player:
+            self.player.send_message(f"You don't see '{target_name}' nearby.")
+            return
+            
+        targets_to_invite = [target_player]
+        
+        if invite_group and target_player.group_id:
+            group = self.world.get_group(target_player.group_id)
+            if group:
+                for member_name in group["members"]:
+                    member_obj = self.world.get_player_obj(member_name)
+                    if member_obj and member_obj not in targets_to_invite:
+                        targets_to_invite.append(member_obj)
+        
+        invited_names = []
+        for p in targets_to_invite:
+            if p.name.lower() not in self.room.invited_guests:
+                self.room.invited_guests.append(p.name.lower())
+                invited_names.append(p.name)
+                p.send_message(f"{self.player.name} waves to you, inviting you to join them.")
+        
+        if invited_names:
+            self.player.send_message(f"You wave at {', '.join(invited_names)} and invite them to sit with you.")
+            self.world.broadcast_to_room(self.room.room_id, f"{self.player.name} invites {', '.join(invited_names)} to the table.", "message", skip_sid=None)
+        else:
+            self.player.send_message(f"{target_player.name} is already invited.")

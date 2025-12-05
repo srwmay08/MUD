@@ -434,6 +434,40 @@ class Enter(BaseVerb):
         if not target_room_id:
             self.player.send_message(f"The {target_name} leads nowhere right now.")
             return
+
+        # --- TABLE LOGIC START ---
+        # If there are people inside, the room must be active in memory.
+        players_inside = self.world.room_players.get(target_room_id, set())
+        if players_inside:
+            target_room_obj = self.world.get_active_room_safe(target_room_id)
+            if target_room_obj and getattr(target_room_obj, "is_table", False):
+                # Check Invite
+                if self.player.name.lower() not in [g.lower() for g in target_room_obj.invited_guests]:
+                    # Check Friends
+                    friend_found = False
+                    for name in players_inside:
+                        p_obj = self.world.get_player_obj(name)
+                        if p_obj and p_obj.is_friend(self.player.name):
+                            friend_found = True
+                            target_room_obj.invited_guests.append(self.player.name.lower())
+                            
+                            # Messages
+                            self.player.send_message(f"{p_obj.name} waves to you, inviting you to join them.")
+                            p_obj.send_message(f"You see {self.player.name} waving at your table. Recognizing your friend, you immediately wave for them to join you.")
+                            self.world.broadcast_to_room(target_room_id, f"{p_obj.name} waves {self.player.name} over to the table.", "message", skip_sid=None)
+                            break
+                    
+                    if not friend_found:
+                        # Deny Entry
+                        self.player.send_message(f"You wave to the people seated at the {enterable_object.get('name', 'table')}, hoping they will invite you to sit with them.")
+                        
+                        inside_msg = (
+                            f"You see {self.player.name} waving at your table, clearly hoping that you will invite them to sit with you. "
+                            f"If you would like, you may <span class='keyword' data-command='invite {self.player.name}'>INVITE {self.player.name}</span> to allow them to join you."
+                        )
+                        self.world.broadcast_to_room(target_room_id, inside_msg, "message")
+                        return
+        # --- TABLE LOGIC END ---
         
         if target_room_id == "inn_room":
             self.player.send_message("The door to your old room is locked. You should <span class='keyword' data-command='talk to innkeeper'>TALK TO THE INNKEEPER</span> if you wish to check in for training.")

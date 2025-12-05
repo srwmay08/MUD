@@ -503,6 +503,15 @@ class Player(GameEntity):
         self.world.remove_player_from_room_index(self.name.lower(), old_room)
         self.world.add_player_to_room_index(self.name.lower(), target_room_id)
         
+        # --- TABLE LOGIC: Clean up empty tables ---
+        old_room_obj = self.world.get_active_room_safe(old_room)
+        if old_room_obj and getattr(old_room_obj, "is_table", False):
+            # Check if any players left (excluding self, who is already removed from index)
+            players_left = self.world.room_players.get(old_room, set())
+            if not players_left:
+                old_room_obj.invited_guests = []
+        # ------------------------------------------
+        
         if target_room_id not in self.visited_rooms:
             self.visited_rooms.append(target_room_id)
         self.send_message(move_message)
@@ -621,6 +630,8 @@ class Room(GameEntity):
         super().__init__(uid=room_id, name=name, data=db_data)
         self.room_id = room_id 
         self.is_room = True
+        self.is_table = self.data.get("is_table", False)
+        self.invited_guests = []
         self.data["description"] = description
         self.exits: Dict[str, str] = self.data.get("exits", {})
         self.triggers: Dict[str, str] = self.data.get("triggers", {})
