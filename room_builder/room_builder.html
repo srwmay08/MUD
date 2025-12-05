@@ -137,6 +137,25 @@
         
         #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal-box { background: #1e1e1e; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #444; width: 400px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+
+        /* Toast Notification for Cycle */
+        #toast-notification {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid #555;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 100;
+        }
     </style>
 </head>
 <body>
@@ -271,6 +290,8 @@
                 <g id="map-content"></g>
             </svg>
         </div>
+        
+        <div id="toast-notification"></div>
     </div>
 </div>
 
@@ -808,7 +829,8 @@
                 rg.classList.add("map-room");
                 if (activeRoom?.file === filename && activeRoom?.index === i) rg.classList.add("current");
                 
-                rg.onclick = (e) => { e.stopPropagation(); setActiveRoom(filename, i); };
+                // --- NEW CLICK HANDLER FOR OVERLAP ---
+                rg.onclick = (e) => handleRoomClick(e, r, filename, i);
                 rg.oncontextmenu = (e) => { e.preventDefault(); openContextMenu(e, r, filename); };
 
                 const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -831,6 +853,63 @@
             });
             svg.appendChild(g);
         });
+    }
+
+    function handleRoomClick(e, targetRoom, filename, index) {
+        e.stopPropagation();
+
+        // Get target's screen coordinates (before visual transform)
+        const targetZone = projectData[filename];
+        const targetCoords = getScreenCoords(targetRoom.x, targetRoom.y, targetRoom.z, targetZone.offset);
+
+        // Find all overlapping rooms across all zones
+        const overlaps = [];
+        
+        for (const [fName, zone] of Object.entries(projectData)) {
+            zone.rooms.forEach((r, idx) => {
+                // Visibility check must match renderMap logic
+                if (!isoMode && r.z !== currentZ) return;
+
+                const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                // Check if overlapping (within 1px tolerance for floating point)
+                if (Math.abs(c.x - targetCoords.x) < 1 && Math.abs(c.y - targetCoords.y) < 1) {
+                    overlaps.push({ file: fName, index: idx, room: r });
+                }
+            });
+        }
+
+        if (overlaps.length <= 1) {
+            setActiveRoom(filename, index);
+            return;
+        }
+
+        // Cycle through overlaps logic
+        let nextIdx = 0;
+        if (activeRoom) {
+            const currentInOverlap = overlaps.findIndex(o => o.file === activeRoom.file && o.index === activeRoom.index);
+            if (currentInOverlap !== -1) {
+                nextIdx = (currentInOverlap + 1) % overlaps.length;
+            }
+        }
+        
+        const next = overlaps[nextIdx];
+        setActiveRoom(next.file, next.index);
+        
+        // Visual Feedback (Toast)
+        showToast(`Selected: ${next.room.name || next.room.room_id} (${nextIdx + 1}/${overlaps.length})`);
+    }
+
+    function showToast(msg) {
+        let toast = document.getElementById('toast-notification');
+        toast.innerText = msg;
+        toast.style.opacity = 1;
+        
+        // Clear previous timeout if exists
+        if (toast.timeoutId) clearTimeout(toast.timeoutId);
+        
+        toast.timeoutId = setTimeout(() => {
+            toast.style.opacity = 0;
+        }, 2000);
     }
 
     function getScreenCoords(x, y, z, offset) {
@@ -1139,9 +1218,6 @@
             const result = await res.json();
             console.log(result); // Optional log
             btn.innerText = "✓";
-            setTimeout(() => btn.innerText = "", 1000); // Clear after delay to reset icon via CSS (or keep text)
-            // Actually, my CSS relies on pseudo-elements or specific content if I used emojis. 
-            // Since I used emojis in the HTML, restoring originalText is safer.
             setTimeout(() => btn.innerText = originalText, 1000);
         } catch(e) {
             alert("Error saving " + filename);
