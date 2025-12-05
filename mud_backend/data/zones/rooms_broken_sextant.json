@@ -124,5 +124,33 @@
         "ambient_events": [],
         "illumination": 50,
         "is_outdoor": false
+    },
+    {
+        "room_id": "inn_table_1",
+        "name": "The Brass Astrolabe",
+        "description": "A heavy, circular booth tucked near the hearth. In the center of the table, bolted down to prevent theft, is a large brass astrolabe. Its plates are stained with ale, but the intricate star map remains visible, perfect for plotting a course—or a revolution.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "room_1764899535979_920"
+        },
+        "objects": [],
+        "x": 1,
+        "y": -2,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_2",
+        "name": "The Rusty Compass",
+        "description": "A rickety table in a drafty corner. Embedded in the wood is a compass that has seen better days; the glass is fogged, and the needle spins lazily in circles, refusing to ever point North. The wood around it is carved with the initials of lost sailors.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "room_1764899535979_920"
+        },
+        "objects": [],
+        "x": -1,
+        "y": -2,
+        "z": 0
     }
 ]
