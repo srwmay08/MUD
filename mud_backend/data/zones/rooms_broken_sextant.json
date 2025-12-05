@@ -63,7 +63,22 @@
             "default": "The tap room with tables"
         },
         "exits": {},
-        "objects": [],
+        "objects": [
+            {
+                "name": "The Brass Astrolabe",
+                "description": "A heavy, circular booth tucked near the hearth. In the center of the table, bolted down to prevent theft, is a large brass astrolabe. Its plates are stained with ale, but the intricate star map remains visible, perfect for plotting a course—or a revolution.",
+                "keywords": ["table", "brass astrolabe", "astrolabe"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_1"
+            },
+            {
+                "name": "The Rusty Compass",
+                "description": "A rickety table in a drafty corner. Embedded in the wood is a compass that has seen better days; the glass is fogged, and the needle spins lazily in circles, refusing to ever point North. The wood around it is carved with the initials of lost sailors.",
+                "keywords": ["table", "rusty compass", "compass"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_2"
+            }
+        ],
         "flags": {
             "is_node": false,
             "is_super_node": false,
