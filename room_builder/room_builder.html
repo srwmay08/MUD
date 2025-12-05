@@ -59,7 +59,8 @@
         .flag-item input { accent-color: #f59e0b; }
 
         /* Object & Interaction Cards */
-        .object-card { background: #252525; border: 1px solid #444; border-radius: 4px; padding: 6px; margin-bottom: 6px; }
+        .object-card { background: #252525; border: 1px solid #444; border-radius: 4px; padding: 6px; margin-bottom: 6px; position: relative; }
+        .object-card.hidden-obj { border-color: #f59e0b; background: #2a2010; }
         .interaction-row { display: flex; gap: 4px; margin-top: 4px; background: #1a1a1a; padding: 4px; border-radius: 3px; border: 1px solid #333; align-items: center; }
 
         /* Context Menu */
@@ -193,10 +194,17 @@
                     <div class="mt-2 flex flex-col gap-2">
                         <div class="flex justify-between items-center">
                             <div id="file-badge" class="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-1 rounded truncate max-w-[150px] cursor-pointer hover:bg-blue-800" onclick="openMoveModal()" title="Click to Move Room"></div>
-                            <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateRoomData()">
-                                <span class="text-xs text-gray-400">Outdoor</span>
-                            </label>
+                            
+                            <div class="flex gap-3">
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateRoomData()">
+                                    <span class="text-xs text-gray-400">Outdoor</span>
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" id="is_table" class="accent-amber-500" onchange="updateRoomData()">
+                                    <span class="text-xs text-gray-400">Is Table</span>
+                                </label>
+                            </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="form-label w-16">Light</label>
@@ -266,7 +274,12 @@
             <button onclick="openNewZoneModal()" class="btn btn-neutral w-full mt-1 text-[10px] py-1 border-dashed text-blue-400 hover:text-white hover:border-blue-500">+ New Zone File</button>
         </div>
 
-        <div class="absolute top-2 right-2 flex gap-1 z-10">
+        <div class="absolute top-2 right-2 flex gap-1 z-10 items-center">
+            <label class="btn btn-neutral text-xs flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" id="show-tables-toggle" checked onchange="renderMap()" class="accent-amber-500 w-3 h-3">
+                Tables
+            </label>
+            <div class="w-[1px] h-6 bg-gray-600 mx-1"></div>
             <button class="btn btn-neutral text-xs" id="btn-2d" onclick="setIsoMode(false)">2D</button>
             <button class="btn btn-neutral text-xs" id="btn-3d" onclick="setIsoMode(true)">3D</button>
         </div>
@@ -450,9 +463,11 @@
             description: { default: "" },
             exits: {},
             objects: [],
+            hidden_objects: [],
             flags: {},
             ambient_events: [],
-            illumination: 50
+            illumination: 50,
+            is_table: false
         };
         // Set defaults
         ROOM_FLAGS.forEach(f => { if(f.default) newRoom.flags[f.key] = true; });
@@ -478,6 +493,7 @@
         document.getElementById('desc').value = room.description.default || "";
         document.getElementById('file-badge').innerText = filename;
         document.getElementById('is_outdoor').checked = !!room.is_outdoor;
+        document.getElementById('is_table').checked = !!room.is_table;
         
         // Illumination
         const light = room.illumination !== undefined ? room.illumination : 50;
@@ -524,8 +540,15 @@
 
         const obList = document.getElementById('objects-list');
         obList.innerHTML = '';
+        
+        // Render regular objects
         (room.objects || []).forEach(obj => {
-            obList.appendChild(createObjectCard(obj));
+            obList.appendChild(createObjectCard(obj, false));
+        });
+        
+        // Render hidden objects
+        (room.hidden_objects || []).forEach(obj => {
+            obList.appendChild(createObjectCard(obj, true));
         });
     }
 
@@ -591,9 +614,10 @@
         }
     }
 
-    function createObjectCard(obj={}) {
+    function createObjectCard(obj={}, isHidden=false) {
         const div = document.createElement('div');
         div.className = 'object-card object-row';
+        if (isHidden) div.classList.add('hidden-obj');
         
         let type = 'static';
         let val = obj.name || "";
@@ -609,7 +633,13 @@
                     <option value="item" ${type==='item'?'selected':''}>Item</option>
                     <option value="node" ${type==='node'?'selected':''}>Node</option>
                 </select>
-                <button onclick="this.closest('.object-row').remove();updateRoomData()" class="text-red-500 font-bold text-xs">×</button>
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] text-gray-400 flex items-center gap-1">
+                        <input type="checkbox" class="obj-hidden accent-amber-500" ${isHidden ? 'checked' : ''} onchange="updateRoomData()">
+                        Hidden
+                    </label>
+                    <button onclick="this.closest('.object-row').remove();updateRoomData()" class="text-red-500 font-bold text-xs">×</button>
+                </div>
             </div>
             <div class="obj-body">${renderObjectBody(type, val, obj)}</div>
         `;
@@ -696,6 +726,7 @@
         r.z = parseInt(document.getElementById('z').value) || 0;
         r.description.default = document.getElementById('desc').value;
         r.is_outdoor = document.getElementById('is_outdoor').checked;
+        r.is_table = document.getElementById('is_table').checked;
         r.illumination = parseInt(document.getElementById('illumination').value);
         
         // Save Flags
@@ -730,11 +761,19 @@
             if (dir && target) r.exits[dir] = target;
         });
 
-        // Objects
+        // Objects - Separated into objects/hidden_objects
         r.objects = [];
+        r.hidden_objects = [];
+        
         document.querySelectorAll('.object-row').forEach(row => {
             const type = row.querySelector('.obj-type').value;
             const val = row.querySelector('.obj-id-name').value.trim();
+            const isHidden = row.querySelector('.obj-hidden').checked;
+            
+            // Visual Update
+            if (isHidden) row.classList.add('hidden-obj'); 
+            else row.classList.remove('hidden-obj');
+
             if (!val) return;
 
             let newObj = {};
@@ -761,7 +800,13 @@
                 else if (type === 'item') { newObj.item_id = val; newObj.is_item = true; }
                 else if (type === 'node') { newObj.node_id = val; newObj.is_gathering_node = true; }
             }
-            r.objects.push(newObj);
+            
+            if (isHidden) {
+                if (!newObj.perception_dc) newObj.perception_dc = 1; // Default perception if none exists
+                r.hidden_objects.push(newObj);
+            } else {
+                r.objects.push(newObj);
+            }
         });
 
         renderMap();
@@ -772,15 +817,24 @@
         const svg = document.getElementById('map-content');
         svg.innerHTML = '';
         
+        // --- READ SHOW TABLES TOGGLE ---
+        const showTables = document.getElementById('show-tables-toggle').checked;
+
         Object.values(projectData).forEach(zone => {
             zone.rooms.forEach(r => {
                 if (!isoMode && r.z !== currentZ) return;
+                // Skip tables if toggle is off
+                if (!showTables && r.is_table) return;
+
                 const start = getScreenCoords(r.x, r.y, r.z, zone.offset);
                 
                 Object.entries(r.exits).forEach(([dir, targetId]) => {
                     const targetInfo = findRoomGlobal(targetId);
                     if (targetInfo) {
                         if (!isoMode && targetInfo.room.z !== currentZ) return;
+                        // Skip link if target is hidden table
+                        if (!showTables && targetInfo.room.is_table) return;
+
                         const end = getScreenCoords(targetInfo.room.x, targetInfo.room.y, targetInfo.room.z, targetInfo.zone.offset);
                         drawLink(svg, start, end, targetInfo.file !== activeRoom?.file);
                     }
@@ -797,6 +851,8 @@
                 let hasVisibleRooms = false;
                 zone.rooms.forEach(r => {
                     if (!isoMode && r.z !== currentZ) return;
+                    if (!showTables && r.is_table) return;
+
                     hasVisibleRooms = true;
                     const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
                     minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
@@ -823,13 +879,16 @@
 
             zone.rooms.forEach((r, i) => {
                 if (!isoMode && r.z !== currentZ) return;
+                // Skip tables if toggle is off
+                if (!showTables && r.is_table) return;
+
                 const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
                 
                 const rg = document.createElementNS("http://www.w3.org/2000/svg", "g");
                 rg.classList.add("map-room");
                 if (activeRoom?.file === filename && activeRoom?.index === i) rg.classList.add("current");
                 
-                // --- NEW CLICK HANDLER FOR OVERLAP ---
+                // --- CLICK HANDLER FOR OVERLAP ---
                 rg.onclick = (e) => handleRoomClick(e, r, filename, i);
                 rg.oncontextmenu = (e) => { e.preventDefault(); openContextMenu(e, r, filename); };
 
@@ -858,20 +917,19 @@
     function handleRoomClick(e, targetRoom, filename, index) {
         e.stopPropagation();
 
-        // Get target's screen coordinates (before visual transform)
         const targetZone = projectData[filename];
         const targetCoords = getScreenCoords(targetRoom.x, targetRoom.y, targetRoom.z, targetZone.offset);
+        const showTables = document.getElementById('show-tables-toggle').checked;
 
-        // Find all overlapping rooms across all zones
+        // Find all overlapping rooms
         const overlaps = [];
-        
         for (const [fName, zone] of Object.entries(projectData)) {
             zone.rooms.forEach((r, idx) => {
-                // Visibility check must match renderMap logic
                 if (!isoMode && r.z !== currentZ) return;
+                if (!showTables && r.is_table) return;
 
                 const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
-                // Check if overlapping (within 1px tolerance for floating point)
+                // Check exact overlap
                 if (Math.abs(c.x - targetCoords.x) < 1 && Math.abs(c.y - targetCoords.y) < 1) {
                     overlaps.push({ file: fName, index: idx, room: r });
                 }
@@ -883,7 +941,7 @@
             return;
         }
 
-        // Cycle through overlaps logic
+        // Cycle through overlaps
         let nextIdx = 0;
         if (activeRoom) {
             const currentInOverlap = overlaps.findIndex(o => o.file === activeRoom.file && o.index === activeRoom.index);
@@ -895,7 +953,6 @@
         const next = overlaps[nextIdx];
         setActiveRoom(next.file, next.index);
         
-        // Visual Feedback (Toast)
         showToast(`Selected: ${next.room.name || next.room.room_id} (${nextIdx + 1}/${overlaps.length})`);
     }
 
@@ -903,13 +960,8 @@
         let toast = document.getElementById('toast-notification');
         toast.innerText = msg;
         toast.style.opacity = 1;
-        
-        // Clear previous timeout if exists
         if (toast.timeoutId) clearTimeout(toast.timeoutId);
-        
-        toast.timeoutId = setTimeout(() => {
-            toast.style.opacity = 0;
-        }, 2000);
+        toast.timeoutId = setTimeout(() => { toast.style.opacity = 0; }, 2000);
     }
 
     function getScreenCoords(x, y, z, offset) {
