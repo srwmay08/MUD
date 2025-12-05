@@ -13,15 +13,25 @@ class Teleport(BaseVerb):
             return
         
         # --- Check NO_PORTAL flag ---
-        for item_id in self.player.inventory:
-            item = self.world.game_items.get(item_id)
+        for item_ref in self.player.inventory:
+            item = None
+            if isinstance(item_ref, dict):
+                item = item_ref
+            else:
+                item = self.world.game_items.get(item_ref)
+                
             if item and "NO_PORTAL" in item.get("flags", []):
                 self.player.send_message(f"The {item['name']} anchors you to this plane! You cannot teleport.")
                 return
         
-        for slot, item_id in self.player.worn_items.items():
-            if item_id:
-                item = self.world.game_items.get(item_id)
+        for slot, item_ref in self.player.worn_items.items():
+            if item_ref:
+                item = None
+                if isinstance(item_ref, dict):
+                    item = item_ref
+                else:
+                    item = self.world.game_items.get(item_ref)
+                    
                 if item and "NO_PORTAL" in item.get("flags", []):
                     self.player.send_message(f"The {item['name']} anchors you to this plane! You cannot teleport.")
                     return
