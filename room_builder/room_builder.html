@@ -10,7 +10,7 @@
         body { font-family: 'Inter', sans-serif; background-color: #121212; color: #e5e5e5; height: 100vh; overflow: hidden; }
         
         #main-container { display: flex; height: 100vh; }
-        #editor-panel { width: 420px; flex-shrink: 0; overflow-y: auto; padding: 1rem; border-right: 1px solid #333; background: #1a1a1a; display: flex; flex-direction: column; gap: 1rem; }
+        #editor-panel { width: 440px; flex-shrink: 0; overflow-y: auto; padding: 1rem; border-right: 1px solid #333; background: #1a1a1a; display: flex; flex-direction: column; gap: 1rem; }
         #visual-panel { flex-grow: 1; display: flex; flex-direction: column; background: #0f0f0f; position: relative; }
         
         /* Map Canvas */
@@ -46,6 +46,18 @@
         .btn-neutral { background: #374151; color: #fff; border: 1px solid #4b5563; }
         .btn-success { background: #10b981; color: #fff; }
 
+        /* Collapsible Sections */
+        details { border: 1px solid #333; border-radius: 4px; overflow: hidden; background: #222; }
+        details summary { padding: 0.5rem; background: #2a2a2a; cursor: pointer; font-size: 0.75rem; font-weight: bold; user-select: none; }
+        details summary:hover { background: #333; }
+        details[open] summary { border-bottom: 1px solid #333; }
+        .details-content { padding: 0.5rem; }
+
+        /* Custom Checkbox Grid */
+        .flag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .flag-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #ccc; }
+        .flag-item input { accent-color: #f59e0b; }
+
         /* Object & Interaction Cards */
         .object-card { background: #252525; border: 1px solid #444; border-radius: 4px; padding: 6px; margin-bottom: 6px; }
         .interaction-row { display: flex; gap: 4px; margin-top: 4px; background: #1a1a1a; padding: 4px; border-radius: 3px; border: 1px solid #333; align-items: center; }
@@ -57,8 +69,71 @@
         .ctx-divider { height: 1px; background: #333; margin: 4px 0; }
 
         /* Zone List Overlay */
-        #zone-list { position: absolute; top: 10px; left: 10px; background: rgba(20,20,20,0.9); border: 1px solid #333; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; width: 200px; }
-        .zone-entry { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 4px; align-items: center; color: #aaa; }
+        #zone-list { 
+            position: absolute; top: 10px; left: 10px; 
+            background: rgba(20,20,20,0.95); 
+            border: 1px solid #333; 
+            padding: 8px; 
+            border-radius: 6px; 
+            max-height: 50vh;
+            width: 280px; 
+            display: flex; flex-direction: column;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            z-index: 50;
+        }
+        #loaded-files-container {
+            overflow-y: auto; 
+            flex-grow: 1; 
+            margin-top: 4px;
+            margin-bottom: 8px;
+            padding-right: 4px;
+        }
+        /* Scrollbar styling */
+        #loaded-files-container::-webkit-scrollbar { width: 6px; }
+        #loaded-files-container::-webkit-scrollbar-track { background: #1a1a1a; }
+        #loaded-files-container::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        #loaded-files-container::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .zone-entry { 
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.75rem; 
+            padding: 6px;
+            background: rgba(255,255,255,0.03); 
+            border: 1px solid transparent;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            transition: all 0.1s;
+        }
+        .zone-entry:hover { 
+            background: rgba(255,255,255,0.08); 
+            border-color: rgba(255,255,255,0.1);
+        }
+        .zone-name { 
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; 
+            flex: 1; 
+            margin-right: 8px; 
+            color: #ddd; 
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .zone-name:hover { color: #f59e0b; text-decoration: underline; }
+        
+        .zone-actions { display: flex; align-items: center; gap: 4px; }
+        .zone-count { font-size: 0.65rem; color: #666; font-family: monospace; min-width: 20px; text-align: right; }
+        
+        .zone-btn { 
+            display: flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px;
+            border-radius: 3px;
+            color: #888;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            transition: all 0.1s;
+            cursor: pointer;
+        }
+        .zone-btn:hover { background: #444; color: white; border-color: #666; }
+        .zone-btn.save:hover { background: #065f46; color: #34d399; border-color: #10b981; }
+        .zone-btn.close:hover { background: #7f1d1d; color: #fca5a5; border-color: #ef4444; }
         
         #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal-box { background: #1e1e1e; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #444; width: 400px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
@@ -96,14 +171,35 @@
                         <div><label class="form-label">Y</label><input type="number" id="y" class="form-input text-center" oninput="updateRoomData()"></div>
                         <div><label class="form-label">Z</label><input type="number" id="z" class="form-input text-center" oninput="updateRoomData()"></div>
                     </div>
-                    <div class="mt-2 flex items-center justify-between">
-                        <div id="file-badge" class="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-1 rounded truncate max-w-[150px] cursor-pointer hover:bg-blue-800" onclick="openMoveModal()" title="Click to Move Room"></div>
-                        <label class="flex items-center gap-1 cursor-pointer">
-                            <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateRoomData()">
-                            <span class="text-xs text-gray-400">Outdoor</span>
-                        </label>
+                    <div class="mt-2 flex flex-col gap-2">
+                        <div class="flex justify-between items-center">
+                            <div id="file-badge" class="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-1 rounded truncate max-w-[150px] cursor-pointer hover:bg-blue-800" onclick="openMoveModal()" title="Click to Move Room"></div>
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" id="is_outdoor" class="accent-amber-500" onchange="updateRoomData()">
+                                <span class="text-xs text-gray-400">Outdoor</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="form-label w-16">Light</label>
+                            <input type="range" id="illumination" min="0" max="100" class="flex-1 accent-amber-500" oninput="updateIlluminationDisplay(); updateRoomData()">
+                            <span id="illumination-val" class="text-xs font-mono w-6 text-right text-gray-400">50</span>
+                        </div>
                     </div>
                 </div>
+
+                <details>
+                    <summary>Room Flags & Rules</summary>
+                    <div class="details-content flag-grid" id="flags-container">
+                        </div>
+                </details>
+
+                <details>
+                    <summary>Ambient Events</summary>
+                    <div class="details-content">
+                        <div id="ambient-list" class="space-y-2 mb-2"></div>
+                        <button onclick="addAmbientRow()" class="text-xs text-blue-400 hover:text-white">+ Add Event</button>
+                    </div>
+                </details>
 
                 <div class="bg-blue-900/10 border border-blue-900/30 p-2 rounded">
                     <h2 class="text-[10px] font-bold text-blue-400 uppercase mb-1">Quick Build</h2>
@@ -143,9 +239,12 @@
 
     <div id="visual-panel">
         <div id="zone-list">
-            <div class="text-[10px] uppercase font-bold text-gray-500 border-b border-gray-700 mb-1 pb-1">Loaded Zones</div>
+            <div class="text-[10px] uppercase font-bold text-gray-500 border-b border-gray-700 mb-1 pb-1 flex justify-between items-center">
+                <span>Loaded Zones</span>
+                <span class="text-[9px] text-gray-600 cursor-pointer" onclick="updateFileList()">↻</span>
+            </div>
             <div id="loaded-files-container"></div>
-            <button onclick="openNewZoneModal()" class="text-[10px] text-blue-400 mt-2 hover:text-white w-full text-left">+ New Zone File</button>
+            <button onclick="openNewZoneModal()" class="btn btn-neutral w-full mt-1 text-[10px] py-1 border-dashed text-blue-400 hover:text-white hover:border-blue-500">+ New Zone File</button>
         </div>
 
         <div class="absolute top-2 right-2 flex gap-1 z-10">
@@ -186,7 +285,8 @@
 <div id="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
     <div id="load-modal" class="modal-box hidden">
         <h2 class="text-lg font-bold text-white mb-4">Load Zone File</h2>
-        <select id="server-file-list" class="form-select mb-4 text-sm h-64" size="10"></select>
+        <div class="text-xs text-gray-400 mb-2">Hold Ctrl/Cmd or Shift to select multiple.</div>
+        <select id="server-file-list" class="form-select mb-4 text-sm h-64" size="10" multiple></select>
         <div class="flex justify-end gap-2">
             <button onclick="closeModal()" class="btn btn-neutral">Cancel</button>
             <button onclick="loadSelectedFile()" class="btn btn-primary">Load</button>
@@ -236,8 +336,8 @@
 
 <script>
     // --- STATE ---
-    let projectData = {}; // { "filename": { rooms: [], offset: {x:0, y:0} } }
-    let activeRoom = null; // { file: "filename", index: 0 }
+    let projectData = {}; 
+    let activeRoom = null; 
     let gameAssets = { monsters: [], items: [], nodes: [] };
     
     // Viewport
@@ -253,6 +353,21 @@
 
     const ROOM_SIZE = 24;
     const CELL_SIZE = 40;
+
+    // --- FLAGS CONFIGURATION ---
+    const ROOM_FLAGS = [
+        { key: "is_node", label: "Node (Regen)" },
+        { key: "is_super_node", label: "Super Node" },
+        { key: "is_sanctuary", label: "Sanctuary" },
+        { key: "is_pvp", label: "PvP Allowed" },
+        { key: "magic_allowed", label: "Magic Allowed", default: true },
+        { key: "stealing_allowed", label: "Stealing Allowed", default: true },
+        { key: "teleport_in_allowed", label: "Teleport In", default: true },
+        { key: "teleport_out_allowed", label: "Teleport Out", default: true },
+        { key: "hiding_allowed", label: "Hiding Allowed", default: true },
+        { key: "sneak_in_allowed", label: "Sneak In Allowed", default: true },
+        { key: "sneak_out_allowed", label: "Sneak Out Allowed", default: true }
+    ];
     
     window.onload = async () => {
         const container = document.getElementById('map-container');
@@ -260,22 +375,30 @@
         pan.y = container.clientHeight / 2;
         updateTransform();
         
+        generateFlagGrid();
         await fetchAssets();
         
         if (Object.keys(projectData).length === 0) {
-            // Don't auto create 'unsaved_zone.json' if we want the user to load explicitly,
-            // but helpful for quick start.
             createZone("unsaved_zone.json"); 
         }
         renderMap();
     };
+
+    function generateFlagGrid() {
+        const grid = document.getElementById('flags-container');
+        grid.innerHTML = ROOM_FLAGS.map(f => `
+            <label class="flag-item">
+                <input type="checkbox" class="room-flag" data-key="${f.key}" onchange="updateRoomData()">
+                ${f.label}
+            </label>
+        `).join('');
+    }
 
     // --- ASSETS ---
     async function fetchAssets() {
         try {
             const res = await fetch('/api/assets');
             gameAssets = await res.json();
-            
             const populate = (id, list) => {
                 document.getElementById(id).innerHTML = list.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
             };
@@ -305,8 +428,14 @@
             interior_id: filename.includes('/') ? filename.split('/').pop().replace('.json','') : "",
             description: { default: "" },
             exits: {},
-            objects: []
+            objects: [],
+            flags: {},
+            ambient_events: [],
+            illumination: 50
         };
+        // Set defaults
+        ROOM_FLAGS.forEach(f => { if(f.default) newRoom.flags[f.key] = true; });
+        
         zone.rooms.push(newRoom);
         setActiveRoom(filename, zone.rooms.length - 1);
         renderMap();
@@ -319,7 +448,7 @@
         document.getElementById('no-selection').classList.add('hidden');
         document.getElementById('room-editor').classList.remove('hidden');
         
-        // Populate fields
+        // Basic Fields
         document.getElementById('room_id').value = room.room_id;
         document.getElementById('name').value = room.name;
         document.getElementById('x').value = room.x;
@@ -328,6 +457,28 @@
         document.getElementById('desc').value = room.description.default || "";
         document.getElementById('file-badge').innerText = filename;
         document.getElementById('is_outdoor').checked = !!room.is_outdoor;
+        
+        // Illumination
+        const light = room.illumination !== undefined ? room.illumination : 50;
+        document.getElementById('illumination').value = light;
+        document.getElementById('illumination-val').innerText = light;
+
+        // Flags
+        const rFlags = room.flags || {};
+        document.querySelectorAll('.room-flag').forEach(cb => {
+            const key = cb.getAttribute('data-key');
+            let val = rFlags[key];
+            if (val === undefined) {
+                const def = ROOM_FLAGS.find(f => f.key === key).default;
+                val = !!def;
+            }
+            cb.checked = val;
+        });
+
+        // Ambient
+        const ambList = document.getElementById('ambient-list');
+        ambList.innerHTML = '';
+        (room.ambient_events || []).forEach(evt => addAmbientRow(evt));
 
         renderLists(room);
         renderMap();
@@ -336,6 +487,10 @@
     function getActiveRoomObj() {
         if (!activeRoom) return null;
         return projectData[activeRoom.file].rooms[activeRoom.index];
+    }
+
+    function updateIlluminationDisplay() {
+        document.getElementById('illumination-val').innerText = document.getElementById('illumination').value;
     }
 
     // --- LIST RENDERING ---
@@ -362,6 +517,57 @@
             <button onclick="this.parentElement.remove();updateRoomData()" class="text-red-500 font-bold px-2">×</button>
         `;
         return div;
+    }
+
+    // --- UPDATED AMBIENT ROW LOGIC ---
+    window.addAmbientRow = function(evt=null) {
+        const list = document.getElementById('ambient-list');
+        const div = document.createElement('div');
+        div.className = "flex gap-1 ambient-row items-center mb-1 bg-black/30 p-1 rounded";
+        
+        const type = evt ? evt.type : 'periodic';
+        const chance = evt ? (evt.chance || 0.1) : 0.1;
+        const timeVal = evt ? (evt.time || 'DAWN') : 'DAWN';
+        const msg = evt ? evt.message : '';
+
+        div.innerHTML = `
+            <select class="form-select text-[10px] w-20 amb-type" onchange="toggleAmbientInput(this); updateRoomData()">
+                <option value="periodic" ${type==='periodic'?'selected':''}>Chance</option>
+                <option value="time" ${type==='time'?'selected':''}>Time</option>
+            </select>
+            
+            <div class="amb-trigger-container w-24">
+                </div>
+            
+            <input class="form-input flex-1 text-xs amb-message" value="${msg.replace(/"/g, '&quot;')}" placeholder="Message..." onchange="updateRoomData()">
+            <button onclick="this.closest('.ambient-row').remove();updateRoomData()" class="text-red-500 font-bold px-1">×</button>
+        `;
+        
+        list.appendChild(div);
+        
+        // Initialize trigger
+        const select = div.querySelector('.amb-type');
+        const container = div.querySelector('.amb-trigger-container');
+        renderAmbientTriggerInput(container, type, type==='periodic' ? chance : timeVal);
+    }
+
+    window.toggleAmbientInput = function(select) {
+        const row = select.closest('.ambient-row');
+        const container = row.querySelector('.amb-trigger-container');
+        const type = select.value;
+        // Default
+        const val = type === 'periodic' ? 0.1 : 'DAWN';
+        renderAmbientTriggerInput(container, type, val);
+    }
+
+    function renderAmbientTriggerInput(container, type, value) {
+        if(type === 'periodic') {
+            container.innerHTML = `<input type="number" step="0.01" min="0" max="1" class="form-input text-xs amb-val" value="${value}" placeholder="0.1" onchange="updateRoomData()">`;
+        } else {
+            const times = ["DAWN", "MORNING", "NOON", "AFTERNOON", "DUSK", "EVENING", "NIGHT", "MIDNIGHT"];
+            const options = times.map(t => `<option value="${t}" ${t===value?'selected':''}>${t}</option>`).join('');
+            container.innerHTML = `<select class="form-select text-xs amb-val" onchange="updateRoomData()">${options}</select>`;
+        }
     }
 
     function createObjectCard(obj={}) {
@@ -469,7 +675,32 @@
         r.z = parseInt(document.getElementById('z').value) || 0;
         r.description.default = document.getElementById('desc').value;
         r.is_outdoor = document.getElementById('is_outdoor').checked;
+        r.illumination = parseInt(document.getElementById('illumination').value);
         
+        // Save Flags
+        r.flags = {};
+        document.querySelectorAll('.room-flag').forEach(cb => {
+            r.flags[cb.getAttribute('data-key')] = cb.checked;
+        });
+
+        // Save Ambient
+        r.ambient_events = [];
+        document.querySelectorAll('.ambient-row').forEach(row => {
+            const type = row.querySelector('.amb-type').value;
+            const msg = row.querySelector('.amb-message').value.trim();
+            const valInput = row.querySelector('.amb-val');
+            
+            if(msg) {
+                let evt = { type: type, message: msg };
+                if (type === 'periodic') {
+                    evt.chance = parseFloat(valInput.value) || 0.1;
+                } else {
+                    evt.time = valInput.value;
+                }
+                r.ambient_events.push(evt);
+            }
+        });
+
         // Exits
         r.exits = {};
         document.querySelectorAll('.exit-row').forEach(row => {
@@ -844,16 +1075,40 @@
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; contextTarget=null; }
 
     async function loadSelectedFile() {
-        const file = document.getElementById('server-file-list').value;
-        if (!file) return;
-        const res = await fetch(`/api/load?file=${encodeURIComponent(file)}`);
-        const data = await res.json();
-        if (res.ok) {
-            projectData[file] = { rooms: data, offset: { x: Object.keys(projectData).length*250, y:50 } };
-            updateFileList(); renderMap(); closeModal();
-            if (data.length) setActiveRoom(file, 0);
+        const select = document.getElementById('server-file-list');
+        const selectedOptions = Array.from(select.selectedOptions);
+        
+        if (selectedOptions.length === 0) return;
+
+        const promises = selectedOptions.map(async (option) => {
+            const filename = option.value;
+            if (projectData[filename]) return null;
+            try {
+                const res = await fetch(`/api/load?file=${encodeURIComponent(filename)}`);
+                const data = await res.json();
+                return res.ok ? { filename, data } : null;
+            } catch(e) { return null; }
+        });
+
+        const results = await Promise.all(promises);
+        let loadedCount = 0;
+
+        results.forEach(res => {
+            if(res) {
+                projectData[res.filename] = {
+                    rooms: res.data,
+                    offset: { x: Object.keys(projectData).length * 250, y: 50 }
+                };
+                loadedCount++;
+            }
+        });
+
+        if (loadedCount > 0) {
+            updateFileList();
+            renderMap();
+            closeModal();
         } else {
-            alert(data.error);
+            alert("No valid files loaded.");
         }
     }
 
@@ -865,12 +1120,73 @@
         alert(ret.results.join('\n'));
     }
 
+    async function saveZone(filename) {
+        if (!projectData[filename]) return;
+        
+        const payload = {};
+        payload[filename] = projectData[filename].rooms;
+        
+        const btn = event.target; // Simple UI feedback
+        const originalText = btn.innerText;
+        btn.innerText = "⏳";
+        
+        try {
+            const res = await fetch('/api/save_batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files: payload })
+            });
+            const result = await res.json();
+            console.log(result); // Optional log
+            btn.innerText = "✓";
+            setTimeout(() => btn.innerText = "", 1000); // Clear after delay to reset icon via CSS (or keep text)
+            // Actually, my CSS relies on pseudo-elements or specific content if I used emojis. 
+            // Since I used emojis in the HTML, restoring originalText is safer.
+            setTimeout(() => btn.innerText = originalText, 1000);
+        } catch(e) {
+            alert("Error saving " + filename);
+            btn.innerText = "⚠️";
+        }
+    }
+
+    function closeZone(filename) {
+        if (!confirm(`Unload ${filename}? Unsaved changes will be lost.`)) return;
+        delete projectData[filename];
+        if (activeRoom && activeRoom.file === filename) {
+            activeRoom = null;
+            document.getElementById('room-editor').classList.add('hidden');
+            document.getElementById('no-selection').classList.remove('hidden');
+        }
+        updateFileList();
+        renderMap();
+    }
+    
+    function focusZone(filename) {
+        // Optional: Pan map to zone
+        const z = projectData[filename];
+        if (z && z.rooms.length > 0) {
+            // Calculate center
+            pan.x = -z.offset.x * scale + (document.getElementById('map-container').clientWidth/2);
+            pan.y = -z.offset.y * scale + (document.getElementById('map-container').clientHeight/2);
+            updateTransform();
+        }
+    }
+
     function updateFileList() {
         const c = document.getElementById('loaded-files-container');
+        if (Object.keys(projectData).length === 0) {
+            c.innerHTML = '<div class="text-gray-500 text-[10px] italic p-2">No zones loaded</div>';
+            return;
+        }
+        
         c.innerHTML = Object.keys(projectData).map(f => `
             <div class="zone-entry">
-                <span title="${f}">${f}</span>
-                <span class="text-[10px] bg-gray-800 px-1 rounded">${projectData[f].rooms.length}</span>
+                <span class="zone-name" title="${f}" onclick="focusZone('${f}')">${f}</span>
+                <div class="zone-actions">
+                    <span class="zone-count">${projectData[f].rooms.length}</span>
+                    <button class="zone-btn save" onclick="saveZone('${f}')" title="Save File">💾</button>
+                    <button class="zone-btn close" onclick="closeZone('${f}')" title="Unload File">✕</button>
+                </div>
             </div>
         `).join('');
     }

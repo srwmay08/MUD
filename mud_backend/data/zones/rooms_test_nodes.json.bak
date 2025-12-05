@@ -1,0 +1,116 @@
+[
+    {
+        "room_id": "node_test_area",
+        "name": "Node Testing Area",
+        "x": 1,
+        "y": 2,
+        "z": 0,
+        "is_outdoor": true,
+        "description": {
+            "default": "A quiet clearing has been set aside here just east of the city docks. A rock face, some leafy plants, a young tree, and a small, quiet fishing pond are all that you see. A path leads back west to the Docks Gate.\n\nSeveral gathering tools have been left on the ground here."
+        },
+        "is_fishing_spot": true,
+        "fishing_dc": 10,
+        "fishing_loot_table_id": "river_fish_loot",
+        "objects": [
+            {
+                "name": "a small fishing pond",
+                "keywords": [
+                    "pond",
+                    "fishing pond",
+                    "water"
+                ],
+                "description": "A small, clear pond. It looks like a good spot to FISH.",
+                "verbs": [
+                    "LOOK",
+                    "EXAMINE",
+                    "FISH"
+                ]
+            },
+            {
+                "name": "a pickaxe",
+                "item_id": "pickaxe",
+                "description": "A sturdy pickaxe lies on the ground.",
+                "keywords": [
+                    "pickaxe",
+                    "pick"
+                ],
+                "verbs": [
+                    "GET",
+                    "LOOK",
+                    "EXAMINE",
+                    "TAKE"
+                ],
+                "is_item": true
+            },
+            {
+                "name": "a wood axe",
+                "item_id": "wood_axe",
+                "description": "A heavy wood axe lies on the ground.",
+                "keywords": [
+                    "axe",
+                    "wood axe"
+                ],
+                "verbs": [
+                    "GET",
+                    "LOOK",
+                    "EXAMINE",
+                    "TAKE"
+                ],
+                "is_item": true
+            },
+            {
+                "name": "a sickle",
+                "item_id": "sickle",
+                "description": "A sharp sickle lies on the ground.",
+                "keywords": [
+                    "sickle",
+                    "knife"
+                ],
+                "verbs": [
+                    "GET",
+                    "LOOK",
+                    "EXAMINE",
+                    "TAKE"
+                ],
+                "is_item": true
+            },
+            {
+                "name": "a fishing pole",
+                "item_id": "fishing_pole",
+                "description": "A simple fishing pole lies on the ground.",
+                "keywords": [
+                    "pole",
+                    "fishing pole"
+                ],
+                "verbs": [
+                    "GET",
+                    "LOOK",
+                    "EXAMINE",
+                    "TAKE"
+                ],
+                "is_item": true
+            }
+        ],
+        "hidden_objects": [
+            {
+                "node_id": "copper_vein",
+                "node_type": "mining",
+                "perception_dc": 20
+            },
+            {
+                "node_id": "viridian_leaf_plant",
+                "node_type": "herbalism",
+                "perception_dc": 10
+            },
+            {
+                "node_id": "young_ash_tree",
+                "node_type": "lumberjacking",
+                "perception_dc": 15
+            }
+        ],
+        "exits": {
+            "west": "north_gate"
+        }
+    }
+]
