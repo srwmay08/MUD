@@ -1,156 +1,329 @@
 [
     {
+        "room_id": "inn_front_desk",
+        "name": "The Broken Sextant - Front Desk",
+        "interior_id": "inn",
         "description": {
-            "default": "You are in the common room of The Broken Sextant. It's loud, smoky, and smells of cheap ale. Mercenaries and sailors of all races eye you suspiciously. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands behind a bar, polishing a mug. A door leads back to your room, and the main exit leads OUT to the South Market."
+            "default": "You are in the entry foyer of The Broken Sextant. To the south, the raucous noise of the Common Room spills through an open archway. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands behind a high counter, managing the ledger. A simple wooden door leads back to the rented rooms, and the main exit leads OUT to the South Market."
         },
         "exits": {
             "out": "ts_south",
-            "south": "room_1764899535979_920",
-            "west": "room_1764900061183_670"
+            "south": "inn_common_room"
         },
-        "interior_id": "inn",
-        "name": "The Broken Sextant - Common Room",
         "objects": [
             {
-                "all_quests_done_message": "The Innkeeper nods. 'The Syndicate's Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'",
-                "description": "A portly, surprisingly cheerful-looking man who seems unfazed by his dangerous clientele. He spots you and waves you over.",
-                "is_npc": true,
-                "keywords": [
-                    "innkeeper",
-                    "man",
-                    "portly man",
-                    "an innkeeper"
-                ],
                 "name": "an innkeeper",
-                "quest_giver_ids": [
-                    "innkeeper_quest_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
+                "description": "A portly, surprisingly cheerful-looking man who seems unfazed by his dangerous clientele. He spots you and waves you over.",
+                "keywords": ["innkeeper", "man", "portly man", "an innkeeper"],
+                "verbs": ["look", "talk to", "give"],
+                "is_npc": true,
+                "quest_giver_ids": ["innkeeper_quest_1"],
+                "all_quests_done_message": "The Innkeeper nods. 'The Syndicate's Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
             },
             {
-                "description": "A simple wooden door leading back to your rented room.",
-                "keywords": [
-                    "door",
-                    "room",
-                    "inn room"
-                ],
                 "name": "door",
-                "perception_dc": 0,
+                "description": "A simple wooden door leading back to your rented room.",
+                "keywords": ["door", "room", "inn room"],
+                "verbs": ["ENTER", "look"],
                 "target_room": "inn_room",
-                "verbs": [
-                    "ENTER",
-                    "look"
-                ]
+                "perception_dc": 0
             }
         ],
-        "room_id": "inn_front_desk",
         "x": 0,
         "y": -2,
         "z": 0
     },
     {
-        "room_id": "room_1764899535979_920",
-        "name": "Tap Room",
-        "x": 0,
-        "y": -3,
-        "z": 0,
-        "interior_id": "rooms_broken_sextant",
+        "room_id": "inn_common_room",
+        "name": "The Broken Sextant - Common Room",
+        "interior_id": "inn",
         "description": {
-            "default": "The tap room with tables"
+            "default": "You are in the main common room of The Broken Sextant. It is loud, smoky, and smells of cheap ale and roasted meat. Mercenaries and sailors of all races crowd the space, eyeing newcomers suspiciously. Various unique tables are scattered around the room, offering places to sit and converse. To the north is the Front Desk, and to the west lies the Gambling Room."
         },
-        "exits": {},
+        "exits": {
+            "north": "inn_front_desk",
+            "west": "inn_gambling_room"
+        },
         "objects": [
             {
                 "name": "The Brass Astrolabe",
                 "description": "A heavy, circular booth tucked near the hearth. In the center of the table, bolted down to prevent theft, is a large brass astrolabe. Its plates are stained with ale, but the intricate star map remains visible, perfect for plotting a course—or a revolution.",
-                "keywords": ["table", "brass astrolabe", "astrolabe"],
+                "keywords": ["table", "booth", "astrolabe", "brass astrolabe"],
                 "verbs": ["ENTER", "look"],
-                "target_room": "inn_table_1"
+                "target_room": "inn_table_astrolabe"
             },
             {
                 "name": "The Rusty Compass",
                 "description": "A rickety table in a drafty corner. Embedded in the wood is a compass that has seen better days; the glass is fogged, and the needle spins lazily in circles, refusing to ever point North. The wood around it is carved with the initials of lost sailors.",
-                "keywords": ["table", "rusty compass", "compass"],
+                "keywords": ["table", "compass", "rusty compass"],
                 "verbs": ["ENTER", "look"],
-                "target_room": "inn_table_2"
+                "target_room": "inn_table_compass"
+            },
+            {
+                "name": "The Cracked Spyglass",
+                "description": "A high-backed booth offering significant privacy. Mounted on a swivel stand in the center is a long telescope with a spiderweb fracture across the primary lens. Looking through it distorts the taproom into a jagged, kaleidoscope nightmare.",
+                "keywords": ["table", "booth", "spyglass", "cracked spyglass", "telescope"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_spyglass"
+            },
+            {
+                "name": "The Ticking Chronometer",
+                "description": "This table is undeniably loud. A boxy marine chronometer sits in a glass case in the center, ticking with an aggressive, rhythmic thud that cuts through the tavern noise. It's the perfect table for meetings where time is of the essence.",
+                "keywords": ["table", "chronometer", "ticking chronometer"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_chronometer"
+            },
+            {
+                "name": "The Weathered Barometer",
+                "description": "A rounded booth smelling of old pipe tobacco. A large banjo-shaped barometer hangs on the pillar next to the table. The needle is stuck permanently on 'Stormy,' which seems fitting given the rowdy clientele usually seated here.",
+                "keywords": ["table", "booth", "barometer", "weathered barometer"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_barometer"
+            },
+            {
+                "name": "The Iron Loadstone",
+                "description": "A solid oak table that feels strangely heavy. A dark, jagged chunk of magnetic ore sits on a pedestal in the center. Iron tankards slide slightly across the table toward the stone if not held firmly, making for messy spills.",
+                "keywords": ["table", "loadstone", "iron loadstone", "ore"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_loadstone"
+            },
+            {
+                "name": "The Captain's Quadrant",
+                "description": "The most commanding table in the room, raised slightly on a dais. A decorative quadrant is inlaid into the tabletop in brass and dark wood. Sitting here gives you a clear view of the entrance, just as a captain watches the horizon.",
+                "keywords": ["table", "quadrant", "captains quadrant", "dais"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_quadrant"
+            },
+            {
+                "name": "The Heavy Hourglass",
+                "description": "A small, intimate table for two. In the center stands an hourglass nearly two feet tall, filled with black volcanic sand. The sand never seems to run out, trickling endlessly into the bottom bulb no matter how long you watch.",
+                "keywords": ["table", "hourglass", "heavy hourglass"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_hourglass"
+            },
+            {
+                "name": "The Golden Telescope",
+                "description": "A gaudy booth with velvet cushions that have seen better days. The centerpiece is a telescope plated in flaking gold leaf. It points accusingly at the bar, though the lens cap is rusted shut.",
+                "keywords": ["table", "booth", "telescope", "golden telescope"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_telescope"
+            },
+            {
+                "name": "The Copper Binnacle",
+                "description": "This booth is warm and illuminated by the soft glow of a ship's binnacle housing standing at the table's head. The compass inside floats in oil, lit by a small, enclosed flame that casts dancing shadows on the faces of those seated there.",
+                "keywords": ["table", "booth", "binnacle", "copper binnacle"],
+                "verbs": ["ENTER", "look"],
+                "target_room": "inn_table_binnacle"
             }
         ],
         "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
             "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "stealing_allowed": true
         },
-        "ambient_events": [],
-        "illumination": 50,
-        "is_outdoor": false
-    },
-    {
-        "room_id": "room_1764900061183_670",
-        "name": "Gambling Room",
-        "x": -1,
-        "y": -2,
-        "z": 0,
-        "interior_id": "rooms_broken_sextant",
-        "description": {
-            "default": ""
-        },
-        "exits": {},
-        "objects": [],
-        "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "illumination": 50,
-        "is_outdoor": false
-    },
-    {
-        "room_id": "inn_table_1",
-        "name": "The Brass Astrolabe",
-        "description": "A heavy, circular booth tucked near the hearth. In the center of the table, bolted down to prevent theft, is a large brass astrolabe. Its plates are stained with ale, but the intricate star map remains visible, perfect for plotting a course—or a revolution.",
-        "interior_id": "inn",
-        "is_table": true,
-        "exits": {
-            "out": "room_1764899535979_920"
-        },
-        "objects": [],
-        "x": 1,
-        "y": -2,
+        "x": 0,
+        "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_2",
-        "name": "The Rusty Compass",
-        "description": "A rickety table in a drafty corner. Embedded in the wood is a compass that has seen better days; the glass is fogged, and the needle spins lazily in circles, refusing to ever point North. The wood around it is carved with the initials of lost sailors.",
+        "room_id": "inn_gambling_room",
+        "name": "Gambling Room",
         "interior_id": "inn",
-        "is_table": true,
+        "description": {
+            "default": "A dimly lit room dedicated to games of chance. Dice clatter on wooden tables and cards are shuffled with practiced ease. The air is thick with tension and smoke."
+        },
         "exits": {
-            "out": "room_1764899535979_920"
+            "east": "inn_common_room"
         },
         "objects": [],
         "x": -1,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_room",
+        "name": "A Room at the Sextant",
+        "interior_id": "inn",
+        "description": {
+            "default": "You are in a simple, spartan room at The Broken Sextant. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads OUT."
+        },
+        "exits": {
+            "out": "inn_front_desk"
+        },
+        "objects": [
+            {
+                "name": "bed",
+                "description": "A simple straw mattress...",
+                "keywords": ["bed", "mattress"],
+                "verbs": ["look", "investigate"],
+                "perception_dc": 0
+            },
+            {
+                "name": "window",
+                "description": "Looking out the window, you can see the bustling, grimy south market.",
+                "keywords": ["window"],
+                "perception_dc": 0
+            },
+            {
+                "name": "table",
+                "description": "A small, plain wooden table.",
+                "keywords": ["table"],
+                "verbs": ["look", "investigate"],
+                "perception_dc": 0
+            }
+        ],
+        "hidden_objects": [
+            {
+                "name": "a note",
+                "description": "A folded piece of parchment rests on the table.",
+                "keywords": ["note", "parchment", "a note"],
+                "verbs": ["GET", "LOOK", "TAKE"],
+                "is_item": true,
+                "item_id": "inn_note",
+                "perception_dc": 1
+            }
+        ],
+        "x": 0,
         "y": -2,
+        "z": 1
+    },
+    {
+        "room_id": "inn_table_astrolabe",
+        "name": "The Brass Astrolabe",
+        "description": "You are seated at The Brass Astrolabe. It is a heavy, circular booth tucked near the hearth. In the center, a large brass astrolabe is bolted to the wood, its plates stained with ale but its star map still visible.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_compass",
+        "name": "The Rusty Compass",
+        "description": "You are seated at The Rusty Compass in a drafty corner. Embedded in the table is an old compass with fogged glass. The needle spins lazily, never pointing North.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_spyglass",
+        "name": "The Cracked Spyglass",
+        "description": "You are seated at The Cracked Spyglass, a high-backed booth offering privacy. A long telescope with a fractured lens is mounted in the center, distorting the view of the taproom.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_chronometer",
+        "name": "The Ticking Chronometer",
+        "description": "You are seated at The Ticking Chronometer. The rhythmic thud of the boxy marine chronometer in the center cuts through the ambient noise of the tavern.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_barometer",
+        "name": "The Weathered Barometer",
+        "description": "You are seated at The Weathered Barometer, a booth smelling of pipe tobacco. A banjo-shaped barometer nearby is stuck permanently on 'Stormy.'",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_loadstone",
+        "name": "The Iron Loadstone",
+        "description": "You are seated at The Iron Loadstone. A dark chunk of magnetic ore sits on a pedestal in the center, occasionally pulling iron tankards across the oak surface.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_quadrant",
+        "name": "The Captain's Quadrant",
+        "description": "You are seated at The Captain's Quadrant, raised slightly on a dais. A decorative brass quadrant is inlaid into the table, giving you a commanding view of the room.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_hourglass",
+        "name": "The Heavy Hourglass",
+        "description": "You are seated at The Heavy Hourglass, an intimate table for two. A two-foot-tall hourglass filled with black volcanic sand trickles endlessly in the center.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_telescope",
+        "name": "The Golden Telescope",
+        "description": "You are seated at The Golden Telescope, a gaudy booth with worn velvet cushions. A gold-plated telescope points accusingly at the bar, its lens cap rusted shut.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "room_id": "inn_table_binnacle",
+        "name": "The Copper Binnacle",
+        "description": "You are seated at The Copper Binnacle. The booth is illuminated by the soft, dancing glow of a ship's binnacle housing a compass floating in oil.",
+        "interior_id": "inn",
+        "is_table": true,
+        "exits": {
+            "out": "inn_common_room"
+        },
+        "objects": [],
+        "x": 0,
+        "y": -3,
         "z": 0
     }
 ]
