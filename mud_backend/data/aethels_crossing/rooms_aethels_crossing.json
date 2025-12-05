@@ -92,7 +92,8 @@
                 ],
                 "verbs": [
                     "look"
-                ]
+                ],
+                "target_room": "inn_front_desk"
             },
             {
                 "name": "auction house entrance",
