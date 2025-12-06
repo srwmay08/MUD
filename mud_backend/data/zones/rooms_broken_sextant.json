@@ -74,16 +74,7 @@
         },
         "interior_id": "inn",
         "name": "The Broken Sextant - Common Room",
-        "objects": [],
-        "room_id": "inn_common_room",
-        "x": 0,
-        "y": -3,
-        "z": 0,
-        "is_outdoor": false,
-        "is_table": false,
-        "illumination": 50,
-        "ambient_events": [],
-        "hidden_objects": [
+        "objects": [
             {
                 "name": "The Brass Astrolabe",
                 "description": "A heavy, circular booth tucked near the hearth. In the center of the table, bolted down to prevent theft, is a large brass astrolabe. Its plates are stained with ale, but the intricate star map remains visible, perfect for plotting a course\u2014or a revolution.",
@@ -94,9 +85,11 @@
                     "brass astrolabe"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_astrolabe",
+                "perception_dc": 0
             },
             {
                 "name": "The Rusty Compass",
@@ -107,9 +100,11 @@
                     "rusty compass"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_compass",
+                "perception_dc": 0
             },
             {
                 "name": "The Cracked Spyglass",
@@ -122,9 +117,11 @@
                     "telescope"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_spyglass",
+                "perception_dc": 0
             },
             {
                 "name": "The Ticking Chronometer",
@@ -135,9 +132,11 @@
                     "ticking chronometer"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_chronometer",
+                "perception_dc": 0
             },
             {
                 "name": "The Weathered Barometer",
@@ -149,9 +148,11 @@
                     "weathered barometer"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_barometer",
+                "perception_dc": 0
             },
             {
                 "name": "The Iron Loadstone",
@@ -163,9 +164,11 @@
                     "ore"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_loadstone",
+                "perception_dc": 0
             },
             {
                 "name": "The Captain's Quadrant",
@@ -177,9 +180,11 @@
                     "dais"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_quadrant",
+                "perception_dc": 0
             },
             {
                 "name": "The Heavy Hourglass",
@@ -190,9 +195,11 @@
                     "heavy hourglass"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_hourglass",
+                "perception_dc": 0
             },
             {
                 "name": "The Golden Telescope",
@@ -204,9 +211,11 @@
                     "golden telescope"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_telescope",
+                "perception_dc": 0
             },
             {
                 "name": "The Copper Binnacle",
@@ -218,11 +227,22 @@
                     "copper binnacle"
                 ],
                 "verbs": [
-                    "look"
+                    "look",
+                    "ENTER"
                 ],
-                "perception_dc": 1
+                "target_room": "inn_table_binnacle",
+                "perception_dc": 0
             }
-        ]
+        ],
+        "room_id": "inn_common_room",
+        "x": 0,
+        "y": -3,
+        "z": 0,
+        "is_outdoor": false,
+        "is_table": false,
+        "illumination": 50,
+        "ambient_events": [],
+        "hidden_objects": []
     },
     {
         "description": {
