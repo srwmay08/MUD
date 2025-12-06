@@ -97,8 +97,9 @@ class Examine(BaseVerb):
         if "table" in found_object.get("keywords", []) or found_object.get("is_table_proxy"):
             occupants = _get_table_occupants(self.world, found_object)
             if occupants:
-                formatted_names = [f"**{name.capitalize()}**" for name in occupants]
-                self.player.send_message(f"Seated here: {', '.join(formatted_names)}")
+                # Privacy Update: Do not list names, just status
+                count = len(occupants)
+                self.player.send_message(f"It is occupied by {count} person{'s' if count > 1 else ''}.")
             else:
                 self.player.send_message("It is currently empty.")
         # -------------------------------
@@ -214,10 +215,11 @@ class Look(BaseVerb):
                 if "table" in obj.get("keywords", []) or obj.get("is_table_proxy"):
                     occupants = _get_table_occupants(self.world, obj)
                     if occupants:
-                        formatted_names = [f"**{name.capitalize()}**" for name in occupants]
-                        self.player.send_message(f"Seated here: {', '.join(formatted_names)}")
+                        # Privacy Update: Do not list names, just status
+                        count = len(occupants)
+                        self.player.send_message(f"It is occupied by {count} person{'s' if count > 1 else ''}.")
                     else:
-                        self.player.send_message("It appears to be empty.")
+                        self.player.send_message("It is currently empty.")
                 # ---------------------------------------------------
 
                 if "FISH" in obj.get("verbs", []):

@@ -1,4 +1,3 @@
-# mud_backend/verbs/social.py
 import random
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
@@ -145,7 +144,12 @@ class Invite(BaseVerb):
             if p.name.lower() not in self.room.invited_guests:
                 self.room.invited_guests.append(p.name.lower())
                 invited_names.append(p.name)
-                p.send_message(f"{self.player.name} waves to you, inviting you to join them.")
+                
+                # Send actionable notification to the invited player
+                p.send_message(
+                    f"{self.player.name} waves to you, inviting you to join them at {self.room.name}. "
+                    f"You may now <span class='keyword' data-command='enter {self.room.name}'>ENTER {self.room.name}</span>."
+                )
         
         if invited_names:
             self.player.send_message(f"You wave at {', '.join(invited_names)} and invite them to sit with you.")
