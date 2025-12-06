@@ -584,62 +584,96 @@
         return wrapper;
     }
 
-    function renderMonsterFields(container, entity) {
+function renderMonsterFields(container, entity) {
+        // --- Row 1: ID and Name (Condensed) ---
+        const headerRow = document.createElement('div');
+        headerRow.className = "flex gap-2 mb-1";
+        
+        // ID Field (Read-onlyish visualization since it's handled by the key usually, but good for display)
+        // If it's a list structure, we might want to edit monster_id. 
+        // Based on your previous code, 'monster_id' is the unique key in list mode.
+        if (!isDictStructure) {
+             const idDiv = document.createElement('div');
+             idDiv.className = "w-1/3";
+             idDiv.appendChild(createInput("ID", entity.monster_id || "", (v) => updateField("monster_id", v)));
+             headerRow.appendChild(idDiv);
+        }
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = isDictStructure ? "w-full" : "w-2/3";
+        nameDiv.appendChild(createInput("Name", entity.name || "", (v) => updateField("name", v)));
+        headerRow.appendChild(nameDiv);
+        container.appendChild(headerRow);
+
+        // --- Row 2: Keywords ---
+        container.appendChild(createInput("Keywords", (entity.keywords || []).join(', '), (v) => updateField("keywords", v.split(',').map(s=>s.trim()).filter(s=>s))));
+
+        // --- Row 3: Flags (Checkboxes) - Removed BCS ---
         const flagDiv = document.createElement('div');
-        flagDiv.className = "flex flex-wrap gap-4 mb-2";
+        flagDiv.className = "flex flex-wrap gap-4 mb-2 mt-2 bg-black/20 p-1 rounded border border-gray-800";
         flagDiv.appendChild(createCheckbox("Is NPC", !!entity.is_npc, (v) => updateField("is_npc", v)));
         flagDiv.appendChild(createCheckbox("Aggressive", !!entity.is_aggressive, (v) => updateField("is_aggressive", v)));
         flagDiv.appendChild(createCheckbox("Undead", !!entity.is_undead, (v) => updateField("is_undead", v)));
         flagDiv.appendChild(createCheckbox("Non-Corporeal", !!entity.is_non_corporeal, (v) => updateField("is_non_corporeal", v)));
-        flagDiv.appendChild(createCheckbox("BCS", !!entity.bcs, (v) => updateField("bcs", v)));
         container.appendChild(flagDiv);
 
-        const grid = document.createElement('div');
-        grid.className = "grid grid-cols-2 gap-4 mb-2";
-        grid.appendChild(createInput("Level", entity.level || 1, (v) => updateField("level", parseInt(v))));
-        grid.appendChild(createInput("Max HP", entity.max_hp || 50, (v) => updateField("max_hp", parseInt(v))));
+        // --- Row 4: Ranges (Level & HP) ---
+        const rangeGrid = document.createElement('div');
+        rangeGrid.className = "grid grid-cols-2 gap-2 mb-2";
         
-        // --- UPDATED: Faction Dropdown ---
-        container.appendChild(createSelect("Faction", entity.faction || "Townsfolk", refs.factions, (v) => updateField("faction", v)));
+        // Level Range
+        const lvlDiv = document.createElement('div');
+        lvlDiv.innerHTML = `<label>Level Range (Min, Max)</label>`;
+        const lvlInp = document.createElement('input');
+        lvlInp.value = (entity.level_range || []).join(', ');
+        lvlInp.placeholder = "e.g. 1, 3";
+        lvlInp.onchange = (e) => updateField("level_range", e.target.value.split(',').map(n => parseInt(n.trim()) || 0));
+        lvlDiv.appendChild(lvlInp);
+        rangeGrid.appendChild(lvlDiv);
+
+        // HP Range
+        const hpDiv = document.createElement('div');
+        hpDiv.innerHTML = `<label>HP Range (Min, Max)</label>`;
+        const hpInp = document.createElement('input');
+        hpInp.value = (entity.hp_range || []).join(', ');
+        hpInp.placeholder = "e.g. 10, 20";
+        hpInp.onchange = (e) => updateField("hp_range", e.target.value.split(',').map(n => parseInt(n.trim()) || 0));
+        hpDiv.appendChild(hpInp);
+        rangeGrid.appendChild(hpDiv);
         
-        grid.appendChild(createInput("Family", entity.family || "Human", (v) => updateField("family", v)));
-        grid.appendChild(createInput("Body Type", entity.body_type || "biped", (v) => updateField("body_type", v)));
-        grid.appendChild(createInput("Perception DC", entity.perception_dc || 0, (v) => updateField("perception_dc", parseInt(v))));
-        container.appendChild(grid);
+        container.appendChild(rangeGrid);
 
-        const grid2 = document.createElement('div');
-        grid2.className = "grid grid-cols-3 gap-4 mb-2 bg-black/20 p-2 rounded border border-gray-700";
-        grid2.appendChild(createInput("Action Timer (s)", entity.action_timer_seconds || 5, (v) => updateField("action_timer_seconds", parseFloat(v))));
-        grid2.appendChild(createInput("Respawn Time (s)", entity.respawn_time_seconds || 300, (v) => updateField("respawn_time_seconds", parseFloat(v))));
-        grid2.appendChild(createInput("Respawn Chance", entity.respawn_chance_per_tick || 0.2, (v) => updateField("respawn_chance_per_tick", parseFloat(v))));
-        container.appendChild(grid2);
+        // --- Row 5: Biology ---
+        const bioGrid = document.createElement('div');
+        bioGrid.className = "grid grid-cols-2 gap-2 mb-2";
+        bioGrid.appendChild(createInput("Family", entity.family || "Human", (v) => updateField("family", v)));
+        bioGrid.appendChild(createInput("Body Type", entity.body_type || "biped", (v) => updateField("body_type", v)));
+        container.appendChild(bioGrid);
 
-        const rangeDiv = document.createElement('div');
-        rangeDiv.innerHTML = `<label>Level Range (Min, Max)</label>`;
-        const rangeInp = document.createElement('input');
-        rangeInp.value = (entity.level_range || []).join(', ');
-        rangeInp.onchange = (e) => updateField("level_range", e.target.value.split(',').map(n => parseInt(n.trim())));
-        rangeDiv.appendChild(rangeInp);
-        container.appendChild(rangeDiv);
+        // --- Group: Description & Messages ---
+        const descGroup = document.createElement('div');
+        descGroup.className = "group-box mb-2";
+        descGroup.innerHTML = `<div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Description & Narrative</div>`;
+        descGroup.appendChild(createInput("Description", entity.description || "", (v) => updateField("description", v)));
         
-        // --- NEW: Faction Adjustment Editor ---
-        container.appendChild(createKeyValueEditor("Faction Adjustments on Death", entity.faction_adjustments_on_death || {}, (v) => updateField("faction_adjustments_on_death", v), refs.factions));
+        const msgGrid = document.createElement('div');
+        msgGrid.className = "grid grid-cols-2 gap-2";
+        msgGrid.appendChild(createInput("Spawn Arrival", entity.spawn_message_arrival || "", (v) => updateField("spawn_message_arrival", v)));
+        msgGrid.appendChild(createInput("Spawn Departure", entity.spawn_message_departure || "", (v) => updateField("spawn_message_departure", v)));
+        descGroup.appendChild(msgGrid);
+        container.appendChild(descGroup);
 
-        container.appendChild(createInput("Spawn Arrival", entity.spawn_message_arrival || "", (v) => updateField("spawn_message_arrival", v)));
-        container.appendChild(createInput("Spawn Departure", entity.spawn_message_departure || "", (v) => updateField("spawn_message_departure", v)));
+        // --- Group: Faction ---
+        const facGroup = document.createElement('div');
+        facGroup.className = "group-box mb-2";
+        facGroup.innerHTML = `<div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Faction Settings</div>`;
+        facGroup.appendChild(createSelect("Faction", entity.faction || "Townsfolk", refs.factions, (v) => updateField("faction", v)));
+        facGroup.appendChild(createKeyValueEditor("Adjustments on Death", entity.faction_adjustments_on_death || {}, (v) => updateField("faction_adjustments_on_death", v), refs.factions));
+        container.appendChild(facGroup);
 
-        container.appendChild(createAIScriptEditor("AI Behavior Strategy", entity.ai_script || [], (v) => updateField("ai_script", v)));
-
-        container.appendChild(createListEditor("Attack Attributes (Natural)", entity.attack_attributes || [], (v) => updateField("attack_attributes", v)));
-        
-        container.appendChild(createKeyValueEditor("Skills (Name: Rank)", entity.skills || {}, (v) => updateField("skills", v), refs.skills));
-        
-        container.appendChild(createKeyValueEditor("Equipped (Slot: ItemID)", entity.equipped || {}, (v) => updateField("equipped", v), refs.slots, "dl-items"));
-        
-        container.appendChild(createListEditor("Known Spells", entity.known_spells || [], (v) => updateField("known_spells", v), "dl-spells"));
-
+        // --- Group: Stats ---
         const statBox = document.createElement('div');
-        statBox.className = "group-box";
+        statBox.className = "group-box mb-2";
         statBox.innerHTML = "<label>Stats</label><div class='stat-grid' id='stat-grid'></div>";
         const statGrid = statBox.querySelector('#stat-grid');
         const stats = entity.stats || {STR:50, CON:50, DEX:50, AGI:50, LOG:10, INT:10, WIS:10, INF:10, ZEA:10, ESS:10, DIS:10, AUR:10};
@@ -653,9 +687,35 @@
             statGrid.appendChild(div);
         });
         container.appendChild(statBox);
+
+        // --- Group: AI ---
+        container.appendChild(createAIScriptEditor("AI Behavior Strategy", entity.ai_script || [], (v) => updateField("ai_script", v)));
+
+        // --- Group: Combat & Assets ---
+        const combatGroup = document.createElement('div');
+        combatGroup.className = "group-box mb-2";
+        combatGroup.innerHTML = `<div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Combat & Assets</div>`;
+        
+        // Timers & Perception
+        const metaGrid = document.createElement('div');
+        metaGrid.className = "grid grid-cols-4 gap-2 mb-2";
+        metaGrid.appendChild(createInput("Act. Time", entity.action_timer_seconds || 5, (v) => updateField("action_timer_seconds", parseFloat(v))));
+        metaGrid.appendChild(createInput("Respawn", entity.respawn_time_seconds || 300, (v) => updateField("respawn_time_seconds", parseFloat(v))));
+        metaGrid.appendChild(createInput("Rsp Chance", entity.respawn_chance_per_tick || 0.2, (v) => updateField("respawn_chance_per_tick", parseFloat(v))));
+        metaGrid.appendChild(createInput("Perception", entity.perception_dc || 0, (v) => updateField("perception_dc", parseInt(v))));
+        combatGroup.appendChild(metaGrid);
+
+        combatGroup.appendChild(createListEditor("Attack Attributes", entity.attack_attributes || [], (v) => updateField("attack_attributes", v)));
+        combatGroup.appendChild(createKeyValueEditor("Skills", entity.skills || {}, (v) => updateField("skills", v), refs.skills));
+        combatGroup.appendChild(createKeyValueEditor("Equipped", entity.equipped || {}, (v) => updateField("equipped", v), refs.slots, "dl-items"));
+        combatGroup.appendChild(createListEditor("Known Spells", entity.known_spells || [], (v) => updateField("known_spells", v), "dl-spells"));
+        
+        container.appendChild(combatGroup);
+
+        // --- Footer: Loot ---
         container.appendChild(createInput("Loot Table ID", entity.loot_table_id || "", (v) => updateField("loot_table_id", v), "dl-loot"));
     }
-
+    
     function renderGlobalFields(container, entity) {
         container.appendChild(createKeyValueEditor("Raw JSON Data", entity, (v) => {
             // Update currentData directly because entity IS currentData[key] here
