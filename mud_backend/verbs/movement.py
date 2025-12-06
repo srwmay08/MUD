@@ -421,9 +421,31 @@ class Enter(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         
-        enterable_object = next((obj for obj in self.room.objects 
-                                 if (obj['name'].lower() == target_name or target_name in obj.get("keywords", []))
-                                 and "ENTER" in obj.get("verbs", [])), None)
+        # --- SMART TABLE SELECTION (GO TABLE) ---
+        enterable_object = None
+        
+        if target_name == "table":
+            # Find the first table that is either empty OR has room (but sticking to empty for now)
+            possible_tables = []
+            for obj in self.room.objects:
+                if "table" in obj.get("keywords", []) and "ENTER" in obj.get("verbs", []):
+                    possible_tables.append(obj)
+            
+            for table in possible_tables:
+                t_room_id = table.get("target_room")
+                if t_room_id:
+                    occupants = self.world.room_players.get(t_room_id, set())
+                    if not occupants:
+                        enterable_object = table
+                        break
+            
+            # If no empty table found, default to the first available table to trigger the 'occupied' message logic
+            if not enterable_object and possible_tables:
+                enterable_object = possible_tables[0]
+        else:
+            enterable_object = next((obj for obj in self.room.objects 
+                                     if (obj['name'].lower() == target_name or target_name in obj.get("keywords", []))
+                                     and "ENTER" in obj.get("verbs", [])), None)
 
         if not enterable_object:
             self.player.send_message(f"You cannot enter the **{target_name}**.")
@@ -435,38 +457,36 @@ class Enter(BaseVerb):
             self.player.send_message(f"The {target_name} leads nowhere right now.")
             return
 
-        # --- TABLE LOGIC START ---
-        # If there are people inside, the room must be active in memory.
-        players_inside = self.world.room_players.get(target_room_id, set())
-        if players_inside:
-            target_room_obj = self.world.get_active_room_safe(target_room_id)
-            if target_room_obj and getattr(target_room_obj, "is_table", False):
-                # Check Invite
-                if self.player.name.lower() not in [g.lower() for g in target_room_obj.invited_guests]:
-                    # Check Friends
-                    friend_found = False
-                    for name in players_inside:
-                        p_obj = self.world.get_player_obj(name)
-                        if p_obj and p_obj.is_friend(self.player.name):
-                            friend_found = True
-                            target_room_obj.invited_guests.append(self.player.name.lower())
-                            
-                            # Messages
-                            self.player.send_message(f"{p_obj.name} waves to you, inviting you to join them.")
-                            p_obj.send_message(f"You see {self.player.name} waving at your table. Recognizing your friend, you immediately wave for them to join you.")
-                            self.world.broadcast_to_room(target_room_id, f"{p_obj.name} waves {self.player.name} over to the table.", "message", skip_sid=None)
-                            break
+        # --- TABLE LOGIC: GATEKEEPER CHECK ---
+        target_room_obj = self.world.get_active_room_safe(target_room_id)
+        if target_room_obj and getattr(target_room_obj, "is_table", False):
+            owner_name = getattr(target_room_obj, "owner", None)
+            
+            if owner_name:
+                # Table is owned. Check permissions.
+                is_invited = self.player.name.lower() in [g.lower() for g in target_room_obj.invited_guests]
+                
+                owner_obj = self.world.get_player_obj(owner_name)
+                is_friend = False
+                if owner_obj:
+                    is_friend = owner_obj.is_friend(self.player.name)
+                
+                if not is_invited and not is_friend and owner_name != self.player.name.lower():
+                    # Deny Entry
+                    self.player.send_message(f"You wave to the people seated at the {enterable_object.get('name', 'table')}, hoping they will invite you to sit with them.")
                     
-                    if not friend_found:
-                        # Deny Entry
-                        self.player.send_message(f"You wave to the people seated at the {enterable_object.get('name', 'table')}, hoping they will invite you to sit with them.")
-                        
-                        inside_msg = (
-                            f"You see {self.player.name} waving at your table, clearly hoping that you will invite them to sit with you. "
-                            f"If you would like, you may <span class='keyword' data-command='invite {self.player.name}'>INVITE {self.player.name}</span> to allow them to join you."
-                        )
-                        self.world.broadcast_to_room(target_room_id, inside_msg, "message")
-                        return
+                    inside_msg = (
+                        f"You see {self.player.name} waving at your table, clearly hoping that you will invite them to sit with you. "
+                        f"If you would like, you may <span class='keyword' data-command='invite {self.player.name}'>INVITE {self.player.name}</span> to allow them to join you."
+                    )
+                    self.world.broadcast_to_room(target_room_id, inside_msg, "message")
+                    return
+                
+                # Auto-invite friend logic for smoother gameplay
+                if is_friend and not is_invited:
+                    target_room_obj.invited_guests.append(self.player.name.lower())
+                    self.player.send_message(f"{owner_obj.name} waves to you, inviting you to join them.")
+                    owner_obj.send_message(f"You see {self.player.name} waving at your table. Recognizing your friend, you immediately wave for them to join you.")
         # --- TABLE LOGIC END ---
         
         if target_room_id == "inn_room":
@@ -744,6 +764,14 @@ class Move(BaseVerb):
             if base_rt > 0:
                 _set_action_roundtime(self.player, base_rt, rt_type="hard")
             return
+
+        # --- SMART TABLE HANDLING IN MOVE ---
+        # If user types "move table" or "go table", we delegate to Enter but must allow 
+        # it to detect the "table" keyword specifically.
+        if target_name == "table":
+             enter_verb = Enter(self.world, self.player, self.room, ["table"])
+             enter_verb.execute()
+             return
 
         enterable_object = None
         for obj in self.room.objects:

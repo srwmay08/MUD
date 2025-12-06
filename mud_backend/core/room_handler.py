@@ -198,6 +198,19 @@ def show_room_to_player(player: Player, room: Room):
     if other_players_in_room:
         player.send_message(f"Also here: {', '.join(other_players_in_room)}.")
 
+    # --- NEW: Visibility Outside Tables ---
+    if getattr(room, "is_table", False) and "out" in room.exits:
+        parent_room_id = room.exits["out"]
+        outside_players = []
+        for sid, data in player.world.get_all_players_info():
+             p_name = data["player_name"]
+             if data["current_room_id"] == parent_room_id:
+                 outside_players.append(f'<span class="keyword" data-name="{p_name}" data-verbs="look">{p_name}</span>')
+        
+        if outside_players:
+            player.send_message(f"Outside the booth, you see: {', '.join(outside_players)}.")
+    # --------------------------------------
+
     if room.exits:
         exit_names = []
         for name in room.exits.keys():
