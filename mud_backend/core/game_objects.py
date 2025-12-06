@@ -507,8 +507,6 @@ class Player(GameEntity):
                 # Get remaining players (excluding self)
                 current_occupants = list(self.world.room_players.get(old_room, []))
                 # Note: 'current_occupants' might still contain self depending on when this is called
-                # In this system, remove_player_from_room_index happens AFTER this hook usually, 
-                # but let's filter safely.
                 remaining = [p for p in current_occupants if p.lower() != self.name.lower()]
                 
                 if remaining:
@@ -540,7 +538,15 @@ class Player(GameEntity):
             if not existing_occupants:
                 target_room_obj.owner = self.name.lower()
                 target_room_obj.invited_guests = [] # Reset invite list on new claim
-                self.send_message("You take a seat at the empty table. You are now the gatekeeper.")
+                self.send_message("You take a seat at the empty table.")
+            else:
+                # SELF-HEALING: If there are occupants but NO owner (e.g. reload or glitch), assign one.
+                if not getattr(target_room_obj, "owner", None):
+                    # Sort occupants to find longest standing? Or just pick first.
+                    # Since existing_occupants is from room_players (set/list), order isn't guaranteed perfectly
+                    # but picking one is better than none.
+                    new_owner = existing_occupants[0]
+                    target_room_obj.owner = new_owner.lower()
         # -----------------------------------------------------
         
         if target_room_id not in self.visited_rooms:

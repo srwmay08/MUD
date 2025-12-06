@@ -204,6 +204,8 @@ def show_room_to_player(player: Player, room: Room):
         outside_players = []
         for sid, data in player.world.get_all_players_info():
              p_name = data["player_name"]
+             if p_name.lower() == player.name.lower(): continue # Skip self
+             
              if data["current_room_id"] == parent_room_id:
                  outside_players.append(f'<span class="keyword" data-name="{p_name}" data-verbs="look">{p_name}</span>')
         

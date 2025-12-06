@@ -139,14 +139,20 @@ class Look(BaseVerb):
                 return
 
             self.player.send_message("--- Tables in the Room ---")
+            
+            table_statuses = []
             for table in tables_found:
                 occupants = _get_table_occupants(self.world, table)
                 if occupants:
-                    count = len(occupants)
-                    people_str = "person" if count == 1 else "people"
-                    self.player.send_message(f"- **{table['name']}**: Occupied by {count} {people_str}.")
+                    # Table is occupied
+                    table_statuses.append(f"**{table['name']}** is occupied")
                 else:
-                    self.player.send_message(f"- **{table['name']}**: Empty")
+                    # Table is empty
+                    table_statuses.append(f"**{table['name']}** is empty")
+            
+            # Join with commas
+            output_msg = ", ".join(table_statuses) + "."
+            self.player.send_message(output_msg)
             return
         # ---------------------------
 

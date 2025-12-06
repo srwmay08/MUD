@@ -460,8 +460,15 @@ class Enter(BaseVerb):
         # --- TABLE LOGIC: GATEKEEPER CHECK ---
         target_room_obj = self.world.get_active_room_safe(target_room_id)
         if target_room_obj and getattr(target_room_obj, "is_table", False):
+            
+            # Self-Healing Check: If occupants exist but no owner, assign one now
+            current_occupants = [p for p in self.world.room_players.get(target_room_id, [])]
             owner_name = getattr(target_room_obj, "owner", None)
             
+            if not owner_name and current_occupants:
+                target_room_obj.owner = current_occupants[0].lower()
+                owner_name = target_room_obj.owner
+
             if owner_name:
                 # Table is owned. Check permissions.
                 is_invited = self.player.name.lower() in [g.lower() for g in target_room_obj.invited_guests]
