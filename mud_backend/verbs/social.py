@@ -141,8 +141,13 @@ class Invite(BaseVerb):
         
         invited_names = []
         for p in targets_to_invite:
-            if p.name.lower() not in self.room.invited_guests:
-                self.room.invited_guests.append(p.name.lower())
+            # FIX: Check if not in list OR not in room (allows re-sending notification if they are outside)
+            if p.name.lower() not in self.room.invited_guests or p.current_room_id != self.room.room_id:
+                
+                # Only append to list if not already there to avoid duplicates
+                if p.name.lower() not in self.room.invited_guests:
+                    self.room.invited_guests.append(p.name.lower())
+                
                 invited_names.append(p.name)
                 
                 # Send actionable notification to the invited player
@@ -150,7 +155,7 @@ class Invite(BaseVerb):
                     f"{self.player.name} waves to you, inviting you to join them at {self.room.name}. "
                     f"You may now <span class='keyword' data-command='enter {self.room.name}'>ENTER {self.room.name}</span>."
                 )
-        
+                
         if invited_names:
             self.player.send_message(f"You wave at {', '.join(invited_names)} and invite them to sit with you.")
             self.world.broadcast_to_room(self.room.room_id, f"{self.player.name} invites {', '.join(invited_names)} to the table.", "message", skip_sid=None)

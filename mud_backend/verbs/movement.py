@@ -529,6 +529,13 @@ class Enter(BaseVerb):
         if _check_toll_gate(self.player, target_room_id):
             return
         
+        # --- GATEKEEPING FIX: Clear Invite on Leave ---
+        # If leaving a table, remove self from guest list so they can't auto-return
+        if getattr(self.room, "is_table", False):
+            if self.player.name.lower() in self.room.invited_guests:
+                self.room.invited_guests.remove(self.player.name.lower())
+            # ----------------------------------------------
+
         group = self.world.get_group(self.player.group_id)
         is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
         if is_leader:
@@ -626,7 +633,13 @@ class Climb(BaseVerb):
             
         if _check_toll_gate(self.player, target_room_id):
             return
-        
+
+        # --- GATEKEEPING FIX: Clear Invite on Leave ---
+        if getattr(self.room, "is_table", False):
+            if self.player.name.lower() in self.room.invited_guests:
+                self.room.invited_guests.remove(self.player.name.lower())
+        # ----------------------------------------------
+
         group = self.world.get_group(self.player.group_id)
         is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
         if is_leader:
