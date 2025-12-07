@@ -158,10 +158,12 @@ def show_room_to_player(player: Player, room: Room):
     if room.objects:
         html_objects = []
         for obj in room.objects:
-            # --- SKIP HIDDEN OBJECTS ---
-            if obj.get("hidden", False):
+            # --- SKIP HIDDEN OBJECTS OR TABLES ---
+            # We skip tables here so they don't clutter the main room view.
+            # Players can still interact with them via LOOK TABLES or LOOK <NAME>.
+            if obj.get("hidden", False) or obj.get("is_table", False):
                 continue
-            # ---------------------------
+            # -------------------------------------
             
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
@@ -172,8 +174,9 @@ def show_room_to_player(player: Player, room: Room):
                     f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
                 )
         if html_objects:
-            player.send_message(f"\nYou also see: {', '.join(html_objects)}.")
+            player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
     
+    # ... (Rest of the function remains unchanged)
     other_players_in_room = []
     for sid, data in player.world.get_all_players_info():
         player_name_in_room = data["player_name"] 
@@ -218,6 +221,7 @@ def show_room_to_player(player: Player, room: Room):
         for name in room.exits.keys():
             exit_names.append(f'<span class="keyword" data-command="{name}">{name.capitalize()}</span>')
         player.send_message(f"Obvious exits: {', '.join(exit_names)}")
+
 
 def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
     """

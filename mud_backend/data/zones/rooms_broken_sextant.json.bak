@@ -1,8 +1,5 @@
 [
     {
-        "room_id": "inn_front_desk",
-        "name": "The Broken Sextant - Front Desk",
-        "interior_id": "inn",
         "description": {
             "default": "You are in the entry foyer of The Broken Sextant. To the south, the raucous noise of the Common Room spills through an open archway. A portly <span class='keyword' data-name='an innkeeper' data-verbs='look,talk to,examine,give'>innkeeper</span> stands behind a high counter, managing the ledger. A simple wooden door leads back to the rented rooms, and the main exit leads OUT to the South Market."
         },
@@ -10,51 +7,52 @@
             "out": "ts_south",
             "south": "inn_common_room"
         },
+        "interior_id": "inn",
+        "name": "The Broken Sextant - Front Desk",
         "objects": [
             {
-                "name": "an innkeeper",
+                "all_quests_done_message": "The Innkeeper nods. 'The Syndicate's Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'",
                 "description": "A portly, surprisingly cheerful-looking man who seems unfazed by his dangerous clientele. He spots you and waves you over.",
+                "is_npc": true,
                 "keywords": [
                     "innkeeper",
                     "man",
                     "portly man",
                     "an innkeeper"
                 ],
+                "name": "an innkeeper",
+                "quest_giver_ids": [
+                    "innkeeper_quest_1"
+                ],
                 "verbs": [
                     "look",
                     "talk to",
                     "give"
-                ],
-                "is_npc": true,
-                "quest_giver_ids": [
-                    "innkeeper_quest_1"
-                ],
-                "all_quests_done_message": "The Innkeeper nods. 'The Syndicate's Clerk tells me you've been a great help. Your debt is clear. Feel free to use the room!'"
+                ]
             },
             {
-                "name": "door",
                 "description": "A simple wooden door leading back to your rented room.",
                 "keywords": [
                     "door",
                     "room",
                     "inn room"
                 ],
+                "name": "door",
+                "perception_dc": 0,
+                "target_room": "inn_room",
                 "verbs": [
                     "ENTER",
                     "look"
-                ],
-                "target_room": "inn_room",
-                "perception_dc": 0
+                ]
             }
         ],
+        "room_id": "inn_front_desk",
         "x": 0,
         "y": -2,
         "z": 0
     },
     {
-        "room_id": "inn_common_room",
-        "name": "The Broken Sextant - Common Room",
-        "interior_id": "inn",
+        "ambient_events": [],
         "description": {
             "default": "You are in the main common room of The Broken Sextant. It is loud, smoky, and smells of cheap ale and roasted meat. Mercenaries and sailors of all races crowd the space, eyeing newcomers suspiciously. Various unique tables are scattered around the room, offering places to sit and converse. To the north is the Front Desk, and to the west lies the Gambling Room."
         },
@@ -62,7 +60,20 @@
             "north": "inn_front_desk",
             "west": "inn_gambling_room"
         },
-        "objects": [
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "hidden_objects": [
             {
                 "name": "The Brass Astrolabe",
                 "description": "A heavy, circular booth tucked near the hearth. In the center of the table, bolted down to prevent theft, is a large brass astrolabe. Its plates are stained with ale, but the intricate star map remains visible, perfect for plotting a course\u2014or a revolution.",
@@ -73,10 +84,9 @@
                     "brass astrolabe"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_astrolabe"
+                "perception_dc": 1
             },
             {
                 "name": "The Rusty Compass",
@@ -87,10 +97,9 @@
                     "rusty compass"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_compass"
+                "perception_dc": 1
             },
             {
                 "name": "The Cracked Spyglass",
@@ -103,10 +112,9 @@
                     "telescope"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_spyglass"
+                "perception_dc": 1
             },
             {
                 "name": "The Ticking Chronometer",
@@ -117,10 +125,9 @@
                     "ticking chronometer"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_chronometer"
+                "perception_dc": 1
             },
             {
                 "name": "The Weathered Barometer",
@@ -132,10 +139,9 @@
                     "weathered barometer"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_barometer"
+                "perception_dc": 1
             },
             {
                 "name": "The Iron Loadstone",
@@ -147,10 +153,9 @@
                     "ore"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_loadstone"
+                "perception_dc": 1
             },
             {
                 "name": "The Captain's Quadrant",
@@ -162,10 +167,9 @@
                     "dais"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_quadrant"
+                "perception_dc": 1
             },
             {
                 "name": "The Heavy Hourglass",
@@ -176,10 +180,9 @@
                     "heavy hourglass"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_hourglass"
+                "perception_dc": 1
             },
             {
                 "name": "The Golden Telescope",
@@ -191,10 +194,9 @@
                     "golden telescope"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_telescope"
+                "perception_dc": 1
             },
             {
                 "name": "The Copper Binnacle",
@@ -206,239 +208,241 @@
                     "copper binnacle"
                 ],
                 "verbs": [
-                    "ENTER",
                     "look"
                 ],
-                "target_room": "inn_table_binnacle"
+                "perception_dc": 1
             }
         ],
-        "flags": {
-            "magic_allowed": true,
-            "stealing_allowed": true
-        },
+        "illumination": 50,
+        "interior_id": "inn",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "The Broken Sextant - Common Room",
+        "objects": [],
+        "room_id": "inn_common_room",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_gambling_room",
-        "name": "Gambling Room",
-        "interior_id": "inn",
         "description": {
             "default": "A dimly lit room dedicated to games of chance. Dice clatter on wooden tables and cards are shuffled with practiced ease. The air is thick with tension and smoke."
         },
         "exits": {
             "east": "inn_common_room"
         },
+        "interior_id": "inn",
+        "name": "Gambling Room",
         "objects": [],
+        "room_id": "inn_gambling_room",
         "x": -1,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_room",
-        "name": "A Room at the Sextant",
-        "interior_id": "inn",
         "description": {
             "default": "You are in a simple, spartan room at The Broken Sextant. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads OUT."
         },
         "exits": {
             "out": "inn_front_desk"
         },
-        "objects": [
-            {
-                "name": "bed",
-                "description": "A simple straw mattress...",
-                "keywords": [
-                    "bed",
-                    "mattress"
-                ],
-                "verbs": [
-                    "look",
-                    "investigate"
-                ],
-                "perception_dc": 0
-            },
-            {
-                "name": "window",
-                "description": "Looking out the window, you can see the bustling, grimy south market.",
-                "keywords": [
-                    "window"
-                ],
-                "perception_dc": 0
-            },
-            {
-                "name": "table",
-                "description": "A small, plain wooden table.",
-                "keywords": [
-                    "table"
-                ],
-                "verbs": [
-                    "look",
-                    "investigate"
-                ],
-                "perception_dc": 0
-            }
-        ],
         "hidden_objects": [
             {
-                "name": "a note",
                 "description": "A folded piece of parchment rests on the table.",
+                "is_item": true,
+                "item_id": "inn_note",
                 "keywords": [
                     "note",
                     "parchment",
                     "a note"
                 ],
+                "name": "a note",
+                "perception_dc": 1,
                 "verbs": [
                     "GET",
                     "LOOK",
                     "TAKE"
-                ],
-                "is_item": true,
-                "item_id": "inn_note",
-                "perception_dc": 1
+                ]
             }
         ],
+        "interior_id": "inn",
+        "name": "A Room at the Sextant",
+        "objects": [
+            {
+                "description": "A simple straw mattress...",
+                "keywords": [
+                    "bed",
+                    "mattress"
+                ],
+                "name": "bed",
+                "perception_dc": 0,
+                "verbs": [
+                    "look",
+                    "investigate"
+                ]
+            },
+            {
+                "description": "Looking out the window, you can see the bustling, grimy south market.",
+                "keywords": [
+                    "window"
+                ],
+                "name": "window",
+                "perception_dc": 0
+            },
+            {
+                "description": "A small, plain wooden table.",
+                "keywords": [
+                    "table"
+                ],
+                "name": "table",
+                "perception_dc": 0,
+                "verbs": [
+                    "look",
+                    "investigate"
+                ]
+            }
+        ],
+        "room_id": "inn_room",
         "x": 0,
         "y": -2,
         "z": 1
     },
     {
-        "room_id": "inn_table_astrolabe",
-        "name": "The Brass Astrolabe",
         "description": "You are seated at The Brass Astrolabe. It is a heavy, circular booth tucked near the hearth. In the center, a large brass astrolabe is bolted to the wood, its plates stained with ale but its star map still visible.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Brass Astrolabe",
         "objects": [],
+        "room_id": "inn_table_astrolabe",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_compass",
-        "name": "The Rusty Compass",
         "description": "You are seated at The Rusty Compass in a drafty corner. Embedded in the table is an old compass with fogged glass. The needle spins lazily, never pointing North.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Rusty Compass",
         "objects": [],
+        "room_id": "inn_table_compass",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_spyglass",
-        "name": "The Cracked Spyglass",
         "description": "You are seated at The Cracked Spyglass, a high-backed booth offering privacy. A long telescope with a fractured lens is mounted in the center, distorting the view of the taproom.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Cracked Spyglass",
         "objects": [],
+        "room_id": "inn_table_spyglass",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_chronometer",
-        "name": "The Ticking Chronometer",
         "description": "You are seated at The Ticking Chronometer. The rhythmic thud of the boxy marine chronometer in the center cuts through the ambient noise of the tavern.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Ticking Chronometer",
         "objects": [],
+        "room_id": "inn_table_chronometer",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_barometer",
-        "name": "The Weathered Barometer",
         "description": "You are seated at The Weathered Barometer, a booth smelling of pipe tobacco. A banjo-shaped barometer nearby is stuck permanently on 'Stormy.'",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Weathered Barometer",
         "objects": [],
+        "room_id": "inn_table_barometer",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_loadstone",
-        "name": "The Iron Loadstone",
         "description": "You are seated at The Iron Loadstone. A dark chunk of magnetic ore sits on a pedestal in the center, occasionally pulling iron tankards across the oak surface.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Iron Loadstone",
         "objects": [],
+        "room_id": "inn_table_loadstone",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_quadrant",
-        "name": "The Captain's Quadrant",
         "description": "You are seated at The Captain's Quadrant, raised slightly on a dais. A decorative brass quadrant is inlaid into the table, giving you a commanding view of the room.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Captain's Quadrant",
         "objects": [],
+        "room_id": "inn_table_quadrant",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_hourglass",
-        "name": "The Heavy Hourglass",
         "description": "You are seated at The Heavy Hourglass, an intimate table for two. A two-foot-tall hourglass filled with black volcanic sand trickles endlessly in the center.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Heavy Hourglass",
         "objects": [],
+        "room_id": "inn_table_hourglass",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_telescope",
-        "name": "The Golden Telescope",
         "description": "You are seated at The Golden Telescope, a gaudy booth with worn velvet cushions. A gold-plated telescope points accusingly at the bar, its lens cap rusted shut.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Golden Telescope",
         "objects": [],
+        "room_id": "inn_table_telescope",
         "x": 0,
         "y": -3,
         "z": 0
     },
     {
-        "room_id": "inn_table_binnacle",
-        "name": "The Copper Binnacle",
         "description": "You are seated at The Copper Binnacle. The booth is illuminated by the soft, dancing glow of a ship's binnacle housing a compass floating in oil.",
-        "interior_id": "inn",
-        "is_table": true,
         "exits": {
             "out": "inn_common_room"
         },
+        "interior_id": "inn",
+        "is_table": true,
+        "name": "The Copper Binnacle",
         "objects": [],
+        "room_id": "inn_table_binnacle",
         "x": 0,
         "y": -3,
         "z": 0
