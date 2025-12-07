@@ -75,7 +75,9 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
         
         objects = room.get("objects", [])
         for obj in objects:
-            if "ENTER" in obj.get("verbs", []) or "CLIMB" in obj.get("verbs", []):
+            # --- FIX: Case-Insensitive Verb Check for Raw Objects ---
+            verbs = [v.upper() for v in obj.get("verbs", [])]
+            if "ENTER" in verbs or "CLIMB" in verbs:
                 target_room = obj.get("target_room")
                 if target_room:
                     obj_keywords = obj.get("keywords", [])
@@ -530,12 +532,12 @@ class Enter(BaseVerb):
             return
         
         # --- GATEKEEPING FIX: Clear Invite on Leave ---
-        # If leaving a table, remove self from guest list so they can't auto-return
-        if getattr(self.room, "is_table", False):
-            if self.player.name.lower() in self.room.invited_guests:
-                self.room.invited_guests.remove(self.player.name.lower())
-            # ----------------------------------------------
-
+        # Note: This logic belongs in EXIT/MOVE, but if entering leads to leaving another table?
+        # Typically ENTER leads to a table, so we don't clear invites here unless switching tables.
+        # But BaseVerb/Player.move_to_room handles ownership succession. 
+        # The logic below handles group movement.
+        # ----------------------------------------------
+        
         group = self.world.get_group(self.player.group_id)
         is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
         if is_leader:
@@ -633,13 +635,7 @@ class Climb(BaseVerb):
             
         if _check_toll_gate(self.player, target_room_id):
             return
-
-        # --- GATEKEEPING FIX: Clear Invite on Leave ---
-        if getattr(self.room, "is_table", False):
-            if self.player.name.lower() in self.room.invited_guests:
-                self.room.invited_guests.remove(self.player.name.lower())
-        # ----------------------------------------------
-
+        
         group = self.world.get_group(self.player.group_id)
         is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
         if is_leader:
@@ -744,6 +740,13 @@ class Move(BaseVerb):
             if _check_toll_gate(self.player, target_room_id):
                 return
             
+            # --- GATEKEEPING FIX: Clear Invite on Leave ---
+            # If leaving a table, remove self from guest list so they can't auto-return
+            if getattr(self.room, "is_table", False):
+                 if self.player.name.lower() in self.room.invited_guests:
+                     self.room.invited_guests.remove(self.player.name.lower())
+            # ----------------------------------------------
+            
             group = self.world.get_group(self.player.group_id)
             is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
             if is_leader:
@@ -840,6 +843,12 @@ class Exit(BaseVerb):
 
                 if _check_toll_gate(self.player, target_room_id):
                     return
+
+                # --- GATEKEEPING FIX: Clear Invite on Leave ---
+                if getattr(self.room, "is_table", False):
+                     if self.player.name.lower() in self.room.invited_guests:
+                         self.room.invited_guests.remove(self.player.name.lower())
+                # ----------------------------------------------
 
                 group = self.world.get_group(self.player.group_id)
                 is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
