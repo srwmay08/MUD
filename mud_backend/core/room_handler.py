@@ -172,7 +172,7 @@ def show_room_to_player(player: Player, room: Room):
                     f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
                 )
         if html_objects:
-            player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
+            player.send_message(f"\nYou also see: {', '.join(html_objects)}.")
     
     other_players_in_room = []
     for sid, data in player.world.get_all_players_info():
