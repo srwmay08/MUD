@@ -71,6 +71,74 @@ def _get_object_sort_priority(obj: Dict[str, Any]) -> int:
     if obj.get("is_item") or obj.get("is_corpse"): return 4
     return 5
 
+def hydrate_room_objects(room: Room, world: 'World'):
+    """
+    Merges object stubs from the room's DB data with live asset templates (Nodes, Monsters, Items).
+    Populates room.objects with fully hydrated dictionaries containing verbs, keywords, etc.
+    """
+    merged_objects = []
+    
+    all_objects_stubs = room.data.get("objects", []) 
+    
+    room_data_in_cache = world.game_rooms.get(room.room_id, {})
+    all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
+    
+    cache_stubs_by_content = {}
+    if all_objects_stubs_in_cache:
+        cache_stubs_by_content = {str(s): s for s in all_objects_stubs_in_cache}
+
+    if all_objects_stubs:
+        for obj_stub in all_objects_stubs: 
+            node_id = obj_stub.get("node_id")
+            monster_id = obj_stub.get("monster_id")
+            obj_stub_in_cache = cache_stubs_by_content.get(str(obj_stub))
+
+            merged_obj = None
+
+            if node_id:
+                template = world.game_nodes.get(node_id)
+                if template:
+                    merged_obj = copy.deepcopy(template)
+                    merged_obj.update(obj_stub) 
+                    if "uid" not in merged_obj:
+                         merged_obj["uid"] = uuid.uuid4().hex
+                         if obj_stub_in_cache: obj_stub_in_cache["uid"] = merged_obj["uid"]
+            
+            elif monster_id:
+                uid = obj_stub.get("uid")
+                if not uid:
+                    uid = uuid.uuid4().hex
+                    if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
+                
+                # Check if defeated
+                if uid and world.get_defeated_monster(uid) is not None:
+                    continue 
+                
+                template = world.game_monster_templates.get(monster_id)
+                if template:
+                    merged_obj = copy.deepcopy(template)
+                    merged_obj.update(obj_stub) 
+                    merged_obj["uid"] = uid 
+
+            else:
+                merged_obj = obj_stub
+                if obj_stub.get("is_npc") and "uid" not in obj_stub:
+                    uid = uuid.uuid4().hex
+                    obj_stub["uid"] = uid
+                    if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
+            
+            # --- FIX: Normalize Verbs to Uppercase ---
+            if merged_obj:
+                if "verbs" in merged_obj:
+                    merged_obj["verbs"] = [v.upper() for v in merged_obj["verbs"]]
+                merged_objects.append(merged_obj)
+            # -----------------------------------------
+    
+    room.objects = merged_objects
+    
+    if room.objects:
+        room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
+
 def show_room_to_player(player: Player, room: Room):
     """
     Sends all room information (name, desc, objects, exits, players) to the player.
@@ -98,62 +166,9 @@ def show_room_to_player(player: Player, room: Room):
              player.send_message("A brief room.")
 
     # Merge objects from DB stubs with live asset templates
-    world = player.world
-    merged_objects = []
+    hydrate_room_objects(room, player.world)
     
-    all_objects_stubs = room.data.get("objects", []) 
-    
-    room_data_in_cache = world.game_rooms.get(room.room_id, {})
-    all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
-    
-    cache_stubs_by_content = {}
-    if all_objects_stubs_in_cache:
-        cache_stubs_by_content = {str(s): s for s in all_objects_stubs_in_cache}
-
-    if all_objects_stubs:
-        for obj_stub in all_objects_stubs: 
-            node_id = obj_stub.get("node_id")
-            monster_id = obj_stub.get("monster_id")
-            obj_stub_in_cache = cache_stubs_by_content.get(str(obj_stub))
-
-            if node_id:
-                template = world.game_nodes.get(node_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub) 
-                    if "uid" not in merged_obj:
-                         merged_obj["uid"] = uuid.uuid4().hex
-                         if obj_stub_in_cache: obj_stub_in_cache["uid"] = merged_obj["uid"]
-                    merged_objects.append(merged_obj)
-            
-            elif monster_id:
-                uid = obj_stub.get("uid")
-                if not uid:
-                    uid = uuid.uuid4().hex
-                    if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
-                
-                if uid and world.get_defeated_monster(uid) is not None:
-                    continue 
-                
-                template = world.game_monster_templates.get(monster_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub) 
-                    merged_obj["uid"] = uid 
-                    merged_objects.append(merged_obj)
-
-            else:
-                if obj_stub.get("is_npc") and "uid" not in obj_stub:
-                    uid = uuid.uuid4().hex
-                    obj_stub["uid"] = uid
-                    if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
-                merged_objects.append(obj_stub)
-    
-    room.objects = merged_objects
     player_perception = player.stats.get("WIS", 0)
-    
-    if room.objects:
-        room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
     
     if room.objects:
         html_objects = []
@@ -176,7 +191,6 @@ def show_room_to_player(player: Player, room: Room):
         if html_objects:
             player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")
     
-    # ... (Rest of the function remains unchanged)
     other_players_in_room = []
     for sid, data in player.world.get_all_players_info():
         player_name_in_room = data["player_name"] 

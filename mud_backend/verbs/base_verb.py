@@ -1,6 +1,7 @@
 # mud_backend/verbs/base_verb.py
 from mud_backend.core.game_objects import Player, Room 
 from typing import List, TYPE_CHECKING
+from mud_backend.core.room_handler import hydrate_room_objects
 
 # --- REFACTORED: Add TYPE_CHECKING for World ---
 if TYPE_CHECKING:
@@ -20,6 +21,11 @@ class BaseVerb:
         self.room = room
         self.args = args
         self.command = command
+
+        # Ensure room objects are fully hydrated so commands like 'go table' 
+        # can find the correct keywords and verbs.
+        if self.room:
+             hydrate_room_objects(self.room, self.world)
     # --- END REFACTOR ---
  
     def execute(self):

@@ -86,7 +86,7 @@
                 ],
                 "verbs": [
                     "look",
-                    "enter"
+                    "ENTER"
                 ],
                 "target_room": "inn_table_astrolabe",
                 "perception_dc": 0,
