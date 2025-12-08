@@ -10,16 +10,12 @@
             "default": ""
         },
         "exits": {
-            "Out": "room_1764878622020_681",
+            "west": "room_1764878622020_681",
             "up": "room_1765209701843_857"
         },
         "objects": [],
         "hidden_objects": [],
         "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
             "magic_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
@@ -30,8 +26,7 @@
         },
         "ambient_events": [],
         "illumination": 50,
-        "is_table": false,
-        "is_outdoor": false
+        "is_table": false
     },
     {
         "room_id": "room_1765209701843_857",

@@ -941,7 +941,7 @@
                 ],
                 "interactions": {
                     "Go East Tower": {
-                        "type": "text",
+                        "type": "move",
                         "value": "room_1765209656695_684"
                     }
                 }

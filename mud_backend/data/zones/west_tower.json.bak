@@ -1,8 +1,8 @@
 [
     {
-        "room_id": "room_1765209656695_684",
+        "room_id": "room_1765209651880_726",
         "name": "New Room",
-        "x": 1,
+        "x": -1,
         "y": -3,
         "z": 0,
         "interior_id": "rooms_aethels_crossing",
@@ -10,42 +10,8 @@
             "default": ""
         },
         "exits": {
-            "Out": "room_1764878622020_681",
-            "up": "room_1765209701843_857"
-        },
-        "objects": [],
-        "hidden_objects": [],
-        "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "illumination": 50,
-        "is_table": false,
-        "is_outdoor": false
-    },
-    {
-        "room_id": "room_1765209701843_857",
-        "name": "New Room",
-        "x": 1,
-        "y": -3,
-        "z": 1,
-        "interior_id": "east_tower",
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "down": "room_1765209656695_684",
-            "up": "room_1765209702297_574"
+            "east": "room_1764878622020_681",
+            "up": "room_1765209676535_272"
         },
         "objects": [],
         "hidden_objects": [],
@@ -63,17 +29,46 @@
         "is_table": false
     },
     {
-        "room_id": "room_1765209702297_574",
+        "room_id": "room_1765209676535_272",
         "name": "New Room",
-        "x": 1,
+        "x": -1,
         "y": -3,
-        "z": 2,
-        "interior_id": "east_tower",
+        "z": 1,
+        "interior_id": "west_tower",
         "description": {
             "default": ""
         },
         "exits": {
-            "down": "room_1765209701843_857"
+            "down": "room_1765209651880_726",
+            "up": "room_1765209677083_711"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765209677083_711",
+        "name": "New Room",
+        "x": -1,
+        "y": -3,
+        "z": 2,
+        "interior_id": "west_tower",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "down": "room_1765209676535_272"
         },
         "objects": [],
         "hidden_objects": [],

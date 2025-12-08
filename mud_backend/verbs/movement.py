@@ -697,13 +697,20 @@ class Move(BaseVerb):
                 if (target_name == obj.get("name", "").lower() or 
                     target_name in obj.get("keywords", [])):
                     
-                    # Check if object has a target room
-                    if obj.get("target_room"):
-                        # Check verbs: If it allows GO, MOVE, WALK, or CLIMB (and user said 'move/go')
-                        # We allow it to function as an exit.
+                    # FIX: Check for both target_room and destination_id
+                    t_room = obj.get("target_room") or obj.get("destination_id")
+
+                    if t_room:
+                        # Check verbs: If it allows GO, MOVE, WALK, CLIMB, or ENTER
                         obj_verbs = [v.upper() for v in obj.get("verbs", [])]
-                        if any(v in obj_verbs for v in ["GO", "MOVE", "WALK", "CLIMB"]):
-                            target_room_id = obj.get("target_room")
+                        
+                        # Added ENTER to allow "GO TOWER" where tower has ENTER verb
+                        if any(v in obj_verbs for v in ["GO", "MOVE", "WALK", "CLIMB", "ENTER"]):
+                            # Preserve special logic: If it's a table, let it fall through to Enter verb handling later
+                            if "table" in obj.get("keywords", []):
+                                continue
+
+                            target_room_id = t_room
                             move_dir_name = obj.get("name")
                             break
         
