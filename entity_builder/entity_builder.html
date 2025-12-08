@@ -222,20 +222,22 @@
         container.classList.remove('hidden');
         document.getElementById('delete-btn').classList.remove('hidden');
 
-        // Key Field
-        if (isDictStructure) {
-            container.appendChild(createInput("ID (Key)", key, (val) => {
-                if (val !== activeEntityId && val) {
-                    currentData[val] = currentData[activeEntityId];
-                    delete currentData[activeEntityId];
-                    activeEntityId = val;
-                    renderEntityList();
+        // Key Field: Only render here if NOT a monster (Monster renderer handles it)
+        if (currentCategory !== 'monsters') {
+            if (isDictStructure) {
+                container.appendChild(createInput("ID (Key)", key, (val) => {
+                    if (val !== activeEntityId && val) {
+                        currentData[val] = currentData[activeEntityId];
+                        delete currentData[activeEntityId];
+                        activeEntityId = val;
+                        renderEntityList();
+                    }
+                }));
+            } else {
+                const idField = currentCategory === 'nodes' ? 'node_id' : 'id';
+                if(entity[idField] !== undefined) {
+                    container.appendChild(createInput(`${idField} (Unique)`, entity[idField], (v) => updateField(idField, v)));
                 }
-            }));
-        } else {
-            const idField = currentCategory === 'monsters' ? 'monster_id' : (currentCategory === 'nodes' ? 'node_id' : 'id');
-            if(entity[idField] !== undefined) {
-                container.appendChild(createInput(`${idField} (Unique)`, entity[idField], (v) => updateField(idField, v)));
             }
         }
 
@@ -244,13 +246,15 @@
         } else if (currentCategory === 'quests') {
             renderQuestFields(container, entity);
         } else if (currentCategory === 'global') {
-            // Generic JSON Editor for Globals
             renderGlobalFields(container, entity);
         } else {
-            // Common
-            container.appendChild(createInput("Name", entity.name || "", (v) => updateField("name", v)));
-            container.appendChild(createInput("Description", entity.description || "", (v) => updateField("description", v)));
-            container.appendChild(createInput("Keywords (csv)", (entity.keywords || []).join(', '), (v) => updateField("keywords", v.split(',').map(s=>s.trim()).filter(s=>s))));
+            // Common Fields (Name, Description, Keywords)
+            // Skip these for monsters, as renderMonsterFields now handles them nicely
+            if (currentCategory !== 'monsters') {
+                container.appendChild(createInput("Name", entity.name || "", (v) => updateField("name", v)));
+                container.appendChild(createInput("Description", entity.description || "", (v) => updateField("description", v)));
+                container.appendChild(createInput("Keywords (csv)", (entity.keywords || []).join(', '), (v) => updateField("keywords", v.split(',').map(s=>s.trim()).filter(s=>s))));
+            }
 
             if (currentCategory === 'monsters') renderMonsterFields(container, entity);
             else if (currentCategory === 'items') renderItemFields(container, entity);
@@ -271,7 +275,7 @@
 
         if (currentCategory === 'monsters') {
             newObj.monster_id = "new_mob_" + Date.now();
-            newObj.level = 1; newObj.is_monster = true;
+            newObj.level_range = [1, 1]; newObj.hp_range = [10, 10]; newObj.is_monster = true;
             newObj.stats = {STR:50, CON:50, DEX:50, AGI:50, LOG:10, INT:10, WIS:10, INF:10, ZEA:10, ESS:10, DIS:10, AUR:10};
             if(!isDictStructure) currentData.push(newObj);
         } else if (currentCategory === 'items') {
@@ -584,23 +588,25 @@
         return wrapper;
     }
 
-function renderMonsterFields(container, entity) {
+    function renderMonsterFields(container, entity) {
         // --- Row 1: ID and Name (Condensed) ---
         const headerRow = document.createElement('div');
         headerRow.className = "flex gap-2 mb-1";
         
-        // ID Field (Read-onlyish visualization since it's handled by the key usually, but good for display)
-        // If it's a list structure, we might want to edit monster_id. 
-        // Based on your previous code, 'monster_id' is the unique key in list mode.
+        // ID Field
+        // We always show the input if it's NOT a dict structure (standard ID field)
+        // If it IS a dict structure, we show a read-only visual to indicate the key
+        const idDiv = document.createElement('div');
+        idDiv.className = "w-1/3";
         if (!isDictStructure) {
-             const idDiv = document.createElement('div');
-             idDiv.className = "w-1/3";
              idDiv.appendChild(createInput("ID", entity.monster_id || "", (v) => updateField("monster_id", v)));
-             headerRow.appendChild(idDiv);
+        } else {
+             idDiv.innerHTML = `<label>ID (Key)</label><input value="${activeEntityId}" disabled class="opacity-50 cursor-not-allowed">`;
         }
+        headerRow.appendChild(idDiv);
 
         const nameDiv = document.createElement('div');
-        nameDiv.className = isDictStructure ? "w-full" : "w-2/3";
+        nameDiv.className = "w-2/3";
         nameDiv.appendChild(createInput("Name", entity.name || "", (v) => updateField("name", v)));
         headerRow.appendChild(nameDiv);
         container.appendChild(headerRow);
@@ -608,7 +614,7 @@ function renderMonsterFields(container, entity) {
         // --- Row 2: Keywords ---
         container.appendChild(createInput("Keywords", (entity.keywords || []).join(', '), (v) => updateField("keywords", v.split(',').map(s=>s.trim()).filter(s=>s))));
 
-        // --- Row 3: Flags (Checkboxes) - Removed BCS ---
+        // --- Row 3: Flags ---
         const flagDiv = document.createElement('div');
         flagDiv.className = "flex flex-wrap gap-4 mb-2 mt-2 bg-black/20 p-1 rounded border border-gray-800";
         flagDiv.appendChild(createCheckbox("Is NPC", !!entity.is_npc, (v) => updateField("is_npc", v)));
@@ -696,7 +702,6 @@ function renderMonsterFields(container, entity) {
         combatGroup.className = "group-box mb-2";
         combatGroup.innerHTML = `<div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Combat & Assets</div>`;
         
-        // Timers & Perception
         const metaGrid = document.createElement('div');
         metaGrid.className = "grid grid-cols-4 gap-2 mb-2";
         metaGrid.appendChild(createInput("Act. Time", entity.action_timer_seconds || 5, (v) => updateField("action_timer_seconds", parseFloat(v))));
