@@ -74,14 +74,13 @@
         "exits": {
             "east": "ts_southeast",
             "north": "town_square",
-            "west": "ts_southwest",
-            "south": "room_1764878618721_900"
+            "south": "room_1764878618721_900",
+            "west": "ts_southwest"
         },
         "is_outdoor": true,
         "name": "South Market",
         "objects": [
             {
-                "name": "door",
                 "description": "The sturdy wooden door to The Broken Sextant, a notorious inn and mercenary guild. You could probably **ENTER** it.",
                 "keywords": [
                     "door",
@@ -90,14 +89,14 @@
                     "sextant",
                     "broken sextant"
                 ],
+                "name": "door",
+                "target_room": "inn_front_desk",
                 "verbs": [
                     "look",
                     "ENTER"
-                ],
-                "target_room": "inn_front_desk"
+                ]
             },
             {
-                "name": "auction house entrance",
                 "description": "A wide set of double doors leading into the Auction House. You can hear the auctioneer shouting from inside.",
                 "keywords": [
                     "entrance",
@@ -106,6 +105,7 @@
                     "house",
                     "auction house"
                 ],
+                "name": "auction house entrance",
                 "verbs": [
                     "look"
                 ]
@@ -308,25 +308,25 @@
         "name": "Guildsman's Walk (North)",
         "objects": [
             {
-                "name": "door",
                 "description": "A heavy oak door with a sigil of an anvil and hammer. This is the town armory.",
                 "keywords": [
                     "heavy door",
                     "oak door",
                     "armory"
                 ],
+                "name": "door",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "post office door",
                 "description": "A door painted with a blue winged envelope. The entrance to the Post Office.",
                 "keywords": [
                     "painted door",
                     "post office",
                     "office"
                 ],
+                "name": "post office door",
                 "verbs": [
                     "look"
                 ]
@@ -633,7 +633,7 @@
         },
         "exits": {
             "east": "node_test_area",
-            "north": "docks_main",
+            "north": "room_1765210087153_354",
             "south": "ts_north",
             "west": "shore_west_1"
         },
@@ -880,9 +880,215 @@
         "z": 1
     },
     {
-        "room_id": "room_1764878618721_900",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1764878622020_681",
+            "north": "ts_south"
+        },
+        "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1764878618721_900",
         "x": 0,
+        "y": -2,
+        "z": 0
+    },
+    {
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1764878618721_900",
+            "west": "room_1765209796949_629",
+            "east": "room_1765210102679_676",
+            "south": "room_1765209713505_612"
+        },
+        "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
+        "name": "New Room",
+        "objects": [
+            {
+                "name": "West Tower",
+                "description": "",
+                "keywords": [
+                    "west",
+                    " west tower"
+                ],
+                "verbs": [
+                    "look",
+                    "Go West Tower"
+                ],
+                "interactions": {
+                    "Go West Tower": {
+                        "type": "move",
+                        "value": "room_1765209651880_726"
+                    }
+                }
+            },
+            {
+                "name": "East Tower",
+                "description": "",
+                "keywords": [
+                    "east",
+                    " east tower"
+                ],
+                "verbs": [
+                    "look",
+                    "Go East Tower"
+                ],
+                "interactions": {
+                    "Go East Tower": {
+                        "type": "text",
+                        "value": "room_1765209656695_684"
+                    }
+                }
+            }
+        ],
+        "room_id": "room_1764878622020_681",
+        "x": 0,
+        "y": -3,
+        "z": 0,
+        "is_table": false,
+        "illumination": 50,
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "hidden_objects": []
+    },
+    {
+        "room_id": "room_1765209796949_629",
+        "name": "New Room",
+        "x": -1,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1764878622020_681",
+            "west": "room_1765210044866_446"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210044866_446",
+        "name": "New Room",
+        "x": -2,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765209796949_629",
+            "west": "room_1765210046088_180"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210046088_180",
+        "name": "New Room",
+        "x": -3,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210044866_446",
+            "west": "room_1765210061099_163"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210061099_163",
+        "name": "New Room",
+        "x": -4,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210046088_180",
+            "northwest": "room_1765210061943_198"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210061943_198",
+        "name": "New Room",
+        "x": -5,
         "y": -2,
         "z": 0,
         "interior_id": "rooms_aethels_crossing",
@@ -890,23 +1096,893 @@
             "default": ""
         },
         "exits": {
-            "south": "room_1764878622020_681"
+            "southeast": "room_1765210061099_163",
+            "west": "room_1765210062586_957"
         },
         "objects": [],
-        "is_outdoor": false
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
     },
     {
-        "room_id": "room_1764878622020_681",
+        "room_id": "room_1765210062586_957",
+        "name": "New Room",
+        "x": -6,
+        "y": -2,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210061943_198",
+            "west": "room_1765210062969_9"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210062969_9",
+        "name": "New Room",
+        "x": -7,
+        "y": -2,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210062586_957",
+            "west": "room_1765210063323_458"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210063323_458",
+        "name": "New Room",
+        "x": -8,
+        "y": -2,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210062969_9",
+            "west": "room_1765210065718_860"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210065718_860",
+        "name": "New Room",
+        "x": -9,
+        "y": -2,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210063323_458",
+            "northwest": "room_1765210068756_194"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210068756_194",
+        "name": "New Room",
+        "x": -10,
+        "y": -1,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "southeast": "room_1765210065718_860",
+            "north": "room_1765210071855_444"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210071855_444",
+        "name": "New Room",
+        "x": -10,
+        "y": 0,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1765210068756_194",
+            "north": "room_1765210072310_226"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210072310_226",
+        "name": "New Room",
+        "x": -10,
+        "y": 1,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1765210071855_444",
+            "north": "room_1765210081930_638"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210081930_638",
+        "name": "New Room",
+        "x": -10,
+        "y": 2,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1765210072310_226",
+            "north": "room_1765210083785_882"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210083785_882",
+        "name": "New Room",
+        "x": -10,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1765210081930_638",
+            "east": "room_1765210085539_116"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210085539_116",
+        "name": "New Room",
+        "x": -9,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210083785_882",
+            "east": "room_1765210085735_870"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210085735_870",
+        "name": "New Room",
+        "x": -8,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210085539_116",
+            "east": "room_1765210085907_573"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210085907_573",
+        "name": "New Room",
+        "x": -7,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210085735_870",
+            "east": "room_1765210086096_29"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210086096_29",
+        "name": "New Room",
+        "x": -6,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210085907_573",
+            "east": "room_1765210086267_11"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210086267_11",
+        "name": "New Room",
+        "x": -5,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210086096_29",
+            "east": "room_1765210086440_358"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210086440_358",
+        "name": "New Room",
+        "x": -4,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210086267_11",
+            "east": "room_1765210086600_406"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210086600_406",
+        "name": "New Room",
+        "x": -3,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210086440_358",
+            "east": "room_1765210086785_685"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210086785_685",
+        "name": "New Room",
+        "x": -2,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210086600_406",
+            "east": "room_1765210086981_192"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210086981_192",
+        "name": "New Room",
+        "x": -1,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210086785_685",
+            "east": "room_1765210087153_354"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210087153_354",
         "name": "New Room",
         "x": 0,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210086981_192",
+            "east": "room_1765210087355_77",
+            "south": "north_gate"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210087355_77",
+        "name": "New Room",
+        "x": 1,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210087153_354",
+            "east": "room_1765210087535_981"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210087535_981",
+        "name": "New Room",
+        "x": 2,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210087355_77",
+            "east": "room_1765210088021_863"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210088021_863",
+        "name": "New Room",
+        "x": 3,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210087535_981",
+            "east": "room_1765210088937_945"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210088937_945",
+        "name": "New Room",
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1765210088021_863",
+            "south": "room_1765210097409_469"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210097409_469",
+        "name": "New Room",
+        "x": 4,
+        "y": 2,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765210088937_945",
+            "south": "room_1765210097824_549"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210097824_549",
+        "name": "New Room",
+        "x": 4,
+        "y": 1,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765210097409_469",
+            "south": "room_1765210098294_766"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210098294_766",
+        "name": "New Room",
+        "x": 4,
+        "y": 0,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765210097824_549",
+            "south": "room_1765210099061_116"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210099061_116",
+        "name": "New Room",
+        "x": 4,
+        "y": -1,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765210098294_766",
+            "southwest": "room_1765210101316_348"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210101316_348",
+        "name": "New Room",
+        "x": 3,
+        "y": -2,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1765210099061_116",
+            "southwest": "room_1765210101552_929"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210101552_929",
+        "name": "New Room",
+        "x": 2,
         "y": -3,
         "z": 0,
         "interior_id": "rooms_aethels_crossing",
         "description": {
             "default": ""
         },
-        "exits": {},
+        "exits": {
+            "northeast": "room_1765210101316_348",
+            "west": "room_1765210102679_676"
+        },
         "objects": [],
-        "is_outdoor": false
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765210102679_676",
+        "name": "New Room",
+        "x": 1,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210101552_929",
+            "west": "room_1764878622020_681"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
     }
 ]

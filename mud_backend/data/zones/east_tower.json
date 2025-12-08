@@ -1,0 +1,88 @@
+[
+    {
+        "room_id": "room_1765209656695_684",
+        "name": "New Room",
+        "x": 1,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "west": "room_1764878622020_681",
+            "up": "room_1765209701843_857"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765209701843_857",
+        "name": "New Room",
+        "x": 1,
+        "y": -3,
+        "z": 1,
+        "interior_id": "east_tower",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "down": "room_1765209656695_684",
+            "up": "room_1765209702297_574"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765209702297_574",
+        "name": "New Room",
+        "x": 1,
+        "y": -3,
+        "z": 2,
+        "interior_id": "east_tower",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "down": "room_1765209701843_857"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    }
+]

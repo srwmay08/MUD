@@ -688,6 +688,24 @@ class Move(BaseVerb):
 
         normalized_direction = DIRECTION_MAP.get(target_name, target_name)
         target_room_id = self.room.exits.get(normalized_direction)
+        move_dir_name = normalized_direction
+
+        # Fix: Check static objects for GO/MOVE verbs if not a standard exit
+        if not target_room_id:
+            for obj in self.room.objects:
+                # Check for name match
+                if (target_name == obj.get("name", "").lower() or 
+                    target_name in obj.get("keywords", [])):
+                    
+                    # Check if object has a target room
+                    if obj.get("target_room"):
+                        # Check verbs: If it allows GO, MOVE, WALK, or CLIMB (and user said 'move/go')
+                        # We allow it to function as an exit.
+                        obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                        if any(v in obj_verbs for v in ["GO", "MOVE", "WALK", "CLIMB"]):
+                            target_room_id = obj.get("target_room")
+                            move_dir_name = obj.get("name")
+                            break
         
         if target_room_id:
             # --- NEW: THE BURDEN CHECK ---
@@ -726,12 +744,22 @@ class Move(BaseVerb):
             leave_suffix = ""
             
             if current_posture == "standing":
-                move_msg = f"You move {normalized_direction}..."
-                leave_suffix = f"heads {normalized_direction}."
+                if move_dir_name in DIRECTION_MAP.values() or move_dir_name in DIRECTION_MAP.keys():
+                    move_msg = f"You move {move_dir_name}..."
+                    leave_suffix = f"heads {move_dir_name}."
+                else:
+                    clean_obj = _clean_name(move_dir_name)
+                    move_msg = f"You move towards the {move_dir_name}..."
+                    leave_suffix = f"heads towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
             elif current_posture == "prone":
-                move_msg = f"You crawl {normalized_direction}..."
-                leave_suffix = f"crawls {normalized_direction}."
+                if move_dir_name in DIRECTION_MAP.values() or move_dir_name in DIRECTION_MAP.keys():
+                    move_msg = f"You crawl {move_dir_name}..."
+                    leave_suffix = f"crawls {move_dir_name}."
+                else:
+                    clean_obj = _clean_name(move_dir_name)
+                    move_msg = f"You crawl towards the {move_dir_name}..."
+                    leave_suffix = f"crawls towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
             else:
                 self.player.send_message("You must stand up first.")
@@ -750,7 +778,7 @@ class Move(BaseVerb):
             group = self.world.get_group(self.player.group_id)
             is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
             if is_leader:
-                move_msg = f"You move {normalized_direction}... and your group follows."
+                move_msg = f"{move_msg} and your group follows."
             
             original_room_id = self.room.room_id
             self.player.move_to_room(target_room_id, move_msg)
