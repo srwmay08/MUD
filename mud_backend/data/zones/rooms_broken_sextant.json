@@ -52,12 +52,14 @@
         "z": 0
     },
     {
+        "ambient_events": [],
         "description": {
             "default": "You are in the main common room of The Broken Sextant. It is loud, smoky, and smells of cheap ale and roasted meat. Mercenaries and sailors of all races crowd the space, eyeing newcomers suspiciously. Various unique tables are scattered around the room, offering places to sit and converse. To the north is the Front Desk, and to the west lies the Gambling Room."
         },
         "exits": {
             "north": "inn_front_desk",
-            "west": "inn_gambling_room"
+            "west": "inn_gambling_room",
+            "south": "room_1765137138586_802"
         },
         "flags": {
             "is_node": false,
@@ -72,8 +74,12 @@
             "sneak_in_allowed": true,
             "sneak_out_allowed": true
         },
+        "hidden_objects": [],
+        "illumination": 50,
         "interior_id": "inn",
-        "name": "The Broken Sextant - Common Room",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "Common Room",
         "objects": [
             {
                 "name": "The Brass Astrolabe",
@@ -85,11 +91,8 @@
                     "brass astrolabe"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_astrolabe",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Rusty Compass",
@@ -100,11 +103,8 @@
                     "rusty compass"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_compass",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Cracked Spyglass",
@@ -117,11 +117,8 @@
                     "telescope"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_spyglass",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Ticking Chronometer",
@@ -132,11 +129,8 @@
                     "ticking chronometer"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_chronometer",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Weathered Barometer",
@@ -148,11 +142,8 @@
                     "weathered barometer"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_barometer",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Iron Loadstone",
@@ -164,11 +155,8 @@
                     "ore"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_loadstone",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Captain's Quadrant",
@@ -180,11 +168,8 @@
                     "dais"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_quadrant",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Heavy Hourglass",
@@ -195,11 +180,8 @@
                     "heavy hourglass"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_hourglass",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Golden Telescope",
@@ -211,11 +193,8 @@
                     "golden telescope"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_telescope",
-                "perception_dc": 0
+                    "look"
+                ]
             },
             {
                 "name": "The Copper Binnacle",
@@ -227,22 +206,14 @@
                     "copper binnacle"
                 ],
                 "verbs": [
-                    "look",
-                    "ENTER"
-                ],
-                "target_room": "inn_table_binnacle",
-                "perception_dc": 0
+                    "look"
+                ]
             }
         ],
         "room_id": "inn_common_room",
         "x": 0,
         "y": -3,
-        "z": 0,
-        "is_outdoor": false,
-        "is_table": false,
-        "illumination": 50,
-        "ambient_events": [],
-        "hidden_objects": []
+        "z": 0
     },
     {
         "description": {
@@ -466,5 +437,36 @@
         "x": 0,
         "y": -3,
         "z": 0
+    },
+    {
+        "room_id": "inn_kitchen",
+        "name": "Kitchens",
+        "x": 0,
+        "y": -4,
+        "z": 0,
+        "interior_id": "rooms_broken_sextant",
+        "description": {
+            "default": ""
+        },
+        "exits": {},
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false,
+        "is_outdoor": false
     }
 ]

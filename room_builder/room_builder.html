@@ -384,11 +384,14 @@
     let isoMode = false;
     let currentZ = 0;
     let contextTarget = null; 
+    
+    // Connection State
+    let connectSource = null;
 
     const ROOM_SIZE = 24;
     const CELL_SIZE = 40;
 
-    // --- FLAGS CONFIGURATION ---
+    // --- CONFIGURATION ---
     const ROOM_FLAGS = [
         { key: "is_node", label: "Node (Regen)" },
         { key: "is_super_node", label: "Super Node" },
@@ -402,6 +405,14 @@
         { key: "sneak_in_allowed", label: "Sneak In Allowed", default: true },
         { key: "sneak_out_allowed", label: "Sneak Out Allowed", default: true }
     ];
+
+    const REVERSE_DIRS = {
+        'north': 'south', 'south': 'north',
+        'east': 'west', 'west': 'east',
+        'northeast': 'southwest', 'southwest': 'northeast',
+        'northwest': 'southeast', 'southeast': 'northwest',
+        'up': 'down', 'down': 'up'
+    };
     
     window.onload = async () => {
         const container = document.getElementById('map-container');
@@ -753,12 +764,28 @@
             }
         });
 
-        // Exits
+        // Exits - AUTO RECIPROCATE ADDED HERE
         r.exits = {};
         document.querySelectorAll('.exit-row').forEach(row => {
             const dir = row.querySelector('.exit-dir').value.trim();
-            const target = row.querySelector('.exit-target').value.trim();
-            if (dir && target) r.exits[dir] = target;
+            const targetId = row.querySelector('.exit-target').value.trim();
+            if (dir && targetId) {
+                r.exits[dir] = targetId;
+
+                // Check for cardinal reciprocity
+                const rev = REVERSE_DIRS[dir.toLowerCase()];
+                if (rev) {
+                    const targetInfo = findRoomGlobal(targetId);
+                    if (targetInfo) {
+                        const targetRoom = targetInfo.room;
+                        // Only add if missing to avoid overwriting intentional one-ways or creating loops while typing
+                        if (!targetRoom.exits[rev]) {
+                            targetRoom.exits[rev] = r.room_id;
+                            showToast(`Auto-linked: ${targetId} (${rev}) -> ${r.room_id}`);
+                        }
+                    }
+                }
+            }
         });
 
         // Objects - Separated into objects/hidden_objects
@@ -916,6 +943,66 @@
 
     function handleRoomClick(e, targetRoom, filename, index) {
         e.stopPropagation();
+        
+        // --- ACTION CONNECT HANDLER ---
+        if (connectSource) {
+            const src = connectSource.room;
+            const tgt = targetRoom;
+            
+            if (src.room_id === tgt.room_id) return;
+            
+            // Calculate direction
+            const dx = tgt.x - src.x;
+            const dy = tgt.y - src.y;
+            const dz = tgt.z - src.z;
+            
+            let dir = null;
+            if (dz === 0) {
+                if (dy === 1 && dx === 0) dir = 'north';
+                else if (dy === -1 && dx === 0) dir = 'south';
+                else if (dx === 1 && dy === 0) dir = 'east';
+                else if (dx === -1 && dy === 0) dir = 'west';
+                else if (dx === 1 && dy === 1) dir = 'northeast';
+                else if (dx === 1 && dy === -1) dir = 'southeast';
+                else if (dx === -1 && dy === 1) dir = 'northwest';
+                else if (dx === -1 && dy === -1) dir = 'southwest';
+            } else if (dx===0 && dy===0) {
+                if (dz === 1) dir = 'up';
+                else if (dz === -1) dir = 'down';
+            }
+            
+            if (dir) {
+                src.exits[dir] = tgt.room_id;
+                if (REVERSE_DIRS[dir]) tgt.exits[REVERSE_DIRS[dir]] = src.room_id;
+                showToast(`Connected ${src.room_id} -> ${tgt.room_id}`);
+                
+                // Clear connect state
+                connectSource = null;
+                document.body.style.cursor = "default";
+                
+                // FIX: If source was active, refresh UI from data (do NOT save from stale DOM)
+                if (activeRoom && activeRoom.file === filename && activeRoom.index === index) {
+                   setActiveRoom(activeRoom.file, activeRoom.index);
+                } else if (activeRoom) {
+                    // Re-render current active room to potentially show new incoming links if relevant
+                     setActiveRoom(activeRoom.file, activeRoom.index);
+                }
+                
+                renderMap();
+            } else {
+                const manualDir = prompt("Could not determine cardinal direction. Enter direction:");
+                if (manualDir) {
+                    src.exits[manualDir] = tgt.room_id;
+                    if (REVERSE_DIRS[manualDir]) tgt.exits[REVERSE_DIRS[manualDir]] = src.room_id;
+                    
+                    connectSource = null;
+                    document.body.style.cursor = "default";
+                    if (activeRoom) setActiveRoom(activeRoom.file, activeRoom.index);
+                    renderMap();
+                }
+            }
+            return;
+        }
 
         const targetZone = projectData[filename];
         const targetCoords = getScreenCoords(targetRoom.x, targetRoom.y, targetRoom.z, targetZone.offset);
@@ -1058,11 +1145,12 @@
             target = zone.rooms[zone.rooms.length-1];
         }
         
+        // Update DATA directly
         r.exits[dir] = target.room_id;
-        const backMap = {north:'south',south:'north',east:'west',west:'east',northeast:'southwest',southwest:'northeast',northwest:'southeast',southeast:'northwest',up:'down',down:'up'};
-        if (backMap[dir]) target.exits[backMap[dir]] = r.room_id;
+        if (REVERSE_DIRS[dir]) target.exits[REVERSE_DIRS[dir]] = r.room_id;
         
-        updateRoomData();
+        // Do NOT call updateRoomData() here because the DOM inputs are stale (empty).
+        // Instead, force the UI to refresh FROM the data we just modified.
         setActiveRoom(activeRoom.file, activeRoom.index);
     }
 
@@ -1087,6 +1175,14 @@
         m.style.left = e.clientX + 'px'; m.style.top = e.clientY + 'px';
         const hide = () => { m.style.display = 'none'; window.removeEventListener('click', hide); };
         window.addEventListener('click', hide);
+    }
+
+    // --- ACTION: CONNECT (IMPLEMENTED) ---
+    function actionConnect() {
+        if (!contextTarget) return;
+        connectSource = contextTarget;
+        document.body.style.cursor = "crosshair";
+        showToast("Select target room to connect...");
     }
 
     // --- ACTION: ADD INTERIOR ---
