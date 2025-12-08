@@ -1,0 +1,93 @@
+[
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "Out": "room_1764878622020_681",
+            "up": "room_1765209701843_857"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765209656695_684",
+        "x": 1,
+        "y": -3,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "down": "room_1765209656695_684",
+            "up": "room_1765209702297_574"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "east_tower",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765209701843_857",
+        "x": 1,
+        "y": -3,
+        "z": 1
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "down": "room_1765209701843_857"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "east_tower",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765209702297_574",
+        "x": 1,
+        "y": -3,
+        "z": 2
+    }
+]
