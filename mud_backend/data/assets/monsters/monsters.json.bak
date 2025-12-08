@@ -252,7 +252,6 @@
         ],
         "family": "Porcine",
         "body_type": "quadruped",
-        "spawn_message_arrival": "A fallow shote comes rushing through the grass.",
-        "spawn_message_departure": "The fallow shote heads towards the {exit}."
+        "spawn_message_arrival": ""
     }
 ]

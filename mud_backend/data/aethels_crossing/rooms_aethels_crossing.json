@@ -632,30 +632,38 @@
             "default": "The smell of salt and fish is strong here. A sturdy stone gatehouse marks the southern exit back to the market. The docks spread out to the north, bustling with sailors and dockhands. A town guardsman stands watch here. A path leads east into a quiet clearing."
         },
         "exits": {
-            "east": "node_test_area",
             "north": "room_1765210087153_354",
-            "south": "ts_north",
-            "west": "shore_west_1"
+            "south": "ts_north"
         },
         "is_outdoor": true,
         "name": "Docks Gate",
         "objects": [
             {
-                "description": "A guardsman in leather armor, holding a spear. He watches the docks warily.",
-                "is_monster": true,
                 "monster_id": "town_guardsman",
-                "name": "a town guardsman",
-                "verbs": [
-                    "look",
-                    "attack",
-                    "talk to"
-                ]
+                "is_monster": true
             }
         ],
         "room_id": "north_gate",
         "x": 0,
         "y": 2,
-        "z": 0
+        "z": 0,
+        "is_table": false,
+        "illumination": 50,
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "hidden_objects": []
     },
     {
         "description": {
@@ -904,8 +912,8 @@
         "exits": {
             "east": "room_1765210102679_676",
             "north": "room_1764878618721_900",
-            "south": "room_1765209713505_612",
-            "west": "room_1765209796949_629"
+            "west": "room_1765209796949_629",
+            "south": "room_1765226474386_628"
         },
         "flags": {
             "is_node": false,
@@ -923,9 +931,9 @@
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
-        "is_outdoor": false,
+        "is_outdoor": true,
         "is_table": false,
-        "name": "New Room",
+        "name": "The Guildway Gate - Interior Wall",
         "objects": [
             {
                 "name": "West Tower",
@@ -935,14 +943,9 @@
                 ],
                 "verbs": [
                     "look",
-                    "Enter"
+                    "ENTER"
                 ],
-                "interactions": {
-                    "Enter": {
-                        "type": "move",
-                        "value": "room_1765209651880_726"
-                    }
-                }
+                "target_room": "room_1765209651880_726"
             },
             {
                 "name": "East Tower",
@@ -952,14 +955,23 @@
                 ],
                 "verbs": [
                     "look",
-                    "Enter"
+                    "ENTER"
                 ],
-                "interactions": {
-                    "Enter": {
-                        "type": "move",
-                        "value": "room_1765209656695_684"
-                    }
-                }
+                "target_room": "room_1765209656695_684"
+            },
+            {
+                "name": "Guildway Gate",
+                "description": "",
+                "keywords": [
+                    "guildway",
+                    "gate",
+                    "guildway gate"
+                ],
+                "verbs": [
+                    "look",
+                    "ENTER"
+                ],
+                "target_room": "room_1765226474386_628"
             }
         ],
         "room_id": "room_1764878622020_681",
@@ -974,27 +986,33 @@
         },
         "exits": {
             "east": "room_1764878622020_681",
+            "north": "room_1765223469151_21",
             "west": "room_1765210044866_446"
         },
         "flags": {
-            "hiding_allowed": true,
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
         "is_table": false,
-        "name": "New Room",
+        "name": "South Ring Road",
         "objects": [],
         "room_id": "room_1765209796949_629",
         "x": -1,
         "y": -3,
-        "z": 0
+        "z": 0,
+        "is_outdoor": true
     },
     {
         "ambient_events": [],
@@ -1006,13 +1024,17 @@
             "west": "room_1765210046088_180"
         },
         "flags": {
-            "hiding_allowed": true,
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -1020,10 +1042,11 @@
         "is_table": false,
         "name": "New Room",
         "objects": [],
-        "room_id": "room_1765210044866_446",
+        "room_id": "South Ring Road",
         "x": -2,
         "y": -3,
-        "z": 0
+        "z": 0,
+        "is_outdoor": false
     },
     {
         "ambient_events": [],
@@ -1035,13 +1058,17 @@
             "west": "room_1765210061099_163"
         },
         "flags": {
-            "hiding_allowed": true,
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -1052,7 +1079,8 @@
         "room_id": "room_1765210046088_180",
         "x": -3,
         "y": -3,
-        "z": 0
+        "z": 0,
+        "is_outdoor": false
     },
     {
         "ambient_events": [],
@@ -1061,6 +1089,7 @@
         },
         "exits": {
             "east": "room_1765210046088_180",
+            "north": "room_1765223523288_428",
             "northwest": "room_1765210061943_198"
         },
         "flags": {
@@ -1177,7 +1206,8 @@
         },
         "exits": {
             "east": "room_1765210062969_9",
-            "west": "room_1765210065718_860"
+            "west": "room_1765210065718_860",
+            "south": "room_1765228268215_495"
         },
         "flags": {
             "hiding_allowed": true,
@@ -1981,6 +2011,91 @@
         "room_id": "room_1765210102679_676",
         "x": 1,
         "y": -3,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1765209796949_629"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "rooms_aethels_crossing",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765223469151_21",
+        "x": -1,
+        "y": -2,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765223523538_707",
+            "south": "room_1765210061099_163"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "rooms_aethels_crossing",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765223523288_428",
+        "x": -4,
+        "y": -2,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1765223523288_428"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "rooms_aethels_crossing",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765223523538_707",
+        "x": -4,
+        "y": -1,
         "z": 0
     }
 ]

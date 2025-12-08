@@ -63,9 +63,16 @@ def save_batch():
         
         try:
             # Create backup
-            if os.path.exists(safe_path):
-                with open(safe_path + ".bak", 'w', encoding='utf-8') as f:
-                    json.dump(json.load(open(safe_path, 'r', encoding='utf-8')), f, indent=4)
+            # if os.path.exists(safe_path):
+            #    with open(safe_path + ".bak", 'w', encoding='utf-8') as f:
+            #        json.dump(json.load(open(safe_path, 'r', encoding='utf-8')), f, indent=4)
+
+        # DIRECT OVERWRITE - NO BACKUP
+            with open(safe_path, 'w', encoding='utf-8') as f:
+                json.dump(rooms, f, indent=4)
+            results.append(f"Saved {filename}")
+        except Exception as e:
+            results.append(f"Error saving {filename}: {str(e)}")
 
             with open(safe_path, 'w', encoding='utf-8') as f:
                 json.dump(rooms, f, indent=4)

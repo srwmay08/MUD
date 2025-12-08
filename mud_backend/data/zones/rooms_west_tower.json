@@ -5,21 +5,22 @@
             "default": ""
         },
         "exits": {
-            "Out": "room_1764878622020_681",
+            "out": "room_1764878622020_681",
+            "south": "room_1765223528062_854",
             "up": "room_1765209676535_272"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
             "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,

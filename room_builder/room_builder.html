@@ -258,6 +258,11 @@
                     <div class="flex justify-between items-center mb-1"><label class="form-label">Objects</label><button onclick="addObjectRow()" class="text-xs text-green-400 hover:text-white">+ Add</button></div>
                     <div id="objects-list"></div>
                 </div>
+
+                <div>
+                    <label class="form-label">JSON Preview</label>
+                    <textarea id="json-preview" class="form-textarea h-48 text-[10px] font-mono text-green-400 bg-black/50" readonly></textarea>
+                </div>
                 
                 <button onclick="deleteRoom()" class="btn btn-danger w-full mt-4">Delete Room</button>
             </div>
@@ -530,6 +535,7 @@
 
         renderLists(room);
         renderMap();
+        updateJsonPreview(); // Added call here
     }
 
     function getActiveRoomObj() {
@@ -659,7 +665,13 @@
 
     function renderObjectBody(type, val, obj) {
         if (type === 'static') {
-            const interactionsHtml = Object.entries(obj.interactions || {}).map(([verb, data]) => `
+            // MERGE target_room INTO INTERACTIONS FOR DISPLAY
+            let interactionsToRender = { ... (obj.interactions || {}) };
+            if (obj.target_room) {
+                interactionsToRender['ENTER'] = { type: 'move', value: obj.target_room };
+            }
+
+            const interactionsHtml = Object.entries(interactionsToRender).map(([verb, data]) => `
                 <div class="interaction-row">
                     <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" value="${verb}" onchange="updateRoomData()">
                     <select class="form-select text-[10px] h-5 p-0 w-16 bg-black ia-type" onchange="updateRoomData()">
@@ -811,14 +823,25 @@
                 newObj.keywords = keys ? keys.split(',') : val.toLowerCase().split(' ');
                 newObj.verbs = ["look"];
                 
+                // Clear any existing target_room so we don't duplicate state
+                delete newObj.target_room;
+
                 const interactions = {};
                 row.querySelectorAll('.interaction-row').forEach(ir => {
                     const v = ir.querySelector('.ia-verb').value.trim();
                     const t = ir.querySelector('.ia-type').value;
                     const d = ir.querySelector('.ia-value').value;
+                    
                     if (v) {
-                        interactions[v] = { type: t, value: d };
-                        newObj.verbs.push(v);
+                        // SPECIAL CASE: Convert "ENTER" -> "MOVE" to target_room property
+                        if (v.toLowerCase() === 'enter' && t === 'move') {
+                            newObj.target_room = d;
+                            // Add verb but DO NOT add to interactions map (to match ts_east style)
+                            newObj.verbs.push(v); 
+                        } else {
+                            interactions[v] = { type: t, value: d };
+                            newObj.verbs.push(v);
+                        }
                     }
                 });
                 if (Object.keys(interactions).length > 0) newObj.interactions = interactions;
@@ -837,6 +860,17 @@
         });
 
         renderMap();
+        updateJsonPreview(); // Added call here
+    }
+
+    // --- JSON PREVIEW LOGIC ---
+    function updateJsonPreview() {
+        const r = getActiveRoomObj();
+        if (!r) {
+            document.getElementById('json-preview').value = '';
+            return;
+        }
+        document.getElementById('json-preview').value = JSON.stringify(r, null, 4);
     }
 
     // --- MAP RENDERING ---
