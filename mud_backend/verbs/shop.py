@@ -34,12 +34,21 @@ def _find_item_in_inventory(player, game_items_data: Dict[str, Any], target_name
 
 def _get_shop_data(room) -> dict | None:
     """Helper to get shop data from a room."""
-    # DEBUG PRINT
-    # print(f"[DEBUG] Checking shop data for room: {room.name}")
+    # --- DEBUG: Print what objects we see to console ---
+    # print(f"[SHOP DEBUG] Checking room '{room.name}' for shop data...")
     for obj in room.objects:
-        # print(f"[DEBUG]  - Object: {obj.get('name')} (Has shop_data: {'shop_data' in obj})")
-        if obj.get("shop_data"):
-            return obj.get("shop_data")
+        # Uncomment the line below if you are still having issues to see object details in server log
+        print(f"[SHOP DEBUG] Checking object: {obj.get('name')} | Keys: {list(obj.keys())}")
+        
+        if "shop_data" in obj:
+            s_data = obj.get("shop_data")
+            if s_data and isinstance(s_data, dict):
+                # print(f"[SHOP DEBUG] Found shop_data in {obj.get('name')}")
+                return s_data
+            else:
+                print(f"[SHOP DEBUG] {obj.get('name')} has shop_data but it is invalid: {type(s_data)}")
+                
+    # print("[SHOP DEBUG] No valid shop_data found in room.")
     return None
 
 def _get_supply_demand_modifier(shop_data: dict, item_type: str) -> float:
@@ -245,9 +254,9 @@ class Sell(BaseVerb):
         shop_data = _get_shop_data(self.room)
         if not shop_data:
             # DEBUG
-            # print("[DEBUG] Sell failed: No shop_data found in room objects.")
-            # for obj in self.room.objects:
-            #     print(f"  - {obj.get('name')}: {obj.keys()}")
+            print("[DEBUG] Sell failed: No shop_data found in room objects.")
+            for obj in self.room.objects:
+                print(f"  - {obj.get('name')}: {list(obj.keys())}")
             self.player.send_message("You can't seem to shop here.")
             return
 
