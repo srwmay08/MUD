@@ -1,3 +1,7 @@
+{
+type: uploaded file
+fileName: srwmay08/mud/MUD-0bea323d3a72cc93600290f6e5e7197c732458be/mud_backend/data/aethels_crossing/rooms_aethels_crossing.json
+fullContent:
 [
     {
         "description": {
@@ -628,6 +632,7 @@
         "z": 1
     },
     {
+        "ambient_events": [],
         "description": {
             "default": "The smell of salt and fish is strong here. A sturdy stone gatehouse marks the southern exit back to the market. The docks spread out to the north, bustling with sailors and dockhands. A town guardsman stands watch here. A path leads east into a quiet clearing."
         },
@@ -635,35 +640,34 @@
             "north": "room_1765210087153_354",
             "south": "ts_north"
         },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
         "is_outdoor": true,
+        "is_table": false,
         "name": "Docks Gate",
         "objects": [
             {
-                "monster_id": "town_guardsman",
-                "is_monster": true
+                "is_monster": true,
+                "monster_id": "town_guardsman"
             }
         ],
         "room_id": "north_gate",
         "x": 0,
         "y": 2,
-        "z": 0,
-        "is_table": false,
-        "illumination": 50,
-        "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "hidden_objects": []
+        "z": 0
     },
     {
         "description": {
@@ -912,21 +916,21 @@
         "exits": {
             "east": "room_1765210102679_676",
             "north": "room_1764878618721_900",
-            "west": "room_1765209796949_629",
-            "south": "room_1765226474386_628"
+            "south": "room_1765226474386_628",
+            "west": "room_1765209796949_629"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -936,42 +940,42 @@
         "name": "The Guildway Gate - Interior Wall",
         "objects": [
             {
-                "name": "West Tower",
                 "description": "",
                 "keywords": [
                     "west tower"
                 ],
+                "name": "West Tower",
+                "target_room": "room_1765209651880_726",
                 "verbs": [
                     "look",
                     "ENTER"
-                ],
-                "target_room": "room_1765209651880_726"
+                ]
             },
             {
-                "name": "East Tower",
                 "description": "",
                 "keywords": [
                     "east tower"
                 ],
+                "name": "East Tower",
+                "target_room": "room_1765209656695_684",
                 "verbs": [
                     "look",
                     "ENTER"
-                ],
-                "target_room": "room_1765209656695_684"
+                ]
             },
             {
-                "name": "Guildway Gate",
                 "description": "",
                 "keywords": [
                     "guildway",
                     "gate",
                     "guildway gate"
                 ],
+                "name": "Guildway Gate",
+                "target_room": "room_1765226474386_628",
                 "verbs": [
                     "look",
                     "ENTER"
-                ],
-                "target_room": "room_1765226474386_628"
+                ]
             }
         ],
         "room_id": "room_1764878622020_681",
@@ -990,29 +994,29 @@
             "west": "room_1765210044866_446"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": true,
         "is_table": false,
         "name": "South Ring Road",
         "objects": [],
         "room_id": "room_1765209796949_629",
         "x": -1,
         "y": -3,
-        "z": 0,
-        "is_outdoor": true
+        "z": 0
     },
     {
         "ambient_events": [],
@@ -1039,14 +1043,14 @@
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
         "is_table": false,
         "name": "New Room",
         "objects": [],
-        "room_id": "South Ring Road",
+        "room_id": "room_1765210044866_446",
         "x": -2,
         "y": -3,
-        "z": 0,
-        "is_outdoor": false
+        "z": 0
     },
     {
         "ambient_events": [],
@@ -1058,29 +1062,29 @@
             "west": "room_1765210061099_163"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
         "is_table": false,
         "name": "New Room",
         "objects": [],
         "room_id": "room_1765210046088_180",
         "x": -3,
         "y": -3,
-        "z": 0,
-        "is_outdoor": false
+        "z": 0
     },
     {
         "ambient_events": [],
@@ -1206,8 +1210,8 @@
         },
         "exits": {
             "east": "room_1765210062969_9",
-            "west": "room_1765210065718_860",
-            "south": "room_1765228268215_495"
+            "south": "room_1765228268215_495",
+            "west": "room_1765210065718_860"
         },
         "flags": {
             "hiding_allowed": true,
@@ -2016,7 +2020,7 @@
     {
         "ambient_events": [],
         "description": {
-            "default": ""
+            "default": "You are in a cluttered pawnshop. The air smells of dust and old metal. Display tables are arranged around the room, laden with goods. To the south is the exit back to the street. A trash bin sits in the corner for unwanted items."
         },
         "exits": {
             "south": "room_1765209796949_629"
@@ -2034,8 +2038,94 @@
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
         "is_table": false,
-        "name": "New Room",
-        "objects": [],
+        "name": "The Pawnshop",
+        "objects": [
+            {
+                "description": "A shrewd-looking merchant evaluating items with a critical eye.",
+                "is_npc": true,
+                "keywords": [
+                    "pawnbroker",
+                    "shopkeep",
+                    "broker",
+                    "merchant"
+                ],
+                "name": "a pawnbroker",
+                "shop_data": {
+                    "inventory": [],
+                    "sold_counts": {},
+                    "type": "pawnshop"
+                },
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "list",
+                    "buy",
+                    "sell",
+                    "appraise"
+                ]
+            },
+            {
+                "description": "A sturdy table covered in various weapons.",
+                "keywords": [
+                    "table",
+                    "weapon",
+                    "weapons"
+                ],
+                "name": "Weapon Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A reinforced table displaying suits of armor and shields.",
+                "keywords": [
+                    "table",
+                    "armor",
+                    "armors"
+                ],
+                "name": "Armor Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A table glowing with faint magical aura, holding scrolls and strange artifacts.",
+                "keywords": [
+                    "table",
+                    "magic",
+                    "arcane",
+                    "scrolls"
+                ],
+                "name": "Arcane Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A cluttered table filled with miscellaneous goods.",
+                "keywords": [
+                    "table",
+                    "misc",
+                    "goods"
+                ],
+                "name": "Goods Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A large bin for disposing of worthless items.",
+                "keywords": [
+                    "bin",
+                    "trash"
+                ],
+                "name": "trash bin",
+                "verbs": [
+                    "look",
+                    "put"
+                ]
+            }
+        ],
         "room_id": "room_1765223469151_21",
         "x": -1,
         "y": -2,
@@ -2099,3 +2189,4 @@
         "z": 0
     }
 ]
+}

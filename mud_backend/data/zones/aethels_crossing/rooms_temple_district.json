@@ -1,0 +1,30 @@
+[
+    {
+        "room_id": "room_1765245697606_135",
+        "name": "New Room",
+        "x": -8,
+        "y": 8,
+        "z": 0,
+        "interior_id": "rooms_high_district",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "southeast": "room_1765245571038_659"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    }
+]

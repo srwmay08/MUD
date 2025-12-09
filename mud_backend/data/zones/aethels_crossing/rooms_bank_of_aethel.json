@@ -1,0 +1,50 @@
+[
+    {
+        "description": {
+            "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall, protected by armed guards. A banker waits patiently."
+        },
+        "exits": {
+            "out": "ts_west"
+        },
+        "interior_id": "bank",
+        "name": "The Bank of Aethel",
+        "objects": [
+            {
+                "all_quests_done_message": "The banker gives you a crisp, professional nod.",
+                "description": "A sharply-dressed banker stands behind the counter, ready to assist you.",
+                "is_npc": true,
+                "keywords": [
+                    "teller",
+                    "banker",
+                    "a banker"
+                ],
+                "name": "a banker",
+                "quest_giver_ids": [
+                    "theatre_quest_1"
+                ],
+                "verbs": [
+                    "deposit",
+                    "withdraw",
+                    "balance",
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            },
+            {
+                "description": "A long, polished counter of dark wood.",
+                "keywords": [
+                    "counter"
+                ],
+                "name": "counter",
+                "verbs": [
+                    "look"
+                ]
+            }
+        ],
+        "room_id": "bank_lobby",
+        "x": -2,
+        "y": 0,
+        "z": 0
+    }
+]
