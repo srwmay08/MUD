@@ -1,0 +1,284 @@
+[
+    {
+        "room_id": "room_1765226474386_628",
+        "name": "Aethelion's Crossing - Guildway Gate - Exterior",
+        "x": 0,
+        "y": -4,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1765226880113_253"
+        },
+        "objects": [
+            {
+                "name": "Guildway Gate",
+                "description": "",
+                "keywords": [
+                    "guildway",
+                    "gate"
+                ],
+                "verbs": [
+                    "look",
+                    "ENTER"
+                ],
+                "target_room": "room_1764878622020_681"
+            }
+        ],
+        "hidden_objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false,
+        "is_outdoor": false
+    },
+    {
+        "room_id": "room_1765226880113_253",
+        "name": "The Guildway",
+        "x": 0,
+        "y": -5,
+        "z": 0,
+        "interior_id": "rooms_demeria_fields",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765226474386_628",
+            "southeast": "room_1765226882610_382"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false,
+        "is_outdoor": false
+    },
+    {
+        "room_id": "room_1765226882610_382",
+        "name": "New Room",
+        "x": 1,
+        "y": -6,
+        "z": 0,
+        "interior_id": "rooms_demeria_fields",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northwest": "room_1765226880113_253",
+            "southeast": "room_1765226886301_617"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765226886301_617",
+        "name": "New Room",
+        "x": 2,
+        "y": -7,
+        "z": 0,
+        "interior_id": "rooms_demeria_fields",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northwest": "room_1765226882610_382"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765228268215_495",
+        "name": "New Room",
+        "x": -8,
+        "y": -3,
+        "z": 0,
+        "interior_id": "rooms_aethels_crossing",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765210063323_458",
+            "south": "room_1765228537326_746"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765228537326_746",
+        "name": "New Room",
+        "x": -8,
+        "y": -4,
+        "z": 0,
+        "interior_id": "rooms_demeria_fields",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1765228268215_495",
+            "southwest": "room_1765228538713_405"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765228538713_405",
+        "name": "New Room",
+        "x": -9,
+        "y": -5,
+        "z": 0,
+        "interior_id": "rooms_demeria_fields",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1765228537326_746",
+            "southwest": "room_1765228539254_729"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765228539254_729",
+        "name": "New Room",
+        "x": -10,
+        "y": -6,
+        "z": 0,
+        "interior_id": "rooms_demeria_fields",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1765228538713_405",
+            "southwest": "room_1765228541360_617"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    },
+    {
+        "room_id": "room_1765228541360_617",
+        "name": "New Room",
+        "x": -11,
+        "y": -7,
+        "z": 0,
+        "interior_id": "rooms_demeria_fields",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1765228539254_729"
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
+    }
+]

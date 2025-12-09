@@ -628,7 +628,6 @@
         "z": 1
     },
     {
-        "ambient_events": [],
         "description": {
             "default": "The smell of salt and fish is strong here. A sturdy stone gatehouse marks the southern exit back to the market. The docks spread out to the north, bustling with sailors and dockhands. A town guardsman stands watch here. A path leads east into a quiet clearing."
         },
@@ -636,34 +635,35 @@
             "north": "room_1765210087153_354",
             "south": "ts_north"
         },
-        "flags": {
-            "hiding_allowed": true,
-            "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
-            "is_super_node": false,
-            "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true
-        },
-        "hidden_objects": [],
-        "illumination": 50,
         "is_outdoor": true,
-        "is_table": false,
         "name": "Docks Gate",
         "objects": [
             {
-                "is_monster": true,
-                "monster_id": "town_guardsman"
+                "monster_id": "town_guardsman",
+                "is_monster": true
             }
         ],
         "room_id": "north_gate",
         "x": 0,
         "y": 2,
-        "z": 0
+        "z": 0,
+        "is_table": false,
+        "illumination": 50,
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "hidden_objects": []
     },
     {
         "description": {
@@ -912,21 +912,21 @@
         "exits": {
             "east": "room_1765210102679_676",
             "north": "room_1764878618721_900",
-            "south": "room_1765226474386_628",
-            "west": "room_1765209796949_629"
+            "west": "room_1765209796949_629",
+            "south": "room_1765226474386_628"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
             "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -936,42 +936,42 @@
         "name": "The Guildway Gate - Interior Wall",
         "objects": [
             {
+                "name": "West Tower",
                 "description": "",
                 "keywords": [
                     "west tower"
                 ],
-                "name": "West Tower",
-                "target_room": "room_1765209651880_726",
                 "verbs": [
                     "look",
                     "ENTER"
-                ]
+                ],
+                "target_room": "room_1765209651880_726"
             },
             {
+                "name": "East Tower",
                 "description": "",
                 "keywords": [
                     "east tower"
                 ],
-                "name": "East Tower",
-                "target_room": "room_1765209656695_684",
                 "verbs": [
                     "look",
                     "ENTER"
-                ]
+                ],
+                "target_room": "room_1765209656695_684"
             },
             {
+                "name": "Guildway Gate",
                 "description": "",
                 "keywords": [
                     "guildway",
                     "gate",
                     "guildway gate"
                 ],
-                "name": "Guildway Gate",
-                "target_room": "room_1765226474386_628",
                 "verbs": [
                     "look",
                     "ENTER"
-                ]
+                ],
+                "target_room": "room_1765226474386_628"
             }
         ],
         "room_id": "room_1764878622020_681",
@@ -990,29 +990,29 @@
             "west": "room_1765210044866_446"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
             "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
-        "is_outdoor": true,
         "is_table": false,
         "name": "South Ring Road",
         "objects": [],
         "room_id": "room_1765209796949_629",
         "x": -1,
         "y": -3,
-        "z": 0
+        "z": 0,
+        "is_outdoor": true
     },
     {
         "ambient_events": [],
@@ -1039,14 +1039,14 @@
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
-        "is_outdoor": false,
         "is_table": false,
         "name": "New Room",
         "objects": [],
-        "room_id": "room_1765210044866_446",
+        "room_id": "South Ring Road",
         "x": -2,
         "y": -3,
-        "z": 0
+        "z": 0,
+        "is_outdoor": false
     },
     {
         "ambient_events": [],
@@ -1058,29 +1058,29 @@
             "west": "room_1765210061099_163"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
             "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
-        "is_outdoor": false,
         "is_table": false,
         "name": "New Room",
         "objects": [],
         "room_id": "room_1765210046088_180",
         "x": -3,
         "y": -3,
-        "z": 0
+        "z": 0,
+        "is_outdoor": false
     },
     {
         "ambient_events": [],
@@ -1206,8 +1206,8 @@
         },
         "exits": {
             "east": "room_1765210062969_9",
-            "south": "room_1765228268215_495",
-            "west": "room_1765210065718_860"
+            "west": "room_1765210065718_860",
+            "south": "room_1765228268215_495"
         },
         "flags": {
             "hiding_allowed": true,
