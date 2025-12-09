@@ -91,6 +91,7 @@ def hydrate_room_objects(room: Room, world: 'World'):
         for obj_stub in all_objects_stubs: 
             node_id = obj_stub.get("node_id")
             monster_id = obj_stub.get("monster_id")
+            item_id = obj_stub.get("item_id") # <-- ADDED THIS CHECK
             obj_stub_in_cache = cache_stubs_by_content.get(str(obj_stub))
 
             merged_obj = None
@@ -120,6 +121,24 @@ def hydrate_room_objects(room: Room, world: 'World'):
                     merged_obj.update(obj_stub) 
                     merged_obj["uid"] = uid 
 
+            elif item_id:
+                # --- NEW: Item Hydration Logic ---
+                template = world.game_items.get(item_id)
+                if template:
+                    merged_obj = copy.deepcopy(template)
+                    merged_obj.update(obj_stub)
+                    merged_obj["is_item"] = True
+                    
+                    # Generate a unique instance ID for this specific item on the ground
+                    if "uid" not in merged_obj:
+                        merged_obj["uid"] = uuid.uuid4().hex
+                        if obj_stub_in_cache: obj_stub_in_cache["uid"] = merged_obj["uid"]
+                else:
+                    # Fallback if item_id is invalid, prevents crash but item will be broken
+                    merged_obj = obj_stub
+                    merged_obj["name"] = f"Broken Item ({item_id})"
+                # ---------------------------------
+
             else:
                 merged_obj = obj_stub
                 if obj_stub.get("is_npc") and "uid" not in obj_stub:
@@ -127,17 +146,16 @@ def hydrate_room_objects(room: Room, world: 'World'):
                     obj_stub["uid"] = uid
                     if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
             
-            # --- FIX: Normalize Verbs to Uppercase ---
             if merged_obj:
+                # Normalize verbs to uppercase for consistency
                 if "verbs" in merged_obj:
                     merged_obj["verbs"] = [v.upper() for v in merged_obj["verbs"]]
                 merged_objects.append(merged_obj)
-            # -----------------------------------------
     
     room.objects = merged_objects
     
     if room.objects:
-        # Safe sort with get()
+        # Safe sort with get() to prevent 'name' key errors during sort
         room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
 
 def show_room_to_player(player: Player, room: Room):
@@ -174,14 +192,12 @@ def show_room_to_player(player: Player, room: Room):
     if room.objects:
         html_objects = []
         for obj in room.objects:
-            # --- SKIP HIDDEN OBJECTS OR TABLES ---
             if obj.get("hidden", False) or obj.get("is_table", False):
                 continue
-            # -------------------------------------
             
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
-                # --- FIX: Safe Access to Name ---
+                # --- FIX: Safe Access to Name (Prevents KeyError) ---
                 obj_name = obj.get('name', 'Unknown Object')
                 verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
                 verb_str = ','.join(verbs).lower()
@@ -198,14 +214,11 @@ def show_room_to_player(player: Player, room: Room):
         
         if player_name_in_room.lower() == player.name.lower(): continue
         
-        # --- NEW: Invisibility Check ---
         if target_player_obj:
             is_invis = target_player_obj.flags.get("invisible", "off") == "on"
-            # If invisible, check if observer is admin
             if is_invis:
                 if not getattr(player, "is_admin", False):
                     continue
-        # -------------------------------
 
         if data["current_room_id"] == room.room_id:
             other_players_in_room.append(
@@ -214,20 +227,18 @@ def show_room_to_player(player: Player, room: Room):
     if other_players_in_room:
         player.send_message(f"Also here: {', '.join(other_players_in_room)}.")
 
-    # --- NEW: Visibility Outside Tables ---
     if getattr(room, "is_table", False) and "out" in room.exits:
         parent_room_id = room.exits["out"]
         outside_players = []
         for sid, data in player.world.get_all_players_info():
              p_name = data["player_name"]
-             if p_name.lower() == player.name.lower(): continue # Skip self
+             if p_name.lower() == player.name.lower(): continue 
              
              if data["current_room_id"] == parent_room_id:
                  outside_players.append(f'<span class="keyword" data-name="{p_name}" data-verbs="look">{p_name}</span>')
         
         if outside_players:
             player.send_message(f"Outside the booth, you see: {', '.join(outside_players)}.")
-    # --------------------------------------
 
     if room.exits:
         exit_names = []
