@@ -35,17 +35,15 @@ def _find_item_on_player(player, target_name):
 def _get_table_occupants(world, table_obj):
     target_room_id = table_obj.get("target_room")
     
-    # Fallback: Try to match by name if target_room isn't set
     if not target_room_id:
         table_name_lower = table_obj.get("name", "").lower()
-        # FIX: Access active_rooms directly (dict of Room objects)
+        # FIX: Access active_rooms instead of rooms
         for rid, room in world.active_rooms.items():
             if room.name.lower() == table_name_lower and getattr(room, "is_table", False):
                 target_room_id = rid
                 break
     
     if target_room_id:
-        # Get players in that room
         player_names = world.room_players.get(target_room_id, [])
         return list(player_names)
     
@@ -104,12 +102,11 @@ def _list_items_on_table(player, room, table_obj):
              items_on_table.append((item_data.get('name', 'Item'), price))
     
     if items_on_table:
-        player.send_message(f"--- On the {table_obj['name']} ---")
+        player.send_message(f"--- On the {table_obj.get('name', 'Table')} ---")
         for name, price in items_on_table:
             player.send_message(f"- {name:<30} {price} silver")
     else:
-        # Only print empty if we are looking specifically AT the table
-        player.send_message(f"The {table_obj['name']} is currently empty.")
+        player.send_message(f"The {table_obj.get('name', 'Table')} is currently empty.")
 
 @VerbRegistry.register(["examine", "x"]) 
 class Examine(BaseVerb):
@@ -181,7 +178,6 @@ class Look(BaseVerb):
             target_on = parts[1].strip()
             
         if target_on:
-            # Find the table object
             table_obj = None
             for obj in self.room.objects:
                 if (target_on == obj.get("name", "").lower() or target_on in obj.get("keywords", [])):

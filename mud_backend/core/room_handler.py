@@ -73,15 +73,16 @@ def _get_object_sort_priority(obj: Dict[str, Any]) -> int:
 
 def hydrate_room_objects(room: Room, world: 'World'):
     """
-    Merges object stubs from the room's DB data with live asset templates.
+    Merges object stubs from the room's DB data with live asset templates (Nodes, Monsters, Items).
+    Populates room.objects with fully hydrated dictionaries containing verbs, keywords, etc.
     """
     merged_objects = []
     
     all_objects_stubs = room.data.get("objects", []) 
     
-    # Cache lookup setup
     room_data_in_cache = world.game_rooms.get(room.room_id, {})
     all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
+    
     cache_stubs_by_content = {}
     if all_objects_stubs_in_cache:
         cache_stubs_by_content = {str(s): s for s in all_objects_stubs_in_cache}
@@ -121,11 +122,13 @@ def hydrate_room_objects(room: Room, world: 'World'):
                     merged_obj["uid"] = uid 
 
             elif item_id:
+                # --- Item Hydration Logic ---
                 template = world.game_items.get(item_id)
                 if template:
                     merged_obj = copy.deepcopy(template)
                     merged_obj.update(obj_stub)
                     merged_obj["is_item"] = True
+                    
                     if "uid" not in merged_obj:
                         merged_obj["uid"] = uuid.uuid4().hex
                         if obj_stub_in_cache: obj_stub_in_cache["uid"] = merged_obj["uid"]
@@ -134,18 +137,18 @@ def hydrate_room_objects(room: Room, world: 'World'):
                     merged_obj["name"] = f"Broken Item ({item_id})"
 
             else:
-                # Custom Object / NPC defined in room data
-                # Use deepcopy to ensure we don't modify the source data by ref
+                # --- Custom Object / NPC ---
+                # Use deepcopy to ensure we don't modify the source data by reference
                 merged_obj = copy.deepcopy(obj_stub)
                 
                 if obj_stub.get("is_npc") and "uid" not in obj_stub:
                     uid = uuid.uuid4().hex
-                    # Update cache/source so ID persists
-                    obj_stub["uid"] = uid
+                    obj_stub["uid"] = uid # Update cache
                     if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
                     merged_obj["uid"] = uid
             
             if merged_obj:
+                # Normalize verbs to uppercase
                 if "verbs" in merged_obj:
                     merged_obj["verbs"] = [v.upper() for v in merged_obj["verbs"]]
                 merged_objects.append(merged_obj)
@@ -157,6 +160,9 @@ def hydrate_room_objects(room: Room, world: 'World'):
         room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
 
 def show_room_to_player(player: Player, room: Room):
+    """
+    Sends all room information (name, desc, objects, exits, players) to the player.
+    """
     player.send_message(f"**{room.name}**")
     
     desc_flag = player.flags.get("descriptions", "on")
@@ -179,6 +185,7 @@ def show_room_to_player(player: Player, room: Room):
         else:
              player.send_message("A brief room.")
 
+    # Merge objects from DB stubs with live asset templates
     hydrate_room_objects(room, player.world)
     
     player_perception = player.stats.get("WIS", 0)
@@ -191,6 +198,7 @@ def show_room_to_player(player: Player, room: Room):
             
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
+                # --- FIX: Safe Access to Name ---
                 obj_name = obj.get('name', 'Unknown Object')
                 verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
                 verb_str = ','.join(verbs).lower()
@@ -241,6 +249,9 @@ def show_room_to_player(player: Player, room: Room):
 
 
 def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
+    """
+    Builds a dictionary of map data for all rooms the player has visited.
+    """
     map_data = {}
     for room_id in player.visited_rooms:
         room = world.game_rooms.get(room_id)
@@ -273,6 +284,9 @@ def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
     return map_data
 
 def _handle_npc_idle_dialogue(world: 'World', player_name: str, room_id: str):
+    """
+    Waits a random time, then checks for NPCs and sends idle quest prompts.
+    """
     try:
         delay = random.randint(3, 10)
         world.socketio.sleep(delay)

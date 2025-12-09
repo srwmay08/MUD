@@ -34,20 +34,36 @@ def _find_item_in_inventory(player, game_items_data: Dict[str, Any], target_name
 
 def _get_shop_data(room) -> dict | None:
     """Helper to get shop data from a room."""
+    # --- DEBUG: Print what objects we see to console ---
+    print(f"[SHOP DEBUG] Checking room '{room.name}' for shop data...")
     for obj in room.objects:
+        # Uncomment the line below if you are still having issues to see object details in server log
+        print(f"[SHOP DEBUG] Checking object: {obj.get('name')} | Keys: {list(obj.keys())}")
+        
         if "shop_data" in obj:
             s_data = obj.get("shop_data")
             if s_data and isinstance(s_data, dict):
+                # print(f"[SHOP DEBUG] Found shop_data in {obj.get('name')}")
                 return s_data
+            else:
+                print(f"[SHOP DEBUG] {obj.get('name')} has shop_data but it is invalid: {type(s_data)}")
+                
+    # print("[SHOP DEBUG] No valid shop_data found in room.")
     return None
 
 def _get_supply_demand_modifier(shop_data: dict, item_type: str) -> float:
+    """Calculates price reduction based on supply."""
     counts = shop_data.get("sold_counts", {})
     count = counts.get(item_type, 0)
+    # 5% reduction per item sold previously, max 50% off
     reduction = count * 0.05
     return max(0.5, 1.0 - reduction)
 
 def _get_item_buy_price(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any], shop_data: Optional[dict] = None) -> int:
+    """
+    Price the SHOP sells to PLAYER.
+    Includes supply/demand logic if shop_data provided.
+    """
     if isinstance(item_ref, dict): item_data = item_ref
     else: item_data = game_items_data.get(item_ref)
     
@@ -61,11 +77,15 @@ def _get_item_buy_price(item_ref: Union[str, Dict[str, Any]], game_items_data: D
         elif "armor_type" in item_data: itype = "armor"
         
         mod = _get_supply_demand_modifier(shop_data, itype)
+        # Supply high = Price low
         return int(base * mod)
         
     return base
 
 def _get_item_sell_price(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any], shop_data: Optional[dict] = None) -> int:
+    """
+    Price the SHOP buys from PLAYER.
+    """
     if isinstance(item_ref, dict): item_data = item_ref
     else: item_data = game_items_data.get(item_ref)
 
@@ -73,6 +93,7 @@ def _get_item_sell_price(item_ref: Union[str, Dict[str, Any]], game_items_data: 
         
     base_val = item_data.get("base_value", 0)
     
+    # Supply/Demand
     if shop_data:
         itype = item_data.get("type", "misc")
         if "weapon_type" in item_data: itype = "weapon"
@@ -134,6 +155,7 @@ class Buy(BaseVerb):
         target_name = " ".join(self.args).lower()
         game_items = self.world.game_items
         
+        # Search Shop Inventory
         item_to_buy = None
         item_index = -1
         
@@ -159,6 +181,7 @@ class Buy(BaseVerb):
             self.player.send_message(f"You can't afford that. It costs {price} silver and you have {player_silver}.")
             return
             
+        # Transaction
         self.player.wealth["silvers"] = player_silver - price
         
         if isinstance(item_to_buy, dict):
@@ -171,8 +194,10 @@ class Buy(BaseVerb):
              self.player.inventory.append(item_to_buy)
              name = game_items.get(item_to_buy, {}).get("name", "the item")
         
+        # Remove from shop
         shop_data["inventory"].pop(item_index)
         
+        # Adjust Supply Count (Buying reduces supply -> price increase for selling)
         if isinstance(item_to_buy, dict): itype = item_to_buy.get("type", "misc")
         else: itype = game_items.get(item_to_buy, {}).get("type", "misc")
         
@@ -197,6 +222,7 @@ class Appraise(BaseVerb):
         target_name = " ".join(self.args).lower()
         game_items = self.world.game_items
         
+        # Check Player Items (Selling Price)
         item_ref, loc = _find_item_in_hands(self.player, game_items, target_name)
         if not item_ref:
             item_ref = _find_item_in_inventory(self.player, game_items, target_name)
@@ -210,6 +236,7 @@ class Appraise(BaseVerb):
             self.player.send_message(f"The pawnbroker glances at your {name}. 'I'd give you {price} silver for that.'")
             return
             
+        # Check Shop Items (Buying Price)
         for item_ref in shop_data.get("inventory", []):
             if isinstance(item_ref, dict): t_data = item_ref
             else: t_data = game_items.get(item_ref)
@@ -226,6 +253,10 @@ class Sell(BaseVerb):
     def execute(self):
         shop_data = _get_shop_data(self.room)
         if not shop_data:
+            # DEBUG
+            print("[DEBUG] Sell failed: No shop_data found in room objects.")
+            for obj in self.room.objects:
+                print(f"  - {obj.get('name')}: {list(obj.keys())}")
             self.player.send_message("You can't seem to shop here.")
             return
 
@@ -236,25 +267,31 @@ class Sell(BaseVerb):
         target_name = " ".join(self.args).lower()
         game_items = self.world.game_items
         
+        # Find item in hands (Must hold to sell usually)
         item_ref, hand_slot = _find_item_in_hands(self.player, game_items, target_name)
         if not item_ref:
             self.player.send_message(f"You aren't holding a '{target_name}'.")
             return
             
+        # --- MARK CHECK ---
         item_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
         if item_uid in self.player.flags.get("marked_items", []):
             self.player.send_message(f"You have marked that item. You cannot sell it until you UNMARK it.")
             return
+        # ------------------
 
+        # Calculate Price
         price = _get_item_sell_price(item_ref, game_items, shop_data)
         
         if price <= 0:
             self.player.send_message("The pawnbroker shakes their head. 'Not worth my time.'")
             return
             
+        # Transaction
         self.player.worn_items[hand_slot] = None
         self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + price
         
+        # Add to Shop Inventory
         if isinstance(item_ref, dict):
             new_stock = item_ref
         else:
@@ -266,13 +303,14 @@ class Sell(BaseVerb):
                 new_stock = None
         
         if new_stock:
-            new_stock["sold_timestamp"] = time.time()
+            new_stock["sold_timestamp"] = time.time() # For aging logic
             
             if "inventory" not in shop_data:
                 shop_data["inventory"] = []
                 
             shop_data["inventory"].append(new_stock)
             
+            # Update Supply counts
             itype = new_stock.get("type", "misc")
             if "weapon_type" in new_stock: itype = "weapon"
             elif "armor_type" in new_stock: itype = "armor"
