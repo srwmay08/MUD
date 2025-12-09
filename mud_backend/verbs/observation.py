@@ -34,17 +34,82 @@ def _find_item_on_player(player, target_name):
 
 def _get_table_occupants(world, table_obj):
     target_room_id = table_obj.get("target_room")
+    
+    # Fallback: Try to match by name if target_room isn't set
     if not target_room_id:
         table_name_lower = table_obj.get("name", "").lower()
-        for rid, room in world.rooms.items():
-            if room.name.lower() == table_name_lower and room.is_table:
+        # FIX: Access active_rooms directly (dict of Room objects)
+        for rid, room in world.active_rooms.items():
+            if room.name.lower() == table_name_lower and getattr(room, "is_table", False):
                 target_room_id = rid
                 break
     
     if target_room_id:
+        # Get players in that room
         player_names = world.room_players.get(target_room_id, [])
         return list(player_names)
+    
     return []
+
+def _list_items_on_table(player, room, table_obj):
+    """
+    Helper to list items associated with a specific display table.
+    """
+    shop_data = _get_shop_data(room)
+    
+    # If no shop data, just check for occupants (Standard Table)
+    if not shop_data:
+        if "table" in table_obj.get("keywords", []):
+             occupants = _get_table_occupants(player.world, table_obj)
+             if occupants:
+                 count = len(occupants)
+                 player.send_message(f"It is occupied by {count} person{'s' if count > 1 else ''}.")
+             else:
+                 player.send_message("It is currently empty.")
+        return
+
+    # Determine Category based on table keywords
+    category = "misc"
+    keywords = table_obj.get("keywords", [])
+    if "weapon" in keywords or "weapons" in keywords: category = "weapon"
+    elif "armor" in keywords or "armors" in keywords: category = "armor"
+    elif "magic" in keywords or "arcane" in keywords or "scrolls" in keywords: category = "magic"
+    
+    # Filter Inventory
+    items_on_table = []
+    game_items = player.world.game_items
+    
+    for item_ref in shop_data.get("inventory", []):
+        # Resolve Item Data
+        if isinstance(item_ref, dict): item_data = item_ref
+        else: item_data = game_items.get(item_ref, {})
+        
+        if not item_data: continue
+        
+        # Check Type
+        itype = item_data.get("type", "misc")
+        if "weapon_type" in item_data: itype = "weapon"
+        elif "armor_type" in item_data: itype = "armor"
+        elif "spell" in item_data or "scroll" in item_data.get("keywords", []): itype = "magic"
+        
+        # Categorization Logic
+        match = False
+        if category == "weapon" and itype == "weapon": match = True
+        elif category == "armor" and itype == "armor": match = True
+        elif category == "magic" and itype == "magic": match = True
+        elif category == "misc" and itype not in ["weapon", "armor", "magic"]: match = True
+        
+        if match:
+             price = _get_item_buy_price(item_ref, game_items, shop_data)
+             items_on_table.append((item_data.get('name', 'Item'), price))
+    
+    if items_on_table:
+        player.send_message(f"--- On the {table_obj['name']} ---")
+        for name, price in items_on_table:
+            player.send_message(f"- {name:<30} {price} silver")
+    else:
+        # Only print empty if we are looking specifically AT the table
+        player.send_message(f"The {table_obj['name']} is currently empty.")
 
 @VerbRegistry.register(["examine", "x"]) 
 class Examine(BaseVerb):
@@ -67,22 +132,21 @@ class Examine(BaseVerb):
             self.player.send_message(f"You do not see a **{target_name}** here.")
             return
 
-        self.player.send_message(f"You examine the **{found_object['name']}**.")
+        self.player.send_message(f"You examine the **{found_object.get('name', 'object')}**.")
         self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
 
         # --- Table Check for Examine ---
-        if "table" in found_object.get("keywords", []) or found_object.get("is_table_proxy"):
+        # If it's a shop table, list items
+        if "table" in found_object.get("keywords", []) and _get_shop_data(self.room):
+             _list_items_on_table(self.player, self.room, found_object)
+        # Else standard table occupants
+        elif "table" in found_object.get("keywords", []) or found_object.get("is_table_proxy"):
             occupants = _get_table_occupants(self.world, found_object)
             if occupants:
                 count = len(occupants)
                 self.player.send_message(f"It is occupied by {count} person{'s' if count > 1 else ''}.")
             else:
-                # If it's a pawnshop table, mention it has items
-                shop_data = _get_shop_data(self.room)
-                if shop_data:
-                     self.player.send_message("It is covered in goods for sale. try 'LOOK ON TABLE'.")
-                else:
-                     self.player.send_message("It is currently empty.")
+                self.player.send_message("It is currently empty.")
         # -------------------------------
 
         player_log_stat = self.player.stats.get("LOG", 0)
@@ -109,58 +173,26 @@ class Look(BaseVerb):
         full_command = " ".join(self.args).lower()
         
         # --- LOOK ON TABLE (Pawnshop) ---
-        if " on " in full_command:
+        target_on = None
+        if full_command.startswith("on "):
+            target_on = full_command[3:].strip()
+        elif " on " in full_command:
             parts = full_command.split(" on ", 1)
-            target = parts[1].strip()
+            target_on = parts[1].strip()
             
+        if target_on:
             # Find the table object
             table_obj = None
             for obj in self.room.objects:
-                if (target == obj.get("name", "").lower() or target in obj.get("keywords", [])):
+                if (target_on == obj.get("name", "").lower() or target_on in obj.get("keywords", [])):
                     table_obj = obj
                     break
             
-            if table_obj and "table" in table_obj.get("keywords", []):
-                shop_data = _get_shop_data(self.room)
-                if not shop_data:
-                    self.player.send_message(f"There is nothing of interest on {table_obj['name']}.")
-                    return
-                
-                # Determine Category based on table keywords
-                category = "misc"
-                keywords = table_obj.get("keywords", [])
-                if "weapon" in keywords or "weapons" in keywords: category = "weapon"
-                elif "armor" in keywords or "armors" in keywords: category = "armor"
-                elif "magic" in keywords or "arcane" in keywords or "scrolls" in keywords: category = "magic"
-                
-                # Filter Inventory
-                items_on_table = []
-                game_items = self.world.game_items
-                
-                for item_ref in shop_data.get("inventory", []):
-                    # Resolve Item Data
-                    if isinstance(item_ref, dict): item_data = item_ref
-                    else: item_data = game_items.get(item_ref, {})
-                    
-                    if not item_data: continue
-                    
-                    # Check Type
-                    itype = item_data.get("type", "misc")
-                    # Fallback type inference
-                    if "weapon_type" in item_data: itype = "weapon"
-                    elif "armor_type" in item_data: itype = "armor"
-                    elif "spell" in item_data or "scroll" in item_data.get("keywords", []): itype = "magic"
-                    
-                    if itype == category or (category == "misc" and itype not in ["weapon", "armor", "magic"]):
-                         price = _get_item_buy_price(item_ref, game_items, shop_data)
-                         items_on_table.append((item_data['name'], price))
-                
-                self.player.send_message(f"--- On the {table_obj['name']} ---")
-                if not items_on_table:
-                    self.player.send_message("It is empty.")
-                else:
-                    for name, price in items_on_table:
-                        self.player.send_message(f"- {name:<30} {price} silvers")
+            if table_obj:
+                _list_items_on_table(self.player, self.room, table_obj)
+                return
+            else:
+                self.player.send_message(f"You don't see a '{target_on}' here.")
                 return
         # --------------------------------
 
@@ -199,14 +231,28 @@ class Look(BaseVerb):
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
             
-                self.player.send_message(f"You investigate the **{obj['name']}**.")
+                self.player.send_message(f"You investigate the **{obj.get('name', 'object')}**.")
                 self.player.send_message(obj.get('description', 'It is a nondescript object.'))
+                
+                # --- NEW: If shop table, list items ---
+                if "table" in obj.get("keywords", []) and _get_shop_data(self.room):
+                     _list_items_on_table(self.player, self.room, obj)
+                # --- OLD: Standard Table Occupants ---
+                elif "table" in obj.get("keywords", []) or obj.get("is_table_proxy"):
+                    occupants = _get_table_occupants(self.world, obj)
+                    if occupants:
+                        count = len(occupants)
+                        self.player.send_message(f"It is occupied by {count} person{'s' if count > 1 else ''}.")
+                    else:
+                        self.player.send_message("It is currently empty.")
+                # -------------------------------------
+
                 return 
 
         # Check player items
         item_data, location = _find_item_on_player(self.player, target_name)
         if item_data:
-            self.player.send_message(f"You look at your **{item_data['name']}**.")
+            self.player.send_message(f"You look at your **{item_data.get('name', 'item')}**.")
             self.player.send_message(item_data.get('description', 'It is a nondescript object.'))
             return
 
@@ -265,54 +311,3 @@ class Investigate(BaseVerb):
             self.world.save_room(self.room)
         else:
             self.player.send_message("...but you don't find anything new.")
-
-@VerbRegistry.register(["inspect"]) 
-class Inspect(BaseVerb):
-    """
-    Shows detailed attributes of an item (Weapon/Armor stats).
-    """
-    def execute(self):
-        if not self.args:
-            self.player.send_message("Inspect what?")
-            return
-            
-        target_name = " ".join(self.args).lower()
-        
-        # Check Hands/Inventory/Worn
-        item_data, loc = _find_item_on_player(self.player, target_name)
-        
-        # Check Shop/Tables if not found on player
-        if not item_data:
-            shop_data = _get_shop_data(self.room)
-            if shop_data:
-                for item_ref in shop_data.get("inventory", []):
-                    if isinstance(item_ref, dict): t_data = item_ref
-                    else: t_data = self.world.game_items.get(item_ref, {})
-                    
-                    if t_data and (target_name == t_data.get("name", "").lower() or target_name in t_data.get("keywords", [])):
-                        item_data = t_data
-                        break
-        
-        if not item_data:
-            self.player.send_message(f"You don't see a '{target_name}' to inspect.")
-            return
-            
-        self.player.send_message(f"--- Inspection: {item_data.get('name')} ---")
-        self.player.send_message(f"Type: {item_data.get('type', 'Unknown')}")
-        self.player.send_message(f"Base Value: {item_data.get('base_value', 0)}")
-        self.player.send_message(f"Weight: {item_data.get('weight', 0)} lbs")
-        
-        if "damage_type" in item_data:
-             self.player.send_message(f"Damage Type: {item_data['damage_type']}")
-        if "base_damage" in item_data:
-             self.player.send_message(f"Base Damage: {item_data['base_damage']}")
-        if "armor_type" in item_data:
-             self.player.send_message(f"Armor Type: {item_data['armor_type']}")
-        if "armor_class" in item_data:
-             self.player.send_message(f"Armor Class: {item_data['armor_class']}")
-             
-        # Pawnshop Note
-        shop_data = _get_shop_data(self.room)
-        if shop_data:
-             price = _get_item_buy_price(item_data, self.world.game_items, shop_data)
-             self.player.send_message(f"Estimated Shop Price: {price} silver")
