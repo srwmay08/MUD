@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: srwmay08/mud/MUD-0bea323d3a72cc93600290f6e5e7197c732458be/mud_backend/data/aethels_crossing/rooms_aethels_crossing.json
-fullContent:
 [
     {
         "description": {
@@ -2189,4 +2185,3 @@ fullContent:
         "z": 0
     }
 ]
-}

@@ -39,7 +39,10 @@ GOTO_MAP = {
     "bank": "bank_lobby",
     "banker": "bank_lobby",
     "inn": "inn_front_desk",
-    "innkeeper": "inn_front_desk"
+    "innkeeper": "inn_front_desk",
+    "pawnshop": "room_1765223469151_21",
+    "pawnbroker": "room_1765223469151_21",
+    "broker": "room_1765223469151_21"
 }
 
 def _clean_name(name: str) -> str:
