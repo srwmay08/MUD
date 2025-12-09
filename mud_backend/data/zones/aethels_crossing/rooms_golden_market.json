@@ -2049,6 +2049,7 @@
                     "broker",
                     "merchant"
                 ],
+                "shop_data": [],
                 "verbs": [
                     "look"
                 ]
