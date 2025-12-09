@@ -311,3 +311,54 @@ class Investigate(BaseVerb):
             self.world.save_room(self.room)
         else:
             self.player.send_message("...but you don't find anything new.")
+
+@VerbRegistry.register(["inspect"]) 
+class Inspect(BaseVerb):
+    """
+    Shows detailed attributes of an item (Weapon/Armor stats).
+    """
+    def execute(self):
+        if not self.args:
+            self.player.send_message("Inspect what?")
+            return
+            
+        target_name = " ".join(self.args).lower()
+        
+        # Check Hands/Inventory/Worn
+        item_data, loc = _find_item_on_player(self.player, target_name)
+        
+        # Check Shop/Tables if not found on player
+        if not item_data:
+            shop_data = _get_shop_data(self.room)
+            if shop_data:
+                for item_ref in shop_data.get("inventory", []):
+                    if isinstance(item_ref, dict): t_data = item_ref
+                    else: t_data = self.world.game_items.get(item_ref, {})
+                    
+                    if t_data and (target_name == t_data.get("name", "").lower() or target_name in t_data.get("keywords", [])):
+                        item_data = t_data
+                        break
+        
+        if not item_data:
+            self.player.send_message(f"You don't see a '{target_name}' to inspect.")
+            return
+            
+        self.player.send_message(f"--- Inspection: {item_data.get('name')} ---")
+        self.player.send_message(f"Type: {item_data.get('type', 'Unknown')}")
+        self.player.send_message(f"Base Value: {item_data.get('base_value', 0)}")
+        self.player.send_message(f"Weight: {item_data.get('weight', 0)} lbs")
+        
+        if "damage_type" in item_data:
+             self.player.send_message(f"Damage Type: {item_data['damage_type']}")
+        if "base_damage" in item_data:
+             self.player.send_message(f"Base Damage: {item_data['base_damage']}")
+        if "armor_type" in item_data:
+             self.player.send_message(f"Armor Type: {item_data['armor_type']}")
+        if "armor_class" in item_data:
+             self.player.send_message(f"Armor Class: {item_data['armor_class']}")
+             
+        # Pawnshop Note
+        shop_data = _get_shop_data(self.room)
+        if shop_data:
+             price = _get_item_buy_price(item_data, self.world.game_items, shop_data)
+             self.player.send_message(f"Estimated Shop Price: {price} silver")

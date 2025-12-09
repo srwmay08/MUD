@@ -2114,19 +2114,11 @@
                 ]
             },
             {
-                "item_id": "short_sword",
+                "item_id": "iron_short_sword",
                 "is_item": true
             },
             {
-                "item_id": "leather_armor",
-                "is_item": true
-            },
-            {
-                "item_id": "iron_javelin",
-                "is_item": true
-            },
-            {
-                "item_id": "iron_mace",
+                "item_id": "iron_dagger",
                 "is_item": true
             }
         ],

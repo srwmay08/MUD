@@ -137,6 +137,7 @@ def hydrate_room_objects(room: Room, world: 'World'):
     room.objects = merged_objects
     
     if room.objects:
+        # Safe sort with get()
         room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
 
 def show_room_to_player(player: Player, room: Room):
@@ -174,15 +175,14 @@ def show_room_to_player(player: Player, room: Room):
         html_objects = []
         for obj in room.objects:
             # --- SKIP HIDDEN OBJECTS OR TABLES ---
-            # We skip tables here so they don't clutter the main room view.
-            # Players can still interact with them via LOOK TABLES or LOOK <NAME>.
             if obj.get("hidden", False) or obj.get("is_table", False):
                 continue
             # -------------------------------------
             
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
-                obj_name = obj['name'] 
+                # --- FIX: Safe Access to Name ---
+                obj_name = obj.get('name', 'Unknown Object')
                 verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
                 verb_str = ','.join(verbs).lower()
                 html_objects.append(
@@ -203,7 +203,6 @@ def show_room_to_player(player: Player, room: Room):
             is_invis = target_player_obj.flags.get("invisible", "off") == "on"
             # If invisible, check if observer is admin
             if is_invis:
-                # Use getattr to be safe if you haven't updated Player class yet
                 if not getattr(player, "is_admin", False):
                     continue
         # -------------------------------
