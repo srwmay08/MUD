@@ -18,13 +18,7 @@ POSTURE_MAP = {
     "lay": "prone"           # Alias for prone
 }
 
-@VerbRegistry.register("stand")
-@VerbRegistry.register("sit")
-@VerbRegistry.register("kneel")
-@VerbRegistry.register("prone")
-@VerbRegistry.register("crouch")
-@VerbRegistry.register("meditate")
-@VerbRegistry.register("lay")
+@VerbRegistry.register(["stand", "sit", "kneel", "prone", "crouch", "meditate", "lay"])
 class Posture(BaseVerb):
     """
     Handles the 'sit', 'stand', 'kneel', 'prone', 'crouch', 

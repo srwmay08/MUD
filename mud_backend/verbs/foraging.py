@@ -10,10 +10,6 @@ from mud_backend.core.room_handler import show_room_to_player
 if TYPE_CHECKING:
     from mud_backend.core.game_objects import Player
 
-@VerbRegistry.register(["forage"]) 
-@VerbRegistry.register(["eat"]) 
-@VerbRegistry.register(["drink"])
-
 def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Finds the first item_id in a player's hands that matches.
@@ -125,7 +121,7 @@ def _set_action_roundtime(player: 'Player', duration_seconds: float, message: st
 
 # --- END CENTRAL RT HELPERS ---
 
-
+@VerbRegistry.register(["forage"]) 
 class Forage(BaseVerb):
     """
     Handles the 'forage' (sense) command.
@@ -187,7 +183,7 @@ class Forage(BaseVerb):
         else:
             self.player.send_message("You do not sense any plants of interest here.")
 
-
+@VerbRegistry.register(["eat"]) 
 class Eat(BaseVerb):
     """
     Handles the 'eat' command for herbs and food.
@@ -237,7 +233,7 @@ class Eat(BaseVerb):
         
         _set_action_roundtime(self.player, 3.0, rt_type="hard") 
 
-
+@VerbRegistry.register(["drink"])
 class Drink(BaseVerb):
     """
     Handles the 'drink' command for potions.
