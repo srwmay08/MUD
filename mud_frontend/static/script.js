@@ -58,7 +58,7 @@ const COMMON_COMMANDS = [
     "health", "stats", "skills", "spells", "info", "score",
     "help", "quit", "save", "alias", "unalias", "stand", "sit", "kneel", "prone",
     "buy", "sell", "list", "order", "appraise",
-    "forage", "harvest", "mine", "chop", "fish", "skin", "search"
+    "forage", "harvest", "mine", "chop", "fish", "skin", "search", "tend", "diagnose"
 ];
 
 function sendCommand(command) {
@@ -193,7 +193,7 @@ const WOUND_COORDS = {
 };
 
 // --- UPDATED: Function to create circle AND text ---
-function createMarker(x, y, rank, isScar=false) {
+function createMarker(x, y, rank, isScar=false, location=null) {
     const group = document.createElementNS(svgNS, 'g');
     
     const circle = document.createElementNS(svgNS, 'circle');
@@ -212,6 +212,25 @@ function createMarker(x, y, rank, isScar=false) {
     
     group.appendChild(circle);
     group.appendChild(text);
+
+    // --- NEW: Add click handler for wounds to TEND ---
+    if (!isScar && location) {
+        group.style.cursor = 'pointer';
+        
+        // Add a tooltip/title
+        const title = document.createElementNS(svgNS, 'title');
+        title.textContent = `Click to TEND ${location.replace(/_/g, ' ')}`;
+        group.appendChild(title);
+
+        group.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const cmdLoc = location.replace(/_/g, ' ');
+            // Echo the action locally for immediate feedback
+            addMessage(`> tend my ${cmdLoc}`, 'command-echo');
+            sendCommand(`tend my ${cmdLoc}`);
+        });
+    }
     
     injurySvg.appendChild(group);
 }
@@ -226,8 +245,24 @@ function updateGuiPanels(vitals) {
     }
 
     // --- UPDATED: Handle Wounds AND Scars ---
-    injurySvg.querySelectorAll('.wound-marker, .scar-marker, .marker-text').forEach(m => m.parentElement.remove());
+    injurySvg.querySelectorAll('.wound-marker, .scar-marker, .marker-text, g').forEach(m => m.remove());
     
+    // Re-draw grid/background if needed (assuming static SVG has background, we only remove markers)
+    // Actually the querySelectorAll might be too aggressive if there are other <g> elements.
+    // Let's scope it to children that we added.
+    // Better way: Clear known markers. 
+    // The previous implementation used m.parentElement.remove() on class selection.
+    // Let's stick to clearing the SVG and assuming the background is CSS or not in dynamic updates.
+    // Or just remove elements with specific classes.
+    const markers = injurySvg.querySelectorAll('.wound-marker, .scar-marker, .marker-text');
+    markers.forEach(m => {
+        if (m.parentElement && m.parentElement.tagName === 'g') {
+            m.parentElement.remove();
+        } else {
+            m.remove();
+        }
+    });
+
     // Draw Scars first (underneath)
     if (vitals.scars) {
         for (const [location, rank] of Object.entries(vitals.scars)) {
@@ -239,7 +274,7 @@ function updateGuiPanels(vitals) {
                 if (vitals.wounds && vitals.wounds[location]) {
                      x -= 1.0; // Shift left if wound exists
                 }
-                createMarker(x, coords.y, rank, true);
+                createMarker(x, coords.y, rank, true, location);
             }
         }
     }
@@ -253,7 +288,7 @@ function updateGuiPanels(vitals) {
                  if (vitals.scars && vitals.scars[location]) {
                      x += 1.0; // Shift right if scar exists
                 }
-                createMarker(x, coords.y, rank, false);
+                createMarker(x, coords.y, rank, false, location);
             }
         }
     }
