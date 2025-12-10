@@ -269,8 +269,10 @@ class Player(GameEntity):
     def stamina_regen_per_pulse(self) -> int:
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.stat_modifiers)
         bonus = 0
-        if self.posture in ["sitting", "kneeling", "prone"]:
+        # --- MODIFIED: Added crouching and meditating ---
+        if self.posture in ["sitting", "kneeling", "prone", "crouching", "meditating"]:
             if self.worn_items.get("mainhand") is None: bonus = 5
+        # -----------------------------------------------
         sr_percent = 20 + math.trunc(con_b / 4.5) + bonus
         enhancive_bonus = 0
         if self.stamina_burst_pulses > 0: enhancive_bonus = 15
@@ -284,6 +286,12 @@ class Player(GameEntity):
         hp_ranks = self.skills.get("harness_power", 0)
         hp_bonus = calculate_skill_bonus(hp_ranks)
         bonus = 0 
+        
+        # --- MODIFIED: Added Meditate Bonus ---
+        if self.posture == "meditating":
+            bonus += 10 # +10% base regen per pulse
+        # --------------------------------------
+
         mr_percent = 10 + math.trunc(int_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
         enhancive_bonus = 0
         gain = round(self.max_mana * (mr_percent / 100.0)) + enhancive_bonus
@@ -295,6 +303,12 @@ class Player(GameEntity):
         hp_ranks = self.skills.get("harness_power", 0)
         hp_bonus = calculate_skill_bonus(hp_ranks)
         bonus = 0 
+
+        # --- MODIFIED: Added Meditate Bonus ---
+        if self.posture == "meditating":
+            bonus += 10 # +10% base regen per pulse
+        # --------------------------------------
+
         spr_percent = 10 + math.trunc(ess_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
         enhancive_bonus = 0
         gain = round(self.max_spirit * (spr_percent / 100.0)) + enhancive_bonus

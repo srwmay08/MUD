@@ -429,8 +429,6 @@ class Tend(BaseVerb):
             return normalized
 
         # 3. Fuzzy / Readable match
-        # Compare user input (cleaned) vs readable version of wound keys
-        # e.g. input "left eye" vs wound "lefteye" -> readable "left eye" -> MATCH
         clean_input = input_arg.lower().replace(" ", "")
         
         for key in target.wounds:

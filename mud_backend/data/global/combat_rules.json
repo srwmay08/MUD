@@ -46,7 +46,9 @@
     "standing": { "ds_penalty": 0, "defense_factor": 1.0 },
     "sitting": { "ds_penalty": -50, "defense_factor": 0.75 },
     "kneeling": { "ds_penalty": -50, "defense_factor": 0.75 },
-    "prone": { "ds_penalty": -50, "defense_factor": 0.50 }
+    "prone": { "ds_penalty": -50, "defense_factor": 0.50 },
+    "crouching": { "ds_penalty": -30, "defense_factor": 0.85 },
+    "meditating": { "ds_penalty": -50, "defense_factor": 0.75 }
   },
   "environmental_modifiers": {
     "average": 0, "bright": -10, "dark": 20, "foggy": 30

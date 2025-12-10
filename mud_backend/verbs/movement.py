@@ -521,6 +521,12 @@ class Enter(BaseVerb):
             self.player.temp_leave_message = leave_suffix
             if not is_door_or_gate:
                 rt = 3.0
+        elif current_posture == "crouching":
+            move_msg = f"You creep into the {enterable_object.get('name', target_name)}..."
+            leave_suffix = f"creeps into the {obj_clean_name}."
+            self.player.temp_leave_message = leave_suffix
+            if not is_door_or_gate:
+                rt = 4.0
         elif current_posture == "prone":
             move_msg = f"You crawl through the {enterable_object.get('name', target_name)}..."
             leave_suffix = f"crawls through the {obj_clean_name}."
@@ -762,6 +768,17 @@ class Move(BaseVerb):
                     move_msg = f"You move towards the {move_dir_name}..."
                     leave_suffix = f"heads towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
+            elif current_posture == "crouching":
+                # --- NEW CROUCHING MOVEMENT LOGIC ---
+                if move_dir_name in DIRECTION_MAP.values() or move_dir_name in DIRECTION_MAP.keys():
+                    move_msg = f"You creep {move_dir_name}..."
+                    leave_suffix = f"creeps {move_dir_name}."
+                else:
+                    clean_obj = _clean_name(move_dir_name)
+                    move_msg = f"You creep towards the {move_dir_name}..."
+                    leave_suffix = f"creeps towards the {clean_obj}."
+                self.player.temp_leave_message = leave_suffix
+                # ------------------------------------
             elif current_posture == "prone":
                 if move_dir_name in DIRECTION_MAP.values() or move_dir_name in DIRECTION_MAP.keys():
                     move_msg = f"You crawl {move_dir_name}..."
@@ -870,6 +887,10 @@ class Exit(BaseVerb):
                 if current_posture == "standing":
                     move_msg = "You head out..."
                     leave_suffix = "heads out."
+                    self.player.temp_leave_message = leave_suffix
+                elif current_posture == "crouching":
+                    move_msg = "You creep out..."
+                    leave_suffix = "creeps out."
                     self.player.temp_leave_message = leave_suffix
                 elif current_posture == "prone":
                     move_msg = "You crawl out..."

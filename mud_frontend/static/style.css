@@ -142,28 +142,35 @@ body {
     stroke: none; 
 }
 
-/* -- NEW: Wound & Scar Markers -- */
+/* -- IMPORTANT: Wound Markers -- */
 .wound-marker {
-    fill: #a00000; /* Dark Red */
-    stroke: #F00;  /* Bright Red Outline */
-    stroke-width: 0.25; 
+    fill: #cc0000;
+    stroke: none;
 }
+
+.wound-marker.fresh {
+    fill: #dd0000;
+}
+
+/* FIX: White ring for bandages */
+.wound-marker.bandaged {
+    fill: #aa0000;       /* Slightly darker red to indicate treated */
+    stroke: #ffffff;     /* The White Outline Ring */
+    stroke-width: 0.3px; /* Thin, sharp outline appropriate for SVG scale */
+}
+
 .scar-marker {
-    fill: #ffdab9; /* Peach/Skin tone */
-    stroke: #8b4513; /* Brown outline */
-    stroke-width: 0.25;
+    fill: #888888;
+    stroke: #aaaaaa;
+    stroke-width: 0.1px;
 }
+
 .marker-text {
-    font-family: sans-serif;
-    font-size: 1.5px; /* Very small relative to 16x16 SVG coord system */
-    font-weight: bold;
-    fill: #fff; /* White text for red wounds */
-    pointer-events: none;
+    fill: #fff;
+    font-size: 1.5px;
     text-anchor: middle;
-    dominant-baseline: central;
-}
-.marker-text.scar {
-    fill: #000; /* Black text for peach scars */
+    dominant-baseline: middle;
+    pointer-events: none;
 }
 
 
