@@ -61,7 +61,7 @@ class Health(BaseVerb):
 class Diagnose(BaseVerb):
     """
     DIAGNOSE [target]
-    Checks wounds and bleeding status.
+    Checks wounds and bleeding status with correct grammatical person.
     """
     def execute(self):
         target = self.player
@@ -77,34 +77,70 @@ class Diagnose(BaseVerb):
                      return
                 target = found
 
-        name_display = "You" if target == self.player else target.name
-        msg = f"Diagnosing {name_display}:\n"
-        found_wounds = False
+        # Determine grammatical person variables
+        if target == self.player:
+            target_display = "yourself"
+            subject = "You"
+            verb_be = "are"
+            verb_have = "have"
+            possessive = "your"
+        else:
+            target_display = target.name
+            subject = target.name
+            verb_be = "is"
+            verb_have = "has"
+            possessive = f"{target.name}'s"
 
-        if hasattr(target, "wounds"):
+        self.player.send_message(f"With a practiced eye, you glance over {target_display}:")
+
+        # Health Status Check
+        current_hp = target.hp
+        max_hp = target.max_hp
+        percent_hp = (current_hp / max_hp) * 100
+        
+        if current_hp <= 0: status = "DEAD"
+        elif percent_hp > 90: status = "in good shape"
+        elif percent_hp > 75: status = "in decent shape"
+        elif percent_hp > 50: status = "looking a bit rough"
+        elif percent_hp > 25: status = "badly wounded"
+        else: status = "in critical condition"
+
+        self.player.send_message(f"{subject} {verb_be} {status}.")
+
+        # Wound Checking
+        found_wounds = False
+        if hasattr(target, "wounds") and target.wounds:
+            wound_descs = self.world.game_criticals.get("wounds", {}) if hasattr(self.world, "game_criticals") else {}
+
             for location, rank in target.wounds.items():
                 if rank > 0:
                     found_wounds = True
-                    severity_str = "minor"
-                    if rank == 2: severity_str = "moderate"
-                    elif rank >= 3: severity_str = "severe"
+                    clean_location = location.replace('_', ' ')
                     
-                    status = [severity_str]
+                    # 1. Determine the Description
+                    loc_data = wound_descs.get(location, {})
+                    db_desc = loc_data.get(str(rank))
                     
-                    # Check Bandages
+                    if db_desc:
+                        # Use the database description directly (e.g. "deep lacerations across your chest")
+                        wound_text = db_desc
+                    else:
+                        # Fallback if no description found
+                        wound_text = f"rank {rank} injuries to {possessive} {clean_location}"
+
+                    # 2. Check Bandages
                     is_bandaged = hasattr(target, "bandages") and location in target.bandages
                     
+                    # 3. Construct the Message
                     if is_bandaged:
-                        status.append("bandaged")
+                        # User Request: "You have deep lacerations across your chest and your chest is bandaged."
+                        self.player.send_message(f"{subject} {verb_have} {wound_text} and {possessive} {clean_location} {verb_be} bandaged.")
                     else:
-                        status.append(f"bleeding {rank}/rnd")
-                    
-                    msg += f"  {location.replace('_', ' ').title()}: {', '.join(status)}\n"
+                        # Bleeding case
+                        self.player.send_message(f"{subject} {verb_have} {wound_text} (bleeding {rank}/rnd).")
 
         if not found_wounds:
-            msg += "  No significant injuries found."
-
-        self.player.send_message(msg)
+            self.player.send_message(f"{subject} {verb_have} no visible wounds.")
 
 
 @VerbRegistry.register(["tend"])
@@ -152,10 +188,9 @@ class Tend(BaseVerb):
                 return
 
         # 3. Validate Wound Existence
-        # FIX: Check 'wounds' dict, not 'body_parts'
         if not hasattr(target, "wounds") or normalized_loc not in target.wounds:
             if target == self.player:
-                self.player.send_message(f"You do not have a '{location_arg}'.")
+                self.player.send_message(f"You do not have a wounded '{location_arg}'.")
             else:
                 self.player.send_message(f"{target.name} does not have a wounded '{location_arg}'.")
             return
@@ -243,24 +278,14 @@ class Tend(BaseVerb):
                 target.send_message(f"{self.player.name} bandages your {location_arg}, stopping the bleeding.")
 
         elif success_type == "partial":
-            # Partial: Prompt says "bandage covering half the bleed amount". 
-            # Implies we track partial bandage. For now, we'll mark it partially bandaged?
-            # Or just give message without applying full stopper.
+            # Partial messaging
             self.player.send_message("After some effort you manage to reduce the bleeding somewhat.")
             if target != self.player:
                 target.send_message(f"{self.player.name} bandages your {location_arg}, reducing the bleeding.")
-            # Note: Without a 'bleed_amount' variable in wounds separate from rank, 
-            # we can't mathematically reduce bleed by half permanently unless we change wound rank.
-            # But changing wound rank heals the wound.
-            # We will just apply the message for partial success as requested by "messaging" section.
 
         # Apply RT
         self.player.send_message(f"Roundtime: {calculated_rt} sec.")
         
-        # If the player has a method to apply RT, use it. 
-        # (Assuming apply_roundtime doesn't exist on BaseVerb/Player in this snippet, 
-        # we rely on the combat system or manual timer handling in other systems. 
-        # But we can set next_action_time manually if needed.)
         if hasattr(self.player, "next_action_time"):
             import time
             self.player.next_action_time = time.time() + calculated_rt

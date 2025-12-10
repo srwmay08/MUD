@@ -1,353 +1,478 @@
-/* mud_frontend/static/style.css */
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
+
 body {
-    background-color: #121212;
-    color: #e0e0e0;
-    font-family: 'Consolas', 'Courier New', monospace;
-    margin: 0;
+    font-family: 'Inconsolata', 'Courier New', monospace;    
+    background: #000;
+    color: #CCC;
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
-#game-container {
+#main-content {
     display: flex;
-    flex: 1;
+    flex-direction: row;
+    flex-grow: 1;
+    width: 100%;
     overflow: hidden;
-    position: relative;
+    margin-bottom: 5px;
 }
 
-/* --- Left Panel (Vitals/Map/State) --- */
 #left-panel {
-    width: 320px;
-    background-color: #1e1e1e;
-    border-right: 1px solid #333;
+    width: 250px;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease, padding 0.3s ease;
-    overflow-y: auto;
+    overflow-y: auto; 
     overflow-x: hidden;
-    flex-shrink: 0;
-}
-
-#left-panel.collapsed {
-    width: 0;
-    padding: 0;
-    border: none;
+    transition: width 0.2s ease-out, padding 0.2s ease-out, min-width 0.2s ease-out;
+    position: relative;
+    border: 1px solid #333;
+    background: #000; 
 }
 
 .widget {
-    background-color: #252526;
-    margin: 8px;
-    border: 1px solid #333;
-    border-radius: 4px;
+    background: #0a0a0a;
+    border-bottom: 1px solid #333;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-}
-
-.widget.dragging {
-    opacity: 0.5;
-    border: 1px dashed #666;
+    overflow: hidden; 
+    flex-shrink: 0;
 }
 
 .widget-header {
-    background-color: #2d2d2d;
-    padding: 5px 10px;
+    padding: 5px 8px;
+    background: #1a1a1a;
+    color: #f0c674; 
     font-weight: bold;
-    border-bottom: 1px solid #333;
-    cursor: grab;
-    user-select: none;
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.9em;
-    color: #bbb;
+    cursor: grab; 
 }
-
 .widget-header:active {
     cursor: grabbing;
 }
 
+.widget-header::after {
+    content: '−'; 
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #888;
+    cursor: pointer;
+    padding: 0 5px;
+}
+.widget-header:hover::after {
+    color: #FFF;
+}
+
 .widget-content {
-    padding: 10px;
+    padding: 8px;
+    flex-grow: 1;
+    display: flex; 
+    flex-direction: column;
+    overflow-y: auto; 
+    max-height: 250px; 
 }
 
 .widget.minimized .widget-content {
     display: none;
 }
-
-/* --- Vitals Bars --- */
-.vital-bar-container {
-    margin-bottom: 8px;
+.widget.minimized .widget-header {
+    border-bottom: none; 
+}
+.widget.minimized .widget-header::after {
+    content: '+'; 
 }
 
-.vital-label {
-    font-size: 0.8em;
-    margin-bottom: 2px;
-    display: flex;
-    justify-content: space-between;
+.widget.dragging {
+    opacity: 0.4;
+    background: #333;
 }
 
-.bar-bg {
-    background-color: #333;
+/* --- Experience Widget --- */
+#exp-widget .widget-content {
+    max-height: 50px; 
+}
+#exp-bar {
+    width: 100%;
     height: 10px;
-    border-radius: 2px;
-    overflow: hidden;
-    position: relative;
-}
-
-.bar-fill {
-    height: 100%;
-    width: 100%; 
-    transition: width 0.3s ease;
-}
-
-#health-fill { background-color: #d32f2f; }
-#mana-fill { background-color: #1976d2; }
-#stamina-fill { background-color: #fbc02d; }
-#spirit-fill { background-color: #7b1fa2; } 
-
-/* --- XP Bar --- */
-#exp-bar-container {
-    margin-top: 5px;
+    background: #333;
+    border: 1px solid #555;
+    box-sizing: border-box;
 }
 #exp-fill {
-    background-color: #388e3c; 
+    width: 0%; 
+    height: 100%;
+    background: #182fa3; 
+    transition: width 0.2s ease-out;
 }
+#exp-text {
+    font-size: 0.9em;
+    color: #ccc;
+    text-align: center;
+    margin-top: 4px;
+}
+#exp-value { color: #FFF; font-weight: bold; }
+#exp-label { color: #aaa; }
 
-/* --- Injuries (SVG) --- */
-#injury-widget .widget-content {
-    display: flex;
+/* --- Injuries Widget --- */
+#injuries-widget .widget-content {
+    padding: 0;
+    align-items: center;
     justify-content: center;
-    background-color: #000;
+    min-height: 200px;
 }
-
 #injury-svg {
-    width: 100%;
+    width: 56%; 
     height: auto;
-    max-width: 200px; 
-    display: block;
+}
+#body-outline {
+    fill: none;       
+    stroke: #777;     
+    stroke-width: 0.5; 
+}
+.body-icon {
+    fill: #555; 
+    stroke: none; 
 }
 
-.body-outline {
-    fill: none;
-    stroke: #444;
-    stroke-width: 1;
+/* -- NEW: Wound & Scar Markers -- */
+.wound-marker {
+    fill: #a00000; /* Dark Red */
+    stroke: #F00;  /* Bright Red Outline */
+    stroke-width: 0.25; 
 }
-
-/* UPDATED: Wound Styles */
-.wound-marker circle {
-    fill: #000;
-    stroke-width: 1px;
-    transition: stroke 0.3s ease;
+.scar-marker {
+    fill: #ffdab9; /* Peach/Skin tone */
+    stroke: #8b4513; /* Brown outline */
+    stroke-width: 0.25;
 }
-
-/* Fresh Wound: RED (Bleeding) */
-.wound-marker.fresh circle {
-    stroke: #f44336; 
-}
-
-/* Bandaged Wound: WHITE */
-.wound-marker.bandaged circle {
-    stroke: #FFFFFF;
-}
-
-/* Scar: PEACH */
-.scar-marker circle {
-    fill: #000;
-    stroke: #FFDAB9; 
-    stroke-width: 0.8px;
-}
-
 .marker-text {
-    font-size: 2px;
-    fill: #fff; 
+    font-family: sans-serif;
+    font-size: 1.5px; /* Very small relative to 16x16 SVG coord system */
+    font-weight: bold;
+    fill: #fff; /* White text for red wounds */
+    pointer-events: none;
     text-anchor: middle;
     dominant-baseline: central;
-    pointer-events: none;
 }
-
 .marker-text.scar {
-    fill: #FFDAB9; 
-    font-size: 1.8px;
+    fill: #000; /* Black text for peach scars */
 }
 
-/* --- Map --- */
-#map-widget .widget-content {
-    padding: 0;
-    position: relative;
-    height: 200px; 
-    background-color: #111;
+
+/* --- Combat Widget --- */
+#combat-widget .widget-content {
+    max-height: 120px;
+}
+.combat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.combat-row span { color: #aaa; }
+.combat-action {
+    color: #f0c674;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-left: 5px;
+}
+.combat-action:hover {
+    color: #FFF;
+}
+#stance-select {
+    background: #111;
+    color: #ccc;
+    border: 1px solid #555;
+    flex-grow: 1;
+    margin-left: 10px;
 }
 
-#map-svg {
-    width: 100%;
-    height: 100%;
-}
-
-#map-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0,0,0,0.7);
-    padding: 4px 8px;
-    font-size: 0.8em;
-    pointer-events: none;
-}
-
-.map-room rect {
-    fill: #333;
-    stroke: #555;
-    stroke-width: 1;
-}
-
-.map-room.current rect {
-    fill: #1976d2; 
-    stroke: #64b5f6;
-}
-
-.map-exit {
-    stroke: #666;
-    stroke-width: 1.5;
-    fill: none;
-}
-
-.map-special-exit {
-    font-size: 8px;
-    fill: #fff;
-    text-anchor: middle;
-    dominant-baseline: middle;
-    font-weight: bold;
-}
-.map-special-exit.up { fill: #4CAF50; }
-.map-special-exit.down { fill: #f44336; }
-.map-special-exit.inout { fill: #FFEB3B; }
-
-/* --- Worn Items --- */
-#worn-items-list {
-    font-size: 0.85em;
+/* --- Inventory Widget --- */
+#inventory-widget .widget-content {
+    max-height: 200px;
+    font-size: 0.9em;
     line-height: 1.4;
 }
-
 .worn-item-slot {
-    color: #888;
-    margin-right: 5px;
+    color: #aaa;
+    width: 100px; 
+    flex-shrink: 0;
+    display: inline-block;
 }
-
 .worn-item-name {
-    color: #ddd;
+    color: #f0c674; 
 }
 
-/* --- Roundtime --- */
-#rt-container {
-    height: 10px;
+/* --- Map Widget --- */
+#map-widget {
+    flex-grow: 0; /* Don't auto expand too much if content is fixed */
+}
+#map-widget .widget-content {
+    padding: 0;
     display: flex;
-    gap: 2px;
-    margin-top: 5px;
-}
-.rt-box {
-    flex: 1;
-    background-color: #333;
-    border-radius: 1px;
-}
-.rt-box.active.hard { background-color: #d32f2f; }
-.rt-box.active.soft { background-color: #fbc02d; }
-
-/* --- Main Content --- */
-#main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
+    justify-content: center;
+    background: #000;
 }
 
-#output {
-    flex: 1;
-    padding: 10px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-    overflow-y: auto;
-    word-wrap: break-word;
-    white-space: pre-wrap; 
-}
-
-.message { margin-bottom: 2px; }
-.room-title { color: #81d4fa; font-weight: bold; font-size: 1.1em; }
-.command-echo { color: #888; font-style: italic; }
-.group-chat { color: #a5d6a7; }
-.group-chat-ooc { color: #81c784; }
-.band-chat { color: #ce93d8; }
-.keyword { color: #fff59d; cursor: pointer; text-decoration: underline; }
-.keyword:hover { color: #fff; }
-
-#input-area {
-    padding: 10px;
-    background-color: #1e1e1e;
-    border-top: 1px solid #333;
-    display: flex;
-}
-
-#command-input {
-    flex: 1;
-    background-color: #2d2d2d;
-    border: 1px solid #444;
-    color: #e0e0e0;
-    padding: 8px;
-    font-family: inherit;
-    font-size: 14px;
-    outline: none;
-}
-
-#command-input:focus {
-    border-color: #555;
-}
-
-#send-button {
-    background-color: #333;
-    color: #ddd;
-    border: 1px solid #444;
-    padding: 0 15px;
-    margin-left: 5px;
-    cursor: pointer;
-}
-
-#send-button:hover {
-    background-color: #444;
+#map-room-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #panel-toggle-button {
-    background-color: #2d2d2d;
-    border: none;
-    border-right: 1px solid #333;
+    font-size: 1.2em;
+    font-weight: bold;
     color: #888;
     cursor: pointer;
-    width: 20px;
+    padding: 0 5px;
+    position: absolute;
+    top: 0px;
+    right: -24px; 
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-left: none;
+    padding: 5px;
+    z-index: 50;
+    border-radius: 0 5px 5px 0;
+}
+#panel-toggle-button:hover {
+    color: #FFF;
+}
+
+#map-svg {
+    /* Modified to responsive width but respecting the viewBox usually handled by JS */
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1; /* Force Square */
+    background: #000;
+}
+
+#map-footer {
+    padding: 5px 8px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    color: #ccc;
+    font-size: 0.9em;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#left-panel.collapsed {
+    width: 0px;
+    min-width: 0px; 
+    border-left: none;
+    border-right: none;
+}
+#left-panel.collapsed .widget {
+    display: none; 
+}
+
+#left-panel.collapsed #panel-toggle-button {
+    right: -24px; 
+}
+
+/* --- Map SVG Internal Styles --- */
+.map-room rect {
+    fill: #2a2a2a;
+    stroke: #555;
+    stroke-width: 1;
+}
+.map-room.current rect {
+    fill: #f0c674; 
+    stroke: #FFF;
+    stroke-width: 2;
+}
+.map-room text {
+    font-size: 9px;
+    fill: #aaa;
+    text-anchor: middle;
+    pointer-events: none;
+}
+.map-room.current text {
+    fill: #000;
+    font-weight: bold;
+}
+.map-exit {
+    stroke: #888;
+    stroke-width: 1.5;
+    fill: none;
+}
+.map-special-exit {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-anchor: middle;
+}
+.map-special-exit.up { fill: #8f8; } 
+.map-special-exit.down { fill: #f88; } 
+.map-special-exit.inout { fill: #88f; } 
+
+
+#output {
+    flex-grow: 1;
+    border: 1px solid #333;
+    border-left: none; 
+    overflow-y: scroll;
+    padding: 10px;
+    box-sizing: border-box;
+    white-space: pre-wrap; 
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    line-height: 1.5;
+    background: #0a0a0a;
+}
+
+.room-title {
+    color: #61bfff; 
+    font-weight: bold;
+}
+.keyword {
+    color: #f0c674; 
+    text-decoration: underline;
+    cursor: pointer;
+}
+.command-echo {
+    color: #888;
+}
+#input-line {
+    display: flex;
+    margin-top: 5px; 
+    flex-grow: 0;
+    flex-shrink: 0;
+    position: relative;
+    border: 1px solid #333;
+    background: #000;
+}
+#rt-container {
+    position: absolute;
+    top: 0;
+    left: 20px; 
+    height: 100%;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 5px;
+}
+.rt-box {
+    width: 10px;
+    height: 16px;
+    background-color: #222;
+    border: 1px solid #444;
+    margin-right: 2px;
+    box-sizing: border-box;
+    transition: background-color 0.1s ease;
+}
+.rt-box.active.hard {
+    background-color: #800000; 
+    border-color: #F00;
+}
+.rt-box.active.soft {
+    background-color: #000080; 
+    border-color: #00F;
+}
+#input-line > span {
+    padding-right: 5px;
+    padding-left: 5px;
+    color: #CCC;
+    position: relative;
+    z-index: 2;
+}
+#command-input {
+    flex-grow: 1;
+    background: transparent;
+    color: #0F0;
+    border: none;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    position: relative;
+    z-index: 2;
+}
+#command-input:focus {
+    outline: none;
+}
+#gauges-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin-top: 10px;
+    flex-shrink: 0;
+    gap: 5px;
+}
+.gauge-bar {
+    flex: 1;
+    height: 22px;
+    background-color: #111;
+    border: 1px solid #555;
+    position: relative;
+    box-sizing: border-box;
+}
+.gauge-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.2s ease-out;
+}
+.gauge-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    text-align: center;
+    color: #FFF;
+    font-weight: bold;
+    font-size: 0.9em;
+    text-shadow: 1px 1px 2px #000;
+    white-space: nowrap;
+}
+.gauge-fill.health { background-color: #a00000; }
+.gauge-fill.mana { background-color: #182fa3; }
+.gauge-fill.stamina { background-color: #00a000; }
+.gauge-fill.spirit { background-color: #a0a000; }
+#posture-container {
+    flex: 0 0 auto;
+    height: 22px;
+    background-color: #111;
+    border: 1px solid #555;
+    box-sizing: border-box;
+    padding: 0 15px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #f0c674;
+    font-weight: bold;
+    white-space: nowrap;
 }
-#panel-toggle-button:hover { background-color: #333; color: #fff; }
-
-/* --- Context Menu --- */
 #context-menu {
     display: none;
     position: absolute;
-    background-color: #2d2d2d;
-    border: 1px solid #555;
-    min-width: 120px;
+    background-color: #2c2c2c;
+    border: 1px solid #888;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    min-width: 150px;
     z-index: 1000;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
 }
-
 #context-menu div {
     padding: 8px 12px;
+    color: #DDD;
     cursor: pointer;
-    color: #e0e0e0;
-    font-size: 14px;
+    border-bottom: 1px solid #444;
+    font-weight: bold;
+    text-transform: uppercase;
 }
-
+#context-menu div:last-child {
+    border-bottom: none;
+}
 #context-menu div:hover {
-    background-color: #3d3d3d;
+    background-color: #4a4a4a;
+    color: #FFF;
 }
