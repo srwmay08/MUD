@@ -45,7 +45,6 @@ def _get_shop_data(room) -> dict | None:
 
             # Fix: Handle empty list from JSON by initializing defaults
             if isinstance(s_data, list):
-                # If it's a list (even empty), convert to dict structure
                 s_data = {"inventory": [], "sold_counts": {}}
                 obj["shop_data"] = s_data
                 return s_data
@@ -57,12 +56,33 @@ def _get_shop_data(room) -> dict | None:
                 return s_data
     return None
 
+def _sync_shop_data_to_storage(room, updated_shop_data):
+    """
+    CRITICAL FIX: Syncs the modified shop_data from the live object (room.objects)
+    back to the raw persistent storage (room.data['objects']).
+    Without this, hydrate_room_objects() overwrites changes on the next 'look'.
+    """
+    # 1. Find the pawnbroker in the live objects to get their name/id
+    target_name = None
+    for obj in room.objects:
+        if obj.get("shop_data") is updated_shop_data:
+            target_name = obj.get("name")
+            break
+            
+    if not target_name:
+        return
+
+    # 2. Find the matching stub in room.data['objects'] and update it
+    raw_objects = room.data.get("objects", [])
+    for stub in raw_objects:
+        if stub.get("name") == target_name and "shop_data" in stub:
+            stub["shop_data"] = updated_shop_data
+            break
+
 def _get_item_type(item_data: dict) -> str:
     """Helper to safely determine item type from various schema versions."""
-    # Check 'item_type' first (schema), then 'type' (legacy/generic)
     base_type = item_data.get("item_type") or item_data.get("type", "misc")
     
-    # Refine based on specific flags
     if "weapon_type" in item_data: return "weapon"
     if "armor_type" in item_data: return "armor"
     if "spell" in item_data or "scroll" in item_data.get("keywords", []): return "magic"
@@ -151,7 +171,6 @@ class List(BaseVerb):
 
         game_items = self.world.game_items
         
-        # Deduplicate list for general view
         seen_items = set()
         count = 0
         
@@ -191,7 +210,6 @@ class Buy(BaseVerb):
         item_to_buy = None
         item_index = -1
 
-        # Search inventory
         for idx, item_ref in enumerate(shop_data.get("inventory", [])):
             if isinstance(item_ref, dict):
                 item_data = item_ref
@@ -230,7 +248,7 @@ class Buy(BaseVerb):
 
         shop_data["inventory"].pop(item_index)
 
-        # Reduce sold count (increase price for future)
+        # Reduce sold count
         if isinstance(item_to_buy, dict):
             item_data = item_to_buy
         else:
@@ -241,6 +259,9 @@ class Buy(BaseVerb):
         if "sold_counts" in shop_data:
             if itype in shop_data["sold_counts"] and shop_data["sold_counts"][itype] > 0:
                 shop_data["sold_counts"][itype] -= 1
+        
+        _sync_shop_data_to_storage(self.room, shop_data)
+        self.world.save_room(self.room)
 
         self.player.send_message(f"You buy {name} for {price} silver.")
 
@@ -334,30 +355,36 @@ class Sell(BaseVerb):
                 new_stock = None
 
         if new_stock:
-            # Add delay / roundtime
-            _set_action_roundtime(self.player, 2.0)
+            # --- 1. Immediate Transaction (No Delay, No Queue) ---
+            self.player.worn_items[hand_slot] = None
+            self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + price
+            new_stock["sold_timestamp"] = time.time()
+
+            # Fix: Use direct send via world to bypass player's message queue lag
+            # Updated phrasing as requested
+            self.world.send_message_to_player(
+                self.player.name,
+                f"The pawnbroker takes {new_stock['name']} from you and hands you {price} silver.",
+                "message"
+            )
             
-            # 1. Inspection Message
-            msg_inspect = f"The pawnbroker takes {new_stock['name']} from {self.player.name} and inspects it carefully..."
-            
-            # Get SIDs to skip (for the player)
+            # Broadcast to room (exclude player)
             player_info = self.world.get_player_info(self.player.name)
             skip_sids = []
             if player_info and "sid" in player_info:
                 skip_sids.append(player_info["sid"])
                 
-            self.world.broadcast_to_room(self.room.room_id, msg_inspect, "message", skip_sid=skip_sids)
-            self.player.send_message(f"The pawnbroker takes your {new_stock['name']} and inspects it...")
+            self.world.broadcast_to_room(
+                self.room.room_id, 
+                f"The pawnbroker takes {new_stock['name']} from {self.player.name} and hands them some coins.", 
+                "message", 
+                skip_sid=skip_sids
+            )
 
-            # 2. Simulated Delay
+            # --- 2. Delay ---
             time.sleep(1.5)
 
-            # Transaction
-            self.player.worn_items[hand_slot] = None
-            self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + price
-            new_stock["sold_timestamp"] = time.time()
-            
-            # Check if we already have this item
+            # --- 3. Shop Logic ---
             already_in_stock = False
             for existing_item in shop_data.get("inventory", []):
                 e_name = existing_item.get("name") if isinstance(existing_item, dict) else game_items.get(existing_item, {}).get("name")
@@ -365,7 +392,6 @@ class Sell(BaseVerb):
                     already_in_stock = True
                     break
 
-            # Add to Inventory
             shop_data["inventory"].append(new_stock)
 
             # Update Counts
@@ -374,19 +400,19 @@ class Sell(BaseVerb):
                 shop_data["sold_counts"] = {}
             shop_data["sold_counts"][itype] = shop_data["sold_counts"].get(itype, 0) + 1
 
-            # 3. Final Messages
+            # --- 4. Final Action (Ambient) ---
             table_name = _get_display_table_name(self.room, new_stock)
             
             if already_in_stock:
-                msg_final = f"He nods and adds it to the stock on the {table_name}."
+                action_msg = f"The pawnbroker checks his ledger, nods, and adds the {new_stock['name']} to the stock on the {table_name}."
             else:
-                msg_final = f"He nods and places it on display on the {table_name}."
+                action_msg = f"The pawnbroker inspects the {new_stock['name']} closely, tags it, and places it on display on the {table_name}."
 
-            self.player.send_message(f"You sell {new_stock['name']} for {price} silver.")
-            self.player.send_message(msg_final)
-            self.world.broadcast_to_room(self.room.room_id, msg_final, "message", skip_sid=skip_sids)
+            # Broadcast to everyone (including player, as this is an ambient event)
+            self.world.broadcast_to_room(self.room.room_id, action_msg, "message")
 
-            # 4. Save Room (Crucial Step)
+            # --- 5. Save & Sync ---
+            _sync_shop_data_to_storage(self.room, shop_data)
             self.world.save_room(self.room)
         else:
             self.player.send_message("Error transferring item.")
