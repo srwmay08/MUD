@@ -86,6 +86,9 @@ def _list_items_on_table(player, room, table_obj):
     # Filter Inventory
     items_on_table = []
     game_items = player.world.game_items
+    
+    # Track displayed names to deduplicate
+    displayed_names = set()
 
     for item_ref in shop_data.get("inventory", []):
         # Resolve Item Data
@@ -118,8 +121,12 @@ def _list_items_on_table(player, room, table_obj):
             match = True
 
         if match:
-            price = _get_item_buy_price(item_ref, game_items, shop_data)
-            items_on_table.append((item_data.get('name', 'Item'), price))
+            name = item_data.get('name', 'Item')
+            # Deduplication: Only show one of each item name
+            if name not in displayed_names:
+                price = _get_item_buy_price(item_ref, game_items, shop_data)
+                items_on_table.append((name, price))
+                displayed_names.add(name)
 
     if items_on_table:
         player.send_message(f"--- On the {table_obj.get('name', 'Table')} ---")
