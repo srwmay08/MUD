@@ -360,16 +360,17 @@ class Sell(BaseVerb):
             self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + price
             new_stock["sold_timestamp"] = time.time()
 
-            # Fix: Use direct send via world to bypass player's message queue lag
-            # Updated phrasing as requested
+            # Fix: Use direct send via world to bypass player's message queue lag.
+            # Use lowercase name to ensure socket lookup works.
             self.world.send_message_to_player(
-                self.player.name,
+                self.player.name.lower(),
                 f"The pawnbroker takes {new_stock['name']} from you and hands you {price} silver.",
                 "message"
             )
             
             # Broadcast to room (exclude player)
-            player_info = self.world.get_player_info(self.player.name)
+            # Use lowercase name for SID lookup
+            player_info = self.world.get_player_info(self.player.name.lower())
             skip_sids = []
             if player_info and "sid" in player_info:
                 skip_sids.append(player_info["sid"])
@@ -403,10 +404,11 @@ class Sell(BaseVerb):
             # --- 4. Final Action (Ambient) ---
             table_name = _get_display_table_name(self.room, new_stock)
             
+            # Removed redundant articles like "adds the an iron dagger"
             if already_in_stock:
-                action_msg = f"The pawnbroker checks his ledger, nods, and adds the {new_stock['name']} to the stock on the {table_name}."
+                action_msg = f"The pawnbroker checks his ledger, nods, and adds {new_stock['name']} to the stock on the {table_name}."
             else:
-                action_msg = f"The pawnbroker inspects the {new_stock['name']} closely, tags it, and places it on display on the {table_name}."
+                action_msg = f"The pawnbroker inspects {new_stock['name']} closely, tags it, and places it on display on the {table_name}."
 
             # Broadcast to everyone (including player, as this is an ambient event)
             self.world.broadcast_to_room(self.room.room_id, action_msg, "message")

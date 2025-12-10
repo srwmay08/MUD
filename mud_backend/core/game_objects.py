@@ -622,9 +622,14 @@ class Player(GameEntity):
     def get_vitals(self) -> Dict[str, Any]:
         worn_data = {}
         for slot_id, slot_name in config.EQUIPMENT_SLOTS.items():
-            item_id = self.worn_items.get(slot_id)
-            if item_id:
-                item_data = self.world.game_items.get(item_id)
+            item_ref = self.worn_items.get(slot_id)
+            if item_ref:
+                # FIX: Handle if the worn item is a dict (instantiated) or ID (template)
+                if isinstance(item_ref, dict):
+                    item_data = item_ref
+                else:
+                    item_data = self.world.game_items.get(item_ref)
+                
                 if item_data:
                     worn_data[slot_id] = {
                         "name": item_data.get("name", "an item"),
