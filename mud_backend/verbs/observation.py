@@ -8,7 +8,7 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend.core.game_loop import environment
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
+from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price, _get_item_type
 
 
 def _find_item_on_player(player, target_name):
@@ -100,14 +100,8 @@ def _list_items_on_table(player, room, table_obj):
         if not item_data:
             continue
 
-        # Check Type
-        itype = item_data.get("type", "misc")
-        if "weapon_type" in item_data:
-            itype = "weapon"
-        elif "armor_type" in item_data:
-            itype = "armor"
-        elif "spell" in item_data or "scroll" in item_data.get("keywords", []):
-            itype = "magic"
+        # Check Type using the shared helper
+        itype = _get_item_type(item_data)
 
         # Categorization Logic
         match = False

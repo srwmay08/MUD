@@ -6,6 +6,7 @@ import random
 import time
 from typing import Tuple, Optional, Dict, Any, Union
 from mud_backend.core.registry import VerbRegistry
+from mud_backend.verbs.foraging import _set_action_roundtime
 import uuid
 
 def _find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: str) -> Tuple[Optional[Any], Optional[str]]:
@@ -44,10 +45,10 @@ def _get_shop_data(room) -> dict | None:
 
             # Fix: Handle empty list from JSON by initializing defaults
             if isinstance(s_data, list):
-                if not s_data:
-                    s_data = {"inventory": [], "sold_counts": {}}
-                    obj["shop_data"] = s_data
-                    return s_data
+                # If it's a list (even empty), convert to dict structure
+                s_data = {"inventory": [], "sold_counts": {}}
+                obj["shop_data"] = s_data
+                return s_data
 
             if s_data is not None and isinstance(s_data, dict):
                 # Ensure keys exist
@@ -55,6 +56,18 @@ def _get_shop_data(room) -> dict | None:
                 if "sold_counts" not in s_data: s_data["sold_counts"] = {}
                 return s_data
     return None
+
+def _get_item_type(item_data: dict) -> str:
+    """Helper to safely determine item type from various schema versions."""
+    # Check 'item_type' first (schema), then 'type' (legacy/generic)
+    base_type = item_data.get("item_type") or item_data.get("type", "misc")
+    
+    # Refine based on specific flags
+    if "weapon_type" in item_data: return "weapon"
+    if "armor_type" in item_data: return "armor"
+    if "spell" in item_data or "scroll" in item_data.get("keywords", []): return "magic"
+    
+    return base_type
 
 def _get_supply_demand_modifier(shop_data: dict, item_type: str) -> float:
     counts = shop_data.get("sold_counts", {})
@@ -74,12 +87,7 @@ def _get_item_buy_price(item_ref: Union[str, Dict[str, Any]], game_items_data: D
     base = item_data.get("base_value", 0) * 2
 
     if shop_data:
-        itype = item_data.get("type", "misc")
-        if "weapon_type" in item_data:
-            itype = "weapon"
-        elif "armor_type" in item_data:
-            itype = "armor"
-
+        itype = _get_item_type(item_data)
         mod = _get_supply_demand_modifier(shop_data, itype)
         return int(base * mod)
 
@@ -97,12 +105,7 @@ def _get_item_sell_price(item_ref: Union[str, Dict[str, Any]], game_items_data: 
     base_val = item_data.get("base_value", 0)
 
     if shop_data:
-        itype = item_data.get("type", "misc")
-        if "weapon_type" in item_data:
-            itype = "weapon"
-        elif "armor_type" in item_data:
-            itype = "armor"
-
+        itype = _get_item_type(item_data)
         mod = _get_supply_demand_modifier(shop_data, itype)
         base_val = int(base_val * mod)
 
@@ -114,10 +117,7 @@ def _get_item_sell_price(item_ref: Union[str, Dict[str, Any]], game_items_data: 
 
 def _get_display_table_name(room, item_data) -> str:
     """Finds the name of the table appropriate for the item."""
-    itype = "misc"
-    if "weapon_type" in item_data: itype = "weapon"
-    elif "armor_type" in item_data: itype = "armor"
-    elif "spell" in item_data or "scroll" in item_data.get("keywords", []): itype = "magic"
+    itype = _get_item_type(item_data)
 
     for obj in room.objects:
         keywords = obj.get("keywords", [])
@@ -232,14 +232,11 @@ class Buy(BaseVerb):
 
         # Reduce sold count (increase price for future)
         if isinstance(item_to_buy, dict):
-            itype = item_to_buy.get("type", "misc")
-            if "weapon_type" in item_to_buy: itype = "weapon"
-            elif "armor_type" in item_to_buy: itype = "armor"
+            item_data = item_to_buy
         else:
-            base = game_items.get(item_to_buy, {})
-            itype = base.get("type", "misc")
-            if "weapon_type" in base: itype = "weapon"
-            elif "armor_type" in base: itype = "armor"
+            item_data = game_items.get(item_to_buy, {})
+            
+        itype = _get_item_type(item_data)
 
         if "sold_counts" in shop_data:
             if itype in shop_data["sold_counts"] and shop_data["sold_counts"][itype] > 0:
@@ -337,12 +334,30 @@ class Sell(BaseVerb):
                 new_stock = None
 
         if new_stock:
+            # Add delay / roundtime
+            _set_action_roundtime(self.player, 2.0)
+            
+            # 1. Inspection Message
+            msg_inspect = f"The pawnbroker takes {new_stock['name']} from {self.player.name} and inspects it carefully..."
+            
+            # Get SIDs to skip (for the player)
+            player_info = self.world.get_player_info(self.player.name)
+            skip_sids = []
+            if player_info and "sid" in player_info:
+                skip_sids.append(player_info["sid"])
+                
+            self.world.broadcast_to_room(self.room.room_id, msg_inspect, "message", skip_sid=skip_sids)
+            self.player.send_message(f"The pawnbroker takes your {new_stock['name']} and inspects it...")
+
+            # 2. Simulated Delay
+            time.sleep(1.5)
+
             # Transaction
             self.player.worn_items[hand_slot] = None
             self.player.wealth["silvers"] = self.player.wealth.get("silvers", 0) + price
             new_stock["sold_timestamp"] = time.time()
             
-            # Check if we already have this item (for messaging)
+            # Check if we already have this item
             already_in_stock = False
             for existing_item in shop_data.get("inventory", []):
                 e_name = existing_item.get("name") if isinstance(existing_item, dict) else game_items.get(existing_item, {}).get("name")
@@ -353,27 +368,25 @@ class Sell(BaseVerb):
             # Add to Inventory
             shop_data["inventory"].append(new_stock)
 
-            # Update Counts (Price Logic)
-            itype = new_stock.get("type", "misc")
-            if "weapon_type" in new_stock:
-                itype = "weapon"
-            elif "armor_type" in new_stock:
-                itype = "armor"
-
+            # Update Counts
+            itype = _get_item_type(new_stock)
             if "sold_counts" not in shop_data:
                 shop_data["sold_counts"] = {}
-
             shop_data["sold_counts"][itype] = shop_data["sold_counts"].get(itype, 0) + 1
 
-            self.player.send_message(f"You sell {new_stock['name']} for {price} silver.")
-            
-            # Ambient Messaging
+            # 3. Final Messages
             table_name = _get_display_table_name(self.room, new_stock)
+            
             if already_in_stock:
-                self.room.send_message(f"The pawnbroker takes {new_stock['name']} from {self.player.name}, inspects it, and adds it to the stock on the {table_name}.", exclude_player=self.player)
+                msg_final = f"He nods and adds it to the stock on the {table_name}."
             else:
-                self.room.send_message(f"The pawnbroker takes {new_stock['name']} from {self.player.name}, inspects it carefully, and places it on display on the {table_name}.", exclude_player=self.player)
+                msg_final = f"He nods and places it on display on the {table_name}."
 
+            self.player.send_message(f"You sell {new_stock['name']} for {price} silver.")
+            self.player.send_message(msg_final)
+            self.world.broadcast_to_room(self.room.room_id, msg_final, "message", skip_sid=skip_sids)
+
+            # 4. Save Room (Crucial Step)
             self.world.save_room(self.room)
         else:
             self.player.send_message("Error transferring item.")
