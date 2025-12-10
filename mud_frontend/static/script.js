@@ -19,7 +19,6 @@ const gaugeTexts = {
     stamina: document.getElementById('stamina-text'),
     spirit: document.getElementById('spirit-text')
 };
-// --- END NEW ---
 
 const leftPanel = document.getElementById('left-panel');
 const panelToggleButton = document.getElementById('panel-toggle-button'); 
@@ -172,7 +171,7 @@ function updateVitals(vitals) {
 
 const WOUND_COORDS = {
     "head":       { x: 8, y: 1.5, r: 1.5 },
-    "neck":       { x: 8, y: 3.5, r: 1 }, // Increased R for text visibility
+    "neck":       { x: 8, y: 3.5, r: 1 },
     "chest":      { x: 8, y: 6, r: 1.5 },
     "abdomen":    { x: 8, y: 9, r: 1.5 },
     "back":       { x: 8, y: 7, r: 1.5 }, 
@@ -186,27 +185,30 @@ const WOUND_COORDS = {
     "left_leg":   { x: 9.25, y: 12.5, r: 1.2 },
     
     // Special mappings
-    "spirit":     { x: 11, y: 12.5, r: 1 }, // Over Heart icon
+    "spirit":     { x: 11, y: 12.5, r: 1 },
     "heart":      { x: 11, y: 12.5, r: 1 }, 
-    "nerves":     { x: 3, y: 12.5, r: 1 }, // Over Lightning icon
+    "nerves":     { x: 3, y: 12.5, r: 1 },
     "nervous":    { x: 3, y: 12.5, r: 1 }
 };
 
-// --- UPDATED: Function to create circle AND text ---
 function createMarker(x, y, rank, isScar=false, location=null, isBandaged=false) {
     const group = document.createElementNS(svgNS, 'g');
     
     const circle = document.createElementNS(svgNS, 'circle');
     circle.setAttribute('cx', x);
     circle.setAttribute('cy', y);
-    // Fixed size for readability
     circle.setAttribute('r', 1.2); 
-    circle.classList.add(isScar ? 'scar-marker' : 'wound-marker');
     
-    // Show bandaged status visually (e.g., green border or different fill)
-    if (isBandaged && !isScar) {
-        circle.style.stroke = "#4CAF50"; // Green stroke for bandage
-        circle.style.strokeWidth = "0.5px";
+    // Apply classes for styling
+    if (isScar) {
+        circle.classList.add('scar-marker');
+    } else {
+        circle.classList.add('wound-marker');
+        if (isBandaged) {
+            circle.classList.add('bandaged');
+        } else {
+            circle.classList.add('fresh');
+        }
     }
 
     const text = document.createElementNS(svgNS, 'text');
@@ -219,23 +221,37 @@ function createMarker(x, y, rank, isScar=false, location=null, isBandaged=false)
     group.appendChild(circle);
     group.appendChild(text);
 
-    // --- NEW: Add click handler for wounds to TEND ---
+    // Context Menu Handler
     if (!isScar && location) {
         group.style.cursor = 'pointer';
         
-        // Add a tooltip/title
         const title = document.createElementNS(svgNS, 'title');
         let status = isBandaged ? " (Bandaged)" : " (Bleeding)";
-        title.textContent = `Click to TEND ${location.replace(/_/g, ' ')}${status}`;
+        title.textContent = `${location.replace(/_/g, ' ')}${status}`;
         group.appendChild(title);
 
         group.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const cmdLoc = location.replace(/_/g, ' ');
-            // Echo the action locally for immediate feedback
-            addMessage(`> tend my ${cmdLoc}`, 'command-echo');
-            sendCommand(`tend my ${cmdLoc}`);
+            
+            const readableLoc = location.replace(/_/g, ' ');
+            activeKeyword = readableLoc;
+
+            // Populate Context Menu with Tend/Diagnose
+            contextMenu.innerHTML = '';
+            
+            const actions = ['tend', 'diagnose'];
+            actions.forEach(verb => {
+                const item = document.createElement('div');
+                item.innerText = `${verb.toUpperCase()} ${readableLoc}`;
+                item.dataset.command = `${verb} my ${readableLoc}`; // Implicitly 'my'
+                contextMenu.appendChild(item);
+            });
+
+            // Position Menu
+            contextMenu.style.left = `${e.pageX}px`;
+            contextMenu.style.top = `${e.pageY}px`;
+            contextMenu.style.display = 'block';
         });
     }
     
@@ -251,7 +267,6 @@ function updateGuiPanels(vitals) {
         expFill.style.width = `${vitals.exp_percent || 0}%`;
     }
 
-    // --- UPDATED: Handle Wounds AND Scars ---
     // Clear old markers
     const markers = injurySvg.querySelectorAll('.wound-marker, .scar-marker, .marker-text');
     markers.forEach(m => {
@@ -269,7 +284,7 @@ function updateGuiPanels(vitals) {
             if (coords && rank > 0) {
                 let x = coords.x;
                 if (vitals.wounds && vitals.wounds[location]) {
-                     x -= 1.0; // Shift left if wound exists
+                     x -= 1.0; 
                 }
                 createMarker(x, coords.y, rank, true, location);
             }
@@ -283,12 +298,9 @@ function updateGuiPanels(vitals) {
             if (coords && rank > 0) {
                 let x = coords.x;
                  if (vitals.scars && vitals.scars[location]) {
-                     x += 1.0; // Shift right if scar exists
+                     x += 1.0; 
                 }
-                
-                // Check bandages
                 const isBandaged = vitals.bandages && vitals.bandages[location];
-                
                 createMarker(x, coords.y, rank, false, location, isBandaged);
             }
         }
@@ -336,7 +348,6 @@ function drawMap(mapData, currentRoomId) {
 
     mapRoomName.innerText = currentRoom.name || "Unknown";
     
-    // Use the explicit width/height from CSS/HTML attributes for calculation
     const svgRect = mapSvg.getBoundingClientRect();
     const svgWidth = svgRect.width;
     const svgHeight = svgRect.height;

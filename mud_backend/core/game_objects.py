@@ -31,14 +31,10 @@ class Player(GameEntity):
         
         self.messages = [] 
         
-        # --- QoL Storage ---
         self.aliases = self.data.get("aliases", {})
         self.message_history = self.data.get("message_history", [])
-        
-        # --- NEW: Social Lists ---
         self.friends = self.data.get("friends", [])
         self.ignored = self.data.get("ignored", [])
-        # -------------------------
 
         self._is_dirty = False
         self._last_save_time = time.time()
@@ -88,6 +84,7 @@ class Player(GameEntity):
         self.wounds = self.data.get("wounds", {})
         self.scars = self.data.get("scars", {})
         self.bandages = self.data.get("bandages", {})
+        self._last_wound_update = time.time()
         # ----------------------
 
         self.next_mana_pulse_time = self.data.get("next_mana_pulse_time", 0.0)
@@ -359,7 +356,6 @@ class Player(GameEntity):
             num_members = len(band.get("members", []))
             if num_members > 0:
                 share = math.trunc(nominal_amount / num_members)
-                
                 if instant:
                      self.experience += share
                      self.send_message(f"You gain {share} experience from your band (Instant).")
@@ -476,12 +472,9 @@ class Player(GameEntity):
 
     def send_message(self, message: str):
         self.messages.append(message)
-        # --- Update History ---
         self.message_history.append(message)
-        # Keep last 100 messages
         if len(self.message_history) > 100:
             self.message_history = self.message_history[-100:]
-        # ---------------------------
 
     def get_equipped_item_data(self, slot: str) -> Optional[dict]:
         item_id = self.worn_items.get(slot) 
@@ -497,69 +490,96 @@ class Player(GameEntity):
     
     def move_to_room(self, target_room_id: str, move_message: str):
         self.world.stop_combat_for_all(self.name.lower(), "any") 
-        
         old_room = self.current_room_id
         
-        # --- TABLE LOGIC: GATEKEEPER SUCCESSION (LEAVING) ---
         old_room_obj = self.world.get_active_room_safe(old_room)
         if old_room_obj and getattr(old_room_obj, "is_table", False):
-            # If I was the owner, we need to pass the key
             if getattr(old_room_obj, "owner", None) == self.name.lower():
-                # Get remaining players (excluding self)
                 current_occupants = list(self.world.room_players.get(old_room, []))
-                # Note: 'current_occupants' might still contain self depending on when this is called
                 remaining = [p for p in current_occupants if p.lower() != self.name.lower()]
-                
                 if remaining:
-                    # Pass key to the first person in list (usually longest standing)
                     new_owner = remaining[0]
                     old_room_obj.owner = new_owner.lower()
-                    
-                    # Notify new owner
                     new_owner_obj = self.world.get_player_obj(new_owner)
                     if new_owner_obj:
                         new_owner_obj.send_message(f"You are now the head of the table.")
                 else:
-                    # Table is empty
                     old_room_obj.owner = None
                     old_room_obj.invited_guests = []
-        # ----------------------------------------------------
 
         self.current_room_id = target_room_id
         
         self.world.remove_player_from_room_index(self.name.lower(), old_room)
         self.world.add_player_to_room_index(self.name.lower(), target_room_id)
         
-        # --- TABLE LOGIC: GATEKEEPER ASSIGNMENT (ENTERING) ---
         target_room_obj = self.world.get_active_room_safe(target_room_id)
         if target_room_obj and getattr(target_room_obj, "is_table", False):
-            # Check if anyone is already there (excluding self)
             existing_occupants = [p for p in self.world.room_players.get(target_room_id, []) if p.lower() != self.name.lower()]
-            
             if not existing_occupants:
                 target_room_obj.owner = self.name.lower()
-                target_room_obj.invited_guests = [] # Reset invite list on new claim
+                target_room_obj.invited_guests = [] 
                 self.send_message("You take a seat at the empty table.")
             else:
-                # SELF-HEALING: If there are occupants but NO owner (e.g. reload or glitch), assign one.
                 if not getattr(target_room_obj, "owner", None):
-                    # Sort occupants to find longest standing? Or just pick first.
-                    # Since existing_occupants is from room_players (set/list), order isn't guaranteed perfectly
-                    # but picking one is better than none.
                     new_owner = existing_occupants[0]
                     target_room_obj.owner = new_owner.lower()
-        # -----------------------------------------------------
         
         if target_room_id not in self.visited_rooms:
             self.visited_rooms.append(target_room_id)
         self.send_message(move_message)
         self.mark_dirty()
 
-    def to_dict(self) -> dict:
-        # Base Entity Data + Player Specifics
-        data = super().to_dict() if hasattr(super(), 'to_dict') else self.data.copy()
+    def _process_wounds(self):
+        """
+        Handles bandage decay and healing (Rank 1 -> Scar).
+        Called periodically (e.g. via get_vitals or a tick loop).
+        """
+        now = time.time()
+        # Only process every 5 seconds to save cycles if called frequently
+        if now - self._last_wound_update < 5:
+            return
+        self._last_wound_update = now
+
+        if not self.bandages:
+            return
+
+        to_remove = []
         
-        # Override with current state (ENSURE ALL MUTABLE FIELDS ARE HERE)
+        # We need a copy because we might modify bandages
+        for loc, data in list(self.bandages.items()):
+            # Simulate decay (placeholder logic: decrement duration based on time passed?)
+            # Prompt: "Bandages can last for a number of offensive actions..."
+            # For this implementation, we simulate 'actions' decaying over time roughly
+            # or we rely on 'actions' being decremented elsewhere.
+            # Assuming duration is just time here for 'Heal Over Time' logic.
+            
+            # Healing Logic for Rank 1
+            if loc in self.wounds and self.wounds[loc] == 1:
+                # Check if enough time passed to Scar?
+                # Let's say 60 seconds for testing/gameplay flow
+                heal_start = data.get("applied_at", now)
+                if now - heal_start > 60: 
+                    # Convert to Scar
+                    self.wounds.pop(loc)
+                    to_remove.append(loc)
+                    
+                    # Create Scar
+                    self.scars[loc] = 1
+                    self.send_message(f"The wound on your {loc.replace('_', ' ')} heals into a scar.")
+                    self.mark_dirty()
+            
+            # Bandage Falling Off Logic
+            # Note: Real implementation would decrement 'duration' in combat.
+            # Here we just check if it's expired if we used time-based duration.
+            # If duration is purely actions, we skip time-decay.
+            pass
+
+        for loc in to_remove:
+            if loc in self.bandages:
+                del self.bandages[loc]
+
+    def to_dict(self) -> dict:
+        data = super().to_dict() if hasattr(super(), 'to_dict') else self.data.copy()
         data.update({
             "name": self.name,
             "current_room_id": self.current_room_id,
@@ -595,9 +615,7 @@ class Player(GameEntity):
             "con_recovery_pool": self.con_recovery_pool,
             "wounds": self.wounds,
             "scars": self.scars,
-            # --- NEW: Bandages ---
             "bandages": self.bandages,
-            # ---------------------
             "next_mana_pulse_time": self.next_mana_pulse_time,
             "mana_pulse_used": self.mana_pulse_used,
             "last_spellup_use_time": self.last_spellup_use_time,
@@ -622,11 +640,13 @@ class Player(GameEntity):
         return data
 
     def get_vitals(self) -> Dict[str, Any]:
+        # Hook for wound processing (lazy update on status check)
+        self._process_wounds()
+
         worn_data = {}
         for slot_id, slot_name in config.EQUIPMENT_SLOTS.items():
             item_ref = self.worn_items.get(slot_id)
             if item_ref:
-                # FIX: Handle if the worn item is a dict (instantiated) or ID (template)
                 if isinstance(item_ref, dict):
                     item_data = item_ref
                 else:
@@ -657,9 +677,7 @@ class Player(GameEntity):
             "stance": self.stance,
             "wounds": self.wounds,
             "scars": self.scars,
-            # --- NEW: Bandages ---
             "bandages": self.bandages,
-            # ---------------------
             "worn_items": worn_data,
             "exp_to_next": self.level_xp_target - self.experience,
             "exp_percent": (self.experience / self.level_xp_target) * 100,
@@ -676,10 +694,8 @@ class Room(GameEntity):
         self.room_id = room_id 
         self.is_room = True
         self.is_table = self.data.get("is_table", False)
-        # --- TABLE LOGIC ---
-        self.owner = None # Runtime tracking of Gatekeeper
+        self.owner = None 
         self.invited_guests = []
-        # -------------------
         self.data["description"] = description
         self.exits: Dict[str, str] = self.data.get("exits", {})
         self.triggers: Dict[str, str] = self.data.get("triggers", {})
