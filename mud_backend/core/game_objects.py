@@ -87,6 +87,7 @@ class Player(GameEntity):
         # --- WOUNDS & SCARS ---
         self.wounds = self.data.get("wounds", {})
         self.scars = self.data.get("scars", {})
+        self.bandages = self.data.get("bandages", {})
         # ----------------------
 
         self.next_mana_pulse_time = self.data.get("next_mana_pulse_time", 0.0)
@@ -593,9 +594,10 @@ class Player(GameEntity):
             "con_lost": self.con_lost,
             "con_recovery_pool": self.con_recovery_pool,
             "wounds": self.wounds,
-            # --- NEW: Scars ---
             "scars": self.scars,
-            # ------------------
+            # --- NEW: Bandages ---
+            "bandages": self.bandages,
+            # ---------------------
             "next_mana_pulse_time": self.next_mana_pulse_time,
             "mana_pulse_used": self.mana_pulse_used,
             "last_spellup_use_time": self.last_spellup_use_time,
@@ -654,9 +656,10 @@ class Player(GameEntity):
             "current_room_id": self.current_room_id,
             "stance": self.stance,
             "wounds": self.wounds,
-            # --- NEW: Send Scars ---
             "scars": self.scars,
-            # -----------------------
+            # --- NEW: Bandages ---
+            "bandages": self.bandages,
+            # ---------------------
             "worn_items": worn_data,
             "exp_to_next": self.level_xp_target - self.experience,
             "exp_percent": (self.experience / self.level_xp_target) * 100,

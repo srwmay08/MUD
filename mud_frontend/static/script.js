@@ -193,7 +193,7 @@ const WOUND_COORDS = {
 };
 
 // --- UPDATED: Function to create circle AND text ---
-function createMarker(x, y, rank, isScar=false, location=null) {
+function createMarker(x, y, rank, isScar=false, location=null, isBandaged=false) {
     const group = document.createElementNS(svgNS, 'g');
     
     const circle = document.createElementNS(svgNS, 'circle');
@@ -203,6 +203,12 @@ function createMarker(x, y, rank, isScar=false, location=null) {
     circle.setAttribute('r', 1.2); 
     circle.classList.add(isScar ? 'scar-marker' : 'wound-marker');
     
+    // Show bandaged status visually (e.g., green border or different fill)
+    if (isBandaged && !isScar) {
+        circle.style.stroke = "#4CAF50"; // Green stroke for bandage
+        circle.style.strokeWidth = "0.5px";
+    }
+
     const text = document.createElementNS(svgNS, 'text');
     text.setAttribute('x', x);
     text.setAttribute('y', y);
@@ -219,7 +225,8 @@ function createMarker(x, y, rank, isScar=false, location=null) {
         
         // Add a tooltip/title
         const title = document.createElementNS(svgNS, 'title');
-        title.textContent = `Click to TEND ${location.replace(/_/g, ' ')}`;
+        let status = isBandaged ? " (Bandaged)" : " (Bleeding)";
+        title.textContent = `Click to TEND ${location.replace(/_/g, ' ')}${status}`;
         group.appendChild(title);
 
         group.addEventListener('click', (e) => {
@@ -245,15 +252,7 @@ function updateGuiPanels(vitals) {
     }
 
     // --- UPDATED: Handle Wounds AND Scars ---
-    injurySvg.querySelectorAll('.wound-marker, .scar-marker, .marker-text, g').forEach(m => m.remove());
-    
-    // Re-draw grid/background if needed (assuming static SVG has background, we only remove markers)
-    // Actually the querySelectorAll might be too aggressive if there are other <g> elements.
-    // Let's scope it to children that we added.
-    // Better way: Clear known markers. 
-    // The previous implementation used m.parentElement.remove() on class selection.
-    // Let's stick to clearing the SVG and assuming the background is CSS or not in dynamic updates.
-    // Or just remove elements with specific classes.
+    // Clear old markers
     const markers = injurySvg.querySelectorAll('.wound-marker, .scar-marker, .marker-text');
     markers.forEach(m => {
         if (m.parentElement && m.parentElement.tagName === 'g') {
@@ -268,8 +267,6 @@ function updateGuiPanels(vitals) {
         for (const [location, rank] of Object.entries(vitals.scars)) {
             const coords = WOUND_COORDS[location.toLowerCase()] || WOUND_COORDS[location.replace(" ", "_")];
             if (coords && rank > 0) {
-                // Slight offset if wound exists? For now, simple overlay.
-                // If both exist, maybe we shift x?
                 let x = coords.x;
                 if (vitals.wounds && vitals.wounds[location]) {
                      x -= 1.0; // Shift left if wound exists
@@ -288,7 +285,11 @@ function updateGuiPanels(vitals) {
                  if (vitals.scars && vitals.scars[location]) {
                      x += 1.0; // Shift right if scar exists
                 }
-                createMarker(x, coords.y, rank, false, location);
+                
+                // Check bandages
+                const isBandaged = vitals.bandages && vitals.bandages[location];
+                
+                createMarker(x, coords.y, rank, false, location, isBandaged);
             }
         }
     }
