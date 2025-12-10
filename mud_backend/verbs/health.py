@@ -58,13 +58,31 @@ class Health(BaseVerb):
         max_hp = player.max_hp
         percent_hp = (current_hp / max_hp) * 100
         
-        if current_hp <= 0: status = "**DEAD**"
-        elif percent_hp > 90: status = "in excellent shape"
-        elif percent_hp > 75: status = "in good shape"
-        elif percent_hp > 50: status = "lightly wounded"
-        elif percent_hp > 25: status = "moderately wounded"
-        elif percent_hp > 10: status = "badly wounded"
-        else: status = "near death"
+        # Check for active wounds to adjust status message
+        has_wounds = False
+        if hasattr(player, "wounds"):
+            for r in player.wounds.values():
+                if r > 0: 
+                    has_wounds = True
+                    break
+
+        if current_hp <= 0: 
+            status = "you are dead"
+        elif percent_hp > 90: 
+            if has_wounds:
+                status = "you seem to be in excellent shape, aside from your injuries"
+            else:
+                status = "you seem to be in excellent shape"
+        elif percent_hp > 75: 
+            status = "you are in good shape"
+        elif percent_hp > 50: 
+            status = "you are looking a bit rough"
+        elif percent_hp > 25: 
+            status = "you are badly wounded"
+        elif percent_hp > 10: 
+            status = "you are barely holding it together"
+        else: 
+            status = "you are near death"
 
         death_sting_msg = "None"
         if hasattr(player, "death_sting_points") and player.death_sting_points > 0:
@@ -76,7 +94,7 @@ class Health(BaseVerb):
             con_loss_msg = f"{player.con_lost} points lost (Recovery pool: {pool:,})"
             
         self.player.send_message("--- [Health Status] ---")
-        self.player.send_message(f"HP: {current_hp}/{max_hp} ({status})")
+        self.player.send_message(f"HP: {current_hp}/{max_hp} - {status}.")
         self.player.send_message(f"CON Loss: {con_loss_msg}")
         self.player.send_message(f"Death's Sting: {death_sting_msg}")
         
@@ -86,7 +104,7 @@ class Health(BaseVerb):
             crit_data = getattr(self.world, "game_criticals", {})
             wound_table = crit_data.get("wounds", {})
             
-            # Check if any wounds exist
+            # Check if any wounds actually exist
             wounds_found = False
             for location, rank in self.player.wounds.items():
                 if rank > 0:
@@ -105,16 +123,11 @@ class Health(BaseVerb):
                         loc_data = wound_table.get(json_key, {})
                         desc = loc_data.get(str(rank), f"rank {rank} injuries to your {readable_loc}")
                         
-                        # Format "You have {description}"
-                        # Note: Descriptions usually contain "your chest", etc.
-                        
                         # Check Bandage status
                         if hasattr(self.player, "bandages") and location in self.player.bandages:
-                            # Conversational Bandage
                             self.player.send_message(f"You have {desc} and your {readable_loc} is bandaged.")
                         else:
-                            # Conversational Bleed
-                            self.player.send_message(f"You have {desc} (bleeding {rank}/rnd).")
+                            self.player.send_message(f"You have {desc}.")
 
         # Display Scars
         if hasattr(self.player, "scars") and self.player.scars:
@@ -282,12 +295,9 @@ class Tend(BaseVerb):
             self.player.send_message("Which location do you want to tend?")
             return
 
-        # Use normalization logic to find the key in the wound dictionary
-        # Normalized key is for DB lookups (e.g., "lefteye" or "l_eye" depending on what injure set)
-        normalized_loc_key = self._normalize_location(location_arg) 
-        
-        # Readable key is for messages (e.g. "left eye")
-        readable_loc = normalize_location_name(normalized_loc_key)
+        # Improved Lookup Logic
+        # Try to find the exact wound key from the user input
+        matched_wound_key = self._find_wound_key(target, location_arg)
 
         target_display = "You" if target == self.player else target.name
         
@@ -298,13 +308,16 @@ class Tend(BaseVerb):
                 return
 
         # 3. Validate Wound Existence
-        if not hasattr(target, "wounds") or normalized_loc_key not in target.wounds:
+        if not matched_wound_key:
             if target == self.player:
-                self.player.send_message(f"You do not have a wounded '{readable_loc}'.")
+                self.player.send_message(f"You do not have a wounded '{location_arg}'.")
             else:
-                self.player.send_message(f"{target.name} does not have a wounded '{readable_loc}'.")
+                self.player.send_message(f"{target.name} does not have a wounded '{location_arg}'.")
             return
 
+        # Use the key we found
+        normalized_loc_key = matched_wound_key
+        readable_loc = normalize_location_name(normalized_loc_key)
         rank = target.wounds[normalized_loc_key]
         
         # 4. Check if already bandaged
@@ -398,8 +411,44 @@ class Tend(BaseVerb):
 
         target.mark_dirty()
 
+    def _find_wound_key(self, target, input_arg):
+        """
+        Robustly finds a matching wound key in target.wounds based on user input.
+        Handles: "lefteye" -> "left_eye", "left eye", "l_eye" matches.
+        """
+        if not hasattr(target, "wounds") or not target.wounds:
+            return None
+
+        # 1. Direct match
+        if input_arg in target.wounds:
+            return input_arg
+
+        # 2. Normalized match (using local normalize)
+        normalized = self._normalize_location(input_arg)
+        if normalized in target.wounds:
+            return normalized
+
+        # 3. Fuzzy / Readable match
+        # Compare user input (cleaned) vs readable version of wound keys
+        # e.g. input "left eye" vs wound "lefteye" -> readable "left eye" -> MATCH
+        clean_input = input_arg.lower().replace(" ", "")
+        
+        for key in target.wounds:
+            readable = normalize_location_name(key) # e.g. "left eye"
+            clean_readable = readable.replace(" ", "") # "lefteye"
+            
+            if clean_readable == clean_input:
+                return key
+            
+            # Also check if the raw key matches the input (e.g. "l_eye" vs "lefteye")
+            clean_key = key.lower().replace("_", "").replace(" ", "")
+            if clean_key == clean_input:
+                return key
+
+        return None
+
     def _normalize_location(self, loc_str):
-        # Maps input strings to internal keys
+        # Maps input strings to internal keys (Helper for specific overrides)
         mapping = {
             "right arm": "r_arm", "r arm": "r_arm", "rightarm": "r_arm",
             "left arm": "l_arm", "l arm": "l_arm", "leftarm": "l_arm",
@@ -412,7 +461,6 @@ class Tend(BaseVerb):
             "chest": "chest", "abdomen": "abdomen",
             "back": "back", "head": "head", "neck": "neck"
         }
-        # Try exact match or underscore replacement
         clean = loc_str.replace(" ", "_")
         return mapping.get(loc_str, clean)
 
