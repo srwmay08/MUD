@@ -169,20 +169,49 @@ function updateVitals(vitals) {
     updateGuiPanels(vitals);
 }
 
+// FIX: Added 'lefteye', 'leftleg' etc to handle non-normalized backend keys
 const WOUND_COORDS = {
     "head":       { x: 8, y: 1.5, r: 1.5 },
     "neck":       { x: 8, y: 3.5, r: 1 },
     "chest":      { x: 8, y: 6, r: 1.5 },
     "abdomen":    { x: 8, y: 9, r: 1.5 },
     "back":       { x: 8, y: 7, r: 1.5 }, 
-    "right_eye":  { x: 7, y: 1.5, r: 0.8 },
-    "left_eye":   { x: 9, y: 1.5, r: 0.8 },
+    
+    // Eyes
+    "right_eye":  { x: 4, y: 1.75, r: 0.8 }, 
+    "r_eye":      { x: 4, y: 1.75, r: 0.8 }, 
+    "righteye":   { x: 4, y: 1.75, r: 0.8 }, // Added match
+    
+    "left_eye":   { x: 12, y: 1.75, r: 0.8 },
+    "l_eye":      { x: 12, y: 1.75, r: 0.8 },
+    "lefteye":    { x: 12, y: 1.75, r: 0.8 }, // Added match
+
+    // Arms
     "right_arm":  { x: 5.5, y: 8, r: 1.2 }, 
+    "r_arm":      { x: 5.5, y: 8, r: 1.2 },
+    "rightarm":   { x: 5.5, y: 8, r: 1.2 }, // Added match
+    
     "left_arm":   { x: 10.5, y: 8, r: 1.2 }, 
+    "l_arm":      { x: 10.5, y: 8, r: 1.2 },
+    "leftarm":    { x: 10.5, y: 8, r: 1.2 }, // Added match
+    
+    // Hands
     "right_hand": { x: 5, y: 9.5, r: 1 },
+    "r_hand":     { x: 5, y: 9.5, r: 1 },
+    "righthand":  { x: 5, y: 9.5, r: 1 }, // Added match
+    
     "left_hand":  { x: 11, y: 9.5, r: 1 },
+    "l_hand":     { x: 11, y: 9.5, r: 1 },
+    "lefthand":   { x: 11, y: 9.5, r: 1 }, // Added match
+    
+    // Legs
     "right_leg":  { x: 6.75, y: 12.5, r: 1.2 },
+    "r_leg":      { x: 6.75, y: 12.5, r: 1.2 },
+    "rightleg":   { x: 6.75, y: 12.5, r: 1.2 }, // Added match
+    
     "left_leg":   { x: 9.25, y: 12.5, r: 1.2 },
+    "l_leg":      { x: 9.25, y: 12.5, r: 1.2 },
+    "leftleg":    { x: 9.25, y: 12.5, r: 1.2 }, // Added match
     
     // Special mappings
     "spirit":     { x: 11, y: 12.5, r: 1 },
@@ -280,6 +309,7 @@ function updateGuiPanels(vitals) {
     // Draw Scars first (underneath)
     if (vitals.scars) {
         for (const [location, rank] of Object.entries(vitals.scars)) {
+            // Check both original key and normalized key
             const coords = WOUND_COORDS[location.toLowerCase()] || WOUND_COORDS[location.replace(" ", "_")];
             if (coords && rank > 0) {
                 let x = coords.x;
@@ -294,6 +324,7 @@ function updateGuiPanels(vitals) {
     // Draw Wounds
     if (vitals.wounds) {
         for (const [location, rank] of Object.entries(vitals.wounds)) {
+            // Check both original key and normalized key
             const coords = WOUND_COORDS[location.toLowerCase()] || WOUND_COORDS[location.replace(" ", "_")];
             if (coords && rank > 0) {
                 let x = coords.x;

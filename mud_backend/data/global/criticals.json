@@ -72,35 +72,147 @@
     }
   },
   "wounds": {
-    "head": { "1": "minor bruises about the head", "2": "minor lacerations about the head and a possible mild concussion", "3": "severe head trauma and bleeding from the ears" },
-    "neck": { "1": "minor bruises on your neck", "2": "moderate bleeding from your neck", "3": "snapped bones and serious bleeding from the neck" },
-    "chest": { "1": "minor cuts and bruises on your chest", "2": "deep lacerations across your chest", "3": "deep gashes and serious bleeding from your chest" },
-    "abdomen": { "1": "minor cuts and bruises on your abdominal area", "2": "deep lacerations across your abdominal area", "3": "deep gashes and serious bleeding from your abdominal area" },
-    "back": { "1": "minor cuts and bruises on your back", "2": "deep lacerations across your back", "3": "deep gashes and serious bleeding from your back" },
-    "right_eye": { "1": "a bruised right eye", "2": "a swollen right eye", "3": "a blinded right eye" },
-    "left_eye": { "1": "a bruised left eye", "2": "a swollen left eye", "3": "a blinded left eye" },
-    "right_leg": { "1": "some minor cuts and bruises on your right leg", "2": "a fractured and bleeding right leg", "3": "a completely severed right leg" },
-    "left_leg": { "1": "some minor cuts and bruises on your left leg", "2": "a fractured and bleeding left leg", "3": "a completely severed left leg" },
-    "right_arm": { "1": "some minor cuts and bruises on your right arm", "2": "a fractured and bleeding right arm", "3": "a completely severed right arm" },
-    "left_arm": { "1": "some minor cuts and bruises on your left arm", "2": "a fractured and bleeding left arm", "3": "a completely severed left arm" },
-    "right_hand": { "1": "some minor cuts and bruises on your right hand", "2": "a fractured and bleeding right hand", "3": "a completely severed right hand" },
-    "left_hand": { "1": "some minor cuts and bruises on your left hand", "2": "a fractured and bleeding left hand", "3": "a completely severed left hand" },
-    "nerves": { "1": "a strange case of muscle twitching", "2": "a case of sporadic convulsions", "3": "a case of uncontrollable convulsions" }
+    "head": { 
+        "1": "minor bruises about the head", 
+        "2": "minor lacerations about the head and a possible mild concussion", 
+        "3": "severe head trauma and bleeding from the ears" 
+    },
+    "neck": { 
+        "1": "minor bruises on your neck", 
+        "2": "moderate bleeding from your neck", 
+        "3": "snapped bones and serious bleeding from the neck" 
+    },
+    "chest": {
+        "1": "minor cuts and bruises on your chest",
+        "2": "deep lacerations across your chest",
+        "3": "deep gashes and serious bleeding from your chest"
+    },
+    "abdomen": {
+        "1": "minor cuts and bruises on your abdominal area",
+        "2": "deep lacerations across your abdominal area",
+        "3": "deep gashes and serious bleeding from your abdominal area"
+    },
+    "back": {
+        "1": "minor cuts and bruises on your back",
+        "2": "deep lacerations across your back",
+        "3": "deep gashes and serious bleeding from your back"
+    },
+    "right_eye": {
+        "1": "a bruised right eye",
+        "2": "a swollen right eye",
+        "3": "a blinded right eye"
+    },
+    "left_eye": {
+        "1": "a bruised left eye",
+        "2": "a swollen left eye",
+        "3": "a blinded left eye"
+    },
+    "right_leg": {
+        "1": "some minor cuts and bruises on your right leg",
+        "2": "a fractured and bleeding right leg",
+        "3": "a completely severed right leg"
+    },
+    "left_leg": {
+        "1": "some minor cuts and bruises on your left leg",
+        "2": "a fractured and bleeding left leg",
+        "3": "a completely severed left leg"
+    },
+    "right_arm": {
+        "1": "some minor cuts and bruises on your right arm",
+        "2": "a fractured and bleeding right arm",
+        "3": "a completely severed right arm"
+    },
+    "left_arm": {
+        "1": "some minor cuts and bruises on your left arm",
+        "2": "a fractured and bleeding left arm",
+        "3": "a completely severed left arm"
+    },
+    "right_hand": {
+        "1": "some minor cuts and bruises on your right hand",
+        "2": "a fractured and bleeding right hand",
+        "3": "a completely severed right hand"
+    },
+    "left_hand": {
+        "1": "some minor cuts and bruises on your left hand",
+        "2": "a fractured and bleeding left hand",
+        "3": "a completely severed left hand"
+    },
+    "nervous_system": {
+        "1": "a strange case of muscle twitching",
+        "2": "a case of sporadic convulsions",
+        "3": "a case of uncontrollable convulsions"
+    }
   },
   "scars": {
-    "head": { "1": "a scar across your face", "2": "several facial scars", "3": "old mutilation wounds about your head" },
-    "neck": { "1": "a scar across your neck", "2": "some old neck wounds", "3": "terrible scars from some serious neck injury" },
-    "chest": { "1": "an old battle scar across your chest", "2": "several painful-looking scars across your chest", "3": "terrible, permanent mutilation of your chest muscles" },
-    "abdomen": { "1": "an old battle scar across your abdominal area", "2": "several painful-looking scars across your abdominal area", "3": "terrible, permanent mutilation of your abdominal muscles" },
-    "back": { "1": "an old battle scar across your back", "2": "several painful-looking scars across your back", "3": "terrible, permanent mutilation of your back muscles" },
-    "right_eye": { "1": "a black-and-blue right eye", "2": "severe bruises and swelling around your right eye", "3": "a missing right eye" },
-    "left_eye": { "1": "a black-and-blue left eye", "2": "severe bruises and swelling around your left eye", "3": "a missing left eye" },
-    "right_leg": { "1": "old battle scars on your right leg", "2": "a mangled right leg", "3": "a missing right leg" },
-    "left_leg": { "1": "old battle scars on your left leg", "2": "a mangled left leg", "3": "a missing left leg" },
-    "right_arm": { "1": "old battle scars on your right arm", "2": "a mangled right arm", "3": "a missing right arm" },
-    "left_arm": { "1": "old battle scars on your left arm", "2": "a mangled left arm", "3": "a missing left arm" },
-    "right_hand": { "1": "old battle scars on your right hand", "2": "a mangled right hand", "3": "a missing right hand" },
-    "left_hand": { "1": "old battle scars on your left hand", "2": "a mangled left hand", "3": "a missing left hand" },
-    "nerves": { "1": "developed slurred speech", "2": "constant muscle spasms", "3": "a very difficult time with muscle control" }
+    "head": { 
+        "1": "a scar across your face", 
+        "2": "several facial scars", 
+        "3": "old mutilation wounds about your head" 
+    },
+    "neck": { 
+        "1": "a scar across your neck", 
+        "2": "some old neck wounds", 
+        "3": "terrible scars from some serious neck injury" 
+    },
+    "chest": {
+        "1": "an old battle scar across your chest",
+        "2": "several painful-looking scars across your chest",
+        "3": "terrible, permanent mutilation of your chest muscles"
+    },
+    "abdomen": {
+        "1": "an old battle scar across your abdominal area",
+        "2": "several painful-looking scars across your abdominal area",
+        "3": "terrible, permanent mutilation of your abdominal muscles"
+    },
+    "back": {
+        "1": "an old battle scar across your back",
+        "2": "several painful-looking scars across your back",
+        "3": "terrible, permanent mutilation of your back muscles"
+    },
+    "right_eye": {
+        "1": "a black-and-blue right eye",
+        "2": "severe bruises and swelling around your right eye",
+        "3": "a missing right eye"
+    },
+    "left_eye": {
+        "1": "a black-and-blue left eye",
+        "2": "severe bruises and swelling around your left eye",
+        "3": "a missing left eye"
+    },
+    "right_leg": {
+        "1": "old battle scars on your right leg",
+        "2": "a mangled right leg",
+        "3": "a missing right leg"
+    },
+    "left_leg": {
+        "1": "old battle scars on your left leg",
+        "2": "a mangled left leg",
+        "3": "a missing left leg"
+    },
+    "right_arm": {
+        "1": "old battle scars on your right arm",
+        "2": "a mangled right arm",
+        "3": "a missing right arm"
+    },
+    "left_arm": {
+        "1": "old battle scars on your left arm",
+        "2": "a mangled left arm",
+        "3": "a missing left arm"
+    },
+    "right_hand": {
+        "1": "old battle scars on your right hand",
+        "2": "a mangled right hand",
+        "3": "a missing right hand"
+    },
+    "left_hand": {
+        "1": "old battle scars on your left hand",
+        "2": "a mangled left hand",
+        "3": "a missing left hand"
+    },
+    "nervous_system": {
+        "1": "developed slurred speech",
+        "2": "constant muscle spasms",
+        "3": "a very difficult time with muscle control"
+    }
   }
 }
