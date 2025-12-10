@@ -13,9 +13,9 @@ POSTURE_MAP = {
     "sit": "sitting",
     "kneel": "kneeling",
     "prone": "prone",
-    "crouch": "crouching",  # Distinct state
+    "crouch": "crouching",   # Distinct state
     "meditate": "meditating", # Distinct state
-    "lay": "prone"        # Alias for prone
+    "lay": "prone"           # Alias for prone
 }
 
 @VerbRegistry.register("stand")
