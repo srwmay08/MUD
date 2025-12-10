@@ -29,6 +29,9 @@ def _get_dynamic_description(
     time_of_day: str, 
     weather: str
 ) -> str:
+    """
+    Finds the best matching description from the room's description block.
+    """
     if isinstance(room_descriptions, str):
         return room_descriptions
     if not isinstance(room_descriptions, dict):
@@ -61,6 +64,7 @@ def _get_dynamic_description(
     return "You are in a nondescript location."
 
 def _get_object_sort_priority(obj: Dict[str, Any]) -> int:
+    """Assigns a numerical priority to objects for sorting."""
     if obj.get("is_npc"): return 1
     if obj.get("is_monster"): return 2
     if obj.get("is_gathering_node"): return 3
@@ -69,7 +73,8 @@ def _get_object_sort_priority(obj: Dict[str, Any]) -> int:
 
 def hydrate_room_objects(room: Room, world: 'World'):
     """
-    Merges object stubs from the room's DB data with live asset templates.
+    Merges object stubs from the room's DB data with live asset templates (Nodes, Monsters, Items).
+    Populates room.objects with fully hydrated dictionaries containing verbs, keywords, etc.
     """
     merged_objects = []
     
@@ -117,11 +122,13 @@ def hydrate_room_objects(room: Room, world: 'World'):
                     merged_obj["uid"] = uid 
 
             elif item_id:
+                # --- Item Hydration Logic ---
                 template = world.game_items.get(item_id)
                 if template:
                     merged_obj = copy.deepcopy(template)
                     merged_obj.update(obj_stub)
                     merged_obj["is_item"] = True
+                    
                     if "uid" not in merged_obj:
                         merged_obj["uid"] = uuid.uuid4().hex
                         if obj_stub_in_cache: obj_stub_in_cache["uid"] = merged_obj["uid"]
@@ -130,21 +137,29 @@ def hydrate_room_objects(room: Room, world: 'World'):
                     merged_obj["name"] = f"Broken Item ({item_id})"
 
             else:
-                # Custom Object / NPC defined in room data
+                # --- Custom Object / NPC ---
                 merged_obj = copy.deepcopy(obj_stub)
                 
                 if obj_stub.get("is_npc") and "uid" not in obj_stub:
                     uid = uuid.uuid4().hex
-                    obj_stub["uid"] = uid 
+                    obj_stub["uid"] = uid # Update cache
                     if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
                     merged_obj["uid"] = uid
             
-            # --- CRITICAL FIX: Ensure shop_data persists ---
-            if merged_obj and "shop_data" in obj_stub:
-                merged_obj["shop_data"] = copy.deepcopy(obj_stub["shop_data"])
-            # -----------------------------------------------
-
             if merged_obj:
+                # --- FORCE FIX: Inject Shop Data if Missing in Handler too ---
+                if "pawnbroker" in merged_obj.get("keywords", []) or "merchant" in merged_obj.get("keywords", []):
+                    if "shop_data" not in merged_obj and "shop_data" in obj_stub:
+                         merged_obj["shop_data"] = copy.deepcopy(obj_stub["shop_data"])
+                    
+                    if "shop_data" not in merged_obj and "pawnbroker" in merged_obj.get("keywords", []):
+                        merged_obj["shop_data"] = {
+                            "inventory": [],
+                            "sold_counts": {},
+                            "type": "pawnshop"
+                        }
+                # -------------------------------------------------------------
+
                 if "verbs" in merged_obj:
                     merged_obj["verbs"] = [v.upper() for v in merged_obj["verbs"]]
                 merged_objects.append(merged_obj)
@@ -152,9 +167,13 @@ def hydrate_room_objects(room: Room, world: 'World'):
     room.objects = merged_objects
     
     if room.objects:
+        # Safe sort with get()
         room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
 
 def show_room_to_player(player: Player, room: Room):
+    """
+    Sends all room information (name, desc, objects, exits, players) to the player.
+    """
     player.send_message(f"**{room.name}**")
     
     desc_flag = player.flags.get("descriptions", "on")
@@ -177,6 +196,7 @@ def show_room_to_player(player: Player, room: Room):
         else:
              player.send_message("A brief room.")
 
+    # Merge objects from DB stubs with live asset templates
     hydrate_room_objects(room, player.world)
     
     player_perception = player.stats.get("WIS", 0)
@@ -189,6 +209,7 @@ def show_room_to_player(player: Player, room: Room):
             
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
+                # --- FIX: Safe Access to Name ---
                 obj_name = obj.get('name', 'Unknown Object')
                 verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
                 verb_str = ','.join(verbs).lower()
@@ -239,6 +260,9 @@ def show_room_to_player(player: Player, room: Room):
 
 
 def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
+    """
+    Builds a dictionary of map data for all rooms the player has visited.
+    """
     map_data = {}
     for room_id in player.visited_rooms:
         room = world.game_rooms.get(room_id)
@@ -271,6 +295,9 @@ def _get_map_data(player: Player, world: 'World') -> Dict[str, Any]:
     return map_data
 
 def _handle_npc_idle_dialogue(world: 'World', player_name: str, room_id: str):
+    """
+    Waits a random time, then checks for NPCs and sends idle quest prompts.
+    """
     try:
         delay = random.randint(3, 10)
         world.socketio.sleep(delay)

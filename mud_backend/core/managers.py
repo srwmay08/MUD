@@ -192,6 +192,7 @@ class RoomManager:
         for obj_stub in template.get("objects", []):
             node_id = obj_stub.get("node_id")
             monster_id = obj_stub.get("monster_id")
+            item_id = obj_stub.get("item_id")
             merged_obj = copy.deepcopy(obj_stub)
             
             if node_id:
@@ -218,10 +219,34 @@ class RoomManager:
                     # Register in Entity/Spatial Manager
                     self.world.entity_manager.register_mob(uid, room_id)
             
+            elif item_id:
+                item_template = self.world.game_items.get(item_id)
+                if item_template:
+                    full_item = copy.deepcopy(item_template)
+                    full_item.update(merged_obj)
+                    merged_obj = full_item
+                    merged_obj["is_item"] = True
+                    if "uid" not in merged_obj:
+                        merged_obj["uid"] = uuid.uuid4().hex
+            
             elif merged_obj.get("is_npc") and not merged_obj.get("uid"):
                  uid = uuid.uuid4().hex
                  merged_obj["uid"] = uid
                  self.world.entity_manager.register_mob(uid, room_id)
+
+            # --- FORCE FIX: Inject Shop Data if Missing in Manager ---
+            if "pawnbroker" in merged_obj.get("keywords", []) or "merchant" in merged_obj.get("keywords", []):
+                if "shop_data" not in merged_obj and "shop_data" in obj_stub:
+                     merged_obj["shop_data"] = copy.deepcopy(obj_stub["shop_data"])
+                
+                # Double fallback: If even obj_stub didn't have it (stale DB), inject default
+                if "shop_data" not in merged_obj and "pawnbroker" in merged_obj.get("keywords", []):
+                    merged_obj["shop_data"] = {
+                        "inventory": [],
+                        "sold_counts": {},
+                        "type": "pawnshop"
+                    }
+            # ---------------------------------------------------------
 
             active_objects.append(merged_obj)
         
