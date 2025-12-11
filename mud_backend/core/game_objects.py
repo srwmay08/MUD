@@ -122,8 +122,21 @@ class Player(GameEntity):
         
         self.temp_leave_message = None
         self.level_xp_target = self._get_xp_target_for_level(self.level)
+        
+        # Transient list for investigating hidden players
+        # Stores UIDs of players this player has successfully spotted
+        self.detected_hiders: List[str] = []
 
     def mark_dirty(self): self._is_dirty = True
+
+    @property
+    def is_hidden(self) -> bool:
+        return self.flags.get("hidden", False)
+
+    @is_hidden.setter
+    def is_hidden(self, value: bool):
+        self.flags["hidden"] = value
+        self.mark_dirty()
 
     def is_ignoring(self, other_name: str) -> bool:
         return other_name.lower() in self.ignored
@@ -506,6 +519,25 @@ class Player(GameEntity):
         self.world.stop_combat_for_all(self.name.lower(), "any") 
         old_room = self.current_room_id
         
+        # --- NEW: Breaking Stealth on Move ---
+        if self.is_hidden:
+            # Check for sneak logic here if we add autosneak later,
+            # for now, movement breaks hide unless sneaking is implemented.
+            # Assuming basic implementation first as per prompt details.
+            # "To sneak automatically when hidden, MOVEMENT AUTOSNEAK ON."
+            # Since autosneak isn't fully built, we'll reveal for now or keep hidden?
+            # Prompt says "To become visible again, one should UNHIDE".
+            # Usually movement without sneak breaks it. 
+            # For this step, I'll clear detected lists but leave hidden status
+            # IF sneaking logic handles the check. If standard move, reveal.
+            # I will assume standard move breaks hide for now.
+            self.is_hidden = False
+            self.send_message("You step out of the shadows as you move.")
+        
+        # Clear detected list (new room, new targets)
+        self.detected_hiders = []
+        # -------------------------------------
+
         old_room_obj = self.world.get_active_room_safe(old_room)
         if old_room_obj and getattr(old_room_obj, "is_table", False):
             if getattr(old_room_obj, "owner", None) == self.name.lower():
@@ -699,7 +731,8 @@ class Player(GameEntity):
             "status_effects": self.status_effects,
             "rt_end_time_ms": real_next_action * 1000,
             "rt_duration_ms": real_duration * 1000, 
-            "rt_type": real_rt_type
+            "rt_type": real_rt_type,
+            "is_hidden": self.is_hidden # --- NEW ---
         }
 
 class Room(GameEntity):
