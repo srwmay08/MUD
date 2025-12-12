@@ -1,5 +1,6 @@
 # mud_backend/verbs/health.py
 import math
+import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 
@@ -392,7 +393,8 @@ class Tend(BaseVerb):
             
             target.bandages[normalized_loc_key] = {
                 "duration": duration,
-                "stopper": self.player.name
+                "stopper": self.player.name,
+                "applied_at": time.time() # --- FIX: Added Timestamp ---
             }
             
             self.player.send_message("After some effort you manage to stop the bleeding.")
@@ -408,11 +410,9 @@ class Tend(BaseVerb):
         self.player.send_message(f"Roundtime: {calculated_rt} sec.")
         
         if hasattr(self.player, "next_action_time"):
-            import time
             self.player.next_action_time = time.time() + calculated_rt
             
         if target != self.player and hasattr(target, "next_action_time"):
-            import time
             target.next_action_time = time.time() + calculated_rt
 
         target.mark_dirty()

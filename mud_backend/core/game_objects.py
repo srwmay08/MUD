@@ -591,7 +591,7 @@ class Player(GameEntity):
                 # Check if enough time passed to Scar?
                 # Let's say 60 seconds for testing/gameplay flow
                 heal_start = data.get("applied_at", now)
-                if now - heal_start > 60: 
+                if now - heal_start > 600: 
                     # Convert to Scar
                     self.wounds.pop(loc)
                     to_remove.append(loc)
