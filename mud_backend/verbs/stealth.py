@@ -149,3 +149,64 @@ class Unhide(BaseVerb):
             "message", 
             skip_sid=sid
         )
+
+@VerbRegistry.register(["stalk"])
+class Stalk(BaseVerb):
+    """
+    Sets the player to stalk another character.
+    If the target moves, the stalker will attempt to follow surreptitiously.
+    """
+    def execute(self):
+        if not self.args:
+            if self.player.stalking_target_uid:
+                self.player.stalking_target_uid = None
+                self.player.send_message("You stop stalking anyone.")
+            else:
+                self.player.send_message("Stalk whom?")
+            return
+
+        target_name = " ".join(self.args).lower()
+        
+        # Look for target in room
+        target_obj = self.world.get_player_obj(target_name)
+        
+        if not target_obj or target_obj.current_room_id != self.room.room_id:
+            self.player.send_message(f"You do not see {target_name} here to stalk.")
+            return
+            
+        if target_obj.name.lower() == self.player.name.lower():
+            self.player.send_message("You cannot stalk yourself.")
+            return
+
+        # Determine visibility
+        if target_obj.is_hidden:
+            # Must detect them to stalk
+            if target_obj.uid not in self.player.detected_hiders:
+                self.player.send_message(f"You do not see {target_name} here.")
+                return
+
+        self.player.stalking_target_uid = target_obj.uid
+        self.player.send_message(f"You begin to secretly stalk {target_obj.name}.")
+
+@VerbRegistry.register(["sneak"])
+class Sneak(BaseVerb):
+    """
+    Wrapper verb that triggers the Move verb with sneak_override=True.
+    Usage: SNEAK NORTH, SNEAK <dir>
+    """
+    def execute(self):
+        # We need to import Move locally to avoid circular dependency loop at top level
+        from mud_backend.verbs.movement import Move as MoveVerb
+        
+        if not self.args:
+            self.player.send_message("Sneak where?")
+            return
+            
+        # Delegate to Move verb with sneak flag
+        # We reuse the arguments passed to sneak (e.g., "north")
+        move_instance = MoveVerb(self.world, self.player, self.room, self.args)
+        
+        # Pass the override flag. We must modify Move.execute to accept kwargs or set a flag.
+        # Since BaseVerb.execute doesn't take args, we set an attribute on the instance.
+        move_instance.force_sneak = True
+        move_instance.execute()

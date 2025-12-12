@@ -3,6 +3,7 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.config import DIRECTION_MAP 
 from mud_backend.core.registry import VerbRegistry 
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 import time
 import random
 import uuid
@@ -78,7 +79,6 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
         
         objects = room.get("objects", [])
         for obj in objects:
-            # --- FIX: Case-Insensitive Verb Check for Raw Objects ---
             verbs = [v.upper() for v in obj.get("verbs", [])]
             if "ENTER" in verbs or "CLIMB" in verbs:
                 target_room = obj.get("target_room")
@@ -99,6 +99,51 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
                 queue.append((next_room_id, new_path))
 
     return None 
+
+def _handle_stalker_move(
+    world: 'World', 
+    leader_player: 'Player',
+    original_room_id: str, 
+    target_room_id: str,
+    move_direction: str
+):
+    """
+    Checks for players in the original room who are stalking the leader.
+    Triggers them to follow via Sneak logic.
+    """
+    potential_stalkers = world.room_players.get(original_room_id, [])
+    
+    for stalker_name in potential_stalkers:
+        if stalker_name == leader_player.name.lower(): continue
+        
+        stalker_obj = world.get_player_obj(stalker_name)
+        if not stalker_obj: continue
+        
+        if stalker_obj.stalking_target_uid == leader_player.uid:
+            # Found a stalker!
+            # We trigger their move with a slight delay to simulate reaction
+            # We instantiate Move verb with force_sneak=True
+            
+            def delayed_stalk():
+                world.socketio.sleep(random.uniform(1.0, 2.5))
+                # Re-verify stalker is still there and valid
+                if stalker_obj.current_room_id != original_room_id: return
+                if stalker_obj.stalking_target_uid != leader_player.uid: return
+                
+                # Execute Sneak Move
+                # Using the normalized direction or object keyword
+                args = move_direction.split()
+                move_verb = Move(world, stalker_obj, world.get_active_room_safe(original_room_id), args)
+                move_verb.force_sneak = True
+                
+                # Check RT before executing to prevent spam errors
+                if not _check_action_roundtime(stalker_obj, action_type="move"):
+                    stalker_obj.send_message(f"(Stalking) You pursue {leader_player.name}...")
+                    move_verb.execute()
+                else:
+                    stalker_obj.send_message(f"You fall behind {leader_player.name} because you are busy.")
+
+            world.socketio.start_background_task(delayed_stalk)
 
 def _handle_group_move(
     world: 'World', 
@@ -145,42 +190,32 @@ def _handle_group_move(
                 skill_rank = member_obj.skills.get("climbing", 0)
                 roll = skill_rank + random.randint(1, 100)
                 attempt_skill_learning(member_obj, "climbing")
-                
                 if roll < skill_dc:
                     member_can_move = False
                     failure_message = f"You try to follow {leader_name} but fail to climb!"
-                
             elif move_verb == "swim":
                 skill_rank = member_obj.skills.get("swimming", 0)
                 roll = skill_rank + random.randint(1, 100)
                 attempt_skill_learning(member_obj, "swimming")
-                
                 if roll < skill_dc:
                     member_can_move = False
                     failure_message = f"You try to follow {leader_name} but fail to swim!"
 
             if member_can_move:
                 follower_move_msg = ""
-                if move_verb == "enter":
-                    follower_move_msg = f"You follow {leader_name} inside..."
-                elif move_verb == "climb":
-                    follower_move_msg = f"You follow {leader_name}, climbing..."
-                elif move_verb == "out":
-                    follower_move_msg = f"You follow {leader_name} out..."
-                elif move_verb in DIRECTION_MAP.values() or move_verb in DIRECTION_MAP.keys():
-                    follower_move_msg = f"You follow {leader_name} {move_verb}..."
-                else:
-                    follower_move_msg = f"You follow {leader_name}..."
+                if move_verb == "enter": follower_move_msg = f"You follow {leader_name} inside..."
+                elif move_verb == "climb": follower_move_msg = f"You follow {leader_name}, climbing..."
+                elif move_verb == "out": follower_move_msg = f"You follow {leader_name} out..."
+                elif move_verb in DIRECTION_MAP.values() or move_verb in DIRECTION_MAP.keys(): follower_move_msg = f"You follow {leader_name} {move_verb}..."
+                else: follower_move_msg = f"You follow {leader_name}..."
 
                 member_obj.messages.clear()
                 member_obj.move_to_room(target_room_id, follower_move_msg) 
                 
                 new_room_data = world.get_room(target_room_id)
-                # --- SAFETY CHECK ---
                 if not new_room_data:
                     member_obj.send_message("You cannot follow, the path leads to void.")
                     continue
-                # --------------------
 
                 new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
                 show_room_to_player(member_obj, new_room)
@@ -337,14 +372,14 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             move_msg, move_verb, skill_dc, leave_msg_suffix
         )
         
+        # NOTE: Autosneak/Stalk logic skipped for GOTO (Fast Travel) to prevent spam/lag
+        
         new_room_data = world.get_room(target_room_id_step)
         
-        # --- SAFETY CHECK ---
         if not new_room_data:
              player_obj.send_message("Error: The next room in the path is missing (Void).")
              player_obj.is_goto_active = False
              return
-        # --------------------
         
         new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(player_obj, new_room)
@@ -426,11 +461,9 @@ class Enter(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         
-        # --- SMART TABLE SELECTION (GO TABLE) ---
         enterable_object = None
         
         if target_name == "table":
-            # Find the first table that is either empty OR has room (but sticking to empty for now)
             possible_tables = []
             for obj in self.room.objects:
                 if "table" in obj.get("keywords", []) and "ENTER" in obj.get("verbs", []):
@@ -443,8 +476,6 @@ class Enter(BaseVerb):
                     if not occupants:
                         enterable_object = table
                         break
-            
-            # If no empty table found, default to the first available table to trigger the 'occupied' message logic
             if not enterable_object and possible_tables:
                 enterable_object = possible_tables[0]
         else:
@@ -462,11 +493,8 @@ class Enter(BaseVerb):
             self.player.send_message(f"The {target_name} leads nowhere right now.")
             return
 
-        # --- TABLE LOGIC: GATEKEEPER CHECK ---
         target_room_obj = self.world.get_active_room_safe(target_room_id)
         if target_room_obj and getattr(target_room_obj, "is_table", False):
-            
-            # Self-Healing Check: If occupants exist but no owner, assign one now
             current_occupants = [p for p in self.world.room_players.get(target_room_id, [])]
             owner_name = getattr(target_room_obj, "owner", None)
             
@@ -475,18 +503,13 @@ class Enter(BaseVerb):
                 owner_name = target_room_obj.owner
 
             if owner_name:
-                # Table is owned. Check permissions.
                 is_invited = self.player.name.lower() in [g.lower() for g in target_room_obj.invited_guests]
-                
                 owner_obj = self.world.get_player_obj(owner_name)
                 is_friend = False
-                if owner_obj:
-                    is_friend = owner_obj.is_friend(self.player.name)
+                if owner_obj: is_friend = owner_obj.is_friend(self.player.name)
                 
                 if not is_invited and not is_friend and owner_name != self.player.name.lower():
-                    # Deny Entry
                     self.player.send_message(f"You wave to the people seated at the {enterable_object.get('name', 'table')}, hoping they will invite you to sit with them.")
-                    
                     inside_msg = (
                         f"You see {self.player.name} waving at your table, clearly hoping that you will invite them to sit with you. "
                         f"If you would like, you may <span class='keyword' data-command='invite {self.player.name}'>INVITE {self.player.name}</span> to allow them to join you."
@@ -494,12 +517,10 @@ class Enter(BaseVerb):
                     self.world.broadcast_to_room(target_room_id, inside_msg, "message")
                     return
                 
-                # Auto-invite friend logic for smoother gameplay
                 if is_friend and not is_invited:
                     target_room_obj.invited_guests.append(self.player.name.lower())
                     self.player.send_message(f"{owner_obj.name} waves to you, inviting you to join them.")
                     owner_obj.send_message(f"You see {self.player.name} waving at your table. Recognizing your friend, you immediately wave for them to join you.")
-        # --- TABLE LOGIC END ---
         
         if target_room_id == "inn_room":
             self.player.send_message("The door to your old room is locked. You should <span class='keyword' data-command='talk to innkeeper'>TALK TO THE INNKEEPER</span> if you wish to check in for training.")
@@ -519,20 +540,17 @@ class Enter(BaseVerb):
             move_msg = f"You enter the {enterable_object.get('name', target_name)}..."
             leave_suffix = f"enters the {obj_clean_name}."
             self.player.temp_leave_message = leave_suffix
-            if not is_door_or_gate:
-                rt = 3.0
+            if not is_door_or_gate: rt = 3.0
         elif current_posture == "crouching":
             move_msg = f"You creep into the {enterable_object.get('name', target_name)}..."
             leave_suffix = f"creeps into the {obj_clean_name}."
             self.player.temp_leave_message = leave_suffix
-            if not is_door_or_gate:
-                rt = 4.0
+            if not is_door_or_gate: rt = 4.0
         elif current_posture == "prone":
             move_msg = f"You crawl through the {enterable_object.get('name', target_name)}..."
             leave_suffix = f"crawls through the {obj_clean_name}."
             self.player.temp_leave_message = leave_suffix
-            if not is_door_or_gate:
-                rt = 8.0
+            if not is_door_or_gate: rt = 8.0
         else: 
             self.player.send_message("You must stand up first.")
             return
@@ -540,28 +558,56 @@ class Enter(BaseVerb):
         if _check_toll_gate(self.player, target_room_id):
             return
         
-        # --- GATEKEEPING FIX: Clear Invite on Leave ---
-        # Note: This logic belongs in EXIT/MOVE, but if entering leads to leaving another table?
-        # Typically ENTER leads to a table, so we don't clear invites here unless switching tables.
-        # But BaseVerb/Player.move_to_room handles ownership succession. 
-        # The logic below handles group movement.
-        # ----------------------------------------------
-        
         group = self.world.get_group(self.player.group_id)
         is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
         if is_leader:
             move_msg = f"You enter the {enterable_object.get('name', target_name)}... and your group follows."
             
         original_room_id = self.room.room_id
+        
+        # --- STEALTH LOGIC ---
+        # If player is hidden and has autosneak, redirect to Sneak Logic via a temporary override logic here
+        # or simplify: just perform skill check here.
+        # But we need to use the Move verb structure or duplicate it.
+        # Given Enter is a distinct verb, we implement local stealth logic.
+        
+        is_sneaking = self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on"
+        
+        if is_sneaking:
+            # Stealth check
+            skill_rank = self.player.skills.get("stalking_and_hiding", 0)
+            skill_bonus = calculate_skill_bonus(skill_rank)
+            dis_b = get_stat_bonus(self.player.stats.get("DIS", 50), "DIS", self.player.stat_modifiers)
+            race_mod = self.player.race_data.get("hide_bonus", 0)
+            roll = random.randint(1, 100) + skill_bonus + dis_b + race_mod
+            
+            # Difficulty? Arbitrary 100 for now, or based on room population
+            difficulty = 100
+            if roll > difficulty:
+                # Success: Silent move
+                move_msg = f"You slip into the {enterable_object.get('name', target_name)} unnoticed."
+                leave_suffix = None # Don't show leaving message
+                rt += 3.0 # Stealth RT penalty
+                attempt_skill_learning(self.player, "stalking_and_hiding")
+            else:
+                # Fail: Reveal
+                self.player.is_hidden = False
+                self.player.send_message("You attempt to sneak in but stumble, revealing yourself!")
+                rt += 2.0
+                move_msg = f"You stumble into the {enterable_object.get('name', target_name)}..."
+                leave_suffix = f"stumbles into the {obj_clean_name}."
+        
         self.player.move_to_room(target_room_id, move_msg)
+        
+        # Handle Stalkers
+        _handle_stalker_move(self.world, self.player, original_room_id, target_room_id, target_name)
         
         _handle_group_move(
             self.world, self.player, original_room_id, target_room_id,
-            move_msg, "enter", skill_dc=0, leave_msg_suffix=leave_suffix
+            move_msg, "enter", skill_dc=0, leave_msg_suffix=(leave_suffix if leave_suffix else "leaves.")
         )
 
         new_room_data = self.world.get_room(target_room_id)
-        
         if not new_room_data:
              self.player.send_message("You cannot seem to go that way (Target room is Void).")
              return
@@ -582,6 +628,22 @@ class Enter(BaseVerb):
         
         if rt > 0:
             _set_action_roundtime(self.player, rt)
+            
+        # Update SIDs for broadcast (Move usually handles this but since we customized msg...)
+        # We need to broadcast departure/arrival if visible
+        player_info = self.world.get_player_info(self.player.name.lower())
+        sid = player_info.get("sid") if player_info else None
+        
+        if original_room_id and target_room_id != original_room_id:
+            self.world.socketio.server.leave_room(sid, original_room_id)
+            if leave_suffix: # Only broadcast if visible
+                msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
+                self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
+            
+            self.world.socketio.server.enter_room(sid, target_room_id)
+            if not self.player.is_hidden:
+                msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
+                self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)
 
 @VerbRegistry.register(["climb"]) 
 class Climb(BaseVerb):
@@ -637,7 +699,6 @@ class Climb(BaseVerb):
         else:
             rt = max(1.0, 5.0 - (success_margin / 20.0))
             move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
-            
             obj_clean_name = _clean_name(climbable_object.get('name', target_name))
             leave_suffix = f"climbs the {obj_clean_name}."
             self.player.temp_leave_message = leave_suffix
@@ -651,11 +712,32 @@ class Climb(BaseVerb):
             move_msg = f"You grasp the {target_name} and begin to climb... and your group follows."
             
         original_room_id = self.room.room_id
+        
+        # --- STEALTH CHECK ---
+        is_sneaking = self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on"
+        if is_sneaking:
+            skill_rank = self.player.skills.get("stalking_and_hiding", 0)
+            skill_bonus = calculate_skill_bonus(skill_rank)
+            dis_b = get_stat_bonus(self.player.stats.get("DIS", 50), "DIS", self.player.stat_modifiers)
+            roll = random.randint(1, 100) + skill_bonus + dis_b
+            if roll > 100:
+                move_msg = f"You silently climb the {target_name}..."
+                leave_suffix = None
+                rt += 2.0
+                attempt_skill_learning(self.player, "stalking_and_hiding")
+            else:
+                self.player.is_hidden = False
+                self.player.send_message("You make too much noise climbing and reveal yourself!")
+                move_msg = f"You struggle noisily up the {target_name}..."
+                rt += 1.0
+
         self.player.move_to_room(target_room_id, move_msg)
+        
+        _handle_stalker_move(self.world, self.player, original_room_id, target_room_id, target_name)
         
         _handle_group_move(
             self.world, self.player, original_room_id, target_room_id,
-            move_msg, "climb", skill_dc=dc, leave_msg_suffix=leave_suffix
+            move_msg, "climb", skill_dc=dc, leave_msg_suffix=(leave_suffix if leave_suffix else "leaves.")
         )
 
         new_room_data = self.world.get_room(target_room_id)
@@ -667,6 +749,21 @@ class Climb(BaseVerb):
         show_room_to_player(self.player, new_room)
         
         _set_action_roundtime(self.player, rt)
+        
+        # Update Visibility/Broadcasting manually
+        player_info = self.world.get_player_info(self.player.name.lower())
+        sid = player_info.get("sid") if player_info else None
+        
+        if original_room_id and target_room_id != original_room_id:
+            self.world.socketio.server.leave_room(sid, original_room_id)
+            if leave_suffix:
+                msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
+                self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
+            
+            self.world.socketio.server.enter_room(sid, target_room_id)
+            if not self.player.is_hidden:
+                msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
+                self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)
 
 @VerbRegistry.register([
     "move", "go", 
@@ -677,7 +774,12 @@ class Climb(BaseVerb):
 class Move(BaseVerb):
     """
     Handles all directional movement with 'Burden' checks and Event Emission.
+    Has support for forced sneak via instance attribute.
     """
+    def __init__(self, world, player, room, args, command=None):
+        super().__init__(world, player, room, args, command)
+        self.force_sneak = False # Set this to True to force a sneak attempt
+
     def execute(self):
         if _check_action_roundtime(self.player, action_type="move"):
             return
@@ -685,7 +787,7 @@ class Move(BaseVerb):
         target_name = None
 
         # Check if the command itself is a direction (e.g. "n", "north")
-        if self.command.lower() in DIRECTION_MAP:
+        if self.command and self.command.lower() in DIRECTION_MAP:
             target_name = self.command.lower()
         # Otherwise, check arguments (e.g., "move north")
         elif self.args:
@@ -699,23 +801,17 @@ class Move(BaseVerb):
         target_room_id = self.room.exits.get(normalized_direction)
         move_dir_name = normalized_direction
 
-        # Fix: Check static objects for GO/MOVE verbs if not a standard exit
+        # Check static objects for GO/MOVE verbs if not a standard exit
         if not target_room_id:
             for obj in self.room.objects:
-                # Check for name match
                 if (target_name == obj.get("name", "").lower() or 
                     target_name in obj.get("keywords", [])):
                     
-                    # FIX: Check for both target_room and destination_id
                     t_room = obj.get("target_room") or obj.get("destination_id")
 
                     if t_room:
-                        # Check verbs: If it allows GO, MOVE, WALK, CLIMB, or ENTER
                         obj_verbs = [v.upper() for v in obj.get("verbs", [])]
-                        
-                        # Added ENTER to allow "GO TOWER" where tower has ENTER verb
                         if any(v in obj_verbs for v in ["GO", "MOVE", "WALK", "CLIMB", "ENTER"]):
-                            # Preserve special logic: If it's a table, let it fall through to Enter verb handling later
                             if "table" in obj.get("keywords", []):
                                 continue
 
@@ -724,36 +820,20 @@ class Move(BaseVerb):
                             break
         
         if target_room_id:
-            # --- NEW: THE BURDEN CHECK ---
+            # Burden Check
             burden_level = 0
             for item_ref in self.player.inventory:
-                item = None
-                if isinstance(item_ref, dict):
-                    item = item_ref
-                else:
-                    item = self.world.game_items.get(item_ref)
-                
-                if item and "HEAVY" in item.get("flags", []):
-                    burden_level += 1
-            
-            # Check worn/hands too
+                item = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref)
+                if item and "HEAVY" in item.get("flags", []): burden_level += 1
             for slot, item_ref in self.player.worn_items.items():
                 if item_ref:
-                    item = None
-                    if isinstance(item_ref, dict):
-                        item = item_ref
-                    else:
-                        item = self.world.game_items.get(item_ref)
+                    item = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref)
+                    if item and "HEAVY" in item.get("flags", []): burden_level += 1
 
-                    if item and "HEAVY" in item.get("flags", []):
-                        burden_level += 1
-
-            # Apply Burden Penalty
             base_rt = 0.0
             if burden_level > 0:
                 self.player.send_message(f"The heavy burden slows you down... (Burden Level: {burden_level})")
                 base_rt = 2.0 * burden_level
-            # -----------------------------
 
             current_posture = self.player.posture
             move_msg = ""
@@ -769,7 +849,6 @@ class Move(BaseVerb):
                     leave_suffix = f"heads towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
             elif current_posture == "crouching":
-                # --- NEW CROUCHING MOVEMENT LOGIC ---
                 if move_dir_name in DIRECTION_MAP.values() or move_dir_name in DIRECTION_MAP.keys():
                     move_msg = f"You creep {move_dir_name}..."
                     leave_suffix = f"creeps {move_dir_name}."
@@ -778,7 +857,6 @@ class Move(BaseVerb):
                     move_msg = f"You creep towards the {move_dir_name}..."
                     leave_suffix = f"creeps towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
-                # ------------------------------------
             elif current_posture == "prone":
                 if move_dir_name in DIRECTION_MAP.values() or move_dir_name in DIRECTION_MAP.keys():
                     move_msg = f"You crawl {move_dir_name}..."
@@ -795,12 +873,9 @@ class Move(BaseVerb):
             if _check_toll_gate(self.player, target_room_id):
                 return
             
-            # --- GATEKEEPING FIX: Clear Invite on Leave ---
-            # If leaving a table, remove self from guest list so they can't auto-return
             if getattr(self.room, "is_table", False):
                  if self.player.name.lower() in self.room.invited_guests:
                      self.room.invited_guests.remove(self.player.name.lower())
-            # ----------------------------------------------
             
             group = self.world.get_group(self.player.group_id)
             is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
@@ -808,19 +883,49 @@ class Move(BaseVerb):
                 move_msg = f"{move_msg} and your group follows."
             
             original_room_id = self.room.room_id
-            self.player.move_to_room(target_room_id, move_msg)
             
-            # --- NEW: EMIT ROOM ENTER EVENT ---
+            # --- STEALTH LOGIC ---
+            is_sneaking = self.force_sneak or (self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on")
+            
+            if is_sneaking:
+                if not self.player.is_hidden and self.force_sneak:
+                    # If forcing sneak but not hidden, try to hide first?
+                    # Or just treat as "trying to move silently"
+                    pass # Just apply skill check
+                
+                skill_rank = self.player.skills.get("stalking_and_hiding", 0)
+                skill_bonus = calculate_skill_bonus(skill_rank)
+                dis_b = get_stat_bonus(self.player.stats.get("DIS", 50), "DIS", self.player.stat_modifiers)
+                # Roll vs 100 (Simplified)
+                roll = random.randint(1, 100) + skill_bonus + dis_b
+                
+                if roll > 100:
+                    # Success
+                    self.player.is_hidden = True # Maintain hide
+                    move_msg = f"You sneak {move_dir_name}..."
+                    leave_suffix = None # Silent leave
+                    base_rt += 3.0
+                    attempt_skill_learning(self.player, "stalking_and_hiding")
+                else:
+                    # Fail
+                    if self.player.is_hidden:
+                        self.player.send_message("You stumble and lose your cover!")
+                    self.player.is_hidden = False
+                    move_msg = f"You stumble {move_dir_name}..."
+                    base_rt += 1.0 # Penalty
+            
+            self.player.move_to_room(target_room_id, move_msg)
             self.world.event_bus.emit("room_enter", player=self.player, room_id=target_room_id)
-            # ----------------------------------
+            
+            # Handle Stalkers
+            _handle_stalker_move(self.world, self.player, original_room_id, target_room_id, normalized_direction)
             
             _handle_group_move(
                 self.world, self.player, original_room_id, target_room_id,
-                move_msg, normalized_direction, skill_dc=0, leave_msg_suffix=leave_suffix
+                move_msg, normalized_direction, skill_dc=0, leave_msg_suffix=(leave_suffix if leave_suffix else "leaves.")
             )
 
             new_room_data = self.world.get_room(target_room_id)
-            
             if not new_room_data:
                  self.player.send_message("You cannot go that way. (Void Error)")
                  return
@@ -841,11 +946,30 @@ class Move(BaseVerb):
 
             if base_rt > 0:
                 _set_action_roundtime(self.player, base_rt, rt_type="hard")
+                
+            # Manual Broadcast Handling to support silent moves
+            player_info = self.world.get_player_info(self.player.name.lower())
+            sid = player_info.get("sid") if player_info else None
+            
+            if original_room_id and target_room_id != original_room_id:
+                self.world.socketio.server.leave_room(sid, original_room_id)
+                
+                # Broadcast LEAVE
+                if leave_suffix:
+                    leaves_message = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
+                    # Filter self
+                    sids_to_skip = {sid}
+                    self.world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sids_to_skip)
+                
+                self.world.socketio.server.enter_room(sid, target_room_id)
+                
+                # Broadcast ARRIVE (if not hidden)
+                if not self.player.is_hidden:
+                    arrives_message = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
+                    self.world.broadcast_to_room(target_room_id, arrives_message, "message", skip_sid=sid)
+                    
             return
 
-        # --- SMART TABLE HANDLING IN MOVE ---
-        # If user types "move table" or "go table", we delegate to Enter but must allow 
-        # it to detect the "table" keyword specifically.
         if target_name == "table":
              enter_verb = Enter(self.world, self.player, self.room, ["table"])
              enter_verb.execute()
@@ -903,11 +1027,9 @@ class Exit(BaseVerb):
                 if _check_toll_gate(self.player, target_room_id):
                     return
 
-                # --- GATEKEEPING FIX: Clear Invite on Leave ---
                 if getattr(self.room, "is_table", False):
                      if self.player.name.lower() in self.room.invited_guests:
                          self.room.invited_guests.remove(self.player.name.lower())
-                # ----------------------------------------------
 
                 group = self.world.get_group(self.player.group_id)
                 is_leader = group and group["leader"] == self.player.name.lower() and len(group["members"]) > 1
@@ -915,15 +1037,35 @@ class Exit(BaseVerb):
                     move_msg = "You head out... and your group follows."
 
                 original_room_id = self.room.room_id 
+                
+                # --- STEALTH CHECK ---
+                is_sneaking = self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on"
+                if is_sneaking:
+                    skill_rank = self.player.skills.get("stalking_and_hiding", 0)
+                    skill_bonus = calculate_skill_bonus(skill_rank)
+                    dis_b = get_stat_bonus(self.player.stats.get("DIS", 50), "DIS", self.player.stat_modifiers)
+                    roll = random.randint(1, 100) + skill_bonus + dis_b
+                    if roll > 100:
+                        move_msg = "You silently slip out..."
+                        leave_suffix = None
+                        rt += 2.0
+                        attempt_skill_learning(self.player, "stalking_and_hiding")
+                    else:
+                        self.player.is_hidden = False
+                        self.player.send_message("You make noise and are revealed!")
+                        move_msg = "You stumble out..."
+                        rt += 1.0
+
                 self.player.move_to_room(target_room_id, move_msg)
+                
+                _handle_stalker_move(self.world, self.player, original_room_id, target_room_id, "out")
                 
                 _handle_group_move(
                     self.world, self.player, original_room_id, target_room_id,
-                    move_msg, "out", skill_dc=0, leave_msg_suffix=leave_suffix
+                    move_msg, "out", skill_dc=0, leave_msg_suffix=(leave_suffix if leave_suffix else "leaves.")
                 )
 
                 new_room_data = self.world.get_room(target_room_id)
-                
                 if not new_room_data:
                      self.player.send_message("You cannot go out. (Void Error)")
                      return
@@ -944,6 +1086,21 @@ class Exit(BaseVerb):
                 
                 if rt > 0:
                     _set_action_roundtime(self.player, rt)
+
+                # Manual Broadcast Handling
+                player_info = self.world.get_player_info(self.player.name.lower())
+                sid = player_info.get("sid") if player_info else None
+                
+                if original_room_id and target_room_id != original_room_id:
+                    self.world.socketio.server.leave_room(sid, original_room_id)
+                    if leave_suffix:
+                        msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
+                        self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
+                    
+                    self.world.socketio.server.enter_room(sid, target_room_id)
+                    if not self.player.is_hidden:
+                        msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
+                        self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)
 
                 return
             else:

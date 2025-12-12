@@ -14,7 +14,8 @@ FLAG_OPTIONS = {
     "righthand": ["on", "off"],
     "lefthand": ["on", "off"],
     "safedrop": ["on", "off"],
-    "groupinvites": ["on", "off"] 
+    "groupinvites": ["on", "off"],
+    "autosneak": ["on", "off"] # --- NEW ---
 }
 
 # Define the default state for all flags
@@ -29,7 +30,8 @@ DEFAULT_FLAGS = {
     "righthand": "on",
     "lefthand": "off",
     "safedrop": "on",
-    "groupinvites": "on"
+    "groupinvites": "on",
+    "autosneak": "off" # --- NEW ---
 }
 
 @VerbRegistry.register(["flag", "flags"]) # <-- Corrected Placement
