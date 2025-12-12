@@ -57,7 +57,8 @@ const COMMON_COMMANDS = [
     "health", "stats", "skills", "spells", "info", "score",
     "help", "quit", "save", "alias", "unalias", "stand", "sit", "kneel", "prone",
     "buy", "sell", "list", "order", "appraise",
-    "forage", "harvest", "mine", "chop", "fish", "skin", "search", "tend", "diagnose"
+    "forage", "harvest", "mine", "chop", "fish", "skin", "search", "tend", "diagnose",
+    "hide", "unhide", "sneak", "stalk"
 ];
 
 function sendCommand(command) {
@@ -161,6 +162,14 @@ function updateVitals(vitals) {
         statusText += ` (${vitals.status_effects.join(', ')})`;
     }
     postureStatusEl.innerText = statusText;
+
+    // --- NEW: Hidden Status Indicator ---
+    if (vitals.is_hidden) {
+        postureStatusEl.innerText += " [HIDDEN]";
+        postureStatusEl.style.color = "#aaddff"; // Light blue indicator
+    } else {
+        postureStatusEl.style.color = ""; // Reset
+    }
 
     if (vitals.rt_end_time_ms > Date.now()) {
         startRtTimer(vitals.rt_duration_ms, vitals.rt_end_time_ms, vitals.rt_type || 'hard');
@@ -311,11 +320,17 @@ function updateGuiPanels(vitals) {
         for (const [location, rank] of Object.entries(vitals.scars)) {
             // Check both original key and normalized key
             const coords = WOUND_COORDS[location.toLowerCase()] || WOUND_COORDS[location.replace(" ", "_")];
+            
             if (coords && rank > 0) {
-                let x = coords.x;
-                if (vitals.wounds && vitals.wounds[location]) {
-                     x -= 1.0; 
+                // --- FIX: Check if active wound exists in same location ---
+                // If there's a wound, skip rendering the scar
+                if (vitals.wounds && vitals.wounds[location] > 0) {
+                    continue;
                 }
+                // ---------------------------------------------------------
+
+                let x = coords.x;
+                // Removed shift logic (x -= 1.0)
                 createMarker(x, coords.y, rank, true, location);
             }
         }
@@ -324,13 +339,11 @@ function updateGuiPanels(vitals) {
     // Draw Wounds
     if (vitals.wounds) {
         for (const [location, rank] of Object.entries(vitals.wounds)) {
-            // Check both original key and normalized key
             const coords = WOUND_COORDS[location.toLowerCase()] || WOUND_COORDS[location.replace(" ", "_")];
             if (coords && rank > 0) {
                 let x = coords.x;
-                 if (vitals.scars && vitals.scars[location]) {
-                     x += 1.0; 
-                }
+                // Removed shift logic (x += 1.0) since scars are now hidden
+                
                 const isBandaged = vitals.bandages && vitals.bandages[location];
                 createMarker(x, coords.y, rank, false, location, isBandaged);
             }
