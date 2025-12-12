@@ -114,6 +114,9 @@ class Player(GameEntity):
         self.band_id = self.data.get("band_id", None) 
         self.band_xp_bank = self.data.get("band_xp_bank", 0) 
         
+        # --- STALKING ---
+        self.stalking_target_uid = self.data.get("stalking_target_uid", None)
+        
         self.locker = self.data.get("locker", {
             "capacity": 50,
             "items": [],
@@ -124,7 +127,6 @@ class Player(GameEntity):
         self.level_xp_target = self._get_xp_target_for_level(self.level)
         
         # Transient list for investigating hidden players
-        # Stores UIDs of players this player has successfully spotted
         self.detected_hiders: List[str] = []
 
     def mark_dirty(self): self._is_dirty = True
@@ -282,10 +284,8 @@ class Player(GameEntity):
     def stamina_regen_per_pulse(self) -> int:
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.stat_modifiers)
         bonus = 0
-        # --- MODIFIED: Added crouching and meditating ---
         if self.posture in ["sitting", "kneeling", "prone", "crouching", "meditating"]:
             if self.worn_items.get("mainhand") is None: bonus = 5
-        # -----------------------------------------------
         sr_percent = 20 + math.trunc(con_b / 4.5) + bonus
         enhancive_bonus = 0
         if self.stamina_burst_pulses > 0: enhancive_bonus = 15
@@ -300,10 +300,8 @@ class Player(GameEntity):
         hp_bonus = calculate_skill_bonus(hp_ranks)
         bonus = 0 
         
-        # --- MODIFIED: Added Meditate Bonus ---
         if self.posture == "meditating":
-            bonus += 10 # +10% base regen per pulse
-        # --------------------------------------
+            bonus += 10 
 
         mr_percent = 10 + math.trunc(int_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
         enhancive_bonus = 0
@@ -317,10 +315,8 @@ class Player(GameEntity):
         hp_bonus = calculate_skill_bonus(hp_ranks)
         bonus = 0 
 
-        # --- MODIFIED: Added Meditate Bonus ---
         if self.posture == "meditating":
-            bonus += 10 # +10% base regen per pulse
-        # --------------------------------------
+            bonus += 10 
 
         spr_percent = 10 + math.trunc(ess_b / 4.5) + math.trunc(hp_bonus / 20) + bonus
         enhancive_bonus = 0
@@ -515,28 +511,17 @@ class Player(GameEntity):
             return armor_data.get("armor_type", DEFAULT_UNARMORED_TYPE)
         return DEFAULT_UNARMORED_TYPE
     
-    def move_to_room(self, target_room_id: str, move_message: str):
+    def move_to_room(self, target_room_id: str, move_message: str, stay_hidden: bool = False):
         self.world.stop_combat_for_all(self.name.lower(), "any") 
         old_room = self.current_room_id
         
-        # --- NEW: Breaking Stealth on Move ---
-        if self.is_hidden:
-            # Check for sneak logic here if we add autosneak later,
-            # for now, movement breaks hide unless sneaking is implemented.
-            # Assuming basic implementation first as per prompt details.
-            # "To sneak automatically when hidden, MOVEMENT AUTOSNEAK ON."
-            # Since autosneak isn't fully built, we'll reveal for now or keep hidden?
-            # Prompt says "To become visible again, one should UNHIDE".
-            # Usually movement without sneak breaks it. 
-            # For this step, I'll clear detected lists but leave hidden status
-            # IF sneaking logic handles the check. If standard move, reveal.
-            # I will assume standard move breaks hide for now.
+        # --- FIXED: Only break stealth if NOT staying hidden ---
+        if self.is_hidden and not stay_hidden:
             self.is_hidden = False
             self.send_message("You step out of the shadows as you move.")
         
         # Clear detected list (new room, new targets)
         self.detected_hiders = []
-        # -------------------------------------
 
         old_room_obj = self.world.get_active_room_safe(old_room)
         if old_room_obj and getattr(old_room_obj, "is_table", False):
@@ -572,7 +557,9 @@ class Player(GameEntity):
         
         if target_room_id not in self.visited_rooms:
             self.visited_rooms.append(target_room_id)
-        self.send_message(move_message)
+        
+        if move_message:
+            self.send_message(move_message)
         self.mark_dirty()
 
     def _process_wounds(self):
@@ -676,6 +663,7 @@ class Player(GameEntity):
             "group_id": self.group_id,
             "band_id": self.band_id,
             "band_xp_bank": self.band_xp_bank,
+            "stalking_target_uid": self.stalking_target_uid,
             "is_admin": self.is_admin,
             "locker": self.locker,
             "aliases": self.aliases,

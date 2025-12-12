@@ -562,6 +562,7 @@ class Enter(BaseVerb):
         
         # --- STEALTH LOGIC ---
         is_sneaking = self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on"
+        should_stay_hidden = False
         
         if is_sneaking:
             skill_rank = self.player.skills.get("stalking_and_hiding", 0)
@@ -570,17 +571,18 @@ class Enter(BaseVerb):
             race_mod = self.player.race_data.get("hide_bonus", 0)
             roll = random.randint(1, 100) + skill_bonus + dis_b + race_mod
             
-            # Revised Sneak Logic
             if roll > 100:
                 # Perfect Sneak
                 move_msg = f"You slip into the {enterable_object.get('name', target_name)} unnoticed."
                 leave_suffix = None # Silent leave
+                should_stay_hidden = True
                 rt += 3.0 
                 attempt_skill_learning(self.player, "stalking_and_hiding")
             elif roll > 30:
                 # Marginal Sneak (Keeps Hidden but Slow)
                 move_msg = f"You manage to sneak into the {enterable_object.get('name', target_name)}, but it takes all your concentration."
                 leave_suffix = None
+                should_stay_hidden = True
                 rt += 6.0 
             else:
                 # Fail
@@ -590,7 +592,7 @@ class Enter(BaseVerb):
                 leave_suffix = f"stumbles into the {obj_clean_name}."
                 rt += 2.0
         
-        self.player.move_to_room(target_room_id, move_msg)
+        self.player.move_to_room(target_room_id, move_msg, stay_hidden=should_stay_hidden)
         
         # Handle Stalkers
         _handle_stalker_move(self.world, self.player, original_room_id, target_room_id, target_name)
@@ -707,6 +709,8 @@ class Climb(BaseVerb):
         
         # --- STEALTH CHECK ---
         is_sneaking = self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on"
+        should_stay_hidden = False
+        
         if is_sneaking:
             skill_rank = self.player.skills.get("stalking_and_hiding", 0)
             skill_bonus = calculate_skill_bonus(skill_rank)
@@ -717,11 +721,13 @@ class Climb(BaseVerb):
             if roll > 100:
                 move_msg = f"You silently climb the {target_name}..."
                 leave_suffix = None
+                should_stay_hidden = True
                 rt += 2.0
                 attempt_skill_learning(self.player, "stalking_and_hiding")
             elif roll > 30:
                 move_msg = f"You manage to climb the {target_name} unseen, but it takes extra effort."
                 leave_suffix = None
+                should_stay_hidden = True
                 rt += 5.0
             else:
                 self.player.is_hidden = False
@@ -729,7 +735,7 @@ class Climb(BaseVerb):
                 move_msg = f"You struggle noisily up the {target_name}..."
                 rt += 1.0
 
-        self.player.move_to_room(target_room_id, move_msg)
+        self.player.move_to_room(target_room_id, move_msg, stay_hidden=should_stay_hidden)
         
         _handle_stalker_move(self.world, self.player, original_room_id, target_room_id, target_name)
         
@@ -884,6 +890,7 @@ class Move(BaseVerb):
             
             # --- STEALTH LOGIC ---
             is_sneaking = self.force_sneak or (self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on")
+            should_stay_hidden = False
             
             if is_sneaking:
                 if not self.player.is_hidden and self.force_sneak:
@@ -899,6 +906,7 @@ class Move(BaseVerb):
                 if roll > 100:
                     # Perfect Sneak (Easy Success)
                     self.player.is_hidden = True 
+                    should_stay_hidden = True
                     move_msg = f"You sneak {move_dir_name}..."
                     leave_suffix = None # Silent leave
                     base_rt += 3.0
@@ -906,6 +914,7 @@ class Move(BaseVerb):
                 elif roll > 30:
                     # Marginal Sneak (Keep Hidden but High RT)
                     self.player.is_hidden = True
+                    should_stay_hidden = True
                     move_msg = f"You manage to sneak {move_dir_name} without being seen, but it takes all your concentration..."
                     leave_suffix = None
                     base_rt += 6.0 # High penalty
@@ -914,10 +923,11 @@ class Move(BaseVerb):
                     if self.player.is_hidden:
                         self.player.send_message("You stumble and lose your cover!")
                     self.player.is_hidden = False
+                    should_stay_hidden = False
                     move_msg = f"You stumble {move_dir_name}..."
                     base_rt += 1.0 # Standard move penalty
             
-            self.player.move_to_room(target_room_id, move_msg)
+            self.player.move_to_room(target_room_id, move_msg, stay_hidden=should_stay_hidden)
             self.world.event_bus.emit("room_enter", player=self.player, room_id=target_room_id)
             
             # Handle Stalkers
@@ -1043,6 +1053,8 @@ class Exit(BaseVerb):
                 
                 # --- STEALTH CHECK ---
                 is_sneaking = self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on"
+                should_stay_hidden = False
+                
                 if is_sneaking:
                     skill_rank = self.player.skills.get("stalking_and_hiding", 0)
                     skill_bonus = calculate_skill_bonus(skill_rank)
@@ -1053,11 +1065,13 @@ class Exit(BaseVerb):
                     if roll > 100:
                         move_msg = "You silently slip out..."
                         leave_suffix = None
+                        should_stay_hidden = True
                         rt += 2.0
                         attempt_skill_learning(self.player, "stalking_and_hiding")
                     elif roll > 30:
                         move_msg = "You manage to slip out unseen, but it requires great effort."
                         leave_suffix = None
+                        should_stay_hidden = True
                         rt += 5.0
                     else:
                         self.player.is_hidden = False
@@ -1065,7 +1079,7 @@ class Exit(BaseVerb):
                         move_msg = "You stumble out..."
                         rt += 1.0
 
-                self.player.move_to_room(target_room_id, move_msg)
+                self.player.move_to_room(target_room_id, move_msg, stay_hidden=should_stay_hidden)
                 
                 _handle_stalker_move(self.world, self.player, original_room_id, target_room_id, "out")
                 
