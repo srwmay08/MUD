@@ -134,23 +134,25 @@ class Health(BaseVerb):
              crit_data = getattr(self.world, "game_criticals", {})
              scar_table = crit_data.get("scars", {})
              
-             scars_found = False
+             # Collect valid scars to display (Filtering out those with active wounds)
+             visible_scars = []
              for location, rank in self.player.scars.items():
                  if rank > 0:
-                     scars_found = True
-                     break
+                     # Check if an active wound exists on this location
+                     if hasattr(self.player, "wounds") and self.player.wounds.get(location, 0) > 0:
+                         continue
+                     visible_scars.append((location, rank))
              
-             if scars_found:
+             if visible_scars:
                  self.player.send_message("\n--- [Permanent Scars] ---")
-                 for location, rank in self.player.scars.items():
-                     if rank > 0:
-                        readable_loc = normalize_location_name(location)
-                        json_key = get_json_key(location)
-                        
-                        loc_data = scar_table.get(json_key, {})
-                        desc = loc_data.get(str(rank), f"rank {rank} scarring on your {readable_loc}")
-                        
-                        self.player.send_message(f"You have {desc}.")
+                 for location, rank in visible_scars:
+                    readable_loc = normalize_location_name(location)
+                    json_key = get_json_key(location)
+                    
+                    loc_data = scar_table.get(json_key, {})
+                    desc = loc_data.get(str(rank), f"rank {rank} scarring on your {readable_loc}")
+                    
+                    self.player.send_message(f"You have {desc}.")
 
 
 @VerbRegistry.register(["diagnose", "diag"])
@@ -242,6 +244,10 @@ class Diagnose(BaseVerb):
         if hasattr(target, "scars") and target.scars:
              for location, rank in target.scars.items():
                  if rank > 0:
+                     # Supress scar if an active wound exists in the same location
+                     if hasattr(target, "wounds") and target.wounds.get(location, 0) > 0:
+                         continue
+
                      found_issues = True
                      readable_loc = normalize_location_name(location)
                      json_key = get_json_key(location)
