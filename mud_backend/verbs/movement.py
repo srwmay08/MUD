@@ -120,10 +120,6 @@ def _handle_stalker_move(
         if not stalker_obj: continue
         
         if stalker_obj.stalking_target_uid == leader_player.uid:
-            # Found a stalker!
-            # We trigger their move with a slight delay to simulate reaction
-            # We instantiate Move verb with force_sneak=True
-            
             def delayed_stalk():
                 world.socketio.sleep(random.uniform(1.0, 2.5))
                 # Re-verify stalker is still there and valid
@@ -131,12 +127,11 @@ def _handle_stalker_move(
                 if stalker_obj.stalking_target_uid != leader_player.uid: return
                 
                 # Execute Sneak Move
-                # Using the normalized direction or object keyword
                 args = move_direction.split()
                 move_verb = Move(world, stalker_obj, world.get_active_room_safe(original_room_id), args)
                 move_verb.force_sneak = True
                 
-                # Check RT before executing to prevent spam errors
+                # Check RT before executing
                 if not _check_action_roundtime(stalker_obj, action_type="move"):
                     stalker_obj.send_message(f"(Stalking) You pursue {leader_player.name}...")
                     move_verb.execute()
@@ -566,36 +561,34 @@ class Enter(BaseVerb):
         original_room_id = self.room.room_id
         
         # --- STEALTH LOGIC ---
-        # If player is hidden and has autosneak, redirect to Sneak Logic via a temporary override logic here
-        # or simplify: just perform skill check here.
-        # But we need to use the Move verb structure or duplicate it.
-        # Given Enter is a distinct verb, we implement local stealth logic.
-        
         is_sneaking = self.player.is_hidden and self.player.flags.get("autosneak", "off") == "on"
         
         if is_sneaking:
-            # Stealth check
             skill_rank = self.player.skills.get("stalking_and_hiding", 0)
             skill_bonus = calculate_skill_bonus(skill_rank)
             dis_b = get_stat_bonus(self.player.stats.get("DIS", 50), "DIS", self.player.stat_modifiers)
             race_mod = self.player.race_data.get("hide_bonus", 0)
             roll = random.randint(1, 100) + skill_bonus + dis_b + race_mod
             
-            # Difficulty? Arbitrary 100 for now, or based on room population
-            difficulty = 100
-            if roll > difficulty:
-                # Success: Silent move
+            # Revised Sneak Logic
+            if roll > 100:
+                # Perfect Sneak
                 move_msg = f"You slip into the {enterable_object.get('name', target_name)} unnoticed."
-                leave_suffix = None # Don't show leaving message
-                rt += 3.0 # Stealth RT penalty
+                leave_suffix = None # Silent leave
+                rt += 3.0 
                 attempt_skill_learning(self.player, "stalking_and_hiding")
+            elif roll > 30:
+                # Marginal Sneak (Keeps Hidden but Slow)
+                move_msg = f"You manage to sneak into the {enterable_object.get('name', target_name)}, but it takes all your concentration."
+                leave_suffix = None
+                rt += 6.0 
             else:
-                # Fail: Reveal
+                # Fail
                 self.player.is_hidden = False
-                self.player.send_message("You attempt to sneak in but stumble, revealing yourself!")
-                rt += 2.0
+                self.player.send_message("You stumble and lose your cover!")
                 move_msg = f"You stumble into the {enterable_object.get('name', target_name)}..."
                 leave_suffix = f"stumbles into the {obj_clean_name}."
+                rt += 2.0
         
         self.player.move_to_room(target_room_id, move_msg)
         
@@ -629,8 +622,7 @@ class Enter(BaseVerb):
         if rt > 0:
             _set_action_roundtime(self.player, rt)
             
-        # Update SIDs for broadcast (Move usually handles this but since we customized msg...)
-        # We need to broadcast departure/arrival if visible
+        # Broadcast Logic
         player_info = self.world.get_player_info(self.player.name.lower())
         sid = player_info.get("sid") if player_info else None
         
@@ -720,11 +712,17 @@ class Climb(BaseVerb):
             skill_bonus = calculate_skill_bonus(skill_rank)
             dis_b = get_stat_bonus(self.player.stats.get("DIS", 50), "DIS", self.player.stat_modifiers)
             roll = random.randint(1, 100) + skill_bonus + dis_b
+            
+            # Revised Sneak Logic
             if roll > 100:
                 move_msg = f"You silently climb the {target_name}..."
                 leave_suffix = None
                 rt += 2.0
                 attempt_skill_learning(self.player, "stalking_and_hiding")
+            elif roll > 30:
+                move_msg = f"You manage to climb the {target_name} unseen, but it takes extra effort."
+                leave_suffix = None
+                rt += 5.0
             else:
                 self.player.is_hidden = False
                 self.player.send_message("You make too much noise climbing and reveal yourself!")
@@ -750,7 +748,7 @@ class Climb(BaseVerb):
         
         _set_action_roundtime(self.player, rt)
         
-        # Update Visibility/Broadcasting manually
+        # Broadcast Logic
         player_info = self.world.get_player_info(self.player.name.lower())
         sid = player_info.get("sid") if player_info else None
         
@@ -889,9 +887,7 @@ class Move(BaseVerb):
             
             if is_sneaking:
                 if not self.player.is_hidden and self.force_sneak:
-                    # If forcing sneak but not hidden, try to hide first?
-                    # Or just treat as "trying to move silently"
-                    pass # Just apply skill check
+                    pass # Applying forced sneak check
                 
                 skill_rank = self.player.skills.get("stalking_and_hiding", 0)
                 skill_bonus = calculate_skill_bonus(skill_rank)
@@ -899,20 +895,27 @@ class Move(BaseVerb):
                 # Roll vs 100 (Simplified)
                 roll = random.randint(1, 100) + skill_bonus + dis_b
                 
+                # Revised Sneak Logic
                 if roll > 100:
-                    # Success
-                    self.player.is_hidden = True # Maintain hide
+                    # Perfect Sneak (Easy Success)
+                    self.player.is_hidden = True 
                     move_msg = f"You sneak {move_dir_name}..."
                     leave_suffix = None # Silent leave
                     base_rt += 3.0
                     attempt_skill_learning(self.player, "stalking_and_hiding")
+                elif roll > 30:
+                    # Marginal Sneak (Keep Hidden but High RT)
+                    self.player.is_hidden = True
+                    move_msg = f"You manage to sneak {move_dir_name} without being seen, but it takes all your concentration..."
+                    leave_suffix = None
+                    base_rt += 6.0 # High penalty
                 else:
-                    # Fail
+                    # Fail (Reveal)
                     if self.player.is_hidden:
                         self.player.send_message("You stumble and lose your cover!")
                     self.player.is_hidden = False
                     move_msg = f"You stumble {move_dir_name}..."
-                    base_rt += 1.0 # Penalty
+                    base_rt += 1.0 # Standard move penalty
             
             self.player.move_to_room(target_room_id, move_msg)
             self.world.event_bus.emit("room_enter", player=self.player, room_id=target_room_id)
@@ -1045,11 +1048,17 @@ class Exit(BaseVerb):
                     skill_bonus = calculate_skill_bonus(skill_rank)
                     dis_b = get_stat_bonus(self.player.stats.get("DIS", 50), "DIS", self.player.stat_modifiers)
                     roll = random.randint(1, 100) + skill_bonus + dis_b
+                    
+                    # Revised Sneak Logic
                     if roll > 100:
                         move_msg = "You silently slip out..."
                         leave_suffix = None
                         rt += 2.0
                         attempt_skill_learning(self.player, "stalking_and_hiding")
+                    elif roll > 30:
+                        move_msg = "You manage to slip out unseen, but it requires great effort."
+                        leave_suffix = None
+                        rt += 5.0
                     else:
                         self.player.is_hidden = False
                         self.player.send_message("You make noise and are revealed!")

@@ -25,8 +25,6 @@ class Hide(BaseVerb):
 
         # 2. Base Calculation
         skill_rank = self.player.skills.get("stalking_and_hiding", 0)
-        
-        # Skill Bonus
         skill_bonus = calculate_skill_bonus(skill_rank)
 
         # Stat Bonus: Discipline
@@ -56,6 +54,7 @@ class Hide(BaseVerb):
         if observers == 0:
             environment_bonus = 50 
         else:
+            # Small penalty per observer to scale difficulty in crowded rooms
             observer_penalty = observers * 5
 
         # Total Modifier
@@ -87,7 +86,6 @@ class Hide(BaseVerb):
         rt = max(3, rt) 
 
         # 4. Result
-        
         # Fetch correct SID to skip broadcast for self
         player_info = self.world.get_player_info(self.player.name.lower())
         sid = player_info.get("sid") if player_info else None
@@ -95,8 +93,13 @@ class Hide(BaseVerb):
         if result > difficulty:
             self.player.is_hidden = True
             
-            # Send success message
-            self.player.send_message("You see no one turn their head in your direction as you hide.")
+            # Send success message (conditional verbosity)
+            if observers > 0:
+                # Chance to notice reaction is lower now
+                notice_roll = random.randint(1, 100)
+                if notice_roll > 70:
+                    self.player.send_message("You see no one turn their head in your direction as you hide.")
+            
             self.player.send_message("You slip into the shadows and are now hidden.")
             
             # Apply RT
@@ -115,7 +118,9 @@ class Hide(BaseVerb):
             
         else:
             # Send failure message
-            self.player.send_message(f"You see {random.choice(['someone', 'something'])} turn their head in your direction as you hide.")
+            if observers > 0:
+                self.player.send_message(f"You see {random.choice(['someone', 'something'])} turn their head in your direction as you hide.")
+            
             self.player.send_message("You attempt to blend with the surroundings, but don't feel very confident about your success.")
             
             # Apply RT
@@ -206,7 +211,6 @@ class Sneak(BaseVerb):
         # We reuse the arguments passed to sneak (e.g., "north")
         move_instance = MoveVerb(self.world, self.player, self.room, self.args)
         
-        # Pass the override flag. We must modify Move.execute to accept kwargs or set a flag.
-        # Since BaseVerb.execute doesn't take args, we set an attribute on the instance.
+        # Pass the override flag.
         move_instance.force_sneak = True
         move_instance.execute()
