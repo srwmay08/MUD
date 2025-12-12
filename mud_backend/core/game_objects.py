@@ -580,12 +580,12 @@ class Player(GameEntity):
         
         # We need a copy because we might modify bandages
         for loc, data in list(self.bandages.items()):
-            # Simulate decay (placeholder logic: decrement duration based on time passed?)
-            # Prompt: "Bandages can last for a number of offensive actions..."
-            # For this implementation, we simulate 'actions' decaying over time roughly
-            # or we rely on 'actions' being decremented elsewhere.
-            # Assuming duration is just time here for 'Heal Over Time' logic.
-            
+            # --- FIX: Cleanup orphan bandages (no wound) ---
+            if loc not in self.wounds:
+                to_remove.append(loc)
+                continue
+            # -----------------------------------------------
+
             # Healing Logic for Rank 1
             if loc in self.wounds and self.wounds[loc] == 1:
                 # Check if enough time passed to Scar?

@@ -102,6 +102,7 @@ class Restore(BaseVerb):
         target.spirit = target.max_spirit
         target.wounds = {}
         target.scars = {} # Clear scars too
+        target.bandages = {} # Clear bandages too
         target.status_effects = []
         target.con_lost = 0
         target.death_sting_points = 0
@@ -289,6 +290,11 @@ class Injure(BaseVerb):
 
         is_scar = self.command.lower() == "scar"
         
+        # FIX: Ensure existing bandage is removed if we are modifying the wound state
+        # Only relevant for INJURE (wounds), though scars typically imply healed wounds too.
+        if not is_scar and location in target.bandages:
+            del target.bandages[location]
+
         if is_scar:
             if rank <= 0:
                 if location in target.scars: del target.scars[location]
@@ -340,6 +346,9 @@ class Heal(BaseVerb):
         # 1. Check and heal Wounds
         if location in target.wounds:
             del target.wounds[location]
+            # FIX: Explicitly remove bandage if healing the wound
+            if location in target.bandages:
+                del target.bandages[location]
             self.player.send_message(f"Healed wound on {location} for {target.name}.")
             healed_any = True
             
