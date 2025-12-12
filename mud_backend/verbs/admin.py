@@ -309,3 +309,49 @@ class Injure(BaseVerb):
         # Send update immediately
         if target.name != self.player.name:
             target.send_message(f"An admin has modified your body state ({self.command}).")
+
+@VerbRegistry.register(["heal"], admin_only=True)
+class Heal(BaseVerb):
+    """
+    Heals a specific wound or scar on a target by removing it completely.
+    Usage: HEAL <target> <location>
+    """
+    def execute(self):
+        if len(self.args) < 2:
+            self.player.send_message("Usage: HEAL <target> <location>")
+            return
+
+        target_name = self.args[0].lower()
+        # Location is everything after target
+        location_raw = " ".join(self.args[1:]).lower()
+        location = location_raw.replace(" ", "_")
+
+        if target_name in ["self", "me"]:
+            target = self.player
+        else:
+            target = self.world.get_player_obj(target_name)
+        
+        if not target:
+            self.player.send_message("Target not found.")
+            return
+
+        healed_any = False
+
+        # 1. Check and heal Wounds
+        if location in target.wounds:
+            del target.wounds[location]
+            self.player.send_message(f"Healed wound on {location} for {target.name}.")
+            healed_any = True
+            
+        # 2. Check and heal Scars
+        if location in target.scars:
+            del target.scars[location]
+            self.player.send_message(f"Removed scar on {location} for {target.name}.")
+            healed_any = True
+            
+        if healed_any:
+            target.mark_dirty()
+            if target != self.player:
+                target.send_message(f"An admin healed your {location}.")
+        else:
+            self.player.send_message(f"{target.name} has no wounds or scars on {location}.")
