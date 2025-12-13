@@ -64,6 +64,7 @@ def _process_player_vitals(world: 'World', log_prefix: str, send_to_player_callb
             
         vitals_changed = False
         
+        # 1. Regenerate Stats
         hp_regen_amount = player_obj.hp_regeneration
         if player_obj.hp < player_obj.max_hp and hp_regen_amount > 0:
             player_obj.hp = min(player_obj.max_hp, player_obj.hp + hp_regen_amount)
@@ -84,15 +85,28 @@ def _process_player_vitals(world: 'World', log_prefix: str, send_to_player_callb
             player_obj.spirit = min(player_obj.max_spirit, player_obj.spirit + spirit_regen_amount)
             vitals_changed = True
 
+        # 2. Process Wounds & Bandages (FIX: Always run this!)
+        # Previous logic only ran this via get_vitals() which only ran if vitals_changed was True.
+        # Now we run it explicitly to check for healing/scaring.
+        player_obj._process_wounds()
+        
+        # If wounds healed, the player object will be marked dirty.
+        if player_obj._is_dirty:
+            vitals_changed = True
+
+        # 3. Absorb Exp
         room_type = _get_absorption_room_type(player_obj.current_room_id)
         absorption_msg = player_obj.absorb_exp_pulse(room_type)
         if absorption_msg:
             vitals_changed = True 
             send_to_player_callback(player_obj.name, absorption_msg, "message")
             
+        # 4. Send Update if needed
         if vitals_changed:
             vitals_data = player_obj.get_vitals()
             send_vitals_callback(player_obj.name, vitals_data)
+            # Reset dirty flag after sending to avoid spamming next tick if nothing else changed
+            player_obj._is_dirty = False
 
 def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_to_player_callback: Callable, send_vitals_callback: Callable) -> bool:
     current_time = time.time()
