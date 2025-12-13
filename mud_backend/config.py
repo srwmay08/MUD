@@ -27,6 +27,10 @@ CHARGEN_START_ROOM = "inn_room"
 CHARGEN_COMPLETE_ROOM = "town_square"
 PLAYER_DEATH_ROOM_ID = "temple_of_light"
 
+# --- Healing & Regeneration ---
+WOUND_HEAL_TIME_SECONDS = 60      # Time for bandaged Rank 1 wound to scar (Non-Trolls)
+TROLL_REGEN_INTERVAL_SECONDS = 60 # Time for Troll natural regeneration tick
+
 # --- Combat System ---
 STAT_BONUS_BASELINE = 50          
 BAREHANDED_FLAT_DAMAGE = 1

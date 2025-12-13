@@ -85,6 +85,7 @@ class Player(GameEntity):
         self.scars = self.data.get("scars", {})
         self.bandages = self.data.get("bandages", {})
         self._last_wound_update = time.time()
+        self._last_troll_regen_time = self.data.get("last_troll_regen_time", time.time())
         # ----------------------
 
         self.next_mana_pulse_time = self.data.get("next_mana_pulse_time", 0.0)
@@ -564,7 +565,7 @@ class Player(GameEntity):
 
     def _process_wounds(self):
         """
-        Handles bandage decay and healing (Rank 1 -> Scar).
+        Handles bandage decay, healing (Rank 1 -> Scar), and Troll regeneration.
         Called periodically (e.g. via get_vitals or a tick loop).
         """
         now = time.time()
@@ -573,48 +574,93 @@ class Player(GameEntity):
             return
         self._last_wound_update = now
 
-        if not self.bandages:
-            return
-
-        to_remove = []
-        
-        # We need a copy because we might modify bandages
-        for loc, data in list(self.bandages.items()):
-            # Cleanup orphan bandages (no wound)
-            if loc not in self.wounds:
-                to_remove.append(loc)
-                continue
-
-            # --- FIX: Handle Legacy Data (Missing timestamp) ---
-            # If bandage exists but has no timestamp, set it to NOW so it starts healing.
-            if "applied_at" not in data:
-                data["applied_at"] = now
-                self.mark_dirty()
-
-            # Healing Logic for Rank 1
-            if loc in self.wounds and self.wounds[loc] == 1:
-                # FIXED: Reduced time from 600s (10m) to 60s (1m) for better responsiveness
-                heal_start = data.get("applied_at", now)
-                
-                # Logic check: If applied_at is in the future (skew), treat as now.
-                if heal_start > now: heal_start = now
-
-                if now - heal_start > 60: 
-                    # Convert to Scar
-                    self.wounds.pop(loc)
-                    to_remove.append(loc)
-                    
-                    # Create Scar
-                    self.scars[loc] = 1
-                    self.send_message(f"The wound on your {loc.replace('_', ' ')} heals into a scar.")
-                    self.mark_dirty()
+        # --- 1. Bandage Logic (Standard) ---
+        if self.bandages:
+            to_remove = []
             
-            # Bandage Falling Off Logic
-            pass
+            for loc, data in list(self.bandages.items()):
+                # Cleanup orphan bandages (no wound)
+                if loc not in self.wounds:
+                    to_remove.append(loc)
+                    continue
 
-        for loc in to_remove:
-            if loc in self.bandages:
-                del self.bandages[loc]
+                # Handle Legacy Data (Missing timestamp)
+                if "applied_at" not in data:
+                    data["applied_at"] = now
+                    self.mark_dirty()
+
+                # Healing Logic for Rank 1 -> Scar
+                if loc in self.wounds and self.wounds[loc] == 1:
+                    heal_start = data.get("applied_at", now)
+                    if heal_start > now: heal_start = now # skew check
+                    
+                    heal_time = getattr(config, 'WOUND_HEAL_TIME_SECONDS', 60)
+                    
+                    if now - heal_start > heal_time: 
+                        self.wounds.pop(loc)
+                        to_remove.append(loc)
+                        self.scars[loc] = 1
+                        self.send_message(f"The wound on your {loc.replace('_', ' ')} heals into a scar.")
+                        self.mark_dirty()
+            
+            for loc in to_remove:
+                if loc in self.bandages:
+                    del self.bandages[loc]
+
+        # --- 2. Troll Regeneration Logic (Passive) ---
+        if self.race == "Troll":
+            troll_interval = getattr(config, 'TROLL_REGEN_INTERVAL_SECONDS', 60)
+            last_regen = getattr(self, '_last_troll_regen_time', 0.0)
+            
+            if last_regen == 0.0:
+                self._last_troll_regen_time = now
+                return
+
+            if now - last_regen > troll_interval:
+                self._last_troll_regen_time = now
+                regen_occurred = False
+                
+                # A. Heal Wounds (Highest to Lowest)
+                # Using list() to create a copy of keys so we can modify self.wounds during iteration
+                newly_scarred = set()
+                
+                for loc in list(self.wounds.keys()):
+                    rank = self.wounds[loc]
+                    if rank > 1:
+                        self.wounds[loc] = rank - 1
+                        self.send_message(f"Your {loc.replace('_', ' ')} regeneration mends the flesh (Rank {rank}->{rank-1}).")
+                        regen_occurred = True
+                    elif rank == 1:
+                        # Rank 1 -> Scar
+                        del self.wounds[loc]
+                        if loc in self.bandages: del self.bandages[loc]
+                        
+                        # Only add scar if not already present (or upgrade? Trolls heal, so probably just base scar)
+                        if loc not in self.scars:
+                            self.scars[loc] = 1
+                        
+                        newly_scarred.add(loc)
+                        self.send_message(f"The wound on your {loc.replace('_', ' ')} closes into a scar.")
+                        regen_occurred = True
+
+                # B. Heal Scars
+                for loc in list(self.scars.keys()):
+                    # Skip if we just added this scar this tick to prevent double-healing instantly
+                    if loc in newly_scarred: continue
+                    
+                    s_rank = self.scars[loc]
+                    if s_rank > 0:
+                        new_rank = s_rank - 1
+                        if new_rank <= 0:
+                            del self.scars[loc]
+                            self.send_message(f"The scar on your {loc.replace('_', ' ')} fades away.")
+                        else:
+                            self.scars[loc] = new_rank
+                            self.send_message(f"The scar on your {loc.replace('_', ' ')} fades slightly.")
+                        regen_occurred = True
+                
+                if regen_occurred:
+                    self.mark_dirty()
 
     def to_dict(self) -> dict:
         data = super().to_dict() if hasattr(super(), 'to_dict') else self.data.copy()
@@ -674,7 +720,8 @@ class Player(GameEntity):
             "aliases": self.aliases,
             "message_history": self.message_history,
             "friends": self.friends,
-            "ignored": self.ignored
+            "ignored": self.ignored,
+            "last_troll_regen_time": self._last_troll_regen_time
         })
         return data
 
