@@ -391,10 +391,11 @@ class Tend(BaseVerb):
             # Duration: Ranks / 10 actions (Min 1)
             duration = max(1, int(actor_ranks / 10))
             
+            # --- IMPORTANT: Timestamp applied for healing logic ---
             target.bandages[normalized_loc_key] = {
                 "duration": duration,
                 "stopper": self.player.name,
-                "applied_at": time.time() # --- FIX: Added Timestamp ---
+                "applied_at": time.time()
             }
             
             self.player.send_message("After some effort you manage to stop the bleeding.")

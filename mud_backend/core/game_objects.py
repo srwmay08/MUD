@@ -580,18 +580,26 @@ class Player(GameEntity):
         
         # We need a copy because we might modify bandages
         for loc, data in list(self.bandages.items()):
-            # --- FIX: Cleanup orphan bandages (no wound) ---
+            # Cleanup orphan bandages (no wound)
             if loc not in self.wounds:
                 to_remove.append(loc)
                 continue
-            # -----------------------------------------------
+
+            # --- FIX: Handle Legacy Data (Missing timestamp) ---
+            # If bandage exists but has no timestamp, set it to NOW so it starts healing.
+            if "applied_at" not in data:
+                data["applied_at"] = now
+                self.mark_dirty()
 
             # Healing Logic for Rank 1
             if loc in self.wounds and self.wounds[loc] == 1:
-                # Check if enough time passed to Scar?
-                # Let's say 60 seconds for testing/gameplay flow
+                # FIXED: Reduced time from 600s (10m) to 60s (1m) for better responsiveness
                 heal_start = data.get("applied_at", now)
-                if now - heal_start > 600: 
+                
+                # Logic check: If applied_at is in the future (skew), treat as now.
+                if heal_start > now: heal_start = now
+
+                if now - heal_start > 60: 
                     # Convert to Scar
                     self.wounds.pop(loc)
                     to_remove.append(loc)
@@ -602,9 +610,6 @@ class Player(GameEntity):
                     self.mark_dirty()
             
             # Bandage Falling Off Logic
-            # Note: Real implementation would decrement 'duration' in combat.
-            # Here we just check if it's expired if we used time-based duration.
-            # If duration is purely actions, we skip time-decay.
             pass
 
         for loc in to_remove:

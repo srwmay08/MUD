@@ -290,8 +290,7 @@ class Injure(BaseVerb):
 
         is_scar = self.command.lower() == "scar"
         
-        # FIX: Ensure existing bandage is removed if we are modifying the wound state
-        # Only relevant for INJURE (wounds), though scars typically imply healed wounds too.
+        # Remove existing bandage if we are modifying the wound state
         if not is_scar and location in target.bandages:
             del target.bandages[location]
 
@@ -316,15 +315,15 @@ class Injure(BaseVerb):
         if target.name != self.player.name:
             target.send_message(f"An admin has modified your body state ({self.command}).")
 
-@VerbRegistry.register(["heal"], admin_only=True)
-class Heal(BaseVerb):
+@VerbRegistry.register(["renew"], admin_only=True)
+class Renew(BaseVerb):
     """
     Heals a specific wound or scar on a target by removing it completely.
-    Usage: HEAL <target> <location>
+    Usage: RENEW <target> <location>
     """
     def execute(self):
         if len(self.args) < 2:
-            self.player.send_message("Usage: HEAL <target> <location>")
+            self.player.send_message("Usage: RENEW <target> <location>")
             return
 
         target_name = self.args[0].lower()
@@ -346,7 +345,7 @@ class Heal(BaseVerb):
         # 1. Check and heal Wounds
         if location in target.wounds:
             del target.wounds[location]
-            # FIX: Explicitly remove bandage if healing the wound
+            # Explicitly remove bandage if healing the wound
             if location in target.bandages:
                 del target.bandages[location]
             self.player.send_message(f"Healed wound on {location} for {target.name}.")
@@ -361,6 +360,6 @@ class Heal(BaseVerb):
         if healed_any:
             target.mark_dirty()
             if target != self.player:
-                target.send_message(f"An admin healed your {location}.")
+                target.send_message(f"An admin renewed your {location}.")
         else:
             self.player.send_message(f"{target.name} has no wounds or scars on {location}.")
