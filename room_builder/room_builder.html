@@ -142,7 +142,7 @@
         /* Toast Notification for Cycle */
         #toast-notification {
             position: absolute;
-            bottom: 2rem;
+            bottom: 4rem;
             left: 50%;
             transform: translateX(-50%);
             background-color: #333;
@@ -157,6 +157,27 @@
             transition: opacity 0.2s ease-in-out;
             z-index: 100;
         }
+
+        /* Z-Toggle Styles */
+        .z-toggle-btn {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            color: #888;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.1s;
+            min-width: 24px;
+            text-align: center;
+        }
+        .z-toggle-btn:hover { background-color: #333; color: white; }
+        .z-toggle-btn.active { background-color: #f59e0b; color: black; border-color: #f59e0b; font-weight: bold; }
+        .z-toggle-btn.z-under { border-color: #9b59b6; }
+        .z-toggle-btn.z-over { border-color: #2ecc71; }
+        .z-toggle-btn.active.z-under { background-color: #9b59b6; border-color: #8e44ad; color: white; }
+        .z-toggle-btn.active.z-over { background-color: #2ecc71; border-color: #27ae60; color: black; }
+
     </style>
 </head>
 <body>
@@ -189,7 +210,7 @@
                     <div class="grid grid-cols-3 gap-2">
                         <div><label class="form-label">X</label><input type="number" id="x" class="form-input text-center" oninput="updateRoomData()"></div>
                         <div><label class="form-label">Y</label><input type="number" id="y" class="form-input text-center" oninput="updateRoomData()"></div>
-                        <div><label class="form-label">Z</label><input type="number" id="z" class="form-input text-center" oninput="updateRoomData()"></div>
+                        <div><label class="form-label">Z</label><input type="number" id="z" class="form-input text-center" oninput="updateRoomData(); checkZChange();"></div>
                     </div>
                     <div class="mt-2 flex flex-col gap-2">
                         <div class="flex justify-between items-center">
@@ -289,10 +310,11 @@
             <button class="btn btn-neutral text-xs" id="btn-3d" onclick="setIsoMode(true)">3D</button>
         </div>
         
-        <div class="absolute bottom-2 right-2 z-10 flex items-center bg-black/60 rounded p-1">
-             <span class="text-[10px] text-gray-400 mr-2">Level</span>
-             <input type="range" id="z-level-slider" min="-5" max="5" step="1" value="0" class="w-24 accent-amber-500" oninput="updateZDisplay()">
-             <span id="z-display" class="text-xs font-mono w-8 text-center text-amber-500">0</span>
+        <div class="absolute bottom-2 right-2 z-10 bg-black/80 border border-gray-700 rounded p-2 flex flex-col gap-1 shadow-lg">
+             <div class="text-[10px] text-gray-400 font-bold uppercase mb-1">Visible Z-Levels</div>
+             <div id="z-toggles-container" class="flex flex-wrap gap-1 max-w-[200px] justify-end">
+                 <span class="text-[9px] text-gray-500 italic">No rooms loaded</span>
+             </div>
         </div>
 
         <div id="map-container" onmousedown="startPan(event)" onwheel="handleZoom(event)" oncontextmenu="return false;">
@@ -387,7 +409,9 @@
     let dragStart = { x: 0, y: 0 };
     let activeZoneDrag = null; 
     let isoMode = false;
-    let currentZ = 0;
+    
+    // NEW: Multi-Z State
+    let activeZLevels = new Set([0]);
     let contextTarget = null; 
     
     // Connection State
@@ -432,6 +456,7 @@
             createZone("unsaved_zone.json"); 
         }
         renderMap();
+        rebuildZToggles(); // Init toggles
     };
 
     function generateFlagGrid() {
@@ -467,6 +492,7 @@
             offset: { x: Object.keys(projectData).length * 250, y: 50 }
         };
         updateFileList();
+        rebuildZToggles();
         return filename;
     }
 
@@ -489,6 +515,13 @@
         ROOM_FLAGS.forEach(f => { if(f.default) newRoom.flags[f.key] = true; });
         
         zone.rooms.push(newRoom);
+        
+        // Auto-enable the new room's Z level if not visible
+        if (!activeZLevels.has(z)) {
+            activeZLevels.add(z);
+            rebuildZToggles();
+        }
+
         setActiveRoom(filename, zone.rooms.length - 1);
         renderMap();
     }
@@ -535,7 +568,7 @@
 
         renderLists(room);
         renderMap();
-        updateJsonPreview(); // Added call here
+        updateJsonPreview(); 
     }
 
     function getActiveRoomObj() {
@@ -557,16 +590,8 @@
 
         const obList = document.getElementById('objects-list');
         obList.innerHTML = '';
-        
-        // Render regular objects
-        (room.objects || []).forEach(obj => {
-            obList.appendChild(createObjectCard(obj, false));
-        });
-        
-        // Render hidden objects
-        (room.hidden_objects || []).forEach(obj => {
-            obList.appendChild(createObjectCard(obj, true));
-        });
+        (room.objects || []).forEach(obj => obList.appendChild(createObjectCard(obj, false)));
+        (room.hidden_objects || []).forEach(obj => obList.appendChild(createObjectCard(obj, true)));
     }
 
     function createExitRow(dir='', target='') {
@@ -580,15 +605,12 @@
         return div;
     }
 
-    // --- UPDATED AMBIENT ROW LOGIC ---
     window.addAmbientRow = function(evt=null) {
         const list = document.getElementById('ambient-list');
         const div = document.createElement('div');
         div.className = "flex gap-1 ambient-row items-center mb-1 bg-black/30 p-1 rounded";
-        
         const type = evt ? evt.type : 'periodic';
-        const chance = evt ? (evt.chance || 0.1) : 0.1;
-        const timeVal = evt ? (evt.time || 'DAWN') : 'DAWN';
+        const val = evt ? (type==='periodic' ? (evt.chance||0.1) : (evt.time||'DAWN')) : 0.1;
         const msg = evt ? evt.message : '';
 
         div.innerHTML = `
@@ -596,27 +618,18 @@
                 <option value="periodic" ${type==='periodic'?'selected':''}>Chance</option>
                 <option value="time" ${type==='time'?'selected':''}>Time</option>
             </select>
-            
-            <div class="amb-trigger-container w-24">
-                </div>
-            
+            <div class="amb-trigger-container w-24"></div>
             <input class="form-input flex-1 text-xs amb-message" value="${msg.replace(/"/g, '&quot;')}" placeholder="Message..." onchange="updateRoomData()">
             <button onclick="this.closest('.ambient-row').remove();updateRoomData()" class="text-red-500 font-bold px-1">×</button>
         `;
-        
         list.appendChild(div);
-        
-        // Initialize trigger
-        const select = div.querySelector('.amb-type');
-        const container = div.querySelector('.amb-trigger-container');
-        renderAmbientTriggerInput(container, type, type==='periodic' ? chance : timeVal);
+        renderAmbientTriggerInput(div.querySelector('.amb-trigger-container'), type, val);
     }
 
     window.toggleAmbientInput = function(select) {
         const row = select.closest('.ambient-row');
         const container = row.querySelector('.amb-trigger-container');
         const type = select.value;
-        // Default
         const val = type === 'periodic' ? 0.1 : 'DAWN';
         renderAmbientTriggerInput(container, type, val);
     }
@@ -652,8 +665,7 @@
                 </select>
                 <div class="flex items-center gap-2">
                     <label class="text-[10px] text-gray-400 flex items-center gap-1">
-                        <input type="checkbox" class="obj-hidden accent-amber-500" ${isHidden ? 'checked' : ''} onchange="updateRoomData()">
-                        Hidden
+                        <input type="checkbox" class="obj-hidden accent-amber-500" ${isHidden ? 'checked' : ''} onchange="updateRoomData()"> Hidden
                     </label>
                     <button onclick="this.closest('.object-row').remove();updateRoomData()" class="text-red-500 font-bold text-xs">×</button>
                 </div>
@@ -665,11 +677,8 @@
 
     function renderObjectBody(type, val, obj) {
         if (type === 'static') {
-            // MERGE target_room INTO INTERACTIONS FOR DISPLAY
             let interactionsToRender = { ... (obj.interactions || {}) };
-            if (obj.target_room) {
-                interactionsToRender['ENTER'] = { type: 'move', value: obj.target_room };
-            }
+            if (obj.target_room) interactionsToRender['ENTER'] = { type: 'move', value: obj.target_room };
 
             const interactionsHtml = Object.entries(interactionsToRender).map(([verb, data]) => `
                 <div class="interaction-row">
@@ -689,18 +698,14 @@
                 <input class="form-input text-xs mb-1 obj-keys" value="${(obj.keywords||[]).join(',')}" placeholder="Keywords" onchange="updateRoomData()">
                 <textarea class="form-textarea text-xs h-10 mb-1 obj-desc" placeholder="Description" onchange="updateRoomData()">${obj.description||''}</textarea>
                 <div class="mt-1">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] text-gray-500">INTERACTIONS</span>
-                        <button onclick="addInteractionRow(this)" class="text-[10px] text-blue-400">+ Add</button>
-                    </div>
+                    <div class="flex justify-between items-center"><span class="text-[10px] text-gray-500">INTERACTIONS</span><button onclick="addInteractionRow(this)" class="text-[10px] text-blue-400">+ Add</button></div>
                     <div class="interactions-list space-y-1">${interactionsHtml}</div>
                 </div>
             `;
         } else {
-            const listId = `dl-${type}s`;
             return `
                 <label class="form-label">Asset ID</label>
-                <input class="form-input text-xs obj-id-name text-green-400" list="${listId}" value="${val}" placeholder="Search ${type}..." onchange="updateRoomData()">
+                <input class="form-input text-xs obj-id-name text-green-400" list="dl-${type}s" value="${val}" placeholder="Search ${type}..." onchange="updateRoomData()">
             `;
         }
     }
@@ -720,9 +725,7 @@
         div.innerHTML = `
             <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" placeholder="verb" onchange="updateRoomData()">
             <select class="form-select text-[10px] h-5 p-0 w-16 bg-black ia-type" onchange="updateRoomData()">
-                <option value="text">Msg</option>
-                <option value="move">Move</option>
-                <option value="script">Code</option>
+                <option value="text">Msg</option> <option value="move">Move</option> <option value="script">Code</option>
             </select>
             <input class="form-input text-[10px] h-5 p-0 px-1 flex-1 bg-black ia-value" placeholder="Value" onchange="updateRoomData()">
             <button onclick="this.parentElement.remove();updateRoomData()" class="text-red-500 font-bold px-1 text-[10px]">×</button>
@@ -730,13 +733,16 @@
         container.appendChild(div);
     };
 
-    window.addExitRow = function() {
-        document.getElementById('exits-list').appendChild(createExitRow());
-    };
-    
-    window.addObjectRow = function() {
-        document.getElementById('objects-list').appendChild(createObjectCard({name:""}));
-    };
+    window.addExitRow = function() { document.getElementById('exits-list').appendChild(createExitRow()); };
+    window.addObjectRow = function() { document.getElementById('objects-list').appendChild(createObjectCard({name:""})); };
+
+    function checkZChange() {
+        const z = parseInt(document.getElementById('z').value) || 0;
+        if (!activeZLevels.has(z)) {
+            activeZLevels.add(z);
+            rebuildZToggles();
+        }
+    }
 
     function updateRoomData() {
         const r = getActiveRoomObj();
@@ -752,67 +758,47 @@
         r.is_table = document.getElementById('is_table').checked;
         r.illumination = parseInt(document.getElementById('illumination').value);
         
-        // Save Flags
         r.flags = {};
-        document.querySelectorAll('.room-flag').forEach(cb => {
-            r.flags[cb.getAttribute('data-key')] = cb.checked;
-        });
+        document.querySelectorAll('.room-flag').forEach(cb => r.flags[cb.getAttribute('data-key')] = cb.checked);
 
-        // Save Ambient
         r.ambient_events = [];
         document.querySelectorAll('.ambient-row').forEach(row => {
             const type = row.querySelector('.amb-type').value;
             const msg = row.querySelector('.amb-message').value.trim();
             const valInput = row.querySelector('.amb-val');
-            
             if(msg) {
                 let evt = { type: type, message: msg };
-                if (type === 'periodic') {
-                    evt.chance = parseFloat(valInput.value) || 0.1;
-                } else {
-                    evt.time = valInput.value;
-                }
+                if (type === 'periodic') evt.chance = parseFloat(valInput.value) || 0.1;
+                else evt.time = valInput.value;
                 r.ambient_events.push(evt);
             }
         });
 
-        // Exits - AUTO RECIPROCATE ADDED HERE
         r.exits = {};
         document.querySelectorAll('.exit-row').forEach(row => {
             const dir = row.querySelector('.exit-dir').value.trim();
             const targetId = row.querySelector('.exit-target').value.trim();
             if (dir && targetId) {
                 r.exits[dir] = targetId;
-
-                // Check for cardinal reciprocity
                 const rev = REVERSE_DIRS[dir.toLowerCase()];
                 if (rev) {
                     const targetInfo = findRoomGlobal(targetId);
-                    if (targetInfo) {
-                        const targetRoom = targetInfo.room;
-                        // Only add if missing to avoid overwriting intentional one-ways or creating loops while typing
-                        if (!targetRoom.exits[rev]) {
-                            targetRoom.exits[rev] = r.room_id;
-                            showToast(`Auto-linked: ${targetId} (${rev}) -> ${r.room_id}`);
-                        }
+                    if (targetInfo && !targetInfo.room.exits[rev]) {
+                        targetInfo.room.exits[rev] = r.room_id;
+                        showToast(`Auto-linked: ${targetId} (${rev}) -> ${r.room_id}`);
                     }
                 }
             }
         });
 
-        // Objects - Separated into objects/hidden_objects
         r.objects = [];
         r.hidden_objects = [];
-        
         document.querySelectorAll('.object-row').forEach(row => {
             const type = row.querySelector('.obj-type').value;
             const val = row.querySelector('.obj-id-name').value.trim();
             const isHidden = row.querySelector('.obj-hidden').checked;
             
-            // Visual Update
-            if (isHidden) row.classList.add('hidden-obj'); 
-            else row.classList.remove('hidden-obj');
-
+            if (isHidden) row.classList.add('hidden-obj'); else row.classList.remove('hidden-obj');
             if (!val) return;
 
             let newObj = {};
@@ -823,20 +809,14 @@
                 newObj.keywords = keys ? keys.split(',') : val.toLowerCase().split(' ');
                 newObj.verbs = ["look"];
                 
-                // Clear any existing target_room so we don't duplicate state
-                delete newObj.target_room;
-
                 const interactions = {};
                 row.querySelectorAll('.interaction-row').forEach(ir => {
                     const v = ir.querySelector('.ia-verb').value.trim();
                     const t = ir.querySelector('.ia-type').value;
                     const d = ir.querySelector('.ia-value').value;
-                    
                     if (v) {
-                        // SPECIAL CASE: Convert "ENTER" -> "MOVE" to target_room property
                         if (v.toLowerCase() === 'enter' && t === 'move') {
                             newObj.target_room = d;
-                            // Add verb but DO NOT add to interactions map (to match ts_east style)
                             newObj.verbs.push(v); 
                         } else {
                             interactions[v] = { type: t, value: d };
@@ -852,7 +832,7 @@
             }
             
             if (isHidden) {
-                if (!newObj.perception_dc) newObj.perception_dc = 1; // Default perception if none exists
+                if (!newObj.perception_dc) newObj.perception_dc = 1;
                 r.hidden_objects.push(newObj);
             } else {
                 r.objects.push(newObj);
@@ -860,136 +840,174 @@
         });
 
         renderMap();
-        updateJsonPreview(); // Added call here
+        updateJsonPreview();
     }
 
-    // --- JSON PREVIEW LOGIC ---
     function updateJsonPreview() {
         const r = getActiveRoomObj();
-        if (!r) {
-            document.getElementById('json-preview').value = '';
-            return;
-        }
-        document.getElementById('json-preview').value = JSON.stringify(r, null, 4);
+        document.getElementById('json-preview').value = r ? JSON.stringify(r, null, 4) : '';
     }
 
-    // --- MAP RENDERING ---
+    // --- MULTI-Z LOGIC ---
+    function rebuildZToggles() {
+        const container = document.getElementById('z-toggles-container');
+        container.innerHTML = '';
+        
+        // Find ALL unique Z levels from loaded zones
+        const zSet = new Set();
+        Object.values(projectData).forEach(zone => {
+            zone.rooms.forEach(r => {
+                if(r.z !== undefined) zSet.add(r.z);
+            });
+        });
+        
+        // Always include 0
+        zSet.add(0);
+        
+        const sortedZ = Array.from(zSet).sort((a,b) => a - b);
+        
+        if (sortedZ.length === 0) {
+            container.innerHTML = '<span class="text-[9px] text-gray-500 italic">No rooms loaded</span>';
+            return;
+        }
+
+        sortedZ.forEach(z => {
+            const btn = document.createElement('div');
+            btn.className = `z-toggle-btn ${activeZLevels.has(z) ? 'active' : ''}`;
+            if (z < 0) btn.classList.add('z-under');
+            if (z > 0) btn.classList.add('z-over');
+            
+            btn.textContent = z;
+            btn.onclick = () => {
+                if (activeZLevels.has(z)) {
+                    activeZLevels.delete(z);
+                    btn.classList.remove('active');
+                } else {
+                    activeZLevels.add(z);
+                    btn.classList.add('active');
+                }
+                renderMap();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    // --- MAP RENDERING (UPDATED) ---
     function renderMap() {
         const svg = document.getElementById('map-content');
         svg.innerHTML = '';
-        
-        // --- READ SHOW TABLES TOGGLE ---
         const showTables = document.getElementById('show-tables-toggle').checked;
 
-        Object.values(projectData).forEach(zone => {
+        // --- LAYER 1: ZONE BACKGROUNDS (HANDLES) ---
+        // This restores the ability to move zones!
+        Object.entries(projectData).forEach(([filename, zone]) => {
+            let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+            let hasVisibleRooms = false;
+
+            // Calculate bounds based on VISIBLE rooms
             zone.rooms.forEach(r => {
-                if (!isoMode && r.z !== currentZ) return;
-                // Skip tables if toggle is off
+                // Check visibility
+                if (!isoMode && !activeZLevels.has(r.z)) return;
                 if (!showTables && r.is_table) return;
 
-                const start = getScreenCoords(r.x, r.y, r.z, zone.offset);
-                
-                Object.entries(r.exits).forEach(([dir, targetId]) => {
-                    const targetInfo = findRoomGlobal(targetId);
-                    if (targetInfo) {
-                        if (!isoMode && targetInfo.room.z !== currentZ) return;
-                        // Skip link if target is hidden table
-                        if (!showTables && targetInfo.room.is_table) return;
-
-                        const end = getScreenCoords(targetInfo.room.x, targetInfo.room.y, targetInfo.room.z, targetInfo.zone.offset);
-                        drawLink(svg, start, end, targetInfo.file !== activeRoom?.file);
-                    }
-                });
+                hasVisibleRooms = true;
+                const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
+                minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
             });
+
+            if (hasVisibleRooms) {
+                const pad = 30;
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.classList.add('zone-group');
+
+                const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                bg.setAttribute("x", minX - pad); bg.setAttribute("y", minY - pad);
+                bg.setAttribute("width", maxX - minX + pad*2 + ROOM_SIZE);
+                bg.setAttribute("height", maxY - minY + pad*2 + ROOM_SIZE);
+                bg.classList.add("zone-bg");
+                bg.onmousedown = (e) => startZoneDrag(e, filename); // <--- Drag Handler Attached Here
+                
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", minX - pad); label.setAttribute("y", minY - pad - 5);
+                label.textContent = filename;
+                label.classList.add("zone-label");
+                
+                g.appendChild(bg); g.appendChild(label);
+                svg.appendChild(g);
+            }
         });
 
-        Object.entries(projectData).forEach(([filename, zone]) => {
-            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            g.classList.add('zone-group');
-            
-            if (zone.rooms.length > 0) {
-                let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
-                let hasVisibleRooms = false;
+        // --- LAYER 2: LINKS & ROOMS (Z-SORTED) ---
+        const sortedActiveZ = Array.from(activeZLevels).sort((a,b) => a - b);
+
+        sortedActiveZ.forEach(drawingZ => {
+            // Draw Links
+            Object.values(projectData).forEach(zone => {
                 zone.rooms.forEach(r => {
-                    if (!isoMode && r.z !== currentZ) return;
+                    if (!isoMode && r.z !== drawingZ) return; 
                     if (!showTables && r.is_table) return;
 
-                    hasVisibleRooms = true;
-                    const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
-                    minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
-                    minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
+                    const start = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                    Object.entries(r.exits).forEach(([dir, targetId]) => {
+                        const targetInfo = findRoomGlobal(targetId);
+                        if (targetInfo) {
+                            const tZ = targetInfo.room.z;
+                            if (!isoMode && !activeZLevels.has(tZ)) return; 
+                            if (!showTables && targetInfo.room.is_table) return;
+
+                            const end = getScreenCoords(targetInfo.room.x, targetInfo.room.y, tZ, targetInfo.zone.offset);
+                            drawLink(svg, start, end, targetInfo.file !== activeRoom?.file, r.z, tZ);
+                        }
+                    });
                 });
-
-                if (hasVisibleRooms) {
-                    const pad = 30;
-                    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    bg.setAttribute("x", minX - pad); bg.setAttribute("y", minY - pad);
-                    bg.setAttribute("width", maxX - minX + pad*2 + ROOM_SIZE);
-                    bg.setAttribute("height", maxY - minY + pad*2 + ROOM_SIZE);
-                    bg.classList.add("zone-bg");
-                    bg.onmousedown = (e) => startZoneDrag(e, filename);
-                    
-                    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    label.setAttribute("x", minX - pad); label.setAttribute("y", minY - pad - 5);
-                    label.textContent = filename;
-                    label.classList.add("zone-label");
-                    
-                    g.appendChild(bg); g.appendChild(label);
-                }
-            }
-
-            zone.rooms.forEach((r, i) => {
-                if (!isoMode && r.z !== currentZ) return;
-                // Skip tables if toggle is off
-                if (!showTables && r.is_table) return;
-
-                const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
-                
-                const rg = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                rg.classList.add("map-room");
-                if (activeRoom?.file === filename && activeRoom?.index === i) rg.classList.add("current");
-                
-                // --- CLICK HANDLER FOR OVERLAP ---
-                rg.onclick = (e) => handleRoomClick(e, r, filename, i);
-                rg.oncontextmenu = (e) => { e.preventDefault(); openContextMenu(e, r, filename); };
-
-                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                rect.setAttribute("x", c.x); rect.setAttribute("y", c.y);
-                rect.setAttribute("width", ROOM_SIZE); rect.setAttribute("height", ROOM_SIZE);
-                
-                if (isoMode) {
-                    const depth = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    depth.setAttribute("d", `M ${c.x} ${c.y+ROOM_SIZE} L ${c.x} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE} Z`);
-                    depth.setAttribute("fill", "#222");
-                    rg.appendChild(depth);
-                }
-
-                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                text.setAttribute("x", c.x + ROOM_SIZE/2); text.setAttribute("y", c.y + ROOM_SIZE/2 + 3);
-                text.textContent = r.room_id.substring(0, 3);
-
-                rg.appendChild(rect); rg.appendChild(text);
-                g.appendChild(rg);
             });
-            svg.appendChild(g);
+
+            // Draw Rooms
+            Object.entries(projectData).forEach(([filename, zone]) => {
+                zone.rooms.forEach((r, i) => {
+                    if (!isoMode && r.z !== drawingZ) return;
+                    if (!showTables && r.is_table) return;
+
+                    const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                    const rg = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    rg.classList.add("map-room");
+                    if (activeRoom?.file === filename && activeRoom?.index === i) rg.classList.add("current");
+                    
+                    rg.onclick = (e) => handleRoomClick(e, r, filename, i);
+                    rg.oncontextmenu = (e) => { e.preventDefault(); openContextMenu(e, r, filename); };
+
+                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    rect.setAttribute("x", c.x); rect.setAttribute("y", c.y);
+                    rect.setAttribute("width", ROOM_SIZE); rect.setAttribute("height", ROOM_SIZE);
+                    
+                    if (isoMode) {
+                        const depth = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        depth.setAttribute("d", `M ${c.x} ${c.y+ROOM_SIZE} L ${c.x} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE+5} L ${c.x+ROOM_SIZE} ${c.y+ROOM_SIZE} Z`);
+                        depth.setAttribute("fill", "#222");
+                        rg.appendChild(depth);
+                    }
+
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", c.x + ROOM_SIZE/2); text.setAttribute("y", c.y + ROOM_SIZE/2 + 3);
+                    text.textContent = r.room_id.substring(0, 3);
+
+                    rg.appendChild(rect); rg.appendChild(text);
+                    svg.appendChild(rg);
+                });
+            });
         });
     }
 
     function handleRoomClick(e, targetRoom, filename, index) {
         e.stopPropagation();
         
-        // --- ACTION CONNECT HANDLER ---
         if (connectSource) {
             const src = connectSource.room;
             const tgt = targetRoom;
-            
             if (src.room_id === tgt.room_id) return;
             
-            // Calculate direction
-            const dx = tgt.x - src.x;
-            const dy = tgt.y - src.y;
-            const dz = tgt.z - src.z;
-            
+            const dx = tgt.x - src.x, dy = tgt.y - src.y, dz = tgt.z - src.z;
             let dir = null;
             if (dz === 0) {
                 if (dy === 1 && dx === 0) dir = 'north';
@@ -1001,36 +1019,23 @@
                 else if (dx === -1 && dy === 1) dir = 'northwest';
                 else if (dx === -1 && dy === -1) dir = 'southwest';
             } else if (dx===0 && dy===0) {
-                if (dz === 1) dir = 'up';
-                else if (dz === -1) dir = 'down';
+                if (dz > 0) dir = 'up'; // Difference is positive
+                else if (dz < 0) dir = 'down';
             }
             
             if (dir) {
                 src.exits[dir] = tgt.room_id;
                 if (REVERSE_DIRS[dir]) tgt.exits[REVERSE_DIRS[dir]] = src.room_id;
                 showToast(`Connected ${src.room_id} -> ${tgt.room_id}`);
-                
-                // Clear connect state
-                connectSource = null;
-                document.body.style.cursor = "default";
-                
-                // FIX: If source was active, refresh UI from data (do NOT save from stale DOM)
-                if (activeRoom && activeRoom.file === filename && activeRoom.index === index) {
-                   setActiveRoom(activeRoom.file, activeRoom.index);
-                } else if (activeRoom) {
-                    // Re-render current active room to potentially show new incoming links if relevant
-                     setActiveRoom(activeRoom.file, activeRoom.index);
-                }
-                
+                connectSource = null; document.body.style.cursor = "default";
+                if (activeRoom) setActiveRoom(activeRoom.file, activeRoom.index);
                 renderMap();
             } else {
                 const manualDir = prompt("Could not determine cardinal direction. Enter direction:");
                 if (manualDir) {
                     src.exits[manualDir] = tgt.room_id;
                     if (REVERSE_DIRS[manualDir]) tgt.exits[REVERSE_DIRS[manualDir]] = src.room_id;
-                    
-                    connectSource = null;
-                    document.body.style.cursor = "default";
+                    connectSource = null; document.body.style.cursor = "default";
                     if (activeRoom) setActiveRoom(activeRoom.file, activeRoom.index);
                     renderMap();
                 }
@@ -1038,31 +1043,35 @@
             return;
         }
 
+        // Logic for handling overlapping rooms (Cycle selection)
+        // Only consider rooms in activeZLevels
         const targetZone = projectData[filename];
         const targetCoords = getScreenCoords(targetRoom.x, targetRoom.y, targetRoom.z, targetZone.offset);
         const showTables = document.getElementById('show-tables-toggle').checked;
 
-        // Find all overlapping rooms
         const overlaps = [];
+        // Important: Reverse sort so we hit-test top-most visible layers first?
+        // Actually, render order puts top last. 
         for (const [fName, zone] of Object.entries(projectData)) {
             zone.rooms.forEach((r, idx) => {
-                if (!isoMode && r.z !== currentZ) return;
+                if (!isoMode && !activeZLevels.has(r.z)) return;
                 if (!showTables && r.is_table) return;
 
                 const c = getScreenCoords(r.x, r.y, r.z, zone.offset);
-                // Check exact overlap
                 if (Math.abs(c.x - targetCoords.x) < 1 && Math.abs(c.y - targetCoords.y) < 1) {
                     overlaps.push({ file: fName, index: idx, room: r });
                 }
             });
         }
+        
+        // Sort overlaps by Z descending (Top to Bottom selection preference)
+        overlaps.sort((a,b) => b.room.z - a.room.z);
 
         if (overlaps.length <= 1) {
             setActiveRoom(filename, index);
             return;
         }
 
-        // Cycle through overlaps
         let nextIdx = 0;
         if (activeRoom) {
             const currentInOverlap = overlaps.findIndex(o => o.file === activeRoom.file && o.index === activeRoom.index);
@@ -1073,8 +1082,7 @@
         
         const next = overlaps[nextIdx];
         setActiveRoom(next.file, next.index);
-        
-        showToast(`Selected: ${next.room.name || next.room.room_id} (${nextIdx + 1}/${overlaps.length})`);
+        showToast(`Selected: ${next.room.name || next.room.room_id} (Z: ${next.room.z})`);
     }
 
     function showToast(msg) {
@@ -1097,12 +1105,19 @@
         return { x: sx + offset.x, y: sy + offset.y };
     }
 
-    function drawLink(parent, p1, p2, isCross) {
+    function drawLink(parent, p1, p2, isCross, z1, z2) {
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         line.setAttribute("x1", p1.x + ROOM_SIZE/2); line.setAttribute("y1", p1.y + ROOM_SIZE/2);
         line.setAttribute("x2", p2.x + ROOM_SIZE/2); line.setAttribute("y2", p2.y + ROOM_SIZE/2);
         line.classList.add("map-link");
         if (isCross) line.classList.add("cross-zone");
+        
+        // Fade lines that go between layers if not in iso mode?
+        if (!isoMode && z1 !== z2) {
+            line.style.opacity = 0.3;
+            line.style.strokeDasharray = "2,2";
+        }
+
         parent.insertBefore(line, parent.firstChild);
     }
 
@@ -1179,26 +1194,17 @@
             target = zone.rooms[zone.rooms.length-1];
         }
         
-        // Update DATA directly
         r.exits[dir] = target.room_id;
         if (REVERSE_DIRS[dir]) target.exits[REVERSE_DIRS[dir]] = r.room_id;
-        
-        // Do NOT call updateRoomData() here because the DOM inputs are stale (empty).
-        // Instead, force the UI to refresh FROM the data we just modified.
         setActiveRoom(activeRoom.file, activeRoom.index);
     }
 
     function setIsoMode(val) {
         isoMode = val;
-        document.getElementById('btn-2d').classList.toggle('active', !val);
-        document.getElementById('btn-3d').classList.toggle('active', val);
-        document.getElementById('z-level-slider').disabled = val;
-        renderMap();
-    }
-
-    function updateZDisplay() {
-        currentZ = parseInt(document.getElementById('z-level-slider').value);
-        document.getElementById('z-display').innerText = currentZ;
+        document.getElementById('btn-2d').classList.toggle('btn-primary', !val);
+        document.getElementById('btn-2d').classList.toggle('btn-neutral', val);
+        document.getElementById('btn-3d').classList.toggle('btn-primary', val);
+        document.getElementById('btn-3d').classList.toggle('btn-neutral', !val);
         renderMap();
     }
 
@@ -1211,7 +1217,7 @@
         window.addEventListener('click', hide);
     }
 
-    // --- ACTION: CONNECT (IMPLEMENTED) ---
+    // --- MODAL ACTIONS ---
     function actionConnect() {
         if (!contextTarget) return;
         connectSource = contextTarget;
@@ -1219,7 +1225,6 @@
         showToast("Select target room to connect...");
     }
 
-    // --- ACTION: ADD INTERIOR ---
     function actionAddInterior() {
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.add('hidden');
@@ -1235,12 +1240,11 @@
         const fname = document.getElementById('int-filename').value;
         const intId = document.getElementById('int-id').value;
         const rName = document.getElementById('int-room-name').value;
-        
         if (!fname) return;
 
         createZone(fname);
         const newZone = projectData[fname];
-        const newRoom = newZone.rooms[0]; // Auto-created by createZone
+        const newRoom = newZone.rooms[0];
         newRoom.name = rName;
         newRoom.interior_id = intId;
         newRoom.room_id = `${intId}_entry`;
@@ -1255,11 +1259,11 @@
         newZone.offset.y = srcZone.offset.y + 50;
         
         closeModal();
+        rebuildZToggles();
         renderMap();
         updateRoomData();
     }
 
-    // --- ACTION: NEW ZONE ---
     function openNewZoneModal() {
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.add('hidden');
@@ -1273,13 +1277,9 @@
         closeModal();
     }
 
-    // --- ACTION: MOVE ROOM ---
     function openMoveModal() {
         if (!contextTarget && !activeRoom) return;
-        if (!contextTarget) {
-            const r = getActiveRoomObj();
-            contextTarget = { room: r, filename: activeRoom.file };
-        }
+        if (!contextTarget) contextTarget = { room: getActiveRoomObj(), filename: activeRoom.file };
 
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.add('hidden');
@@ -1292,14 +1292,13 @@
             .filter(f => f !== contextTarget.filename)
             .map(f => `<option value="${f}">${f}</option>`)
             .join('');
-        
         sel.innerHTML += `<option value="__NEW__">+ Create New Zone</option>`;
     }
 
     function confirmMoveRoom() {
         let targetFile = document.getElementById('move-target-zone').value;
         if (targetFile === "__NEW__") {
-            targetFile = prompt("New filename (e.g. zones/my_shop.json):");
+            targetFile = prompt("New filename:");
             if (!targetFile) return;
             createZone(targetFile);
         }
@@ -1307,7 +1306,6 @@
         const sourceFile = contextTarget.filename;
         const roomToMove = contextTarget.room;
         
-        // Find index to splice
         const idx = projectData[sourceFile].rooms.indexOf(roomToMove);
         if (idx > -1) {
             projectData[sourceFile].rooms.splice(idx, 1);
@@ -1316,12 +1314,12 @@
 
         closeModal();
         updateFileList();
-        activeRoom = null; // Deselect
+        activeRoom = null;
         document.getElementById('room-editor').classList.add('hidden');
         renderMap();
+        rebuildZToggles();
     }
 
-    // --- IO ---
     function openLoadModal() {
         document.getElementById('modal-overlay').style.display = 'flex';
         document.getElementById('load-modal').classList.remove('hidden');
@@ -1366,6 +1364,7 @@
 
         if (loadedCount > 0) {
             updateFileList();
+            rebuildZToggles();
             renderMap();
             closeModal();
         } else {
@@ -1383,22 +1382,18 @@
 
     async function saveZone(filename) {
         if (!projectData[filename]) return;
-        
         const payload = {};
         payload[filename] = projectData[filename].rooms;
-        
-        const btn = event.target; // Simple UI feedback
+        const btn = event.target;
         const originalText = btn.innerText;
         btn.innerText = "⏳";
         
         try {
-            const res = await fetch('/api/save_batch', {
+            await fetch('/api/save_batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ files: payload })
             });
-            const result = await res.json();
-            console.log(result); // Optional log
             btn.innerText = "✓";
             setTimeout(() => btn.innerText = originalText, 1000);
         } catch(e) {
@@ -1408,7 +1403,7 @@
     }
 
     function closeZone(filename) {
-        if (!confirm(`Unload ${filename}? Unsaved changes will be lost.`)) return;
+        if (!confirm(`Unload ${filename}?`)) return;
         delete projectData[filename];
         if (activeRoom && activeRoom.file === filename) {
             activeRoom = null;
@@ -1416,14 +1411,13 @@
             document.getElementById('no-selection').classList.remove('hidden');
         }
         updateFileList();
+        rebuildZToggles();
         renderMap();
     }
     
     function focusZone(filename) {
-        // Optional: Pan map to zone
         const z = projectData[filename];
         if (z && z.rooms.length > 0) {
-            // Calculate center
             pan.x = -z.offset.x * scale + (document.getElementById('map-container').clientWidth/2);
             pan.y = -z.offset.y * scale + (document.getElementById('map-container').clientHeight/2);
             updateTransform();
@@ -1455,6 +1449,7 @@
         z.rooms.splice(activeRoom.index, 1);
         activeRoom = null;
         document.getElementById('room-editor').classList.add('hidden');
+        rebuildZToggles();
         renderMap();
     }
 </script>
