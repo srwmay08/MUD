@@ -530,7 +530,6 @@ def calculate_parry_defense(defender_stats: dict, defender_skills: dict, defende
         twc_ranks = defender_skills.get("two_weapon_combat", 0)
         off_enchant = offhand_data.get("enchantment", 0)
         twc_rules = combat_rules.get("twc_rules", {})
-        off_mod_table = twc_rules.get("offhand_stance_modifiers", {})
         off_mod = off_mod_table.get(defender_stance, 0.25)
         
         off_keywords = offhand_data.get("keywords", [])
@@ -791,7 +790,30 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             world.stop_combat_for_all(combatant_id, state["target_id"])
             continue
 
+        # [FIX] Check for Room/Distance integrity
+        # Attacks should not happen if the target has left the room
+        attacker_loc = None
+        if isinstance(attacker, Player): attacker_loc = attacker.current_room_id
+        else: attacker_loc = world.mob_locations.get(attacker.get("uid"))
+
+        defender_loc = None
+        if isinstance(defender, Player): defender_loc = defender.current_room_id
+        else: defender_loc = world.mob_locations.get(defender.get("uid"))
+        
+        if attacker_loc != defender_loc:
+            world.stop_combat_for_all(combatant_id, state["target_id"])
+            continue
+
         if isinstance(attacker, Player): continue 
+        
+        # [FIX] Check if Monster Attacker is Dead
+        # Prevents "zombie" attacks from defeated monsters that haven't been cleaned up yet
+        if not isinstance(attacker, Player):
+             att_uid = attacker.get("uid")
+             att_hp = world.get_monster_hp(att_uid)
+             if att_hp is not None and att_hp <= 0:
+                 world.remove_combat_state(combatant_id)
+                 continue
 
         is_defender_player = isinstance(defender, Player)
         
