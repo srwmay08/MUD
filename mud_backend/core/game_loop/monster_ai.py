@@ -350,6 +350,31 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
         in_combat = combat_state and combat_state.get("state_type") == "combat"
         target_id = combat_state.get("target_id") if in_combat else None
 
+        # [FIX] Validate Target Presence: If target left room, stop combat
+        if in_combat and target_id:
+            target_found = False
+            
+            # Check players
+            if players_in_room:
+                for p_name in players_in_room:
+                    if p_name.lower() == target_id:
+                        target_found = True
+                        break
+            
+            # Check mobs (if not found as player)
+            if not target_found:
+                with room.lock:
+                    for obj in room.objects:
+                        if obj.get("uid") == target_id:
+                            target_found = True
+                            break
+            
+            if not target_found:
+                world.remove_combat_state(uid)
+                in_combat = False
+                target_id = None
+                # Optional: You could broadcast a message here like "The creature looks confused."
+
         # 2a. Execute Behavior Script (if any)
         # We do this even if not in combat to allow for passive behaviors like healing or buffering
         script_action = _execute_behavior_tree(world, monster_obj, target_id, room_id, broadcast_callback)

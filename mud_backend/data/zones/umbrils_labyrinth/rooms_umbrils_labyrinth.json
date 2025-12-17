@@ -52,7 +52,7 @@
         "y": 0,
         "z": -1,
         "description": {
-            "default": "The damp, foul smell from the cistern intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
+            "default": "The damp, foul smell from the cistern lingers, but a faint scent of woodsmoke and ozone drifts from the east. The tunnel widens here, becoming less of a sewer and more of a passage."
         },
         "objects": [
             {
@@ -68,7 +68,8 @@
             }
         ],
         "exits": {
-            "west": "well_bottom"
+            "west": "well_bottom",
+            "east": "umbril_gate"
         }
     },
     {
@@ -138,6 +139,51 @@
         ],
         "exits": {
             "south": "flooded_tunnel"
+        }
+    },
+    {
+        "room_id": "umbril_gate",
+        "name": "Gates of the Undercity",
+        "x": 2,
+        "y": 0,
+        "z": -1,
+        "description": {
+            "default": "You stand before a massive archway constructed of dark, volcanic stone. Green flames dance in iron braziers, casting long, eerie shadows. To the west lies the sewer network; to the east, the bustle of the Undercity."
+        },
+        "objects": [],
+        "exits": {
+            "west": "cave_east",
+            "east": "umbril_square"
+        }
+    },
+    {
+        "room_id": "umbril_square",
+        "name": "Shadow Market Square",
+        "x": 3,
+        "y": 0,
+        "z": -1,
+        "description": {
+            "default": "The central hub of the Undercity is a chaotic mess of stalls, tents, and shady figures. It is dimly lit by luminescent moss and sputtering torches. To the north stands a dilapidated building marked as a hostel. To the west is the gate to the sewers."
+        },
+        "objects": [],
+        "exits": {
+            "west": "umbril_gate",
+            "north": "umbril_hostel"
+        }
+    },
+    {
+        "room_id": "umbril_hostel",
+        "name": "The Skulking Rat Hostel",
+        "x": 3,
+        "y": 1,
+        "z": -1,
+        "description": {
+            "default": "This large, open room smells of stale beer and wet dog. Rows of hammocks and straw mats line the walls. It isn't luxurious, but it's a safe place to rest for those unwelcome on the surface."
+        },
+        "objects": [],
+        "hidden_objects": [],
+        "exits": {
+            "south": "umbril_square"
         }
     }
 ]
