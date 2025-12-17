@@ -5,8 +5,25 @@
         "x": 0,
         "y": 0,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "It is dark and cramped down here. The air is foul and smells of sewage and wet fur. You notice some strange plants growing in the muck near the wall. Dark passages lead east and west, and a half-flooded tunnel continues north. A rusted iron ladder leads up."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [
             {
@@ -34,9 +51,12 @@
                 "monster_id": "well_bottom_stirring_monster"
             },
             {
-            "node_id": "viridian_leaf_plant",
-            "players_tapped": [],
-            "taps_remaining": 1
+                "name": "viridian leaf plant",
+                "node_id": "viridian_leaf_plant",
+                "description": "A small plant with viridian leaves growing in the muck.",
+                "keywords": ["plant", "viridian", "leaf"],
+                "players_tapped": [],
+                "taps_remaining": 1
             }
         ],
         "exits": {
@@ -51,8 +71,25 @@
         "x": 1,
         "y": 0,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "The damp, foul smell from the cistern lingers, but a faint scent of woodsmoke and ozone drifts from the east. The tunnel widens here, becoming less of a sewer and more of a passage."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [
             {
@@ -78,8 +115,25 @@
         "x": -1,
         "y": 0,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "The damp, foul smell from the cistern intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [
             {
@@ -104,8 +158,25 @@
         "x": 0,
         "y": 1,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "You wade through knee-deep, foul-smelling water. The tunnel, built of ancient, crumbling brick, continues north. The main cistern is to the south."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [
             {
@@ -126,8 +197,25 @@
         "x": 0,
         "y": 2,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "The tunnel opens into a small, domed chamber that was once a crypt. Stone sarcophagi line the walls, their lids askew. The air is heavy with the smell of dust and decay. The only exit is the flooded tunnel to the south."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [
             {
@@ -147,8 +235,25 @@
         "x": 2,
         "y": 0,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "You stand before a massive archway constructed of dark, volcanic stone. Green flames dance in iron braziers, casting long, eerie shadows. To the west lies the sewer network; to the east, the bustle of the Undercity."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [],
         "exits": {
@@ -162,8 +267,25 @@
         "x": 3,
         "y": 0,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "The central hub of the Undercity is a chaotic mess of stalls, tents, and shady figures. It is dimly lit by luminescent moss and sputtering torches. To the north stands a dilapidated building marked as a hostel. To the west is the gate to the sewers."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [],
         "exits": {
@@ -177,8 +299,25 @@
         "x": 3,
         "y": 1,
         "z": -1,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "illumination": 0,
+        "is_outdoor": false,
+        "is_table": false,
         "description": {
             "default": "This large, open room smells of stale beer and wet dog. Rows of hammocks and straw mats line the walls. It isn't luxurious, but it's a safe place to rest for those unwelcome on the surface."
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
         },
         "objects": [],
         "hidden_objects": [],
