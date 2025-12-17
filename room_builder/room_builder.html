@@ -28,6 +28,7 @@
         /* Links */
         .map-link { stroke: #555; stroke-width: 1; pointer-events: none; marker-end: url(#arrowhead); }
         .map-link.cross-zone { stroke: #3b82f6; stroke-width: 2; stroke-dasharray: 4; marker-end: url(#arrowhead-blue); }
+        .map-link.object-link { stroke: #f59e0b; stroke-width: 1.5; stroke-dasharray: 4,4; marker-end: url(#arrowhead-orange); opacity: 0.8; }
 
         /* Zone Groups */
         .zone-group rect.zone-bg { fill: rgba(50, 50, 50, 0.05); stroke: #444; stroke-width: 1; stroke-dasharray: 4; rx: 8; }
@@ -325,6 +326,9 @@
                     </marker>
                     <marker id="arrowhead-blue" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
                         <polygon points="0 0, 5 2.5, 0 5" fill="#3b82f6"/>
+                    </marker>
+                    <marker id="arrowhead-orange" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                        <polygon points="0 0, 5 2.5, 0 5" fill="#f59e0b"/>
                     </marker>
                 </defs>
                 <g id="map-content"></g>
@@ -949,6 +953,8 @@
                     if (!showTables && r.is_table) return;
 
                     const start = getScreenCoords(r.x, r.y, r.z, zone.offset);
+                    
+                    // 1. Draw Directional Exits
                     Object.entries(r.exits).forEach(([dir, targetId]) => {
                         const targetInfo = findRoomGlobal(targetId);
                         if (targetInfo) {
@@ -958,6 +964,21 @@
 
                             const end = getScreenCoords(targetInfo.room.x, targetInfo.room.y, tZ, targetInfo.zone.offset);
                             drawLink(svg, start, end, targetInfo.file !== activeRoom?.file, r.z, tZ);
+                        }
+                    });
+
+                    // 2. Draw Object-Based Links (Climb/Enter)
+                    [...(r.objects || []), ...(r.hidden_objects || [])].forEach(obj => {
+                        if (obj.target_room) {
+                            const targetInfo = findRoomGlobal(obj.target_room);
+                            if (targetInfo) {
+                                const tZ = targetInfo.room.z;
+                                if (!isoMode && !activeZLevels.has(tZ)) return;
+                                if (!showTables && targetInfo.room.is_table) return;
+
+                                const end = getScreenCoords(targetInfo.room.x, targetInfo.room.y, tZ, targetInfo.zone.offset);
+                                drawLink(svg, start, end, targetInfo.file !== activeRoom?.file, r.z, tZ, true); // True = Object Link
+                            }
                         }
                     });
                 });
@@ -1105,17 +1126,20 @@
         return { x: sx + offset.x, y: sy + offset.y };
     }
 
-    function drawLink(parent, p1, p2, isCross, z1, z2) {
+    function drawLink(parent, p1, p2, isCross, z1, z2, isObject=false) {
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         line.setAttribute("x1", p1.x + ROOM_SIZE/2); line.setAttribute("y1", p1.y + ROOM_SIZE/2);
         line.setAttribute("x2", p2.x + ROOM_SIZE/2); line.setAttribute("y2", p2.y + ROOM_SIZE/2);
         line.classList.add("map-link");
+        
         if (isCross) line.classList.add("cross-zone");
+        if (isObject) line.classList.add("object-link"); // New style class
         
         // Fade lines that go between layers if not in iso mode?
         if (!isoMode && z1 !== z2) {
             line.style.opacity = 0.3;
-            line.style.strokeDasharray = "2,2";
+            // Dotted for cross-layer
+            if (!isObject) line.style.strokeDasharray = "2,2"; 
         }
 
         parent.insertBefore(line, parent.firstChild);
