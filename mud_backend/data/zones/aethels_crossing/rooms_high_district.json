@@ -1,389 +1,384 @@
 [
     {
-        "room_id": "room_1765245266833_245",
-        "name": "New Room",
-        "x": -8,
-        "y": 4,
-        "z": 0,
-        "interior_id": "rooms_golden_market",
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "south": "room_1765210085735_870",
             "east": "room_1765245549420_321",
+            "south": "room_1765210085735_870",
             "west": "room_1765245567102_677"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
+        "interior_id": "rooms_golden_market",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245266833_245",
+        "x": -8,
+        "y": 4,
+        "z": 0
     },
     {
-        "room_id": "room_1765245549420_321",
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765245550084_221",
+            "west": "room_1765245266833_245"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245549420_321",
         "x": -7,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245266833_245",
-            "east": "room_1765245550084_221"
+            "east": "room_1765245550461_719",
+            "west": "room_1765245549420_321"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245550084_221",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245550084_221",
         "x": -6,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245549420_321",
-            "east": "room_1765245550461_719"
+            "east": "room_1765245550861_229",
+            "west": "room_1765245550084_221"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245550461_719",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245550461_719",
         "x": -5,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245550084_221",
-            "east": "room_1765245550861_229"
+            "east": "room_1765245551328_988",
+            "west": "room_1765245550461_719"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245550861_229",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245550861_229",
         "x": -4,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245550461_719",
-            "east": "room_1765245551328_988"
+            "east": "room_1765245552766_201",
+            "west": "room_1765245550861_229"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245551328_988",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245551328_988",
         "x": -3,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245550861_229",
-            "east": "room_1765245552766_201"
+            "east": "room_1765245552953_162",
+            "west": "room_1765245551328_988"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245552766_201",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245552766_201",
         "x": -2,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245551328_988",
-            "east": "room_1765245552953_162"
+            "east": "room_1765245553140_651",
+            "west": "room_1765245552766_201"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245552953_162",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245552953_162",
         "x": -1,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245552766_201",
-            "east": "room_1765245553140_651"
+            "east": "room_1765245553331_506",
+            "west": "room_1765245552953_162"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245553140_651",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245553140_651",
         "x": 0,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245552953_162",
-            "east": "room_1765245553331_506"
+            "east": "room_1765245555066_225",
+            "west": "room_1765245553140_651"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245553331_506",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245553331_506",
         "x": 1,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245553140_651",
-            "east": "room_1765245555066_225"
+            "east": "room_1765245561797_637",
+            "west": "room_1765245553331_506"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245555066_225",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245555066_225",
         "x": 2,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245553331_506",
-            "east": "room_1765245561797_637"
+            "east": "room_1765245563069_106",
+            "west": "room_1765245555066_225"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245561797_637",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245561797_637",
         "x": 3,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245555066_225",
-            "east": "room_1765245563069_106"
+            "north": "room_1765245826845_921",
+            "west": "room_1765245561797_637"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245563069_106",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245563069_106",
         "x": 4,
         "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "west": "room_1765245561797_637",
-            "north": "room_1765245826845_921"
-        },
-        "objects": [],
-        "hidden_objects": [],
-        "flags": {
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "illumination": 50,
-        "is_table": false
+        "z": 0
     },
     {
-        "room_id": "room_1765245567102_677",
-        "name": "New Room",
-        "x": -9,
-        "y": 4,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "ambient_events": [],
         "description": {
             "default": ""
         },
@@ -391,348 +386,348 @@
             "east": "room_1765245266833_245",
             "north": "room_1765245569102_736"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
+        "interior_id": "rooms_high_district",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245567102_677",
+        "x": -9,
+        "y": 4,
+        "z": 0
     },
     {
-        "room_id": "room_1765245569102_736",
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1765245570047_223",
+            "south": "room_1765245567102_677"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245569102_736",
         "x": -9,
         "y": 5,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "south": "room_1765245567102_677",
-            "northeast": "room_1765245570047_223"
+            "northeast": "room_1765245571038_659",
+            "southwest": "room_1765245569102_736"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245570047_223",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245570047_223",
         "x": -8,
         "y": 6,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "southwest": "room_1765245569102_736",
-            "northeast": "room_1765245571038_659"
+            "northeast": "room_1765245573438_971",
+            "northwest": "room_1765245697606_135",
+            "southwest": "room_1765245570047_223"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245571038_659",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245571038_659",
         "x": -7,
         "y": 7,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "southwest": "room_1765245570047_223",
-            "northeast": "room_1765245573438_971",
-            "northwest": "room_1765245697606_135"
+            "east": "room_1765245796910_799",
+            "southwest": "room_1765245571038_659"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245573438_971",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245573438_971",
         "x": -6,
         "y": 8,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "southwest": "room_1765245571038_659",
-            "east": "room_1765245796910_799"
+            "northeast": "room_1765245800005_762",
+            "west": "room_1765245573438_971"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245796910_799",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245796910_799",
         "x": -5,
         "y": 8,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245573438_971",
-            "northeast": "room_1765245800005_762"
+            "east": "room_1765245801683_799",
+            "southwest": "room_1765245796910_799"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245800005_762",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245800005_762",
         "x": -4,
         "y": 9,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "southwest": "room_1765245796910_799",
-            "east": "room_1765245801683_799"
+            "east": "room_1765245803275_192",
+            "west": "room_1765245800005_762"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245801683_799",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245801683_799",
         "x": -3,
         "y": 9,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245800005_762",
-            "east": "room_1765245803275_192"
+            "east": "room_1765245805436_54",
+            "west": "room_1765245801683_799"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245803275_192",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245803275_192",
         "x": -2,
         "y": 9,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245801683_799",
-            "east": "room_1765245805436_54"
+            "east": "room_1765245805896_523",
+            "west": "room_1765245803275_192"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245805436_54",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245805436_54",
         "x": -1,
         "y": 9,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245803275_192",
-            "east": "room_1765245805896_523"
+            "east": "room_1765245808036_73",
+            "west": "room_1765245805436_54"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245805896_523",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245805896_523",
         "x": 0,
         "y": 9,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "z": 0
+    },
+    {
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
-            "west": "room_1765245805436_54",
-            "east": "room_1765245808036_73"
+            "southeast": "room_1765245812970_647",
+            "west": "room_1765245805896_523"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
-    },
-    {
-        "room_id": "room_1765245808036_73",
+        "interior_id": "rooms_high_district",
+        "is_table": false,
         "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245808036_73",
         "x": 1,
         "y": 9,
-        "z": 0,
-        "interior_id": "rooms_high_district",
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "west": "room_1765245805896_523",
-            "southeast": "room_1765245812970_647"
-        },
-        "objects": [],
-        "hidden_objects": [],
-        "flags": {
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "illumination": 50,
-        "is_table": false
+        "z": 0
     },
     {
-        "room_id": "room_1765245812970_647",
-        "name": "New Room",
-        "x": 2,
-        "y": 8,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "ambient_events": [],
         "description": {
             "default": ""
         },
@@ -740,28 +735,28 @@
             "northwest": "room_1765245808036_73",
             "southeast": "room_1765245821450_328"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
+        "interior_id": "rooms_high_district",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245812970_647",
+        "x": 2,
+        "y": 8,
+        "z": 0
     },
     {
-        "room_id": "room_1765245821450_328",
-        "name": "New Room",
-        "x": 3,
-        "y": 7,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "ambient_events": [],
         "description": {
             "default": ""
         },
@@ -769,28 +764,28 @@
             "northwest": "room_1765245812970_647",
             "southeast": "room_1765245825620_631"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
+        "interior_id": "rooms_high_district",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245821450_328",
+        "x": 3,
+        "y": 7,
+        "z": 0
     },
     {
-        "room_id": "room_1765245825620_631",
-        "name": "New Room",
-        "x": 4,
-        "y": 6,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "ambient_events": [],
         "description": {
             "default": ""
         },
@@ -798,49 +793,54 @@
             "northwest": "room_1765245821450_328",
             "south": "room_1765245826845_921"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
+        "interior_id": "rooms_high_district",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245825620_631",
+        "x": 4,
+        "y": 6,
+        "z": 0
     },
     {
-        "room_id": "room_1765245826845_921",
-        "name": "New Room",
-        "x": 4,
-        "y": 5,
-        "z": 0,
-        "interior_id": "rooms_high_district",
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {
+            "east": "room_1765245860900_996",
             "north": "room_1765245825620_631",
-            "south": "room_1765245563069_106",
-            "east": "room_1765245860900_996"
+            "south": "room_1765245563069_106"
         },
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
-        "is_table": false
+        "interior_id": "rooms_high_district",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1765245826845_921",
+        "x": 4,
+        "y": 5,
+        "z": 0
     }
 ]

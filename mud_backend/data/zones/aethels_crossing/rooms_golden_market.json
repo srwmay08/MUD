@@ -17,55 +17,60 @@
         "name": "The Golden Market",
         "objects": [
             {
-                "is_item": true,
                 "item_id": "signet_of_communion",
-                "keywords": [
-                    "ring"
-                ],
-                "name": "A banded iron ring",
-                "verbs": [
-                    "get"
-                ]
+                "is_item": true
             },
             {
+                "name": "statue of a merchant-prince",
                 "description": "A verdigris-stained bronze statue of a forgotten merchant-prince, now serving mostly as a perch for gulls. Its base is a common meeting spot for deals both public and private.",
                 "keywords": [
                     "statue",
                     "merchant-prince",
                     "bronze statue"
                 ],
-                "name": "statue of a merchant-prince",
-                "perception_dc": 0,
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "all_quests_done_message": "The warrior nods at you. 'You've got the hang of it. Now go practice on something... uglier.'",
-                "description": "A grizzled old warrior paces the square, his eyes scanning for... something. He carries a long spear and looks like he's seen a hundred battles.",
-                "is_monster": true,
-                "is_npc": true,
-                "keywords": [
-                    "warrior",
-                    "grizzled warrior",
-                    "a grizzled warrior"
-                ],
                 "monster_id": "grizzled_warrior",
-                "name": "a grizzled warrior",
-                "quest_giver_ids": [
-                    "trip_quest_1"
+                "is_monster": true
+            },
+            {
+                "name": "Town Well",
+                "description": "",
+                "keywords": [
+                    "town well",
+                    "well"
                 ],
                 "verbs": [
                     "look",
-                    "attack",
-                    "talk to"
-                ]
+                    "Enter"
+                ],
+                "target_room": "room_1766106929120_953"
             }
         ],
         "room_id": "town_square",
         "x": 0,
         "y": 0,
-        "z": 0
+        "z": 0,
+        "is_table": false,
+        "illumination": 50,
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "hidden_objects": []
     },
     {
         "description": {
@@ -350,41 +355,41 @@
         "name": "Ambassador's Row (South)",
         "objects": [
             {
+                "name": "shop door",
                 "description": "A small shop door with a sign of a mortar and pestle. This is the Apothecary. You can **ENTER**.",
                 "keywords": [
                     "door",
                     "shop door",
                     "apothecary"
                 ],
-                "name": "shop door",
-                "perception_dc": 0,
-                "target_room": "apothecary_shop",
                 "verbs": [
-                    "ENTER",
-                    "look"
-                ]
-            },
-            {
-                "description": "A dark, narrow alley. A rusted iron ladder descends into a sewage cistern below. You could **CLIMB** the ladder.",
-                "keywords": [
-                    "alley",
-                    "dark alley",
-                    "ladder",
-                    "cistern"
+                    "look",
+                    "ENTER"
                 ],
-                "name": "dark alley",
-                "perception_dc": 0,
-                "target_room": "well_bottom",
-                "verbs": [
-                    "CLIMB",
-                    "look"
-                ]
+                "target_room": "apothecary_shop"
             }
         ],
         "room_id": "ts_southeast",
         "x": 1,
         "y": -1,
-        "z": 0
+        "z": 0,
+        "is_table": false,
+        "illumination": 50,
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "hidden_objects": []
     },
     {
         "description": {
@@ -1122,13 +1127,17 @@
             "west": "room_1765210062586_957"
         },
         "flags": {
-            "hiding_allowed": true,
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -1139,7 +1148,8 @@
         "room_id": "room_1765210061943_198",
         "x": -5,
         "y": -2,
-        "z": 0
+        "z": 0,
+        "is_outdoor": false
     },
     {
         "ambient_events": [],
@@ -1439,16 +1449,21 @@
         },
         "exits": {
             "east": "room_1765210085907_573",
-            "west": "room_1765210085539_116"
+            "west": "room_1765210085539_116",
+            "north": "room_1765245266833_245"
         },
         "flags": {
-            "hiding_allowed": true,
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -1459,7 +1474,8 @@
         "room_id": "room_1765210085735_870",
         "x": -8,
         "y": 3,
-        "z": 0
+        "z": 0,
+        "is_outdoor": false
     },
     {
         "ambient_events": [],
@@ -2022,26 +2038,26 @@
             "south": "room_1765209796949_629"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
         "is_table": false,
         "name": "The Pawnshop",
         "objects": [
             {
-                "name": "a pawnbroker",
                 "description": "A shrewd-looking merchant evaluating items with a critical eye.",
                 "keywords": [
                     "pawnbroker",
@@ -2049,37 +2065,37 @@
                     "broker",
                     "merchant"
                 ],
+                "name": "a pawnbroker",
                 "shop_data": [],
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "Weapon Table",
                 "description": "A sturdy table covered in various weapons.",
                 "keywords": [
                     "table",
                     "weapon",
                     "weapons"
                 ],
+                "name": "Weapon Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "Armor Table",
                 "description": "A reinforced table displaying suits of armor and shields.",
                 "keywords": [
                     "table",
                     "armor",
                     "armors"
                 ],
+                "name": "Armor Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "Arcane Table",
                 "description": "A table glowing with faint magical aura, holding scrolls and strange artifacts.",
                 "keywords": [
                     "table",
@@ -2087,47 +2103,47 @@
                     "arcane",
                     "scrolls"
                 ],
+                "name": "Arcane Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "Goods Table",
                 "description": "A cluttered table filled with miscellaneous goods.",
                 "keywords": [
                     "table",
                     "misc",
                     "goods"
                 ],
+                "name": "Goods Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "trash bin",
                 "description": "A large bin for disposing of worthless items.",
                 "keywords": [
                     "bin",
                     "trash"
                 ],
+                "name": "trash bin",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "item_id": "iron_short_sword",
-                "is_item": true
+                "is_item": true,
+                "item_id": "iron_short_sword"
             },
             {
-                "item_id": "iron_dagger",
-                "is_item": true
+                "is_item": true,
+                "item_id": "iron_dagger"
             }
         ],
         "room_id": "room_1765223469151_21",
         "x": -1,
         "y": -2,
-        "z": 0,
-        "is_outdoor": false
+        "z": 0
     },
     {
         "ambient_events": [],

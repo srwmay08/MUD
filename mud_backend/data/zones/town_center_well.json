@@ -1,0 +1,215 @@
+[
+    {
+        "room_id": "room_1766106929120_953",
+        "name": "Town Well",
+        "x": -5,
+        "y": -1,
+        "z": 0,
+        "interior_id": "rooms_golden_market",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1766107071981_571",
+            "northwest": "room_1766107074505_244",
+            "south": "town_square"
+        },
+        "objects": [
+            {
+                "name": "Town Well",
+                "description": "",
+                "keywords": [
+                    "town well",
+                    " well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
+                "interactions": {
+                    "Climb": {
+                        "type": "move",
+                        "value": "well_bottom"
+                    }
+                }
+            }
+        ],
+        "hidden_objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false,
+        "is_outdoor": false
+    },
+    {
+        "room_id": "room_1766107071981_571",
+        "name": "New Room",
+        "x": -4,
+        "y": 0,
+        "z": 0,
+        "interior_id": "town_center_well",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "southwest": "room_1766106929120_953",
+            "northwest": "room_1766107073364_416"
+        },
+        "objects": [
+            {
+                "name": "Town Well",
+                "description": "",
+                "keywords": [
+                    "town well",
+                    " well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
+                "interactions": {
+                    "Climb": {
+                        "type": "move",
+                        "value": "well_bottom"
+                    }
+                }
+            }
+        ],
+        "hidden_objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false,
+        "is_outdoor": false
+    },
+    {
+        "room_id": "room_1766107073364_416",
+        "name": "New Room",
+        "x": -5,
+        "y": 1,
+        "z": 0,
+        "interior_id": "town_center_well",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "southeast": "room_1766107071981_571",
+            "southwest": "room_1766107074505_244"
+        },
+        "objects": [
+            {
+                "name": "Town Well",
+                "description": "",
+                "keywords": [
+                    "town well",
+                    " well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
+                "interactions": {
+                    "Climb": {
+                        "type": "move",
+                        "value": "well_bottom"
+                    }
+                }
+            }
+        ],
+        "hidden_objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false,
+        "is_outdoor": false
+    },
+    {
+        "room_id": "room_1766107074505_244",
+        "name": "New Room",
+        "x": -6,
+        "y": 0,
+        "z": 0,
+        "interior_id": "town_center_well",
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1766107073364_416",
+            "southeast": "room_1766106929120_953"
+        },
+        "objects": [
+            {
+                "name": "Town Well",
+                "description": "",
+                "keywords": [
+                    "town well",
+                    " well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
+                "interactions": {
+                    "Climb": {
+                        "type": "move",
+                        "value": "well_bottom"
+                    }
+                }
+            }
+        ],
+        "hidden_objects": [],
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false,
+        "is_outdoor": false
+    }
+]

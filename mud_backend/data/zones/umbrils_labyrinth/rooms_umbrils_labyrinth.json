@@ -1,83 +1,69 @@
 [
     {
-        "room_id": "well_bottom",
-        "name": "The Bottom of a Sewage Cistern",
-        "x": 0,
-        "y": 0,
-        "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
-        "illumination": 0,
-        "is_outdoor": false,
-        "is_table": false,
         "description": {
             "default": "It is dark and cramped down here. The air is foul and smells of sewage and wet fur. You notice some strange plants growing in the muck near the wall. Dark passages lead east and west, and a half-flooded tunnel continues north. A rusted iron ladder leads up."
         },
+        "exits": {
+            "east": "cave_east",
+            "north": "flooded_tunnel",
+            "west": "cave_west"
+        },
         "flags": {
-            "hiding_allowed": true,
             "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
             "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
+        "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "The Bottom of a Sewage Cistern",
         "objects": [
             {
                 "name": "iron ladder",
                 "description": "A rusted iron ladder leads back up to a dark alley in Aethel's Crossing.",
-                "verbs": [
-                    "CLIMB"
-                ],
-                "target_room": "ts_southeast",
-                "perception_dc": 0,
                 "keywords": [
                     "ladder",
                     "iron ladder"
-                ]
-            },
-            {
-                "name": "stirring monster",
-                "description": "A mass of shadows and wet fur, it huffs angrily.",
+                ],
                 "verbs": [
                     "look",
-                    "attack"
+                    "ENTER"
                 ],
-                "perception_dc": 15,
-                "is_monster": true,
-                "monster_id": "well_bottom_stirring_monster"
+                "target_room": "room_1766106929120_953"
             },
             {
-                "name": "viridian leaf plant",
+                "monster_id": "well_bottom_stirring_monster",
+                "is_monster": true
+            },
+            {
                 "node_id": "viridian_leaf_plant",
-                "description": "A small plant with viridian leaves growing in the muck.",
-                "keywords": ["plant", "viridian", "leaf"],
-                "players_tapped": [],
-                "taps_remaining": 1
+                "is_gathering_node": true
             }
         ],
-        "exits": {
-            "north": "flooded_tunnel",
-            "east": "cave_east",
-            "west": "cave_west"
-        }
-    },
-    {
-        "room_id": "cave_east",
-        "name": "A Dark Sewer Tunnel",
-        "x": 1,
+        "room_id": "well_bottom",
+        "x": 0,
         "y": 0,
         "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
-        "illumination": 0,
-        "is_outdoor": false,
-        "is_table": false,
+        "ambient_events": [],
+        "hidden_objects": []
+    },
+    {
         "description": {
             "default": "The damp, foul smell from the cistern lingers, but a faint scent of woodsmoke and ozone drifts from the east. The tunnel widens here, becoming less of a sewer and more of a passage."
         },
+        "exits": {
+            "east": "room_1766106317256_875",
+            "west": "well_bottom"
+        },
         "flags": {
             "hiding_allowed": true,
             "is_node": false,
@@ -91,37 +77,36 @@
             "teleport_in_allowed": true,
             "teleport_out_allowed": true
         },
+        "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "A Dark Sewer Tunnel",
         "objects": [
             {
-                "name": "stirring monster",
                 "description": "A mass of shadows and wet fur, it huffs angrily.",
+                "is_monster": true,
+                "monster_id": "well_bottom_stirring_monster",
+                "name": "stirring monster",
+                "perception_dc": 15,
                 "verbs": [
                     "look",
                     "attack"
-                ],
-                "perception_dc": 15,
-                "is_monster": true,
-                "monster_id": "well_bottom_stirring_monster"
+                ]
             }
         ],
-        "exits": {
-            "west": "well_bottom",
-            "east": "umbril_gate"
-        }
+        "room_id": "cave_east",
+        "x": 1,
+        "y": 0,
+        "z": -1
     },
     {
-        "room_id": "cave_west",
-        "name": "A Dark Sewer Tunnel",
-        "x": -1,
-        "y": 0,
-        "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
-        "illumination": 0,
-        "is_outdoor": false,
-        "is_table": false,
         "description": {
             "default": "The damp, foul smell from the cistern intensifies here. The darkness is oppressive, and you hear a faint skittering noise from deeper in."
         },
+        "exits": {
+            "east": "well_bottom"
+        },
         "flags": {
             "hiding_allowed": true,
             "is_node": false,
@@ -135,36 +120,37 @@
             "teleport_in_allowed": true,
             "teleport_out_allowed": true
         },
+        "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "A Dark Sewer Tunnel",
         "objects": [
             {
-                "name": "stirring monster",
                 "description": "A mass of shadows and wet fur, it huffs angrily.",
+                "is_monster": true,
+                "monster_id": "well_bottom_stirring_monster",
+                "name": "stirring monster",
+                "perception_dc": 15,
                 "verbs": [
                     "look",
                     "attack"
-                ],
-                "perception_dc": 15,
-                "is_monster": true,
-                "monster_id": "well_bottom_stirring_monster"
+                ]
             }
         ],
-        "exits": {
-            "east": "well_bottom"
-        }
+        "room_id": "cave_west",
+        "x": -1,
+        "y": 0,
+        "z": -1
     },
     {
-        "room_id": "flooded_tunnel",
-        "name": "Flooded Tunnel",
-        "x": 0,
-        "y": 1,
-        "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
-        "illumination": 0,
-        "is_outdoor": false,
-        "is_table": false,
         "description": {
             "default": "You wade through knee-deep, foul-smelling water. The tunnel, built of ancient, crumbling brick, continues north. The main cistern is to the south."
         },
+        "exits": {
+            "north": "forgotten_crypt",
+            "south": "well_bottom"
+        },
         "flags": {
             "hiding_allowed": true,
             "is_node": false,
@@ -178,32 +164,37 @@
             "teleport_in_allowed": true,
             "teleport_out_allowed": true
         },
-        "objects": [
-            {
-                "name": "murky water",
-                "description": "Filthy water flows slowly through the tunnel. You can't see the bottom.",
-                "keywords": ["water", "murky water"],
-                "verbs": ["look", "examine"]
-            }
-        ],
-        "exits": {
-            "south": "well_bottom",
-            "north": "forgotten_crypt"
-        }
-    },
-    {
-        "room_id": "forgotten_crypt",
-        "name": "Forgotten Crypt",
-        "x": 0,
-        "y": 2,
-        "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
         "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
         "is_outdoor": false,
         "is_table": false,
+        "name": "Flooded Tunnel",
+        "objects": [
+            {
+                "description": "Filthy water flows slowly through the tunnel. You can't see the bottom.",
+                "keywords": [
+                    "water",
+                    "murky water"
+                ],
+                "name": "murky water",
+                "verbs": [
+                    "look",
+                    "examine"
+                ]
+            }
+        ],
+        "room_id": "flooded_tunnel",
+        "x": 0,
+        "y": 1,
+        "z": -1
+    },
+    {
         "description": {
             "default": "The tunnel opens into a small, domed chamber that was once a crypt. Stone sarcophagi line the walls, their lids askew. The air is heavy with the smell of dust and decay. The only exit is the flooded tunnel to the south."
         },
+        "exits": {
+            "south": "flooded_tunnel"
+        },
         "flags": {
             "hiding_allowed": true,
             "is_node": false,
@@ -217,112 +208,58 @@
             "teleport_in_allowed": true,
             "teleport_out_allowed": true
         },
+        "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "Forgotten Crypt",
         "objects": [
             {
-                "name": "stone sarcophagus",
                 "description": "An ancient stone sarcophagus. Its lid has been pushed aside, revealing only darkness within.",
-                "keywords": ["sarcophagus", "stone sarcophagus", "crypt"],
-                "verbs": ["look", "examine", "investigate"]
+                "keywords": [
+                    "sarcophagus",
+                    "stone sarcophagus",
+                    "crypt"
+                ],
+                "name": "stone sarcophagus",
+                "verbs": [
+                    "look",
+                    "examine",
+                    "investigate"
+                ]
             }
         ],
-        "exits": {
-            "south": "flooded_tunnel"
-        }
+        "room_id": "forgotten_crypt",
+        "x": 0,
+        "y": 2,
+        "z": -1
     },
     {
-        "room_id": "umbril_gate",
-        "name": "Gates of the Undercity",
+        "room_id": "room_1766106317256_875",
+        "name": "New Room",
         "x": 2,
         "y": 0,
         "z": -1,
         "interior_id": "rooms_umbrils_labyrinth",
-        "illumination": 0,
-        "is_outdoor": false,
-        "is_table": false,
         "description": {
-            "default": "You stand before a massive archway constructed of dark, volcanic stone. Green flames dance in iron braziers, casting long, eerie shadows. To the west lies the sewer network; to the east, the bustle of the Undercity."
+            "default": ""
         },
-        "flags": {
-            "hiding_allowed": true,
-            "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
-            "is_super_node": false,
-            "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true
-        },
-        "objects": [],
         "exits": {
-            "west": "cave_east",
-            "east": "umbril_square"
-        }
-    },
-    {
-        "room_id": "umbril_square",
-        "name": "Shadow Market Square",
-        "x": 3,
-        "y": 0,
-        "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
-        "illumination": 0,
-        "is_outdoor": false,
-        "is_table": false,
-        "description": {
-            "default": "The central hub of the Undercity is a chaotic mess of stalls, tents, and shady figures. It is dimly lit by luminescent moss and sputtering torches. To the north stands a dilapidated building marked as a hostel. To the west is the gate to the sewers."
-        },
-        "flags": {
-            "hiding_allowed": true,
-            "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
-            "is_super_node": false,
-            "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true
-        },
-        "objects": [],
-        "exits": {
-            "west": "umbril_gate",
-            "north": "umbril_hostel"
-        }
-    },
-    {
-        "room_id": "umbril_hostel",
-        "name": "The Skulking Rat Hostel",
-        "x": 3,
-        "y": 1,
-        "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
-        "illumination": 0,
-        "is_outdoor": false,
-        "is_table": false,
-        "description": {
-            "default": "This large, open room smells of stale beer and wet dog. Rows of hammocks and straw mats line the walls. It isn't luxurious, but it's a safe place to rest for those unwelcome on the surface."
-        },
-        "flags": {
-            "hiding_allowed": true,
-            "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
-            "is_super_node": false,
-            "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "west": "cave_east"
         },
         "objects": [],
         "hidden_objects": [],
-        "exits": {
-            "south": "umbril_square"
-        }
+        "flags": {
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": [],
+        "illumination": 50,
+        "is_table": false
     }
 ]

@@ -1,0 +1,98 @@
+[
+    {
+        "description": {
+            "default": "This large, open room smells of stale beer and wet dog. Rows of hammocks and straw mats line the walls. It isn't luxurious, but it's a safe place to rest for those unwelcome on the surface."
+        },
+        "exits": {
+            "south": "umbril_square"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "The Skulking Rat Hostel",
+        "objects": [],
+        "room_id": "umbril_hostel",
+        "x": 3,
+        "y": 1,
+        "z": -1
+    },
+    {
+        "description": {
+            "default": "The central hub of the Undercity is a chaotic mess of stalls, tents, and shady figures. It is dimly lit by luminescent moss and sputtering torches. To the north stands a dilapidated building marked as a hostel. To the west is the gate to the sewers."
+        },
+        "exits": {
+            "north": "umbril_hostel",
+            "west": "umbril_gate"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "Shadow Market Square",
+        "objects": [],
+        "room_id": "umbril_square",
+        "x": 3,
+        "y": 0,
+        "z": -1
+    },
+    {
+        "description": {
+            "default": "You stand before a massive archway constructed of dark, volcanic stone. Green flames dance in iron braziers, casting long, eerie shadows. To the west lies the sewer network; to the east, the bustle of the Undercity."
+        },
+        "exits": {
+            "east": "umbril_square",
+            "west": "cave_east"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "illumination": 0,
+        "interior_id": "rooms_umbrils_labyrinth",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "Gates of the Undercity",
+        "objects": [],
+        "room_id": "umbril_gate",
+        "x": 2,
+        "y": 0,
+        "z": -1
+    }
+]
