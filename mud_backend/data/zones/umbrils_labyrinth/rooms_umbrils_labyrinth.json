@@ -233,33 +233,5 @@
         "x": 0,
         "y": 2,
         "z": -1
-    },
-    {
-        "room_id": "room_1766106317256_875",
-        "name": "New Room",
-        "x": 2,
-        "y": 0,
-        "z": -1,
-        "interior_id": "rooms_umbrils_labyrinth",
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "west": "cave_east"
-        },
-        "objects": [],
-        "hidden_objects": [],
-        "flags": {
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "illumination": 50,
-        "is_table": false
     }
 ]
