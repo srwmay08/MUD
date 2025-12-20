@@ -967,19 +967,34 @@
                         }
                     });
 
-                    // 2. Draw Object-Based Links (Climb/Enter)
+                    // 2. Draw Object-Based Links (Climb/Enter/etc)
                     [...(r.objects || []), ...(r.hidden_objects || [])].forEach(obj => {
-                        if (obj.target_room) {
-                            const targetInfo = findRoomGlobal(obj.target_room);
-                            if (targetInfo) {
+                        const targets = new Set();
+                        
+                        // Legacy support (Direct target_room property)
+                        if (obj.target_room) targets.add(obj.target_room);
+                        
+                        // Interactions support (e.g. Climb -> Move)
+                        if (obj.interactions) {
+                            Object.values(obj.interactions).forEach(interaction => {
+                                if (interaction.type === 'move' && interaction.value) {
+                                    targets.add(interaction.value);
+                                }
+                            });
+                        }
+
+                        // Draw dashed lines for unique targets
+                        targets.forEach(tid => {
+                             const targetInfo = findRoomGlobal(tid);
+                             if (targetInfo) {
                                 const tZ = targetInfo.room.z;
                                 if (!isoMode && !activeZLevels.has(tZ)) return;
                                 if (!showTables && targetInfo.room.is_table) return;
 
                                 const end = getScreenCoords(targetInfo.room.x, targetInfo.room.y, tZ, targetInfo.zone.offset);
                                 drawLink(svg, start, end, targetInfo.file !== activeRoom?.file, r.z, tZ, true); // True = Object Link
-                            }
-                        }
+                             }
+                        });
                     });
                 });
             });

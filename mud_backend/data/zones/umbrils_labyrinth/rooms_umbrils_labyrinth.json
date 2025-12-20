@@ -1,5 +1,6 @@
 [
     {
+        "ambient_events": [],
         "description": {
             "default": "It is dark and cramped down here. The air is foul and smells of sewage and wet fur. You notice some strange plants growing in the muck near the wall. Dark passages lead east and west, and a half-flooded tunnel continues north. A rusted iron ladder leads up."
         },
@@ -21,6 +22,7 @@
             "sneak_in_allowed": true,
             "sneak_out_allowed": true
         },
+        "hidden_objects": [],
         "illumination": 0,
         "interior_id": "rooms_umbrils_labyrinth",
         "is_outdoor": false,
@@ -36,9 +38,14 @@
                 ],
                 "verbs": [
                     "look",
-                    "ENTER"
+                    "Climb"
                 ],
-                "target_room": "room_1766106929120_953"
+                "interactions": {
+                    "Climb": {
+                        "type": "move",
+                        "value": "room_1766106929120_953"
+                    }
+                }
             },
             {
                 "monster_id": "well_bottom_stirring_monster",
@@ -52,9 +59,7 @@
         "room_id": "well_bottom",
         "x": 0,
         "y": 0,
-        "z": -1,
-        "ambient_events": [],
-        "hidden_objects": []
+        "z": -1
     },
     {
         "description": {

@@ -54,6 +54,24 @@ def _clean_name(name: str) -> str:
     if lower_name.startswith("the "): return name[4:]
     return name
 
+def _resolve_interaction_room(obj: Dict, verb: str) -> Optional[str]:
+    """
+    Helper to resolve target room from either legacy 'target_room' 
+    or new 'interactions' dict.
+    """
+    # 1. Legacy Check (Direct property)
+    if "target_room" in obj:
+        return obj["target_room"]
+    
+    # 2. Interactions Check (Nested property)
+    interactions = obj.get("interactions", {})
+    # Attempt to find the verb in interactions (case-insensitive key search)
+    for key, data in interactions.items():
+        if key.upper() == verb.upper():
+            if data.get("type") == "move":
+                return data.get("value")
+    return None
+
 def _check_toll_gate(player, target_room_id: str) -> bool:
     if player.current_room_id == "north_gate_outside" and target_room_id == "north_gate_inside":
         if "gate_pass" not in player.inventory:
@@ -80,17 +98,24 @@ def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str
         objects = room.get("objects", [])
         for obj in objects:
             verbs = [v.upper() for v in obj.get("verbs", [])]
-            if "ENTER" in verbs or "CLIMB" in verbs:
-                target_room = obj.get("target_room")
-                if target_room:
-                    obj_keywords = obj.get("keywords", [])
-                    for keyword in obj_keywords:
-                        if keyword not in exits:
-                            exits[keyword] = target_room
-                    
-                    obj_name = obj.get("name", "").lower()
-                    if obj_name and obj_name not in exits:
-                         exits[obj_name] = target_room
+            target_room = None
+            
+            # Check for ENTER or CLIMB interactions
+            if "ENTER" in verbs:
+                target_room = _resolve_interaction_room(obj, "ENTER")
+            
+            if not target_room and "CLIMB" in verbs:
+                target_room = _resolve_interaction_room(obj, "CLIMB")
+
+            if target_room:
+                obj_keywords = obj.get("keywords", [])
+                for keyword in obj_keywords:
+                    if keyword not in exits:
+                        exits[keyword] = target_room
+                
+                obj_name = obj.get("name", "").lower()
+                if obj_name and obj_name not in exits:
+                        exits[obj_name] = target_room
 
         for direction, next_room_id in exits.items():
             if next_room_id not in visited:
@@ -321,18 +346,21 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             enter_obj = next((obj for obj in current_room_data.get("objects", []) 
                               if ((move_direction in obj.get("keywords", []) or 
                                    move_direction == obj.get("name", "").lower()) and
-                                  (obj.get("target_room")))
+                                  (_resolve_interaction_room(obj, "ENTER") or _resolve_interaction_room(obj, "CLIMB")))
                              ), None)
             
             if enter_obj:
-                target_room_id_step = enter_obj.get("target_room")
                 clean_obj_name = _clean_name(enter_obj.get('name', 'something'))
-                if "CLIMB" in enter_obj.get("verbs", []):
+                obj_verbs = [v.upper() for v in enter_obj.get("verbs", [])]
+                
+                if "CLIMB" in obj_verbs:
+                    target_room_id_step = _resolve_interaction_room(enter_obj, "CLIMB")
                     move_verb = "climb"
                     skill_dc = 20 
                     move_msg = f"You climb the {enter_obj.get('name')}..."
                     leave_msg_suffix = f"climbs the {clean_obj_name}."
                 else: 
+                    target_room_id_step = _resolve_interaction_room(enter_obj, "ENTER")
                     move_verb = "enter"
                     move_msg = f"You enter the {enter_obj.get('name')}..."
                     leave_msg_suffix = f"enters the {clean_obj_name}."
@@ -461,11 +489,12 @@ class Enter(BaseVerb):
         if target_name == "table":
             possible_tables = []
             for obj in self.room.objects:
-                if "table" in obj.get("keywords", []) and "ENTER" in obj.get("verbs", []):
+                obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                if "table" in obj.get("keywords", []) and "ENTER" in obj_verbs:
                     possible_tables.append(obj)
             
             for table in possible_tables:
-                t_room_id = table.get("target_room")
+                t_room_id = _resolve_interaction_room(table, "ENTER")
                 if t_room_id:
                     occupants = self.world.room_players.get(t_room_id, set())
                     if not occupants:
@@ -476,13 +505,13 @@ class Enter(BaseVerb):
         else:
             enterable_object = next((obj for obj in self.room.objects 
                                      if (obj['name'].lower() == target_name or target_name in obj.get("keywords", []))
-                                     and "ENTER" in obj.get("verbs", [])), None)
+                                     and "ENTER" in [v.upper() for v in obj.get("verbs", [])]), None)
 
         if not enterable_object:
             self.player.send_message(f"You cannot enter the **{target_name}**.")
             return
 
-        target_room_id = enterable_object.get("target_room")
+        target_room_id = _resolve_interaction_room(enterable_object, "ENTER")
 
         if not target_room_id:
             self.player.send_message(f"The {target_name} leads nowhere right now.")
@@ -654,7 +683,9 @@ class Climb(BaseVerb):
         
         climbable_object = None
         for obj in self.room.objects:
-            if "CLIMB" in obj.get("verbs", []):
+            # Case insensitive check for CLIMB in verbs
+            obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+            if "CLIMB" in obj_verbs:
                 if (target_name == obj.get("name", "").lower() or
                     target_name in obj.get("keywords", [])):
                     climbable_object = obj
@@ -664,7 +695,8 @@ class Climb(BaseVerb):
             self.player.send_message(f"You cannot climb the **{target_name}** here.")
             return
 
-        target_room_id = climbable_object.get("target_room")
+        # Resolve target via helper (handles legacy and new Interaction schema)
+        target_room_id = _resolve_interaction_room(climbable_object, "CLIMB")
 
         if not target_room_id:
             self.player.send_message(f"The {target_name} leads nowhere right now.")
@@ -811,14 +843,24 @@ class Move(BaseVerb):
                 if (target_name == obj.get("name", "").lower() or 
                     target_name in obj.get("keywords", [])):
                     
-                    t_room = obj.get("target_room") or obj.get("destination_id")
+                    obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                    valid_verbs = ["GO", "MOVE", "WALK", "CLIMB", "ENTER"]
+                    matching_verbs = [v for v in obj_verbs if v in valid_verbs]
+                    
+                    if matching_verbs:
+                        if "table" in obj.get("keywords", []):
+                            continue
+                        
+                        # First try legacy
+                        t_room = obj.get("target_room") or obj.get("destination_id")
+                        
+                        # Then try to resolve via interactions using matched verbs
+                        if not t_room:
+                            for v in matching_verbs:
+                                t_room = _resolve_interaction_room(obj, v)
+                                if t_room: break
 
-                    if t_room:
-                        obj_verbs = [v.upper() for v in obj.get("verbs", [])]
-                        if any(v in obj_verbs for v in ["GO", "MOVE", "WALK", "CLIMB", "ENTER"]):
-                            if "table" in obj.get("keywords", []):
-                                continue
-
+                        if t_room:
                             target_room_id = t_room
                             move_dir_name = obj.get("name")
                             break
@@ -990,7 +1032,8 @@ class Move(BaseVerb):
 
         enterable_object = None
         for obj in self.room.objects:
-             if "ENTER" in obj.get("verbs", []):
+             obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+             if "ENTER" in obj_verbs:
                 if (target_name == obj.get("name", "").lower() or
                     target_name in obj.get("keywords", [])):
                     enterable_object = obj
@@ -1129,7 +1172,8 @@ class Exit(BaseVerb):
             else:
                 default_exit_obj = None
                 for obj in self.room.objects:
-                    if "ENTER" in obj.get("verbs", []):
+                    obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                    if "ENTER" in obj_verbs:
                         if "door" in obj.get("keywords", []) or "out" in obj.get("keywords", []):
                             default_exit_obj = obj
                             break
