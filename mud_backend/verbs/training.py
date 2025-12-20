@@ -36,6 +36,12 @@ class CheckIn(BaseVerb):
 
         self.player.send_message("You check in at the inn, ready to train.")
         self.player.game_state = "training"
+        
+        # --- FIX: Explicitly tell player if they can level up ---
+        if self.player.experience >= self.player.level_xp_target:
+             self.player.send_message("\n** You have enough experience to gain a level! Type 'LEVELUP' to advance. **\n")
+        # -------------------------------------------------------
+
         show_skill_list(self.player, "all")
 
 @VerbRegistry.register(["train_list"]) 
@@ -133,7 +139,7 @@ class LevelUp(BaseVerb):
              self.player.mtps += mtps
              self.player.stps += stps
              
-             # --- KEY CHANGE: Reset the training limit for the new level ---
+             # Reset the training limit for the new level
              self.player.ranks_trained_this_level.clear()
              
              self.player.send_message(f"**CONGRATULATIONS! You have advanced to Level {self.player.level}!**")
@@ -152,7 +158,7 @@ class LevelUp(BaseVerb):
 class Done(BaseVerb):
     """Handles the 'done' command *during training*."""
     def execute(self):
-        self.player.send_message("You finish your training and head out into the world.")
+        # REMOVED DUPLICATE MESSAGE
         self.player.game_state = "playing"
         
         self.player.hp = self.player.max_hp

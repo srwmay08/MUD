@@ -194,6 +194,15 @@ class Advance(BaseVerb):
             old_level = target.level
             target.level = max(0, target.level + amount)
             
+            # --- FIX: Update XP Target and Reset Training Limits on Admin Level Up ---
+            # 1. Update the XP Target for the new level
+            if hasattr(target, "_get_xp_target_for_level"):
+                target.level_xp_target = target._get_xp_target_for_level(target.level)
+            
+            # 2. Reset training limits so the player can train again immediately
+            target.ranks_trained_this_level.clear()
+            # ------------------------------------------------------------------------
+
             # Calculate TPs for gained levels
             if target.level > old_level:
                 levels_gained = target.level - old_level
@@ -202,6 +211,7 @@ class Advance(BaseVerb):
                 target.mtps += mtps * levels_gained
                 target.stps += stps * levels_gained
                 target.send_message(f"You have been adjusted to level {target.level}. (Gained TPs for {levels_gained} levels)")
+                target.send_message("Your skill training limits have been reset.")
             else:
                 target.send_message(f"You have been adjusted to level {target.level}.")
             
