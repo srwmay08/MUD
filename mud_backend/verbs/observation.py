@@ -11,7 +11,6 @@ from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price, _get_ite
 import re
 
 def _clean_name(name: str) -> str:
-    """Helper to strip articles."""
     if not name: return ""
     return re.sub(r'^(my|the|a|an)\s+', '', name.strip().lower()).strip()
 
@@ -163,7 +162,7 @@ def _show_room_filtered(player, room, world):
     exit_str = ", ".join(exit_list) if exit_list else "None"
     player.send_message(f"<span class='room-exits'>Obvious exits: {exit_str}</span>")
     
-    # Highlight Objects
+    # Highlight Objects (No grouping)
     visible_objects = []
     for obj in room.objects:
         obj_name = obj.get("name", "something")
@@ -205,7 +204,7 @@ class Examine(BaseVerb):
         if target_name.startswith("at "):
             target_name = target_name[3:]
 
-        # Clean articles
+        # Clean articles from examine target
         target_name = _clean_name(target_name)
 
         found_object = None
@@ -274,6 +273,7 @@ class Look(BaseVerb):
                 target_name = full_command[len(prep)+1:].strip()
                 break
             elif f" {prep} " in full_command:
+                # Handle mid-sentence if needed, but strict startswith is safer for LOOK
                 pass
 
         # Clean articles
