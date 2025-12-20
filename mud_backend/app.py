@@ -6,11 +6,16 @@ import sys
 import os
 import time
 import datetime
-import threading 
-import queue 
+import threading
+import queue
 
-from flask import Flask, request, render_template, session
-from flask_socketio import SocketIO, emit, join_room
+from flask import Flask
+from flask import request
+from flask import render_template
+from flask import session
+from flask_socketio import SocketIO
+from flask_socketio import emit
+from flask_socketio import join_room
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -19,12 +24,12 @@ from mud_backend.core.game_loop_handler import check_and_run_game_tick
 from mud_backend.core.game_state import World
 from mud_backend.core import db
 from mud_backend.core import scripting
-from mud_backend.core import combat_system 
+from mud_backend.core import combat_system
 from mud_backend.core.game_loop import monster_ai
 from mud_backend import config
 from mud_backend.core.room_handler import _handle_npc_idle_dialogue
 from mud_backend.core.worker import WorkerManager
-from mud_backend.core import quest_handler 
+from mud_backend.core import quest_handler
 
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'static'))
@@ -39,10 +44,10 @@ game_event_queue = queue.Queue()
 # These define the structure, but do not START anything yet.
 print("[SERVER INIT] Defining World...")
 world = World()
-world.socketio = socketio 
-world.app = app 
+world.socketio = socketio
+world.app = app
 # Initialize the manager but DO NOT start it here
-world.worker_manager = WorkerManager() 
+world.worker_manager = WorkerManager()
 
 @app.route("/")
 def index():
@@ -52,7 +57,7 @@ def persistence_task(world_instance: World):
     """Saves dirty players to DB every 60 seconds."""
     print("[SERVER] Persistence task started.")
     while True:
-        socketio.sleep(60) 
+        socketio.sleep(60)
         count = 0
         active_players = world_instance.get_all_players_info()
         for name, data in active_players:
@@ -66,7 +71,7 @@ def persistence_task(world_instance: World):
 
 def game_loop_task(world_instance: World):
     print("[SERVER START] Game Loop task started.")
-    
+
     quest_handler.initialize_quest_listeners(world_instance)
 
     with app.app_context():
@@ -78,22 +83,25 @@ def game_loop_task(world_instance: World):
                     func, args = game_event_queue.get_nowait()
                     func(**args)
                     events_processed += 1
-                except queue.Empty: break
+                except queue.Empty:
+                    break
                 except Exception as e:
                     print(f"[GAME LOOP ERROR] {e}")
                     import traceback
                     traceback.print_exc()
-            
+
             # Yield to allow heartbeats
             socketio.sleep(0)
 
             current_time = time.time()
             log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
-            
+
             def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
                 world_instance.broadcast_to_room(room_id, message, msg_type, skip_sid)
+
             def send_to_player(player_name, message, msg_type):
                 world_instance.send_message_to_player(player_name.lower(), message, msg_type)
+
             def send_vitals_to_player(player_name, vitals_data):
                 p_info = world_instance.get_player_info(player_name.lower())
                 if p_info and p_info.get("sid"):
@@ -108,7 +116,7 @@ def game_loop_task(world_instance: World):
                     combat_state = world_instance.get_combat_state(player_key)
                     in_rt = False
                     if combat_state and current_time < combat_state.get("next_action_time", 0):
-                         in_rt = True
+                        in_rt = True
                     if not in_rt:
                         cmd_to_run = player_obj.command_queue.pop(0)
                         result_data = execute_command(world_instance, player_obj.name, cmd_to_run, sid)
@@ -116,7 +124,7 @@ def game_loop_task(world_instance: World):
 
             # 3. Combat Tick
             combat_system.process_combat_tick(world_instance, broadcast_to_room, send_to_player, send_vitals_to_player)
-            
+
             # 4. Monster Tick
             if current_time - world_instance.last_monster_tick_time >= config.MONSTER_TICK_INTERVAL_SECONDS:
                 world_instance.last_monster_tick_time = current_time
@@ -128,9 +136,10 @@ def game_loop_task(world_instance: World):
             did_global_tick = check_and_run_game_tick(
                 world_instance, broadcast_to_room, send_to_player, send_vitals_to_player
             )
-            if did_global_tick: socketio.emit('tick')
-            
-            socketio.sleep(0.05) 
+            if did_global_tick:
+                socketio.emit('tick')
+
+            socketio.sleep(0.05)
 
 @socketio.on('connect')
 def handle_connect():
@@ -145,13 +154,14 @@ def handle_disconnect():
     player_name = session.get('player_name')
     player_info = None
     if player_name:
-        player_info = world.remove_player(player_name.lower()) 
+        player_info = world.remove_player(player_name.lower())
     if player_name and player_info:
         room_id = player_info.get("current_room_id")
         if room_id:
             emit("message", f'<span class="keyword" data-name="{player_name}">{player_name}</span> disappears.', to=room_id)
         player_obj = player_info.get("player_obj")
-        if player_obj: db.save_game_state(player_obj)
+        if player_obj:
+            db.save_game_state(player_obj)
     else:
         print(f"[CONNECTION] Unauthenticated client disconnected: {sid}")
 
@@ -161,26 +171,26 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
         new_player_info = world.get_player_info(player_name.lower())
         new_room_id = new_player_info.get("current_room_id") if new_player_info else None
         player_obj = new_player_info.get("player_obj") if new_player_info else None
-        
+
         if new_room_id and old_room_id and old_room_id != new_room_id:
             world.socketio.server.leave_room(sid, old_room_id)
-            
+
             leave_msg = result_data.get("leave_message")
             if not leave_msg:
                 leave_msg = "leaves."
-            
-            world.broadcast_to_room(old_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> {leave_msg}', "message") 
-            
+
+            world.broadcast_to_room(old_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> {leave_msg}', "message")
+
             world.socketio.server.enter_room(sid, new_room_id)
             world.broadcast_to_room(new_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> arrives.', "message", skip_sid=sid)
             socketio.start_background_task(_handle_npc_idle_dialogue, world, player_name, new_room_id)
-            
+
             real_active_room = world.get_active_room_safe(new_room_id)
             if real_active_room and real_active_room.triggers:
                 on_enter_script = real_active_room.triggers.get("on_enter")
                 if on_enter_script:
                     scripting.execute_script(world, player_obj, real_active_room, on_enter_script)
-        
+
         socketio.emit("command_response", result_data, to=sid)
 
         if player_obj and new_room_id:
@@ -188,7 +198,7 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
             if room_data:
                 for obj in room_data.get("objects", []):
                     if (obj.get("is_monster") or obj.get("is_npc")):
-                         monster_ai._check_and_start_npc_combat(world, obj, new_room_id)
+                        monster_ai._check_and_start_npc_combat(world, obj, new_room_id)
 
     except Exception as e:
         print(f"Error in worker: {e}")
@@ -200,7 +210,7 @@ def handle_command_event(data):
     sid = request.sid
     command = data.get("command", "").strip()
     state = session.get('state', 'auth_user')
-    
+
     if state == 'auth_user':
         username = command
         if not username:
@@ -211,32 +221,32 @@ def handle_command_event(data):
         emit("prompt_password", to=sid)
 
     elif state == 'auth_pass':
-            password = command
-            username = session.get('username')
-            if not password or not username:
-                session['state'] = 'auth_user'
-                emit("login_failed", "Error.", to=sid)
-                emit("prompt_username", to=sid)
-                return
-            account = db.fetch_account(username)
-            if not account:
-                db.create_account(username, password)
+        password = command
+        username = session.get('username')
+        if not password or not username:
+            session['state'] = 'auth_user'
+            emit("login_failed", "Error.", to=sid)
+            emit("prompt_username", to=sid)
+            return
+        account = db.fetch_account(username)
+        if not account:
+            db.create_account(username, password)
+            session['state'] = 'char_create_name'
+            emit("prompt_create_character", to=sid)
+        elif db.check_account_password(account, password):
+            chars = db.fetch_characters_for_account(username)
+            if not chars:
                 session['state'] = 'char_create_name'
+                emit("message", "No characters found.", to=sid)
                 emit("prompt_create_character", to=sid)
-            elif db.check_account_password(account, password):
-                chars = db.fetch_characters_for_account(username)
-                if not chars:
-                    session['state'] = 'char_create_name'
-                    emit("message", "No characters found.", to=sid)
-                    emit("prompt_create_character", to=sid)
-                else:
-                    session['characters'] = [c['name'] for c in chars]
-                    session['state'] = 'char_select'
-                    emit("show_char_list", {"chars": session['characters']}, to=sid)
             else:
-                emit("login_failed", "Invalid password.", to=sid)
-                session['state'] = 'auth_user'
-                emit("prompt_username", to=sid)
+                session['characters'] = [c['name'] for c in chars]
+                session['state'] = 'char_select'
+                emit("show_char_list", {"chars": session['characters']}, to=sid)
+        else:
+            emit("login_failed", "Invalid password.", to=sid)
+            session['state'] = 'auth_user'
+            emit("prompt_username", to=sid)
 
     elif state == 'char_create_name':
         new_char_name = command.capitalize()
@@ -251,7 +261,7 @@ def handle_command_event(data):
         session['state'] = 'in_game'
         result_data = execute_command(world, new_char_name, "look", sid, account_username=username)
         emit("command_response", result_data, to=sid)
-        
+
     elif state == 'char_select':
         char_name = command.capitalize()
         if char_name.lower() == 'create':
@@ -263,17 +273,17 @@ def handle_command_event(data):
             return
         session['player_name'] = char_name
         session['state'] = 'in_game'
-        
+
         # --- EXECUTE LOGIN ---
         # 1. Execute 'look' to initialize session
         result_data = execute_command(world, char_name, "look", sid)
-        
+
         # 2. Fetch Player Object to get history
         player_info = world.get_player_info(char_name.lower())
         if player_info:
             player_obj = player_info.get("player_obj")
             room_id = player_info.get("current_room_id")
-            
+
             # 3. Send History (Inject into result_data or send separately)
             # Prepend history to the look output for seamlessness
             if player_obj and player_obj.message_history:
@@ -284,7 +294,7 @@ def handle_command_event(data):
             if room_id:
                 join_room(room_id, sid=sid)
                 world.broadcast_to_room(room_id, f"{char_name} arrives.", "message", skip_sid=sid)
-                
+
         emit("command_response", result_data, to=sid)
 
     elif state == 'in_game':
@@ -301,11 +311,11 @@ if __name__ == "__main__":
     # 1. Start Workers (Only in main process)
     print("[SERVER START] Starting Workers...")
     world.worker_manager.start()
-    
+
     # 2. Load Data (Only in main process)
     print("[SERVER START] Loading Data...")
     world.load_all_data(db)
-    
+
     # 3. Wire Events (Only in main process)
     world.event_bus.subscribe("save_room", lambda room: db.save_room_state(room))
     world.event_bus.subscribe("update_band_xp", lambda player_name, amount: db.update_player_band_xp_bank(player_name, amount))
@@ -314,7 +324,7 @@ if __name__ == "__main__":
     print("[SERVER START] Starting Background Tasks...")
     socketio.start_background_task(game_loop_task, world)
     socketio.start_background_task(persistence_task, world)
-    
+
     # 5. Run Server
     print("[SERVER START] Running SocketIO server on http://127.0.0.1:8024")
     socketio.run(app, host='0.0.0.0', port=8024, debug=True, use_reloader=False)

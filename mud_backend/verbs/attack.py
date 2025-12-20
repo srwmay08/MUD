@@ -1,14 +1,15 @@
 # mud_backend/verbs/attack.py
 import time
-import copy 
+import copy
 import math
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend import config 
+from mud_backend import config
 from mud_backend.core import combat_system
 from mud_backend.core import loot_system
-from mud_backend.core import db 
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core import db
+from mud_backend.verbs.foraging import _check_action_roundtime
+from mud_backend.verbs.foraging import _set_action_roundtime
 from mud_backend.core import faction_handler
 
 @VerbRegistry.register(["attack"])
@@ -17,31 +18,36 @@ class Attack(BaseVerb):
     Handles the 'attack' command.
     Supports Single Weapon and Two-Weapon Combat (TWC).
     """
-    
+
     def _trigger_social_aggro(self, target_monster_data: dict):
         target_faction = target_monster_data.get("faction")
-        if not target_faction: return
+        if not target_faction:
+            return
 
         target_uid = target_monster_data.get("uid")
         player_id = self.player.name.lower()
         current_time = time.time()
 
         for obj in self.room.objects:
-            if obj.get("uid") == target_uid: continue
-            if not (obj.get("is_monster") or obj.get("is_npc")): continue
-            if obj.get("faction") != target_faction: continue
-                
+            if obj.get("uid") == target_uid:
+                continue
+            if not (obj.get("is_monster") or obj.get("is_npc")):
+                continue
+            if obj.get("faction") != target_faction:
+                continue
+
             mob_uid = obj.get("uid")
             combat_state = self.world.get_combat_state(mob_uid)
-            if combat_state and combat_state.get("state_type") == "combat": continue
-                
+            if combat_state and combat_state.get("state_type") == "combat":
+                continue
+
             monster_name = obj.get("name", "A creature")
             self.player.send_message(f"The {monster_name} comes to the aid of its kin!")
             self.world.broadcast_to_room(self.room.room_id, f"The {monster_name} joins the fight!", "combat_broadcast", skip_sid=self.player.uid)
-            
+
             monster_agi = obj.get("stats", {}).get("AGI", 50)
             monster_rt = combat_system.calculate_roundtime(monster_agi)
-            
+
             self.world.set_combat_state(mob_uid, {
                 "state_type": "combat",
                 "target_id": player_id,
@@ -60,21 +66,21 @@ class Attack(BaseVerb):
             "hit": attack_results['hit'],
             "is_fatal": False,
             "combat_continues": True,
-            "messages": [] 
+            "messages": []
         }
-        
+
         resolve_data["messages"].append(attack_results['attempt_msg'])
         resolve_data["messages"].append(attack_results['roll_string'])
         resolve_data["messages"].append(attack_results['result_msg'])
-        
+
         if attack_results['hit']:
             if attack_results['critical_msg']:
                 resolve_data["messages"].append(attack_results['critical_msg'])
-            
+
             damage = attack_results['damage']
             is_fatal = attack_results['is_fatal']
             resolve_data["is_fatal"] = is_fatal
-            
+
             monster_uid = target_monster_data.get("uid")
             new_hp = self.world.modify_monster_hp(
                 monster_uid,
@@ -88,8 +94,8 @@ class Attack(BaseVerb):
             if new_hp <= 0 or is_fatal:
                 consequence_msg = f"**The {target_monster_data['name']} has been DEFEATED!**"
                 resolve_data["messages"].append(consequence_msg)
-                resolve_data["combat_continues"] = False 
-                
+                resolve_data["combat_continues"] = False
+
                 # --- NEW: Treasure System Pressure ---
                 monster_id = target_monster_data.get("monster_id")
                 if monster_id:
@@ -98,11 +104,11 @@ class Attack(BaseVerb):
 
                 # --- UPDATE QUEST COUNTERS ---
                 monster_family = target_monster_data.get("family")
-                
+
                 if monster_id:
                     key = f"{monster_id}_kills"
                     self.player.quest_counters[key] = self.player.quest_counters.get(key, 0) + 1
-                    
+
                 if monster_family:
                     key = f"{monster_family}_kills"
                     self.player.quest_counters[key] = self.player.quest_counters.get(key, 0) + 1
@@ -113,24 +119,29 @@ class Attack(BaseVerb):
                 monster_level = target_monster_data.get("level", 1)
                 level_diff = player_level - monster_level
                 nominal_xp = 0
-                if level_diff >= 10: nominal_xp = 0
-                elif 1 <= level_diff <= 9: nominal_xp = 100 - (10 * level_diff)
-                elif level_diff == 0: nominal_xp = 100
-                elif -4 <= level_diff <= -1: nominal_xp = 100 + (10 * abs(level_diff))
-                elif level_diff <= -5: nominal_xp = 150
-                nominal_xp = max(0, nominal_xp) 
-                
+                if level_diff >= 10:
+                    nominal_xp = 0
+                elif 1 <= level_diff <= 9:
+                    nominal_xp = 100 - (10 * level_diff)
+                elif level_diff == 0:
+                    nominal_xp = 100
+                elif -4 <= level_diff <= -1:
+                    nominal_xp = 100 + (10 * abs(level_diff))
+                elif level_diff <= -5:
+                    nominal_xp = 150
+                nominal_xp = max(0, nominal_xp)
+
                 if nominal_xp > 0:
                     resolve_data["messages"].append(f"You have gained {nominal_xp} experience from the kill.")
                     self.player.grant_experience(nominal_xp, source="combat")
-                
+
                 # Faction Adjustments
                 monster_faction = target_monster_data.get("faction")
                 if monster_faction:
                     adjustments = faction_handler.get_faction_adjustments_on_kill(self.world, monster_faction)
                     for fac_id, amount in adjustments.items():
                         faction_handler.adjust_player_faction(self.player, fac_id, amount)
-                
+
                 # Corpse
                 corpse_data = loot_system.create_corpse_object_data(
                     target_monster_data, monster_uid, self.world.game_items, self.world.game_loot_tables, {}
@@ -138,12 +149,12 @@ class Attack(BaseVerb):
                 self.room.objects.append(corpse_data)
                 if target_monster_data in self.room.objects:
                     self.room.objects.remove(target_monster_data)
-                
+
                 self.world.save_room(self.room)
                 self.world.unregister_mob(monster_uid)
-                
+
                 resolve_data["messages"].append(f"The {corpse_data['name']} falls to the ground.")
-                
+
                 # Respawn
                 respawn_time = target_monster_data.get("respawn_time_seconds", 300)
                 respawn_chance = target_monster_data.get("respawn_chance_per_tick", getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2))
@@ -157,7 +168,7 @@ class Attack(BaseVerb):
                     "faction": monster_faction
                 })
                 self.world.stop_combat_for_all(self.player.name.lower(), monster_uid)
-        
+
         return resolve_data
 
     def execute(self):
@@ -170,7 +181,7 @@ class Attack(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         target_monster_data = None
-        
+
         # Find Target
         for obj in self.room.objects:
             if obj.get("is_monster") or obj.get("is_npc"):
@@ -178,7 +189,7 @@ class Attack(BaseVerb):
                 is_defeated = False
                 if uid:
                     is_defeated = self.world.get_defeated_monster(uid) is not None
-                
+
                 if not is_defeated:
                     if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
                         target_monster_data = obj
@@ -192,36 +203,39 @@ class Attack(BaseVerb):
         if not monster_uid:
             self.player.send_message("That creature cannot be attacked right now.")
             return
-        
+
         # Check TWC
         main_weapon = self.player.get_equipped_item_data("mainhand")
         off_weapon = self.player.get_equipped_item_data("offhand")
-        
+
         is_twc = (main_weapon and main_weapon.get("item_type") == "weapon" and
                   off_weapon and off_weapon.get("item_type") == "weapon")
-        
+
         current_time = time.time()
-        
+
         if is_twc:
             # 1. Execute Main Attack
             res_main = self._resolve_and_handle_attack(target_monster_data, is_offhand=False)
-            for msg in res_main["messages"]: self.player.send_message(msg)
-            
+            for msg in res_main["messages"]:
+                self.player.send_message(msg)
+
             # 2. Execute Offhand Attack (if target alive)
             if res_main["combat_continues"]:
                 res_off = self._resolve_and_handle_attack(target_monster_data, is_offhand=True)
-                for msg in res_off["messages"]: self.player.send_message(msg)
-            
+                for msg in res_off["messages"]:
+                    self.player.send_message(msg)
+
             # 3. Apply TWC Roundtime
             rt_seconds = combat_system.calculate_roundtime_twc(
                 self.player.stats, main_weapon, off_weapon
             )
-            
+
         else:
             # Standard Attack
             res = self._resolve_and_handle_attack(target_monster_data, is_offhand=False)
-            for msg in res["messages"]: self.player.send_message(msg)
-            
+            for msg in res["messages"]:
+                self.player.send_message(msg)
+
             # Standard Roundtime
             base_speed = main_weapon.get("base_speed", 3) if main_weapon else 3
             agi = self.player.stats.get("AGI", 50)
@@ -230,23 +244,23 @@ class Attack(BaseVerb):
         # Apply RT to Player
         armor_penalty = self.player.armor_rt_penalty
         final_rt = rt_seconds + armor_penalty
-        
+
         self.world.set_combat_state(self.player.name.lower(), {
             "state_type": "action",
-            "target_id": monster_uid, 
-            "next_action_time": current_time + final_rt, 
-            "duration": final_rt, 
+            "target_id": monster_uid,
+            "next_action_time": current_time + final_rt,
+            "duration": final_rt,
             "current_room_id": self.room.room_id,
-            "rt_type": "hard" 
+            "rt_type": "hard"
         })
         self.player.send_message(f"Roundtime: {final_rt:.1f}s")
 
         # Ensure Monster Aggro
         monster_state = self.world.get_combat_state(monster_uid)
-        monster_is_fighting_player = (monster_state and 
-                                      monster_state.get("state_type") == "combat" and 
+        monster_is_fighting_player = (monster_state and
+                                      monster_state.get("state_type") == "combat" and
                                       monster_state.get("target_id") == self.player.name.lower())
-        
+
         if not monster_is_fighting_player and (target_monster_data not in self.room.objects or self.world.get_defeated_monster(monster_uid)):
             pass # Monster died, no aggro needed
         elif not monster_is_fighting_player:
@@ -259,4 +273,4 @@ class Attack(BaseVerb):
                 "current_room_id": self.room.room_id
             })
             if self.world.get_monster_hp(monster_uid) is None:
-                 self.world.set_monster_hp(monster_uid, target_monster_data.get("max_hp", 50))
+                self.world.set_monster_hp(monster_uid, target_monster_data.get("max_hp", 50))
