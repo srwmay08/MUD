@@ -299,7 +299,8 @@ class Put(BaseVerb):
             self.player.send_message("Do what?")
             return
 
-        # Separate logic for DROP/DISCARD vs PUT to avoid ambiguity
+        # STRICTLY SEPARATE DROP FROM PUT
+        # This prevents "put" falling through to drop if parsing fails
         if self.command_root in ["drop", "discard"]:
             self._execute_drop()
         else:
@@ -345,7 +346,7 @@ class Put(BaseVerb):
         args_str = " ".join(self.args).lower()
         
         # Regex to split ITEM and CONTAINER using a preposition
-        # Finds the last preposition to handle cases correctly
+        # Matches: [item] [prep] [container]
         match = re.search(r'\b(inside|into|under|behind|beneath|in|on)\b', args_str, re.IGNORECASE)
 
         if match:
@@ -354,6 +355,8 @@ class Put(BaseVerb):
             target_item_name = args_str[:start].strip()
             target_container_name = args_str[end:].strip()
         else:
+            # If no preposition is found, we cannot assume container.
+            # We explicitly FAIL here to avoid searching for "dagger behind bench" as an item name.
             self.player.send_message("Put it where? (e.g., PUT DAGGER ON BENCH)")
             return
 
