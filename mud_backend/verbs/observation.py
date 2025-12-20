@@ -8,6 +8,12 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price, _get_item_type
+import re
+
+def _clean_name(name: str) -> str:
+    """Helper to strip articles."""
+    if not name: return ""
+    return re.sub(r'^(my|the|a|an)\s+', '', name.strip().lower()).strip()
 
 def _find_item_on_player(player, target_name):
     """Checks worn items and inventory for a match."""
@@ -199,12 +205,8 @@ class Examine(BaseVerb):
         if target_name.startswith("at "):
             target_name = target_name[3:]
 
-        # Clean articles from examine target
-        target_name = target_name.strip()
-        if target_name.startswith("my "): target_name = target_name[3:].strip()
-        if target_name.startswith("the "): target_name = target_name[4:].strip()
-        if target_name.startswith("a "): target_name = target_name[2:].strip()
-        if target_name.startswith("an "): target_name = target_name[3:].strip()
+        # Clean articles
+        target_name = _clean_name(target_name)
 
         found_object = None
         for obj in self.room.objects:
@@ -272,15 +274,10 @@ class Look(BaseVerb):
                 target_name = full_command[len(prep)+1:].strip()
                 break
             elif f" {prep} " in full_command:
-                # Handle mid-sentence if needed, but strict startswith is safer for LOOK
                 pass
 
         # Clean articles
-        target_name = target_name.strip()
-        if target_name.startswith("my "): target_name = target_name[3:].strip()
-        if target_name.startswith("the "): target_name = target_name[4:].strip()
-        if target_name.startswith("a "): target_name = target_name[2:].strip()
-        if target_name.startswith("an "): target_name = target_name[3:].strip()
+        target_name = _clean_name(target_name)
 
         # 2. Find Target
         found_obj = None

@@ -7,15 +7,13 @@ from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roun
 from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
 import time
 import uuid
+import re
 
 def _clean_name(name: str) -> str:
-    """Helper to strip articles from names for cleaner matching."""
-    name = name.strip().lower()
-    if name.startswith("my "): name = name[3:].strip()
-    if name.startswith("the "): name = name[4:].strip()
-    if name.startswith("a "): name = name[2:].strip()
-    if name.startswith("an "): name = name[3:].strip()
-    return name
+    """Helper to strip articles from names using regex for safety."""
+    if not name: return ""
+    # Strip starting articles (my, the, a, an) followed by space
+    return re.sub(r'^(my|the|a|an)\s+', '', name.strip().lower()).strip()
 
 def _get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(item_ref, dict): return item_ref
@@ -63,6 +61,7 @@ def _find_item_worn(player, target_name: str) -> Tuple[str | None, str | None]:
 
 def _find_container_on_player(player, game_items_data: Dict[str, Any], target_name: str) -> Dict[str, Any] | None:
     target_name = _clean_name(target_name)
+    # Check worn items
     for slot, item in player.worn_items.items():
         if item:
             item_data = _get_item_data(item, game_items_data)
@@ -72,6 +71,7 @@ def _find_container_on_player(player, game_items_data: Dict[str, Any], target_na
                 if (target_name == item_data.get("name", "").lower() or target_name in search_keywords):
                     item_data_with_id = item_data.copy(); item_data_with_id["_runtime_item_ref"] = item
                     return item_data_with_id
+    # Check inventory (nested containers)
     for item in player.inventory:
         item_data = _get_item_data(item, game_items_data)
         if item_data and item_data.get("is_container"):
@@ -83,8 +83,14 @@ def _find_container_on_player(player, game_items_data: Dict[str, Any], target_na
     return None
 
 def _find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep=None):
+    """
+    Searches for an item inside an object's 'container_storage'.
+    Returns (item_ref, found_prep, index)
+    """
     target_item_name = _clean_name(target_item_name)
     storage = obj.get("container_storage", {})
+    
+    # Define which prepositions to search
     preps_to_check = [specific_prep] if specific_prep else storage.keys()
     
     for prep in preps_to_check:
@@ -112,9 +118,11 @@ class Get(BaseVerb):
             if "vault" not in self.room.name.lower() and "locker" not in self.room.name.lower():
                  self.player.send_message("You must be at the Town Hall Vaults to access your locker.")
                  return
+            
             target = args_str.replace("from locker", "").replace("from vault", "").strip()
             if target.startswith("get "): target = target[4:].strip()
             if target.startswith("take "): target = target[5:].strip()
+
             locker = self.player.locker
             found_item = None
             found_idx = -1
@@ -122,7 +130,9 @@ class Get(BaseVerb):
             
             for i, item in enumerate(locker["items"]):
                 if target in item["name"].lower() or target in item.get("keywords", []):
-                    found_item = item; found_idx = i; break
+                    found_item = item
+                    found_idx = i
+                    break
             
             if not found_item:
                 self.player.send_message("You don't see that in your locker.")
@@ -149,6 +159,7 @@ class Get(BaseVerb):
             target_item_name = parts[0].strip()
             target_container_name = parts[1].strip()
             
+            # Using simple splitting for 'from' logic
             prepositions = ["inside", "into", "under", "behind", "beneath", "in", "on"]
             for prep in prepositions:
                 if target_container_name.startswith(f"{prep} "):
@@ -159,6 +170,7 @@ class Get(BaseVerb):
         if target_item_name: target_item_name = _clean_name(target_item_name)
         if target_container_name: target_container_name = _clean_name(target_container_name)
 
+        # Determine hand
         target_hand_slot = None
         if self.player.worn_items.get("mainhand") is None: target_hand_slot = "mainhand"
         elif self.player.worn_items.get("offhand") is None: target_hand_slot = "offhand"
@@ -167,6 +179,7 @@ class Get(BaseVerb):
 
         # --- GET FROM CONTAINER / OBJECT ---
         if target_container_name:
+            # 1. Check Room Objects
             container_obj = None
             for obj in self.room.objects:
                 if (target_container_name == obj.get("name", "").lower() or 
@@ -175,29 +188,31 @@ class Get(BaseVerb):
                     break
             
             if container_obj:
-                # A) Shop Inventory
+                # A) Check Shop Inventory (Tables)
                 if "table" in container_obj.get("keywords", []):
                     shop_data = _get_shop_data(self.room)
                     if shop_data:
                         found_item_ref = None
                         for item_ref in shop_data.get("inventory", []):
                             item_data = _get_item_data(item_ref, game_items)
-                            if item_data and (target_item_name == item_data.get("name", "").lower() or target_item_name in item_data.get("keywords", [])):
-                                found_item_ref = item_ref; break
+                            if item_data:
+                                if (target_item_name == item_data.get("name", "").lower() or target_item_name in item_data.get("keywords", [])):
+                                    found_item_ref = item_ref
+                                    break
                         if found_item_ref:
                             price = _get_item_buy_price(found_item_ref, game_items, shop_data)
                             item_name = _get_item_data(found_item_ref, game_items).get("name", "that")
                             self.player.send_message(f"The pawnbroker notices your interest. 'That {item_name} will cost you {price} silvers.'")
                             return
 
-                # B) Container Storage
+                # B) Check Container Storage
                 item_ref, found_prep, idx = _find_item_in_obj_storage(
                     container_obj, target_item_name, game_items, specific_prep=target_prep
                 )
                 
                 if item_ref:
                     if not target_hand_slot:
-                        self.player.send_message("Your hands are full.")
+                        self.player.send_message("Your hands are full. You must free a hand to get that.")
                         return
 
                     container_obj["container_storage"][found_prep].pop(idx)
@@ -213,7 +228,7 @@ class Get(BaseVerb):
                 self.player.send_message(f"You don't see a '{target_item_name}' {loc_str}the {container_obj['name']}.")
                 return
 
-            # C) Player Containers
+            # 2. Check Player Containers
             container_data = _find_container_on_player(self.player, game_items, target_container_name)
             if not container_data:
                 self.player.send_message(f"You don't have a container called '{target_container_name}' and don't see one here.")
@@ -228,7 +243,7 @@ class Get(BaseVerb):
             item_name = item_data.get("name", "an item")
 
             if not target_hand_slot:
-                self.player.send_message("Your hands are full.")
+                self.player.send_message("Your hands are full. You must free a hand to get that.")
                 return
                 
             self.player.inventory.remove(item_ref)
@@ -238,7 +253,7 @@ class Get(BaseVerb):
             
         # --- GET FROM GROUND / VISIBLE SURFACES ---
         else:
-            # 1. Check Room Objects
+            # 1. Check Room Objects (Floor)
             item_obj = _find_item_in_room(self.room.objects, target_item_name)
             
             if item_obj:
@@ -269,7 +284,7 @@ class Get(BaseVerb):
                 self.world.save_room(self.room)
                 return
 
-            # 2. Check Visible Surfaces (Auto-check "ON")
+            # 2. Check Visible Surfaces (Auto-check "ON" surfaces)
             for obj in self.room.objects:
                 item_ref, found_prep, idx = _find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep="on")
                 if item_ref:
@@ -299,7 +314,7 @@ class Get(BaseVerb):
             # 4. Check Inventory (Unstow)
             item_ref_from_pack = _find_item_in_inventory(self.player, game_items, target_item_name)
             if not item_ref_from_pack:
-                self.player.send_message(f"You don't see a **{target_item_name}** here.")
+                self.player.send_message(f"You don't see a **{target_item_name}** here, in your pack, or on any surfaces.")
                 return
 
             if not target_hand_slot:
@@ -330,21 +345,22 @@ class Put(BaseVerb):
             
         args_str = " ".join(self.args).lower()
         
-        prepositions = ["inside", "into", "under", "behind", "beneath", "in", "on"]
-        
-        target_item_name = args_str
+        target_item_name = None
         target_container_name = None
         target_prep = None
         
-        # 1. Parse Prepositions
-        for prep in prepositions:
-            check_str = f" {prep} "
-            if check_str in args_str:
-                parts = args_str.split(check_str, 1)
-                target_item_name = parts[0].strip()
-                target_container_name = parts[1].strip()
-                target_prep = prep
-                break
+        # 1. Regex Split for Prepositions to handle whitespace safely
+        # Matches " on ", " under ", etc.
+        match = re.search(r'\s+(inside|into|under|behind|beneath|in|on)\s+', args_str)
+        
+        if match:
+            target_prep = match.group(1)
+            start, end = match.span()
+            target_item_name = args_str[:start].strip()
+            target_container_name = args_str[end:].strip()
+        else:
+            # No preposition found, treat entire string as item name (for drop)
+            target_item_name = args_str.strip()
         
         # 2. Check for explicit "MY"
         explicit_player_source = False
@@ -366,7 +382,7 @@ class Put(BaseVerb):
         # A) Check Hands
         item_ref, hand_slot = _find_item_in_hands(self.player, game_items, target_item_name)
         
-        # B) Check Inventory (Auto-retrieve)
+        # B) Check Inventory (Auto-retrieve) if not in hands
         if not item_ref:
             item_ref = _find_item_in_inventory(self.player, game_items, target_item_name)
             if item_ref:
@@ -376,7 +392,7 @@ class Put(BaseVerb):
         if not item_ref and not explicit_player_source:
             item_obj = _find_item_in_room(self.room.objects, target_item_name)
             if item_obj:
-                item_ref = item_obj
+                item_ref = item_obj # Room object is the ref
                 item_obj_ref = item_obj
                 from_room = True
 
@@ -390,7 +406,7 @@ class Put(BaseVerb):
         item_data = _get_item_data(item_ref, game_items)
         item_name = item_data.get("name", "the item")
         
-        # 4. Handle DROP
+        # 4. Handle DROP (No container specified, and command was explicitly drop/discard)
         if not target_container_name and self.command_root in ["drop", "discard"]:
             if from_room:
                 self.player.send_message("It's already on the ground.")
@@ -401,6 +417,7 @@ class Put(BaseVerb):
             else:
                 self.player.worn_items[hand_slot] = None
             
+            # Construct room object
             if isinstance(item_ref, dict):
                 obj = item_ref
                 obj["is_item"] = True
@@ -412,7 +429,7 @@ class Put(BaseVerb):
             self.world.save_room(self.room)
             return
 
-        # 5. Handle PUT
+        # 5. Handle PUT (Must have container)
         if not target_container_name:
             self.player.send_message("Put it where? (e.g., PUT DAGGER ON BENCH)")
             return
