@@ -50,6 +50,17 @@ def _find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: st
                     return item_ref, slot
     return None, None
 
+def _find_item_worn(player, target_name: str) -> Tuple[str | None, str | None]:
+    """Returns (item_id, slot_name) if found worn."""
+    target_name = _clean_name(target_name)
+    for slot, item_id in player.worn_items.items():
+        if item_id:
+            item_data = _get_item_data(item_id, player.world.game_items)
+            if item_data:
+                if (target_name == item_data.get("name", "").lower() or target_name in item_data.get("keywords", [])):
+                    return item_id, slot
+    return None, None
+
 def _find_container_on_player(player, game_items_data: Dict[str, Any], target_name: str) -> Dict[str, Any] | None:
     target_name = _clean_name(target_name)
     # Check worn items
