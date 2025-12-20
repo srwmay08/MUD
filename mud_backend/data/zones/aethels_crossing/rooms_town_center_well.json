@@ -237,6 +237,10 @@
                         "value": "There is a bit of room to fit something behind the bench and between the well."
                     }
                 }
+            },
+            {
+                "item_id": "iron_dagger",
+                "is_item": true
             }
         ],
         "room_id": "room_1766107074505_244",
