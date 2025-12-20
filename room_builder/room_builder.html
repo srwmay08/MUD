@@ -395,6 +395,24 @@
     </div>
 </div>
 
+<datalist id="common-verbs">
+    <option value="look at">
+    <option value="look in">
+    <option value="look on">
+    <option value="look under">
+    <option value="look behind">
+    <option value="look beneath">
+    <option value="look inside">
+    <option value="read">
+    <option value="open">
+    <option value="close">
+    <option value="push">
+    <option value="pull">
+    <option value="touch">
+    <option value="climb">
+    <option value="enter">
+</datalist>
+
 <datalist id="dl-monsters"></datalist>
 <datalist id="dl-items"></datalist>
 <datalist id="dl-nodes"></datalist>
@@ -686,7 +704,7 @@
 
             const interactionsHtml = Object.entries(interactionsToRender).map(([verb, data]) => `
                 <div class="interaction-row">
-                    <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" value="${verb}" onchange="updateRoomData()">
+                    <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" value="${verb}" list="common-verbs" onchange="updateRoomData()">
                     <select class="form-select text-[10px] h-5 p-0 w-16 bg-black ia-type" onchange="updateRoomData()">
                         <option value="text" ${data.type==='text'?'selected':''}>Msg</option>
                         <option value="move" ${data.type==='move'?'selected':''}>Move</option>
@@ -727,7 +745,7 @@
         const div = document.createElement('div');
         div.className = 'interaction-row';
         div.innerHTML = `
-            <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" placeholder="verb" onchange="updateRoomData()">
+            <input class="form-input text-[10px] h-5 p-0 w-12 bg-black ia-verb" placeholder="verb" list="common-verbs" onchange="updateRoomData()">
             <select class="form-select text-[10px] h-5 p-0 w-16 bg-black ia-type" onchange="updateRoomData()">
                 <option value="text">Msg</option> <option value="move">Move</option> <option value="script">Code</option>
             </select>
