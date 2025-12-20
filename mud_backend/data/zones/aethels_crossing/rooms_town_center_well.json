@@ -10,17 +10,17 @@
             "south": "town_square"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -30,22 +30,22 @@
         "name": "Town Well",
         "objects": [
             {
-                "name": "Town Well",
                 "description": "",
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "verbs": [
-                    "look",
-                    "Climb"
-                ],
                 "interactions": {
                     "Climb": {
                         "type": "move",
                         "value": "well_bottom"
                     }
-                }
+                },
+                "keywords": [
+                    "town well",
+                    "well"
+                ],
+                "name": "Town Well",
+                "verbs": [
+                    "look",
+                    "Climb"
+                ]
             }
         ],
         "room_id": "room_1766106929120_953",
@@ -61,112 +61,6 @@
         "exits": {
             "northwest": "room_1766107073364_416",
             "southwest": "room_1766106929120_953"
-        },
-        "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "hidden_objects": [],
-        "illumination": 50,
-        "interior_id": "town_center_well",
-        "is_outdoor": false,
-        "is_table": false,
-        "name": "New Room",
-        "objects": [
-            {
-                "name": "Town Well",
-                "description": "",
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "verbs": [
-                    "look",
-                    "Climb"
-                ],
-                "interactions": {
-                    "Climb": {
-                        "type": "move",
-                        "value": "well_bottom"
-                    }
-                }
-            }
-        ],
-        "room_id": "room_1766107071981_571",
-        "x": -4,
-        "y": 0,
-        "z": 0
-    },
-    {
-        "ambient_events": [],
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "southeast": "room_1766107071981_571",
-            "southwest": "room_1766107074505_244"
-        },
-        "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "hidden_objects": [],
-        "illumination": 50,
-        "interior_id": "town_center_well",
-        "is_outdoor": false,
-        "is_table": false,
-        "name": "New Room",
-        "objects": [
-            {
-                "name": "Town Well",
-                "description": "",
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "verbs": [
-                    "look",
-                    "Climb"
-                ],
-                "interactions": {
-                    "Climb": {
-                        "type": "move",
-                        "value": "well_bottom"
-                    }
-                }
-            }
-        ],
-        "room_id": "room_1766107073364_416",
-        "x": -5,
-        "y": 1,
-        "z": 0
-    },
-    {
-        "ambient_events": [],
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "northeast": "room_1766107073364_416",
-            "southeast": "room_1766106929120_953"
         },
         "flags": {
             "hiding_allowed": true,
@@ -205,6 +99,145 @@
                     "look",
                     "Climb"
                 ]
+            }
+        ],
+        "room_id": "room_1766107071981_571",
+        "x": -4,
+        "y": 0,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "southeast": "room_1766107071981_571",
+            "southwest": "room_1766107074505_244"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "town_center_well",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "New Room",
+        "objects": [
+            {
+                "description": "",
+                "interactions": {
+                    "Climb": {
+                        "type": "move",
+                        "value": "well_bottom"
+                    }
+                },
+                "keywords": [
+                    "town well",
+                    "well"
+                ],
+                "name": "Town Well",
+                "verbs": [
+                    "look",
+                    "Climb"
+                ]
+            }
+        ],
+        "room_id": "room_1766107073364_416",
+        "x": -5,
+        "y": 1,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "northeast": "room_1766107073364_416",
+            "southeast": "room_1766106929120_953"
+        },
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "town_center_well",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "New Room",
+        "objects": [
+            {
+                "name": "Town Well",
+                "description": "",
+                "keywords": [
+                    "town well",
+                    "well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
+                "interactions": {
+                    "Climb": {
+                        "type": "move",
+                        "value": "well_bottom"
+                    }
+                }
+            },
+            {
+                "name": "a bench",
+                "description": "",
+                "keywords": [
+                    "a",
+                    "bench"
+                ],
+                "verbs": [
+                    "look",
+                    "look on",
+                    "look at",
+                    "look under",
+                    "look behind"
+                ],
+                "interactions": {
+                    "look on": {
+                        "type": "text",
+                        "value": "The top of the bench is smooth stone, it looks like a nice place to sit."
+                    },
+                    "look at": {
+                        "type": "text",
+                        "value": "A nice stone bench."
+                    },
+                    "look under": {
+                        "type": "text",
+                        "value": "The grass is growing up the legs of the bench, the gardners seem to have missed this bench when tending to the area."
+                    },
+                    "look behind": {
+                        "type": "text",
+                        "value": "There is a bit of room to fit something behind the bench and between the well."
+                    }
+                }
             }
         ],
         "room_id": "room_1766107074505_244",
