@@ -334,8 +334,9 @@ class Get(BaseVerb):
 @VerbRegistry.register(["put", "drop", "discard"])
 class Put(BaseVerb):
     """
-    Handles PUT/DROP logic with strict separation.
-    Supports putting items IN/ON/UNDER/BEHIND/BENEATH objects.
+    Handles PUT/DROP logic.
+    Differentiates between explicitly 'MY' items (restricted to inventory/hands)
+    and generic items (can pick up from room floor to put on/in container).
     """
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"): return
@@ -362,29 +363,56 @@ class Put(BaseVerb):
                 target_prep = prep
                 break
         
-        # Clean Names
+        # 2. Check for explicit "MY" before cleaning
+        explicit_player_source = False
+        if target_item_name.startswith("my "):
+            explicit_player_source = True
+        
+        # Clean Names (strips 'my', 'the', 'a', etc.)
         if target_item_name: target_item_name = _clean_name(target_item_name)
         if target_container_name: target_container_name = _clean_name(target_container_name)
 
-        # 2. Find Item in Hands (or inventory fallback for auto-wield)
+        # 3. Find Item
         game_items = self.world.game_items
+        item_ref = None
+        hand_slot = None
+        from_inventory = False
+        from_room = False
+        item_obj_ref = None # For room objects
+
+        # A) Check Hands
         item_ref, hand_slot = _find_item_in_hands(self.player, game_items, target_item_name)
         
-        from_inventory = False
+        # B) Check Inventory (Auto-retrieve) if not in hands
         if not item_ref:
-            # Check inventory to auto-retrieve
             item_ref = _find_item_in_inventory(self.player, game_items, target_item_name)
             if item_ref:
                 from_inventory = True
+        
+        # C) Check Room (Only if 'my' was NOT used)
+        if not item_ref and not explicit_player_source:
+            item_obj = _find_item_in_room(self.room.objects, target_item_name)
+            if item_obj:
+                item_ref = item_obj # Room object is the ref
+                item_obj_ref = item_obj
+                from_room = True
+
+        if not item_ref:
+            if explicit_player_source:
+                self.player.send_message(f"You don't have a '{target_item_name}'.")
             else:
-                self.player.send_message(f"You aren't holding a '{target_item_name}' and don't have one in your pack.")
-                return
+                self.player.send_message(f"You don't see a '{target_item_name}' here.")
+            return
             
         item_data = _get_item_data(item_ref, game_items)
         item_name = item_data.get("name", "the item")
         
-        # 3. Handle DROP (No container specified, and command was explicitly drop/discard)
+        # 4. Handle DROP (No container specified, and command was explicitly drop/discard)
         if not target_container_name and self.command_root in ["drop", "discard"]:
+            if from_room:
+                self.player.send_message("It's already on the ground.")
+                return
+                
             if from_inventory:
                 self.player.inventory.remove(item_ref)
             else:
@@ -402,12 +430,12 @@ class Put(BaseVerb):
             self.world.save_room(self.room)
             return
 
-        # 4. Handle PUT (Must have container)
+        # 5. Handle PUT (Must have container)
         if not target_container_name:
             self.player.send_message("Put it where? (e.g., PUT DAGGER ON BENCH)")
             return
 
-        # 5. Find Target Object
+        # 6. Find Target Object
         container_obj = None
         for obj in self.room.objects:
              if (target_container_name == obj.get("name", "").lower() or 
@@ -419,20 +447,20 @@ class Put(BaseVerb):
             self.player.send_message(f"You don't see a {target_container_name} here.")
             return
 
-        # 6. Check Trash
+        # 7. Check Trash
         trash_keywords = ["bin", "trash", "barrel", "crate", "urn", "coffin", "case"]
         is_trash = any(k in container_obj.get("keywords", []) for k in trash_keywords)
         
         if is_trash and target_prep in [None, "in", "inside", "into"]:
-            if from_inventory:
-                self.player.inventory.remove(item_ref)
-            else:
-                self.player.worn_items[hand_slot] = None
+            if from_room: self.room.objects.remove(item_obj_ref)
+            elif from_inventory: self.player.inventory.remove(item_ref)
+            else: self.player.worn_items[hand_slot] = None
+            
             self.player.send_message(f"You discard {item_name} into the {container_obj['name']}.")
             _set_action_roundtime(self.player, 1.0)
             return
 
-        # 7. Validate Placement
+        # 8. Validate Placement Support
         if target_prep in ["inside", "into"]: target_prep = "in"
         if target_prep == "beneath": target_prep = "under"
         
@@ -457,8 +485,10 @@ class Put(BaseVerb):
             self.player.send_message(f"You can't put things {target_prep} the {container_obj['name']}.")
             return
 
-        # 8. Execute Placement
-        if from_inventory:
+        # 9. Execute Placement
+        if from_room:
+            self.room.objects.remove(item_obj_ref)
+        elif from_inventory:
             self.player.inventory.remove(item_ref)
         else:
             self.player.worn_items[hand_slot] = None
