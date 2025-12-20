@@ -61,32 +61,31 @@ def _resolve_interaction_target(obj, verb):
         return obj["target_room"]
     return None
 
+def _get_item_data_safe(item_ref, world):
+    if isinstance(item_ref, dict): return item_ref
+    return world.game_items.get(item_ref, {})
+
 def _list_container_storage(player, obj, prep):
-    """Lists items stored ON/UNDER/IN/BEHIND an object via the container_storage system."""
+    """Lists items stored ON/UNDER/IN/BEHIND an object via container_storage."""
     storage = obj.get("container_storage", {})
     items = storage.get(prep, [])
     
     if not items:
         return False
         
-    game_items = player.world.game_items
-    
     player.send_message(f"--- {prep.upper()} the {obj.get('name', 'Object')} ---")
     for item_ref in items:
-        if isinstance(item_ref, dict):
-            item_data = item_ref
-        else:
-            item_data = game_items.get(item_ref, {})
-            
+        item_data = _get_item_data_safe(item_ref, player.world)
         if item_data:
-            player.send_message(f"- {item_data.get('name', 'something')}")
+            name = item_data.get('name', 'something')
+            player.send_message(f"- <span class='keyword' data-command='look at {name}'>{name}</span>")
     return True
 
 def _list_items_on_table(player, room, table_obj):
     shop_data = _get_shop_data(room)
     has_shop_items = False
     
-    # 1. List Shop Items
+    # 1. Shop Items
     if shop_data:
         category = "misc"
         keywords = table_obj.get("keywords", [])
@@ -122,12 +121,12 @@ def _list_items_on_table(player, room, table_obj):
             has_shop_items = True
             player.send_message(f"--- On the {table_obj.get('name', 'Table')} (For Sale) ---")
             for name, price in items_on_table:
-                player.send_message(f"- {name:<30} {price} silver")
+                player.send_message(f"- <span class='keyword' data-command='buy {name}'>{name}</span> : {price} silver")
 
-    # 2. List Player-Placed Items (container_storage)
+    # 2. Player Placed Items (container_storage)
     has_placed_items = _list_container_storage(player, table_obj, "on")
 
-    # 3. List Occupants (if not a shop table)
+    # 3. Occupants (if no items)
     if not has_shop_items and not has_placed_items:
         if "table" in table_obj.get("keywords", []):
             occupants = _get_table_occupants(player.world, table_obj)
@@ -139,7 +138,7 @@ def _list_items_on_table(player, room, table_obj):
 
 def _show_room_filtered(player, room, world):
     """
-    Local replacement for show_room_to_player to filter hidden entities.
+    Local replacement for show_room_to_player to filter hidden entities and provide HTML.
     """
     player.send_message(f"<span class='room-title'>[ {room.name} ]</span>")
     
@@ -149,20 +148,26 @@ def _show_room_filtered(player, room, world):
     
     player.send_message(f"<span class='room-desc'>{desc}</span>")
     
+    # Highlight Exits
     exit_list = []
     if room.exits:
         for direction, _ in room.exits.items():
-            exit_list.append(direction.capitalize())
+            exit_html = f"<span class='keyword' data-command='move {direction}'>{direction.capitalize()}</span>"
+            exit_list.append(exit_html)
     exit_str = ", ".join(exit_list) if exit_list else "None"
     player.send_message(f"<span class='room-exits'>Obvious exits: {exit_str}</span>")
     
+    # Highlight Objects
     visible_objects = []
     for obj in room.objects:
-        visible_objects.append(obj.get("name", "something"))
+        obj_name = obj.get("name", "something")
+        obj_html = f"<span class='keyword' data-command='look at {obj_name}'>{obj_name}</span>"
+        visible_objects.append(obj_html)
     
     if visible_objects:
         player.send_message(f"You also see: {', '.join(visible_objects)}.")
 
+    # Highlight Players
     room_players = world.room_players.get(room.room_id, [])
     visible_players = []
     
@@ -177,7 +182,7 @@ def _show_room_filtered(player, room, world):
                 visible_players.append(f"({target_obj.name})") 
             continue
             
-        visible_players.append(target_obj.name)
+        visible_players.append(f"<span class='keyword' data-command='look at {target_obj.name}'>{target_obj.name}</span>")
         
     if visible_players:
         player.send_message(f"<span class='room-players'>Also here: {', '.join(visible_players)}</span>")
@@ -193,6 +198,13 @@ class Examine(BaseVerb):
         target_name = " ".join(self.args).lower()
         if target_name.startswith("at "):
             target_name = target_name[3:]
+
+        # Clean articles from examine target
+        target_name = target_name.strip()
+        if target_name.startswith("my "): target_name = target_name[3:].strip()
+        if target_name.startswith("the "): target_name = target_name[4:].strip()
+        if target_name.startswith("a "): target_name = target_name[2:].strip()
+        if target_name.startswith("an "): target_name = target_name[3:].strip()
 
         found_object = None
         for obj in self.room.objects:
@@ -213,16 +225,12 @@ class Examine(BaseVerb):
         self.player.send_message(f"You examine the **{found_object.get('name', 'object')}**.")
         self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
 
-        # Interactions check (Examine sometimes triggers 'look' interactions if defined?)
-        # For now we stick to standard examine logic + tables
-        
+        # Check table contents
         if "table" in found_object.get("keywords", []) and _get_shop_data(self.room):
             _list_items_on_table(self.player, self.room, found_object)
         elif "table" in found_object.get("keywords", []) or found_object.get("is_table_proxy"):
             # Check for placed items first
-            if _list_container_storage(self.player, found_object, "on"):
-                pass
-            else:
+            if not _list_container_storage(self.player, found_object, "on"):
                 occupants = _get_table_occupants(self.world, found_object)
                 if occupants:
                     count = len(occupants)
@@ -254,7 +262,6 @@ class Look(BaseVerb):
         full_command = " ".join(self.args).lower()
         
         # 1. Parse Prepositions
-        # Order matters: check longer/specific ones first
         prepositions = ["inside", "into", "under", "behind", "beneath", "in", "on", "at"]
         found_prep = None
         target_name = full_command
@@ -265,44 +272,32 @@ class Look(BaseVerb):
                 target_name = full_command[len(prep)+1:].strip()
                 break
             elif f" {prep} " in full_command:
-                # Handle cases like "look under table" if args were split differently? 
-                # Currently self.args joined, so startswith usually covers "look <prep> <target>"
+                # Handle mid-sentence if needed, but strict startswith is safer for LOOK
                 pass
 
-        # --- NEW: Clean articles (a, an, the, my) ---
+        # Clean articles
         target_name = target_name.strip()
-        if target_name.startswith("my "):
-            target_name = target_name[3:].strip()
-        
-        if target_name.startswith("the "):
-            target_name = target_name[4:].strip()
-            
-        if target_name.startswith("a "):
-            target_name = target_name[2:].strip()
-            
-        if target_name.startswith("an "):
-            target_name = target_name[3:].strip()
-        # ---------------------------------------------
+        if target_name.startswith("my "): target_name = target_name[3:].strip()
+        if target_name.startswith("the "): target_name = target_name[4:].strip()
+        if target_name.startswith("a "): target_name = target_name[2:].strip()
+        if target_name.startswith("an "): target_name = target_name[3:].strip()
 
-        # 2. Find Target (Room Object -> Player -> Self -> Other Player)
+        # 2. Find Target
         found_obj = None
         source_loc = "room"
 
-        # Search Room Objects
         for obj in self.room.objects:
             if (target_name == obj.get("name", "").lower() or 
                 target_name in obj.get("keywords", [])):
                 found_obj = obj
                 break
         
-        # Search Inventory/Worn
         if not found_obj:
             item_data, loc = _find_item_on_player(self.player, target_name)
             if item_data:
                 found_obj = item_data
                 source_loc = loc
 
-        # Search Players (including self)
         if not found_obj:
             if target_name == "self" or target_name == self.player.name.lower():
                 self.player.send_message(f"You see **{self.player.name}** (that's you!).")
@@ -311,11 +306,9 @@ class Look(BaseVerb):
             
             target_player_obj = self.world.get_player_obj(target_name)
             if target_player_obj and target_player_obj.current_room_id == self.room.room_id:
-                # Hide check
                 if target_player_obj.is_hidden and target_player_obj.uid not in self.player.detected_hiders:
                      self.player.send_message(f"You do not see a '{target_name}' here.")
                      return
-                
                 self.player.send_message(f"You see **{target_player_obj.name}**.")
                 self.player.send_message(format_player_description(target_player_obj.to_dict()))
                 return
@@ -324,21 +317,18 @@ class Look(BaseVerb):
             self.player.send_message(f"You do not see a '{target_name}' here.")
             return
 
-        # 3. Handle Preposition-Specific Look (container_storage vs interactions)
+        # 3. Handle Prepositions
         if found_prep:
-            # Normalize variations
             if found_prep in ["inside", "into"]: found_prep = "in"
             if found_prep == "beneath": found_prep = "under"
             
-            # A) Check Dynamic Container Storage
+            # A) Check Container Storage (Dynamic)
             has_items = _list_container_storage(self.player, found_obj, found_prep)
             
-            # B) Check Static Interactions ("look <prep>")
+            # B) Check Interactions (Static)
             interactions = found_obj.get("interactions", {})
             look_key = f"look {found_prep}"
             found_static = False
-            
-            # Case-insensitive check
             for k, v in interactions.items():
                 if k.lower() == look_key:
                     if v.get("type") == "text":
@@ -354,7 +344,7 @@ class Look(BaseVerb):
                 _list_items_on_table(self.player, self.room, found_obj)
                 return
             
-            # D) Container Logic (fallback)
+            # D) Container Default
             if found_prep == "in":
                 if found_obj.get("is_container"):
                     if found_obj.get("wearable_slot") == "back" and source_loc == "worn":
@@ -381,7 +371,6 @@ class Look(BaseVerb):
         self.player.send_message(f"You look at the **{found_obj.get('name', 'object')}**.")
         self.player.send_message(found_obj.get('description', 'It is a nondescript object.'))
         
-        # Auto-show table contents if applicable
         if "table" in found_obj.get("keywords", []):
              _list_items_on_table(self.player, self.room, found_obj)
 
