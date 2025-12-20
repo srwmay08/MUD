@@ -335,24 +335,21 @@ class Look(BaseVerb):
             if found_prep == "beneath":
                 found_prep = "under"
 
-            # A) Check Container Storage (Dynamic)
-            has_items = _list_container_storage(self.player, found_obj, found_prep)
-
-            # B) Check Interactions (Static)
+            found_any = False
+            
+            # A) Check Interactions (Static) - Display first to give context
             interactions = found_obj.get("interactions", {})
             look_key = f"look {found_prep}"
-            found_static = False
-            for k, v in interactions.items():
-                if k.lower() == look_key:
-                    if v.get("type") == "text":
-                        self.player.send_message(v.get("value"))
-                        found_static = True
-                    break
+            if look_key in interactions:
+                val = interactions[look_key]
+                if val.get("type") == "text":
+                    self.player.send_message(val.get("value"))
+                    found_any = True
 
+            # B) Check Container Storage (Dynamic)
+            has_items = _list_container_storage(self.player, found_obj, found_prep)
             if has_items:
-                return
-            if found_static:
-                return
+                found_any = True
 
             # C) Special case for ON (Tables/Shop)
             if found_prep == "on" and "table" in found_obj.get("keywords", []):
@@ -375,14 +372,16 @@ class Look(BaseVerb):
                                 if i_d:
                                     self.player.send_message(f"- {i_d.get('name', 'item')}")
                     else:
-                        self.player.send_message(f"You look in the {found_obj['name']}.")
-                        self.player.send_message("It is empty.")
+                        if not has_items:
+                             self.player.send_message(f"You look in the {found_obj['name']}.")
+                             self.player.send_message("It is empty.")
                     return
-                else:
+                elif not found_any:
                     self.player.send_message(f"You cannot look inside the {found_obj['name']}.")
                     return
 
-            self.player.send_message(f"You see nothing special {found_prep} the {found_obj['name']}.")
+            if not found_any:
+                self.player.send_message(f"You see nothing special {found_prep} the {found_obj['name']}.")
             return
 
         # 4. Default Look At
