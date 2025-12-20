@@ -36,8 +36,10 @@ def _find_item_on_player(player, target_name):
     return None, None
 
 def _get_table_occupants(world, table_obj):
-    target_room_id = table_obj.get("target_room")
+    target_room_id = table_obj.get("target_room") or _resolve_interaction_target(table_obj, "enter")
+    
     if not target_room_id:
+        # Fallback: check table proxy naming convention if no direct link
         table_name_lower = table_obj.get("name", "").lower()
         for rid, room in world.active_rooms.items():
             if room.name.lower() == table_name_lower and getattr(room, "is_table", False):
@@ -48,6 +50,16 @@ def _get_table_occupants(world, table_obj):
         player_names = world.room_players.get(target_room_id, [])
         return list(player_names)
     return []
+
+def _resolve_interaction_target(obj, verb):
+    """Helper to find move targets from interactions."""
+    interactions = obj.get("interactions", {})
+    if verb in interactions and interactions[verb].get("type") == "move":
+        return interactions[verb].get("value")
+    # Legacy fallback
+    if verb == "enter" and "target_room" in obj:
+        return obj["target_room"]
+    return None
 
 def _list_items_on_table(player, room, table_obj):
     shop_data = _get_shop_data(room)
@@ -101,20 +113,15 @@ def _list_items_on_table(player, room, table_obj):
 def _show_room_filtered(player, room, world):
     """
     Local replacement for show_room_to_player to filter hidden entities.
-    This ensures hidden players are not shown in 'Also here'.
     """
-    # 1. Title
     player.send_message(f"<span class='room-title'>[ {room.name} ]</span>")
     
-    # 2. Description (Handle Dictionary or String)
     desc = room.description
     if isinstance(desc, dict):
-        # Default to 'default' key, or first available value, or str dump if fail
         desc = desc.get('default', list(desc.values())[0] if desc else "")
     
     player.send_message(f"<span class='room-desc'>{desc}</span>")
     
-    # 3. Exits
     exit_list = []
     if room.exits:
         for direction, _ in room.exits.items():
@@ -122,7 +129,6 @@ def _show_room_filtered(player, room, world):
     exit_str = ", ".join(exit_list) if exit_list else "None"
     player.send_message(f"<span class='room-exits'>Obvious exits: {exit_str}</span>")
     
-    # 4. Objects (Visible)
     visible_objects = []
     for obj in room.objects:
         visible_objects.append(obj.get("name", "something"))
@@ -130,7 +136,6 @@ def _show_room_filtered(player, room, world):
     if visible_objects:
         player.send_message(f"You also see: {', '.join(visible_objects)}.")
 
-    # 5. Players (FILTERED)
     room_players = world.room_players.get(room.room_id, [])
     visible_players = []
     
@@ -140,11 +145,9 @@ def _show_room_filtered(player, room, world):
         target_obj = world.get_player_obj(p_name)
         if not target_obj: continue
         
-        # HIDE CHECK
         if target_obj.is_hidden:
-            # Only show if the looker has detected them
             if target_obj.uid in player.detected_hiders:
-                visible_players.append(f"({target_obj.name})") # Parentheses indicate hidden but spotted
+                visible_players.append(f"({target_obj.name})") 
             continue
             
         visible_players.append(target_obj.name)
@@ -172,13 +175,20 @@ class Examine(BaseVerb):
                 break
 
         if not found_object:
-            self.player.send_message(f"You do not see a **{target_name}** here.")
-            return
+            # Check inventory/worn
+            item_data, loc = _find_item_on_player(self.player, target_name)
+            if item_data:
+                found_object = item_data
+            else:
+                self.player.send_message(f"You do not see a **{target_name}** here.")
+                return
 
         self.player.send_message(f"You examine the **{found_object.get('name', 'object')}**.")
         self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
 
-        # --- Table Check for Examine ---
+        # Interactions check (Examine sometimes triggers 'look' interactions if defined?)
+        # For now we stick to standard examine logic + tables
+        
         if "table" in found_object.get("keywords", []) and _get_shop_data(self.room):
             _list_items_on_table(self.player, self.room, found_object)
         elif "table" in found_object.get("keywords", []) or found_object.get("is_table_proxy"):
@@ -188,7 +198,6 @@ class Examine(BaseVerb):
                 self.player.send_message(f"It is occupied by {count} person{'s' if count > 1 else ''}.")
             else:
                 self.player.send_message("It is currently empty.")
-        # -------------------------------
 
         player_log_stat = self.player.stats.get("LOG", 0)
         hidden_details = found_object.get("details", [])
@@ -208,144 +217,159 @@ class Examine(BaseVerb):
 class Look(BaseVerb):
     def execute(self):
         if not self.args:
-            # Use local filtered version to respect hiding and dict descriptions
             _show_room_filtered(self.player, self.room, self.world)
             return
 
         full_command = " ".join(self.args).lower()
-
-        # --- LOOK ON TABLE (Pawnshop) ---
-        target_on = None
-        if full_command.startswith("on "):
-            target_on = full_command[3:].strip()
-        elif " on " in full_command:
-            parts = full_command.split(" on ", 1)
-            target_on = parts[1].strip()
-
-        if target_on:
-            table_obj = None
-            for obj in self.room.objects:
-                if (target_on == obj.get("name", "").lower() or target_on in obj.get("keywords", [])):
-                    table_obj = obj
-                    break
-
-            if table_obj:
-                _list_items_on_table(self.player, self.room, table_obj)
-                return
-            else:
-                self.player.send_message(f"You don't see a '{target_on}' here.")
-                return
-        # --------------------------------
-
-        if full_command.startswith("in "):
-            container_name = full_command[3:].strip()
-            if container_name.startswith("my "):
-                container_name = container_name[3:].strip()
-
-            container_data, location = _find_item_on_player(self.player, container_name)
-
-            if not container_data or not container_data.get("is_container"):
-                self.player.send_message(f"You don't see a container called '{container_name}' here.")
-                return
-
-            if container_data.get("wearable_slot") == "back":
-                if not self.player.inventory:
-                    self.player.send_message(f"Your {container_data['name']} is empty.")
-                    return
-                self.player.send_message(f"You look in your {container_data['name']}:")
-                for item_id in self.player.inventory:
-                    if isinstance(item_id, dict):
-                        item_data = item_id
-                    else:
-                        item_data = self.world.game_items.get(item_id, {})
-
-                    if item_data:
-                        self.player.send_message(f"- {item_data.get('name', 'an item')}")
-                    else:
-                        self.player.send_message(f"- Unknown Item ({item_id})")
-                return
-            else:
-                self.player.send_message(f"You look in {container_data['name']}.")
-                self.player.send_message("It is empty.")
-                return
-
+        
+        # 1. Parse Prepositions
+        # Order matters: check longer/specific ones first
+        prepositions = ["inside", "into", "under", "behind", "beneath", "in", "on", "at"]
+        found_prep = None
         target_name = full_command
-        if target_name.startswith("at "):
-            target_name = target_name[3:]
+        
+        for prep in prepositions:
+            if full_command.startswith(f"{prep} "):
+                found_prep = prep
+                target_name = full_command[len(prep)+1:].strip()
+                break
+            elif f" {prep} " in full_command:
+                # Handle cases like "look under table" if args were split differently? 
+                # Currently self.args joined, so startswith usually covers "look <prep> <target>"
+                pass
 
-        # Check room objects
+        # --- FIX: Clean articles (a, an, the, my) ---
+        target_name = target_name.strip()
+        if target_name.startswith("my "): target_name = target_name[3:].strip()
+        if target_name.startswith("the "): target_name = target_name[4:].strip()
+        if target_name.startswith("a "): target_name = target_name[2:].strip()
+        if target_name.startswith("an "): target_name = target_name[3:].strip()
+        # ----------------------------------------------
+
+        # 2. Find Target (Room Object -> Player -> Self -> Other Player)
+        found_obj = None
+        source_loc = "room"
+
+        # Search Room Objects
         for obj in self.room.objects:
-            if (target_name == obj.get("name", "").lower() or
-                    target_name in obj.get("keywords", [])):
+            if (target_name == obj.get("name", "").lower() or 
+                target_name in obj.get("keywords", [])):
+                found_obj = obj
+                break
+        
+        # Search Inventory/Worn
+        if not found_obj:
+            item_data, loc = _find_item_on_player(self.player, target_name)
+            if item_data:
+                found_obj = item_data
+                source_loc = loc
 
-                self.player.send_message(f"You investigate the **{obj.get('name', 'object')}**.")
-                self.player.send_message(obj.get('description', 'It is a nondescript object.'))
-
-                if "table" in obj.get("keywords", []) and _get_shop_data(self.room):
-                    _list_items_on_table(self.player, self.room, obj)
-                elif "table" in obj.get("keywords", []) or obj.get("is_table_proxy"):
-                    occupants = _get_table_occupants(self.world, obj)
-                    if occupants:
-                        count = len(occupants)
-                        self.player.send_message(f"It is occupied by {count} person{'s' if count > 1 else ''}.")
-                    else:
-                        self.player.send_message("It is currently empty.")
-
+        # Search Players (including self)
+        if not found_obj:
+            if target_name == "self" or target_name == self.player.name.lower():
+                self.player.send_message(f"You see **{self.player.name}** (that's you!).")
+                self.player.send_message(format_player_description(self.player.to_dict()))
+                return
+            
+            target_player_obj = self.world.get_player_obj(target_name)
+            if target_player_obj and target_player_obj.current_room_id == self.room.room_id:
+                # Hide check
+                if target_player_obj.is_hidden and target_player_obj.uid not in self.player.detected_hiders:
+                     self.player.send_message(f"You do not see a '{target_name}' here.")
+                     return
+                
+                self.player.send_message(f"You see **{target_player_obj.name}**.")
+                self.player.send_message(format_player_description(target_player_obj.to_dict()))
                 return
 
-        # Check player items
-        item_data, location = _find_item_on_player(self.player, target_name)
-        if item_data:
-            self.player.send_message(f"You look at your **{item_data.get('name', 'item')}**.")
-            self.player.send_message(item_data.get('description', 'It is a nondescript object.'))
+        if not found_obj:
+            self.player.send_message(f"You do not see a '{target_name}' here.")
             return
 
-        # Check self
-        if target_name == self.player.name.lower() or target_name == "self":
-            self.player.send_message(f"You see **{self.player.name}** (that's you!).")
-            self.player.send_message(format_player_description(self.player.to_dict()))
-            return
-
-        # Check other players
-        target_player_obj = self.world.get_player_obj(target_name)
-        if target_player_obj and target_player_obj.current_room_id == self.room.room_id:
-            # --- Hide Check ---
-            if target_player_obj.is_hidden:
-                # Unless we have detected them
-                if target_player_obj.uid not in self.player.detected_hiders:
-                    self.player.send_message(f"You do not see a **{target_name}** here.")
+        # 3. Check for Custom Interactions ("look <prep>")
+        # We try to find keys like "look under" in the object's interaction dict
+        interactions = found_obj.get("interactions", {})
+        
+        # Determine keys to search for
+        keys_to_check = []
+        if found_prep:
+            # e.g. "look under", "look behind"
+            keys_to_check.append(f"look {found_prep}")
+            # Normalize variations
+            if found_prep in ["inside", "into"]: keys_to_check.append("look in")
+            if found_prep == "beneath": keys_to_check.append("look under")
+        else:
+            # Default "look" or "look at"
+            keys_to_check.append("look")
+            keys_to_check.append("look at")
+            
+        for key in keys_to_check:
+            if key in interactions:
+                action = interactions[key]
+                if action.get("type") == "text":
+                    self.player.send_message(action.get("value"))
                     return
-            # -----------------------
+                # If script/move types existed for LOOK, handle here.
+        
+        # 4. Fallback Default Logic (if no custom interaction found)
+        
+        # A) Description (look at / look)
+        if found_prep == "at" or not found_prep:
+            self.player.send_message(f"You look at the **{found_obj.get('name', 'object')}**.")
+            self.player.send_message(found_obj.get('description', 'It is a nondescript object.'))
+            
+            # Auto-show table contents if applicable
+            if "table" in found_obj.get("keywords", []):
+                 if _get_shop_data(self.room):
+                     _list_items_on_table(self.player, self.room, found_obj)
+                 else:
+                     occupants = _get_table_occupants(self.world, found_obj)
+                     if occupants:
+                         self.player.send_message(f"It is occupied by {len(occupants)} people.")
 
-            target_player_data = target_player_obj.to_dict()
-            self.player.send_message(f"You see **{target_player_data['name']}**.")
-            description = format_player_description(target_player_data)
-            self.player.send_message(description)
-            return
+        # B) Container Logic (look in/inside/into)
+        elif found_prep in ["in", "inside", "into"]:
+            if found_obj.get("is_container"):
+                if found_obj.get("wearable_slot") == "back" and source_loc == "worn": # Backpack logic
+                     self.player.send_message(f"You look in your {found_obj['name']}:")
+                     if not self.player.inventory:
+                         self.player.send_message("It is empty.")
+                     else:
+                         for item_id in self.player.inventory:
+                             if isinstance(item_id, dict): i_d = item_id
+                             else: i_d = self.world.game_items.get(item_id, {})
+                             if i_d: self.player.send_message(f"- {i_d.get('name', 'item')}")
+                else:
+                    # General container logic (e.g. chest on ground) - simplified for now
+                    self.player.send_message(f"You look in the {found_obj['name']}.")
+                    self.player.send_message("It is empty.") # Real container logic would list `contains` items
+            else:
+                self.player.send_message(f"You cannot look inside the {found_obj['name']}.")
 
-        self.player.send_message(f"You do not see a **{target_name}** here.")
+        # C) Table Logic (look on)
+        elif found_prep == "on":
+            if "table" in found_obj.get("keywords", []):
+                _list_items_on_table(self.player, self.room, found_obj)
+            else:
+                self.player.send_message(f"You see nothing special on the {found_obj['name']}.")
+        
+        # D) Generic Fail (under, behind, etc without interaction)
+        else:
+            self.player.send_message(f"You see nothing special {found_prep} the {found_obj['name']}.")
 
 
 @VerbRegistry.register(["investigate"])
 class Investigate(BaseVerb):
     def execute(self):
-        # 1. Check RT
-        if _check_action_roundtime(self.player, action_type="other"):
-            return
-        # Minor RT for searching
+        if _check_action_roundtime(self.player, action_type="other"): return
         _set_action_roundtime(self.player, 3.0)
-
-        # 2. Handle arguments
-        if self.args:
-            # Future enhancement: target specific objects or players
-            pass
-
+        
         self.player.send_message("You investigate the area...")
         attempt_skill_learning(self.player, "investigation")
 
-        # 3. Hidden Objects (Standard Logic)
-        hidden_objects = self.room.data.get("hidden_objects", [])
+        # 1. Reveal Hidden Objects
         found_obj = False
+        hidden_objects = self.room.data.get("hidden_objects", [])
         if hidden_objects:
             for i in range(len(hidden_objects) - 1, -1, -1):
                 obj = hidden_objects[i]
@@ -362,38 +386,28 @@ class Investigate(BaseVerb):
                     found_obj = True
                     self.player.send_message(f"Your investigation reveals: **{found_item.get('name', 'an item')}**!")
 
-        if found_obj:
-            self.world.save_room(self.room)
+        if found_obj: self.world.save_room(self.room)
 
-        # 4. Hidden Players (Stealth Detection)
-        # Searcher Roll: Perception Bonus + Wisdom Stat Bonus
+        # 2. Reveal Hidden Players
         per_rank = self.player.skills.get("perception", 0)
         per_bonus = calculate_skill_bonus(per_rank)
         wis_bonus = get_stat_bonus(self.player.stats.get("WIS", 50), "WIS", self.player.stat_modifiers)
-        
         searcher_roll = random.randint(1, 100) + per_bonus + wis_bonus
         
         found_person = False
         room_players = self.world.room_players.get(self.room.room_id, [])
-        
         for p_name in room_players:
             if p_name == self.player.name.lower(): continue
             target_obj = self.world.get_player_obj(p_name)
             if not target_obj or not target_obj.is_hidden: continue
+            if target_obj.uid in self.player.detected_hiders: continue
             
-            # Already detected?
-            if target_obj.uid in self.player.detected_hiders:
-                continue
-                
-            # Hider Roll: Discipline + Dexterity + Skill(S&H)
             dis_b = get_stat_bonus(target_obj.stats.get("DIS", 50), "DIS", target_obj.stat_modifiers)
             dex_b = get_stat_bonus(target_obj.stats.get("DEX", 50), "DEX", target_obj.stat_modifiers)
             sh_rank = target_obj.skills.get("stalking_and_hiding", 0)
             sh_bonus = calculate_skill_bonus(sh_rank)
-            
             hider_roll = random.randint(1, 100) + dis_b + dex_b + sh_bonus
             
-            # Contest
             if searcher_roll > hider_roll:
                 self.player.detected_hiders.append(target_obj.uid)
                 self.player.send_message(f"You notice the distinct outline of **{target_obj.name}** hiding nearby!")
@@ -403,79 +417,46 @@ class Investigate(BaseVerb):
         if not found_obj and not found_person:
             self.player.send_message("...but you don't find anything unusual.")
 
-
 @VerbRegistry.register(["point"])
 class Point(BaseVerb):
     def execute(self):
         if not self.args:
             self.player.send_message("Point at whom?")
             return
-            
         target_name = " ".join(self.args).lower()
-        
-        # Check if target is in room
         target_obj = self.world.get_player_obj(target_name)
+        
         if not target_obj or target_obj.current_room_id != self.room.room_id:
             self.player.send_message(f"You do not see {target_name} here.")
             return
 
-        # Case 1: Target is Visible (Standard Emote)
         if not target_obj.is_hidden:
             self.player.send_message(f"You point at {target_obj.name}.")
-            self.world.broadcast_to_room(
-                self.room.room_id,
-                f"{self.player.name} points at {target_obj.name}.",
-                "message",
-                skip_sid=self.player.get("sid")
-            )
-            return
-            
-        # Case 2: Target is Hidden
-        # Must be in detected_hiders
-        if target_obj.uid in self.player.detected_hiders:
-            # Reveal them!
+            self.world.broadcast_to_room(self.room.room_id, f"{self.player.name} points at {target_obj.name}.", "message", skip_sid=self.player.get("sid"))
+        elif target_obj.uid in self.player.detected_hiders:
             target_obj.is_hidden = False
             self.player.send_message(f"You point triumphantly at {target_obj.name}, revealing their location!")
             target_obj.send_message(f"**{self.player.name}** points right at you, revealing you!")
-            self.world.broadcast_to_room(
-                self.room.room_id,
-                f"{self.player.name} points at a shadow, revealing {target_obj.name}!",
-                "message",
-                skip_sid=self.player.get("sid")
-            )
-            # Clear them from detecting list since they are now visible
+            self.world.broadcast_to_room(self.room.room_id, f"{self.player.name} points at a shadow, revealing {target_obj.name}!", "message", skip_sid=self.player.get("sid"))
             if target_obj.uid in self.player.detected_hiders:
                 self.player.detected_hiders.remove(target_obj.uid)
         else:
             self.player.send_message(f"You do not see {target_name} here.")
 
-
 @VerbRegistry.register(["inspect"])
 class Inspect(BaseVerb):
-    """
-    Shows detailed attributes of an item (Weapon/Armor stats).
-    """
-
     def execute(self):
         if not self.args:
             self.player.send_message("Inspect what?")
             return
-
         target_name = " ".join(self.args).lower()
-
-        # Check Hands/Inventory/Worn
         item_data, loc = _find_item_on_player(self.player, target_name)
-
-        # Check Shop/Tables if not found on player
+        
         if not item_data:
             shop_data = _get_shop_data(self.room)
             if shop_data:
                 for item_ref in shop_data.get("inventory", []):
-                    if isinstance(item_ref, dict):
-                        t_data = item_ref
-                    else:
-                        t_data = self.world.game_items.get(item_ref, {})
-
+                    t_data = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref, {})
                     if t_data and (target_name == t_data.get("name", "").lower() or target_name in t_data.get("keywords", [])):
                         item_data = t_data
                         break
@@ -489,16 +470,11 @@ class Inspect(BaseVerb):
         self.player.send_message(f"Base Value: {item_data.get('base_value', 0)}")
         self.player.send_message(f"Weight: {item_data.get('weight', 0)} lbs")
 
-        if "damage_type" in item_data:
-            self.player.send_message(f"Damage Type: {item_data['damage_type']}")
-        if "base_damage" in item_data:
-            self.player.send_message(f"Base Damage: {item_data['base_damage']}")
-        if "armor_type" in item_data:
-            self.player.send_message(f"Armor Type: {item_data['armor_type']}")
-        if "armor_class" in item_data:
-            self.player.send_message(f"Armor Class: {item_data['armor_class']}")
-
-        # Pawnshop Note
+        if "damage_type" in item_data: self.player.send_message(f"Damage Type: {item_data['damage_type']}")
+        if "base_damage" in item_data: self.player.send_message(f"Base Damage: {item_data['base_damage']}")
+        if "armor_type" in item_data: self.player.send_message(f"Armor Type: {item_data['armor_type']}")
+        if "armor_class" in item_data: self.player.send_message(f"Armor Class: {item_data['armor_class']}")
+        
         shop_data = _get_shop_data(self.room)
         if shop_data:
             price = _get_item_buy_price(item_data, self.world.game_items, shop_data)

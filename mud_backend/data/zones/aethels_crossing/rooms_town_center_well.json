@@ -208,9 +208,8 @@
             },
             {
                 "name": "a bench",
-                "description": "",
+                "description": "A nice stone bench.",
                 "keywords": [
-                    "a",
                     "bench"
                 ],
                 "verbs": [

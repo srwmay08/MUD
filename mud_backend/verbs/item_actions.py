@@ -8,6 +8,15 @@ from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
 import time
 import uuid
 
+def _clean_name(name: str) -> str:
+    """Helper to strip articles from names."""
+    name = name.strip()
+    if name.startswith("my "): name = name[3:].strip()
+    if name.startswith("the "): name = name[4:].strip()
+    if name.startswith("a "): name = name[2:].strip()
+    if name.startswith("an "): name = name[3:].strip()
+    return name
+
 def _get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(item_ref, dict): return item_ref
     return game_items_data.get(item_ref, {})
@@ -154,9 +163,11 @@ class Get(BaseVerb):
                     target_prep = prep
                     target_container_name = target_container_name[len(prep)+1:].strip()
                     break
-                    
-            if target_container_name.startswith("my "):
-                target_container_name = target_container_name[3:].strip()
+        
+        # --- FIX: Clean names ---
+        if target_item_name: target_item_name = _clean_name(target_item_name)
+        if target_container_name: target_container_name = _clean_name(target_container_name)
+        # ------------------------
 
         # Determine hand
         target_hand_slot = None
@@ -353,7 +364,12 @@ class Put(BaseVerb):
         elif not target_container_name:
             self.player.send_message("Put it where? (e.g., PUT DAGGER IN CHEST, PUT COIN ON TABLE)")
             return
-            
+        
+        # --- FIX: Clean names ---
+        if target_item_name: target_item_name = _clean_name(target_item_name)
+        if target_container_name: target_container_name = _clean_name(target_container_name)
+        # ------------------------
+
         # 2. Find Item in Hands
         game_items = self.world.game_items
         item_ref, hand_slot = _find_item_in_hands(self.player, game_items, target_item_name)
