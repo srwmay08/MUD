@@ -347,9 +347,9 @@ class Put(BaseVerb):
 
         args_str = " ".join(self.args).lower()
         
-        # Regex to split ITEM and CONTAINER using a preposition
+        # 1. Regex to split ITEM and CONTAINER using a preposition
         # Matches: [item] [prep] [container]
-        match = re.search(r'\b(inside|into|under|behind|beneath|in|on)\b', args_str, re.IGNORECASE)
+        match = re.search(r'\s+(inside|into|under|behind|beneath|in|on)\s+', args_str, re.IGNORECASE)
 
         if match:
             target_prep = match.group(1).lower()
@@ -379,35 +379,29 @@ class Put(BaseVerb):
         
         game_items = self.world.game_items
         
-        # --- FIND THE ITEM ---
+        # --- 2. FIND THE ITEM (Hands or Inventory) ---
         item_ref = None; hand_slot = None; from_inventory = False; from_room = False; item_obj_ref = None
 
-        # 1. Hands
+        # Check Hands
         item_ref, hand_slot = _find_item_in_hands(self.player, game_items, target_item_name)
 
-        # 2. Inventory
+        # Check Inventory (if not in hands)
         if not item_ref:
             item_ref = _find_item_in_inventory(self.player, game_items, target_item_name)
             if item_ref:
                 from_inventory = True
-
-        # 3. Room (if not explicit 'my')
-        if not item_ref and not explicit_player_source:
-            item_obj = _find_item_in_room(self.room.objects, target_item_name)
-            if item_obj:
-                item_ref = item_obj; item_obj_ref = item_obj; from_room = True
+        
+        # NOTE: PUT does NOT take from room (only GET/TAKE does). 
+        # You must hold the item to put it somewhere.
 
         if not item_ref:
-            if explicit_player_source:
-                self.player.send_message(f"You don't have a '{target_item_name}'.")
-            else:
-                self.player.send_message(f"You don't see a '{target_item_name}' here.")
+            self.player.send_message(f"You aren't holding a '{target_item_name}'.")
             return
 
         item_data = _get_item_data(item_ref, game_items)
         item_name = item_data.get("name", "the item")
 
-        # --- FIND THE CONTAINER/SURFACE ---
+        # --- 3. FIND THE CONTAINER/SURFACE ---
         container_obj = None
         
         # Check Room Objects (Bench, Table, etc.)
@@ -425,7 +419,7 @@ class Put(BaseVerb):
             self.player.send_message(f"You don't see a {target_container_name} here.")
             return
 
-        # --- VALIDATE PLACEMENT ---
+        # --- 4. VALIDATE PLACEMENT ---
         if target_prep in ["inside", "into"]:
             target_prep = "in"
         if target_prep == "beneath":
@@ -435,40 +429,38 @@ class Put(BaseVerb):
         interactions = container_obj.get("interactions", {})
         look_key = f"look {target_prep}".lower()
 
-        # 1. Check if interaction exists (e.g. "look behind")
+        # Check interaction existence (e.g., "look behind")
+        # If I can look behind it, I can put something behind it.
         for key in interactions.keys():
             if key.lower() == look_key:
                 supported = True
                 break
         
-        # 2. Check if storage already exists or keywords allow it
+        # Check if storage already exists or logic implies it
         if not supported:
-            # Does container_storage already exist for this prep?
+            # Existing storage?
             if "container_storage" in container_obj and target_prep in container_obj["container_storage"]:
                 supported = True
-            # Keyword/Type checks
+            # Implicit "on" table
             elif target_prep == "on" and ("table" in container_obj.get("keywords", []) or container_obj.get("is_table")):
                 supported = True
+            # Implicit "in" container
             elif target_prep == "in" and container_obj.get("is_container"):
                 supported = True
 
-        # 3. Trash logic (special case)
+        # Trash logic (special case)
         trash_keywords = ["bin", "trash", "barrel", "crate", "urn", "coffin", "case"]
         is_trash = any(k in container_obj.get("keywords", []) for k in trash_keywords) and target_prep == "in"
-        
-        if is_trash:
-             supported = True
+        if is_trash: supported = True
 
         if not supported and not is_trash:
             self.player.send_message(f"You can't put things {target_prep} the {container_obj['name']}.")
             return
 
-        # --- EXECUTE MOVE ---
+        # --- 5. EXECUTE MOVE ---
         
         # Remove from source
-        if from_room:
-            self.room.objects.remove(item_obj_ref)
-        elif from_inventory:
+        if from_inventory:
             self.player.inventory.remove(item_ref)
         else:
             self.player.worn_items[hand_slot] = None
@@ -477,7 +469,6 @@ class Put(BaseVerb):
         if is_trash:
              self.player.send_message(f"You discard {item_name} into the {container_obj['name']}.")
              _set_action_roundtime(self.player, 1.0)
-             # Item is deleted (not added to storage)
              return
 
         if "container_storage" not in container_obj:
@@ -491,10 +482,10 @@ class Put(BaseVerb):
         
         # Save changes
         if container_obj.get("_runtime_item_ref"):
-             # It's a player item, no room save needed
+             # It's a player item (backpack), no room save needed
              pass 
         else:
-             # It's a room object
+             # It's a room object, save room
              self.world.save_room(self.room)
              
         _set_action_roundtime(self.player, 0.5)

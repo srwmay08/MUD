@@ -80,12 +80,18 @@ def _list_container_storage(player, obj, prep):
     if not items:
         return False
 
-    player.send_message(f"--- {prep.upper()} the {obj.get('name', 'Object')} ---")
+    # Display Header
+    prep_display = prep.upper()
+    obj_name = obj.get('name', 'Object')
+    player.send_message(f"--- {prep_display} the {obj_name} ---")
+    
+    # List Items
     for item_ref in items:
         item_data = _get_item_data_safe(item_ref, player.world)
         if item_data:
             name = item_data.get('name', 'something')
             player.send_message(f"- <span class='keyword' data-command='look at {name}'>{name}</span>")
+            
     return True
 
 def _list_items_on_table(player, room, table_obj):
@@ -347,12 +353,13 @@ class Look(BaseVerb):
                     found_any = True
 
             # B) Check Container Storage (Dynamic)
+            # This handles listing items put BEHIND/ON/UNDER/IN the object
             has_items = _list_container_storage(self.player, found_obj, found_prep)
             if has_items:
                 found_any = True
 
-            # C) Special case for ON (Tables/Shop)
-            if found_prep == "on" and "table" in found_obj.get("keywords", []):
+            # C) Special case for ON (Tables/Shop) - Legacy support
+            if found_prep == "on" and "table" in found_obj.get("keywords", []) and not has_items:
                 _list_items_on_table(self.player, self.room, found_obj)
                 return
 
@@ -372,7 +379,7 @@ class Look(BaseVerb):
                                 if i_d:
                                     self.player.send_message(f"- {i_d.get('name', 'item')}")
                     else:
-                        if not has_items:
+                        if not has_items and not found_any:
                              self.player.send_message(f"You look in the {found_obj['name']}.")
                              self.player.send_message("It is empty.")
                     return
