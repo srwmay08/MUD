@@ -433,7 +433,7 @@ class Put(BaseVerb):
             
         supported = False
         interactions = container_obj.get("interactions", {})
-        look_key = f"look {target_prep}"
+        look_key = f"look {target_prep}".lower()
 
         # 1. Check if interaction exists (e.g. "look behind")
         for key in interactions.keys():
@@ -441,19 +441,18 @@ class Put(BaseVerb):
                 supported = True
                 break
         
-        # 2. Check if storage already exists
-        if not supported and "container_storage" in container_obj and target_prep in container_obj["container_storage"]:
-            supported = True
+        # 2. Check if storage already exists or keywords allow it
+        if not supported:
+            # Does container_storage already exist for this prep?
+            if "container_storage" in container_obj and target_prep in container_obj["container_storage"]:
+                supported = True
+            # Keyword/Type checks
+            elif target_prep == "on" and ("table" in container_obj.get("keywords", []) or container_obj.get("is_table")):
+                supported = True
+            elif target_prep == "in" and container_obj.get("is_container"):
+                supported = True
 
-        # 3. Implicit fallbacks
-        if not supported and target_prep == "on":
-            if "table" in container_obj.get("keywords", []) or container_obj.get("is_table"):
-                supported = True
-        if not supported and target_prep == "in":
-            if container_obj.get("is_container"):
-                supported = True
-        
-        # 4. Trash logic (special case)
+        # 3. Trash logic (special case)
         trash_keywords = ["bin", "trash", "barrel", "crate", "urn", "coffin", "case"]
         is_trash = any(k in container_obj.get("keywords", []) for k in trash_keywords) and target_prep == "in"
         
