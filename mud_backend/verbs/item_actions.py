@@ -250,7 +250,7 @@ class Get(BaseVerb):
                     self.player.worn_items[target_hand_slot] = item_to_pickup
                     self.player.send_message(f"You get {item_name} and hold it.")
                 
-                # FIXED: Explicitly verify and remove the exact object reference
+                # Explicitly verify and remove the exact object reference
                 if item_obj in self.room.objects:
                     self.room.objects.remove(item_obj)
                 self.world.save_room(self.room)
@@ -290,23 +290,16 @@ class Get(BaseVerb):
             self.player.send_message(f"You get {item_data.get('name', 'item')} from your pack and hold it.")
             _set_action_roundtime(self.player, 1.0)
 
-@VerbRegistry.register(["put", "drop", "discard"])
-class Put(BaseVerb):
+
+@VerbRegistry.register(["drop", "discard"])
+class Drop(BaseVerb):
     def execute(self):
         if _check_action_roundtime(self.player, action_type="other"):
             return
         if not self.args:
-            self.player.send_message("Do what?")
+            self.player.send_message("Drop what?")
             return
 
-        # STRICTLY SEPARATE DROP FROM PUT
-        # This prevents "put" falling through to drop if parsing fails
-        if self.command_root in ["drop", "discard"]:
-            self._execute_drop()
-        else:
-            self._execute_put()
-
-    def _execute_drop(self):
         args_str = " ".join(self.args).lower()
         target_item_name = _clean_name(args_str)
         game_items = self.world.game_items
@@ -342,7 +335,16 @@ class Put(BaseVerb):
         self.player.send_message(f"You drop {item_name} on the ground.")
         self.world.save_room(self.room)
 
-    def _execute_put(self):
+
+@VerbRegistry.register(["put"])
+class Put(BaseVerb):
+    def execute(self):
+        if _check_action_roundtime(self.player, action_type="other"):
+            return
+        if not self.args:
+            self.player.send_message("Put what where?")
+            return
+
         args_str = " ".join(self.args).lower()
         
         # Regex to split ITEM and CONTAINER using a preposition
@@ -355,10 +357,15 @@ class Put(BaseVerb):
             target_item_name = args_str[:start].strip()
             target_container_name = args_str[end:].strip()
         else:
-            # If no preposition is found, we cannot assume container.
-            # We explicitly FAIL here to avoid searching for "dagger behind bench" as an item name.
-            self.player.send_message("Put it where? (e.g., PUT DAGGER ON BENCH)")
-            return
+            # Fallback for "put item container" (implicit IN)
+            parts = args_str.rsplit(' ', 1)
+            if len(parts) == 2:
+                 target_item_name = parts[0].strip()
+                 target_container_name = parts[1].strip()
+                 target_prep = "in"
+            else:
+                 self.player.send_message("Put it where? (e.g., PUT DAGGER ON BENCH)")
+                 return
 
         if not target_item_name or not target_container_name:
              self.player.send_message("Put it where? (e.g., PUT DAGGER ON BENCH)")
@@ -484,10 +491,8 @@ class Put(BaseVerb):
         self.player.send_message(f"You put {item_name} {target_prep} the {container_obj['name']}.")
         
         # Save changes
-        # If container is player-worn, we update player/inventory is handled by referencing the object
-        # Note: references in python are by assignment, but to be safe for persistence:
         if container_obj.get("_runtime_item_ref"):
-             # It's a player item, no room save needed, but player save happens implicitly on logout/periodic
+             # It's a player item, no room save needed
              pass 
         else:
              # It's a room object
