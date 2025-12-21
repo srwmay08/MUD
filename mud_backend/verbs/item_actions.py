@@ -198,7 +198,27 @@ class Get(BaseVerb):
                 if item_ref:
                     if not target_hand_slot:
                         self.player.send_message("Your hands are full."); return
+                    
+                    # Remove from active object
                     container_obj["container_storage"][found_prep].pop(idx)
+                    
+                    # --- SYNC WITH PERSISTENT DATA ---
+                    if "uid" in container_obj:
+                        persistent_objs = self.room.data.get("objects", [])
+                        for p_obj in persistent_objs:
+                            if p_obj.get("uid") == container_obj["uid"]:
+                                if "container_storage" in p_obj and found_prep in p_obj["container_storage"]:
+                                    # We need to find the matching item in persistence
+                                    # Since items in storage might not have UIDs, we rely on index if possible
+                                    # But since we just popped index 'idx' from active, we can try to pop 'idx' from persistent
+                                    try:
+                                        if len(p_obj["container_storage"][found_prep]) > idx:
+                                            p_obj["container_storage"][found_prep].pop(idx)
+                                    except:
+                                        pass
+                                break
+                    # ---------------------------------
+
                     self.player.worn_items[target_hand_slot] = item_ref
                     item_data = _get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {container_obj['name']}.")
@@ -248,9 +268,20 @@ class Get(BaseVerb):
                     self.player.worn_items[target_hand_slot] = item_to_pickup
                     self.player.send_message(f"You get {item_name} and hold it.")
                 
-                # Explicitly verify and remove the exact object reference
+                # --- REMOVE FROM ROOM (Persistent Sync) ---
                 if item_obj in self.room.objects:
                     self.room.objects.remove(item_obj)
+                
+                # Remove from room.data["objects"] using UID
+                target_uid = item_obj.get("uid")
+                if target_uid:
+                    persistent_objs = self.room.data.get("objects", [])
+                    for i, obj in enumerate(persistent_objs):
+                        if obj.get("uid") == target_uid:
+                            persistent_objs.pop(i)
+                            break
+                # -------------------------------------------
+
                 self.world.save_room(self.room)
                 return
 
@@ -260,7 +291,24 @@ class Get(BaseVerb):
                 if item_ref:
                     if not target_hand_slot:
                         self.player.send_message("Your hands are full."); return
+                    
+                    # Remove from active
                     obj["container_storage"][found_prep].pop(idx)
+                    
+                    # --- SYNC WITH PERSISTENT DATA ---
+                    if "uid" in obj:
+                        persistent_objs = self.room.data.get("objects", [])
+                        for p_obj in persistent_objs:
+                            if p_obj.get("uid") == obj["uid"]:
+                                if "container_storage" in p_obj and found_prep in p_obj["container_storage"]:
+                                    try:
+                                        if len(p_obj["container_storage"][found_prep]) > idx:
+                                            p_obj["container_storage"][found_prep].pop(idx)
+                                    except:
+                                        pass
+                                break
+                    # ---------------------------------
+
                     self.player.worn_items[target_hand_slot] = item_ref
                     item_data = _get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {obj['name']}.")

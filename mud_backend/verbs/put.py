@@ -203,6 +203,7 @@ class Put(BaseVerb):
              _set_action_roundtime(self.player, 1.0)
              return
 
+        # Update Active Object
         if "container_storage" not in container_obj:
             container_obj["container_storage"] = {}
         if target_prep not in container_obj["container_storage"]:
@@ -212,11 +213,23 @@ class Put(BaseVerb):
 
         self.player.send_message(f"You put {item_name} {target_prep} the {container_obj['name']}.")
         
-        # Save changes
+        # --- SYNC WITH PERSISTENT DATA ---
         if container_obj.get("_runtime_item_ref"):
-             # Player container, saving handled by player state
              pass 
         else:
+             # Find persistent object by UID
+             target_uid = container_obj.get("uid")
+             if target_uid:
+                 persistent_objs = self.room.data.get("objects", [])
+                 for p_obj in persistent_objs:
+                     if p_obj.get("uid") == target_uid:
+                         if "container_storage" not in p_obj:
+                             p_obj["container_storage"] = {}
+                         if target_prep not in p_obj["container_storage"]:
+                             p_obj["container_storage"][target_prep] = []
+                         p_obj["container_storage"][target_prep].append(item_ref)
+                         break
+             
              self.world.save_room(self.room)
              
         _set_action_roundtime(self.player, 0.5)

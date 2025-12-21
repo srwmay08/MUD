@@ -8,6 +8,7 @@ from mud_backend.verbs.item_actions import (
     _find_item_in_inventory, 
     _get_item_data
 )
+import uuid
 
 @VerbRegistry.register(["drop", "discard"])
 class Drop(BaseVerb):
@@ -54,22 +55,33 @@ class Drop(BaseVerb):
         else:
             self.player.worn_items[hand_slot] = None
 
+        new_obj = None
         if isinstance(item_ref, dict):
-            obj = item_ref
-            obj["is_item"] = True
-            if "keywords" not in obj: obj["keywords"] = item_data.get("keywords", [])
+            new_obj = item_ref
+            new_obj["is_item"] = True
+            if "keywords" not in new_obj: new_obj["keywords"] = item_data.get("keywords", [])
+            if "uid" not in new_obj: new_obj["uid"] = uuid.uuid4().hex
         else:
             item_keywords = [item_name.lower()] + item_name.lower().split()
-            obj = {
+            new_obj = {
                 "item_id": item_ref, 
                 "name": item_name, 
                 "is_item": True, 
                 "keywords": list(set(item_keywords)),
                 "description": item_data.get("description", "It's an item."),
-                "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"]
+                "verbs": ["GET", "LOOK", "EXAMINE", "TAKE"],
+                "uid": uuid.uuid4().hex
             }
         
-        self.room.objects.append(obj)
+        # Add to active room
+        self.room.objects.append(new_obj)
+        
+        # --- SYNC WITH PERSISTENT DATA ---
+        if "objects" not in self.room.data:
+            self.room.data["objects"] = []
+        self.room.data["objects"].append(new_obj)
+        # ---------------------------------
+
         self.player.send_message(f"You drop {item_name} on the ground.")
         self.world.save_room(self.room)
         _set_action_roundtime(self.player, 1.0)

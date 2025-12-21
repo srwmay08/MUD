@@ -73,81 +73,63 @@ def _get_object_sort_priority(obj: Dict[str, Any]) -> int:
 
 def hydrate_room_objects(room: Room, world: 'World'):
     """
-    Merges object stubs from the room's DB data with live asset templates (Nodes, Monsters, Items).
-    Populates room.objects with fully hydrated dictionaries containing verbs, keywords, etc.
+    Merges object stubs from the room's DB data with live asset templates.
+    Ensures persistent UIDs are assigned to stubs in room.data.
     """
     merged_objects = []
     
+    # We iterate over the actual list reference in room.data so we can modify it
     all_objects_stubs = room.data.get("objects", []) 
     
-    room_data_in_cache = world.game_rooms.get(room.room_id, {})
-    all_objects_stubs_in_cache = room_data_in_cache.get("objects", [])
-    
-    cache_stubs_by_content = {}
-    if all_objects_stubs_in_cache:
-        cache_stubs_by_content = {str(s): s for s in all_objects_stubs_in_cache}
-
     if all_objects_stubs:
         for obj_stub in all_objects_stubs: 
             node_id = obj_stub.get("node_id")
             monster_id = obj_stub.get("monster_id")
             item_id = obj_stub.get("item_id")
-            obj_stub_in_cache = cache_stubs_by_content.get(str(obj_stub))
 
             merged_obj = None
+
+            # Ensure UID exists in the STUB (Persistence)
+            if "uid" not in obj_stub:
+                obj_stub["uid"] = uuid.uuid4().hex
+
+            current_uid = obj_stub["uid"]
 
             if node_id:
                 template = world.game_nodes.get(node_id)
                 if template:
                     merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub) 
-                    if "uid" not in merged_obj:
-                         merged_obj["uid"] = uuid.uuid4().hex
-                         if obj_stub_in_cache: obj_stub_in_cache["uid"] = merged_obj["uid"]
+                    merged_obj.update(obj_stub)
             
             elif monster_id:
-                uid = obj_stub.get("uid")
-                if not uid:
-                    uid = uuid.uuid4().hex
-                    if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
-                
                 # Check if defeated
-                if uid and world.get_defeated_monster(uid) is not None:
+                if world.get_defeated_monster(current_uid) is not None:
                     continue 
                 
                 template = world.game_monster_templates.get(monster_id)
                 if template:
                     merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub) 
-                    merged_obj["uid"] = uid 
+                    merged_obj.update(obj_stub)
 
             elif item_id:
-                # --- Item Hydration Logic ---
                 template = world.game_items.get(item_id)
                 if template:
                     merged_obj = copy.deepcopy(template)
                     merged_obj.update(obj_stub)
                     merged_obj["is_item"] = True
-                    
-                    if "uid" not in merged_obj:
-                        merged_obj["uid"] = uuid.uuid4().hex
-                        if obj_stub_in_cache: obj_stub_in_cache["uid"] = merged_obj["uid"]
                 else:
                     merged_obj = copy.deepcopy(obj_stub)
                     merged_obj["name"] = f"Broken Item ({item_id})"
 
             else:
-                # --- Custom Object / NPC ---
+                # Custom Object / NPC
                 merged_obj = copy.deepcopy(obj_stub)
-                
-                if obj_stub.get("is_npc") and "uid" not in obj_stub:
-                    uid = uuid.uuid4().hex
-                    obj_stub["uid"] = uid # Update cache
-                    if obj_stub_in_cache: obj_stub_in_cache["uid"] = uid
-                    merged_obj["uid"] = uid
             
             if merged_obj:
-                # --- FORCE FIX: Inject Shop Data if Missing in Handler too ---
+                # Ensure hydrated object has the UID
+                merged_obj["uid"] = current_uid
+
+                # Shop Data Injection fix
                 if "pawnbroker" in merged_obj.get("keywords", []) or "merchant" in merged_obj.get("keywords", []):
                     if "shop_data" not in merged_obj and "shop_data" in obj_stub:
                          merged_obj["shop_data"] = copy.deepcopy(obj_stub["shop_data"])
@@ -158,7 +140,6 @@ def hydrate_room_objects(room: Room, world: 'World'):
                             "sold_counts": {},
                             "type": "pawnshop"
                         }
-                # -------------------------------------------------------------
 
                 if "verbs" in merged_obj:
                     merged_obj["verbs"] = [v.upper() for v in merged_obj["verbs"]]
@@ -167,12 +148,11 @@ def hydrate_room_objects(room: Room, world: 'World'):
     room.objects = merged_objects
     
     if room.objects:
-        # Safe sort with get()
         room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
 
 def show_room_to_player(player: Player, room: Room):
     """
-    Sends all room information (name, desc, objects, exits, players) to the player.
+    Sends all room information to the player.
     """
     player.send_message(f"**{room.name}**")
     
@@ -196,7 +176,7 @@ def show_room_to_player(player: Player, room: Room):
         else:
              player.send_message("A brief room.")
 
-    # Merge objects from DB stubs with live asset templates
+    # Re-hydrate to ensure we see current state, but rely on room.data for source of truth
     hydrate_room_objects(room, player.world)
     
     player_perception = player.stats.get("WIS", 0)
@@ -209,7 +189,6 @@ def show_room_to_player(player: Player, room: Room):
             
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
-                # --- FIX: Safe Access to Name ---
                 obj_name = obj.get('name', 'Unknown Object')
                 verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
                 verb_str = ','.join(verbs).lower()

@@ -80,17 +80,15 @@ def _list_container_storage(player, obj, prep):
     if not items:
         return False
 
-    # Display Header
-    prep_display = prep.upper()
-    obj_name = obj.get('name', 'Object')
-    player.send_message(f"--- {prep_display} the {obj_name} ---")
-    
-    # List Items
+    item_list = []
     for item_ref in items:
         item_data = _get_item_data_safe(item_ref, player.world)
         if item_data:
             name = item_data.get('name', 'something')
-            player.send_message(f"- <span class='keyword' data-command='look at {name}'>{name}</span>")
+            item_list.append(f"<span class='keyword' data-command='look at {name}'>{name}</span>")
+    
+    if item_list:
+        player.send_message(f"You also see: {', '.join(item_list)}.")
             
     return True
 
