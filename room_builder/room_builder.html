@@ -527,7 +527,6 @@
             description: { default: "" },
             exits: {},
             objects: [],
-            hidden_objects: [],
             flags: {},
             ambient_events: [],
             illumination: 50,
@@ -612,7 +611,11 @@
 
         const obList = document.getElementById('objects-list');
         obList.innerHTML = '';
-        (room.objects || []).forEach(obj => obList.appendChild(createObjectCard(obj, false)));
+        
+        // Merge objects and legacy hidden_objects for display
+        // If an object is in 'objects' list but has hidden=true, we pass true to createObjectCard
+        (room.objects || []).forEach(obj => obList.appendChild(createObjectCard(obj, obj.hidden === true)));
+        // Support for legacy files where they are split
         (room.hidden_objects || []).forEach(obj => obList.appendChild(createObjectCard(obj, true)));
     }
 
@@ -813,8 +816,12 @@
             }
         });
 
+        // MERGED OBJECT SAVING:
+        // We now save EVERYTHING to r.objects, using the 'hidden' flag to distinguish.
+        // We do NOT populate r.hidden_objects anymore.
         r.objects = [];
-        r.hidden_objects = [];
+        // Legacy cleanup (optional): delete r.hidden_objects;
+        
         document.querySelectorAll('.object-row').forEach(row => {
             const type = row.querySelector('.obj-type').value;
             const val = row.querySelector('.obj-id-name').value.trim();
@@ -824,6 +831,11 @@
             if (!val) return;
 
             let newObj = {};
+            if (isHidden) {
+                newObj.hidden = true;
+                if (!newObj.perception_dc) newObj.perception_dc = 1;
+            }
+
             if (type === 'static') {
                 newObj.name = val;
                 newObj.description = row.querySelector('.obj-desc').value;
@@ -853,12 +865,7 @@
                 else if (type === 'node') { newObj.node_id = val; newObj.is_gathering_node = true; }
             }
             
-            if (isHidden) {
-                if (!newObj.perception_dc) newObj.perception_dc = 1;
-                r.hidden_objects.push(newObj);
-            } else {
-                r.objects.push(newObj);
-            }
+            r.objects.push(newObj);
         });
 
         renderMap();

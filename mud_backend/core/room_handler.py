@@ -78,8 +78,21 @@ def hydrate_room_objects(room: Room, world: 'World'):
     """
     merged_objects = []
     
-    # We iterate over the actual list reference in room.data so we can modify it
-    all_objects_stubs = room.data.get("objects", []) 
+    # Merging logic: Combine standard objects and legacy hidden_objects
+    # This ensures items hidden in the builder are still 'physically' in the room
+    # so players can LOOK AT them, even if they don't appear in the 'Also here' list.
+    all_objects_stubs = []
+    
+    standard_objs = room.data.get("objects", [])
+    if standard_objs:
+        all_objects_stubs.extend(standard_objs)
+        
+    hidden_objs = room.data.get("hidden_objects", [])
+    if hidden_objs:
+        # Force the hidden flag on these legacy items
+        for h_obj in hidden_objs:
+            h_obj['hidden'] = True
+            all_objects_stubs.append(h_obj)
     
     if all_objects_stubs:
         for obj_stub in all_objects_stubs: 
