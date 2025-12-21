@@ -110,6 +110,24 @@ class ScriptAPI:
                 self.player.send_message(f"You lose {item_id}.")
                 return
 
+    def give_item(self, item_id: str, count: int = 1):
+        """
+        Gives an item to the player.
+        Usage: give_item("fresh_water")
+        """
+        item_template = self.world.game_items.get(item_id)
+        if not item_template:
+            print(f"[SCRIPT ERROR] give_item: Template '{item_id}' not found.")
+            self.player.send_message(f"Error: Item '{item_id}' does not exist.")
+            return
+
+        for _ in range(count):
+            new_item = copy.deepcopy(item_template)
+            new_item["uid"] = uuid.uuid4().hex
+            self.player.inventory.append(new_item)
+            
+        self.player.send_message(f"You receive {item_template['name']}.")
+
     # --- NEW METHODS ---
     def start_timer(self, seconds: int, callback_script: str):
         """
@@ -166,6 +184,7 @@ def execute_script(world: 'World', player: 'Player', room: 'Room', script_string
         "grant_xp": api.grant_xp,
         "has_item": api.has_item,
         "take_item": api.take_item,
+        "give_item": api.give_item,
         "start_timer": api.start_timer,
         "fail_quest": api.fail_quest,
         "check_flag": api.check_flag,
