@@ -2,6 +2,7 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
+from mud_backend.core.scripting import execute_script
 from typing import Dict, Any, Union, Tuple, Optional
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
@@ -102,6 +103,49 @@ def _find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep=N
                 if clean_target == i_name or clean_target == _clean_name(i_name) or clean_target in item_data.get("keywords", []):
                     return item_ref, prep, i
     return None, None, -1
+
+@VerbRegistry.register(["turn", "crank", "push", "pull", "touch", "press"])
+class ObjectInteraction(BaseVerb):
+    def execute(self):
+        if not self.args:
+            self.player.send_message(f"{self.command_trigger.capitalize()} what?")
+            return
+
+        target_name = " ".join(self.args).lower()
+        
+        # 1. Find the target object in the room
+        # We manually check ALL objects because static objects (like windlass) might not identify as "items"
+        found_obj = None
+        clean_target = _clean_name(target_name)
+        
+        for obj in self.room.objects:
+            obj_name = obj.get("name", "").lower()
+            if clean_target == obj_name or clean_target == _clean_name(obj_name) or clean_target in obj.get("keywords", []):
+                found_obj = obj
+                break
+
+        if not found_obj:
+            self.player.send_message(f"You don't see a '{target_name}' here.")
+            return
+
+        # 2. Check for defined interactions
+        interactions = found_obj.get("interactions", {})
+        verb = self.command_trigger.lower()
+        
+        if verb in interactions:
+            action = interactions[verb]
+            act_type = action.get("type")
+            act_val = action.get("value")
+            
+            if act_type == "text":
+                self.player.send_message(act_val)
+            elif act_type == "script":
+                execute_script(self.world, self.player, self.room, act_val)
+            elif act_type == "move":
+                self.player.move_to_room(act_val)
+            return
+
+        self.player.send_message(f"You can't {verb} that.")
 
 @VerbRegistry.register(["get", "take"])
 class Get(BaseVerb):
