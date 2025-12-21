@@ -85,7 +85,10 @@ def _list_container_storage(player, obj, prep):
         item_data = _get_item_data_safe(item_ref, player.world)
         if item_data:
             name = item_data.get('name', 'something')
-            item_list.append(f"<span class='keyword' data-command='look at {name}'>{name}</span>")
+            # FIX: Use data-verbs instead of data-command to enable context menu
+            verbs = item_data.get('verbs', ['look', 'examine', 'get'])
+            verb_str = ','.join(verbs).lower()
+            item_list.append(f"<span class='keyword' data-name='{name}' data-verbs='{verb_str}'>{name}</span>")
     
     if item_list:
         player.send_message(f"You also see: {', '.join(item_list)}.")
@@ -142,6 +145,7 @@ def _list_items_on_table(player, room, table_obj):
             has_shop_items = True
             player.send_message(f"--- On the {table_obj.get('name', 'Table')} (For Sale) ---")
             for name, price in items_on_table:
+                # Shop items still use data-command for quick buying, or you can change this to data-verbs="buy,look"
                 player.send_message(f"- <span class='keyword' data-command='buy {name}'>{name}</span> : {price} silver")
 
     # 2. Player Placed Items (container_storage)
@@ -182,7 +186,13 @@ def _show_room_filtered(player, room, world):
     visible_objects = []
     for obj in room.objects:
         obj_name = obj.get("name", "something")
-        obj_html = f"<span class='keyword' data-command='look at {obj_name}'>{obj_name}</span>"
+        
+        # FIX: Use data-verbs instead of data-command to enable context menu
+        # Default to standard verbs if none are defined on the object
+        verbs = obj.get('verbs', ['look', 'examine', 'get'])
+        verb_str = ','.join(verbs).lower()
+        
+        obj_html = f"<span class='keyword' data-name='{obj_name}' data-verbs='{verb_str}'>{obj_name}</span>"
         visible_objects.append(obj_html)
 
     if visible_objects:
