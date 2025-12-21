@@ -56,7 +56,7 @@
     {
         "ambient_events": [],
         "description": {
-            "default": "You are at the eastern face of the well structure. The stone base here is worn smooth by the friction of countless leaning bodies. The great <span class=\"keyword\" data-name=\"a rope\" data-verbs=\"look\">a rope</span> extends out to this side, allowing access to the water <span class=\"keyword\" data-name=\"wooden windlass\" data-verbs=\"look,turn,crank\">mechanism</span>. The slate shingles of the roof drip condensation onto the cobblestones, keeping them permanently wet. A simple, low wooden bench is positioned near the trough."
+            "default": "You are at the eastern face of the well structure. The stone base here is worn smooth by the friction of countless leaning bodies. The great <span class=\"keyword\" data-name=\"a rope\" data-verbs=\"look\">a rope</span> extends out to this side, allowing access to the <span class=\"keyword\" data-name=\"wooden windlass\" data-verbs=\"look,turn,crank\">wooden windlass</span>. The slate shingles of the roof drip condensation onto the cobblestones, keeping them permanently wet. A simple, low wooden bench is positioned near the trough."
         },
         "exits": {
             "northwest": "room_1766107073364_416",
