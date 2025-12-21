@@ -91,7 +91,7 @@ def _list_container_storage(player, obj, prep):
             item_list.append(f"<span class='keyword' data-name='{name}' data-verbs='{verb_str}'>{name}</span>")
     
     if item_list:
-        player.send_message(f"You also see: {', '.join(item_list)}.")
+        player.send_message(f"You also see {', '.join(item_list)}.")
             
     return True
 
@@ -196,7 +196,7 @@ def _show_room_filtered(player, room, world):
         visible_objects.append(obj_html)
 
     if visible_objects:
-        player.send_message(f"You also see: {', '.join(visible_objects)}.")
+        player.send_message(f"You also see {', '.join(visible_objects)}.")
 
     # Highlight Players
     room_players = world.room_players.get(room.room_id, [])
