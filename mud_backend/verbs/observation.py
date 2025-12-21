@@ -185,6 +185,10 @@ def _show_room_filtered(player, room, world):
     # Highlight Objects (No grouping)
     visible_objects = []
     for obj in room.objects:
+        # Respect the hidden flag to exclude embedded/hidden objects from this list
+        if obj.get("hidden", False):
+            continue
+
         obj_name = obj.get("name", "something")
         
         # FIX: Use data-verbs instead of data-command to enable context menu
@@ -399,10 +403,19 @@ class Look(BaseVerb):
                 self.player.send_message(f"You see nothing special {found_prep} the {found_obj['name']}.")
             return
 
-        # 4. Default Look At
-        self.player.send_message(f"You look at the **{found_obj.get('name', 'object')}**.")
-        self.player.send_message(found_obj.get('description', 'It is a nondescript object.'))
+        # 4. Default Look At (No specific preposition provided)
+        interactions = found_obj.get("interactions", {})
+        
+        # Priority 1: Check if 'look at' interaction is defined.
+        if "look at" in interactions and interactions["look at"].get("type") == "text":
+             self.player.send_message(interactions["look at"]["value"])
+        
+        # Priority 2: Fallback to description field
+        else:
+             self.player.send_message(f"You look at the **{found_obj.get('name', 'object')}**.")
+             self.player.send_message(found_obj.get('description', 'It is a nondescript object.'))
 
+        # Check table contents (always happens for tables regardless of description source)
         if "table" in found_obj.get("keywords", []):
             _list_items_on_table(self.player, self.room, found_obj)
 

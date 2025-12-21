@@ -689,6 +689,7 @@
                     <option value="node" ${type==='node'?'selected':''}>Node</option>
                 </select>
                 <div class="flex items-center gap-2">
+                    <button class="text-[10px] bg-blue-900 text-blue-300 px-1 rounded border border-blue-800 hover:bg-blue-800" onclick="embedObject(this)" title="Embed in Description">Embed</button>
                     <label class="text-[10px] text-gray-400 flex items-center gap-1">
                         <input type="checkbox" class="obj-hidden accent-amber-500" ${isHidden ? 'checked' : ''} onchange="updateRoomData()"> Hidden
                     </label>
@@ -736,6 +737,51 @@
     }
 
     // --- GLOBAL HELPERS ---
+    window.embedObject = function(btn) {
+        const row = btn.closest('.object-row');
+        const nameInput = row.querySelector('.obj-id-name');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+            alert("Please enter an object name/ID first.");
+            return;
+        }
+
+        // Calculate verbs
+        let verbs = ["look"];
+        row.querySelectorAll('.ia-verb').forEach(input => {
+            const v = input.value.trim().toLowerCase();
+            if(v) verbs.push(v);
+        });
+        
+        const verbStr = verbs.join(',');
+        const span = `<span class="keyword" data-name="${name}" data-verbs="${verbStr}">${name}</span>`;
+
+        // Insert into description
+        const descField = document.getElementById('desc');
+        const start = descField.selectionStart;
+        const end = descField.selectionEnd;
+        const text = descField.value;
+        const before = text.substring(0, start);
+        const after = text.substring(end, text.length);
+        
+        descField.value = before + span + after;
+        
+        // Move cursor after insertion
+        descField.selectionStart = descField.selectionEnd = start + span.length;
+        descField.focus();
+
+        // Auto-Hide
+        const hiddenCb = row.querySelector('.obj-hidden');
+        if (!hiddenCb.checked) {
+            hiddenCb.checked = true;
+            row.classList.add('hidden-obj');
+        }
+        
+        updateRoomData();
+        showToast("Object embedded & hidden");
+    }
+
     window.changeObjType = function(select) {
         const type = select.value;
         const body = select.closest('.object-card').querySelector('.obj-body');
