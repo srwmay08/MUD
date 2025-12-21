@@ -56,7 +56,7 @@
     {
         "ambient_events": [],
         "description": {
-            "default": "You are at the eastern face of the well structure. The stone base here is worn smooth by the friction of countless leaning bodies. The great <span class=\"keyword\" data-name=\"a rope\" data-verbs=\"look\">a rope</span> extends out to this side, allowing access to the <span class=\"keyword\" data-name=\"wooden windlass\" data-verbs=\"look,turn,crank\">wooden windlass</span>. The slate shingles of the roof drip condensation onto the cobblestones, keeping them permanently wet. A simple, low wooden bench is positioned near the trough."
+            "default": "You are at the eastern face of the well structure. The stone base here is worn smooth by the friction of countless leaning bodies. The great <span class=\"keyword\" data-name=\"a rope\" data-verbs=\"look\">a rope</span> extends out to this side, allowing access to the water <span class=\"keyword\" data-name=\"wooden windlass\" data-verbs=\"look,turn,crank\">mechanism</span>. The slate shingles of the roof drip condensation onto the cobblestones, keeping them permanently wet. A simple, low wooden bench is positioned near the trough."
         },
         "exits": {
             "northwest": "room_1766107073364_416",
@@ -119,11 +119,11 @@
                 "interactions": {
                     "turn": {
                         "type": "script",
-                        "value": "echo("
+                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.'); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
                     },
                     "crank": {
                         "type": "script",
-                        "value": "echo("
+                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.'); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
                     }
                 }
             },

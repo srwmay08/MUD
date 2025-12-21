@@ -4,8 +4,6 @@ from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
 from mud_backend.core.scripting import execute_script
 from typing import Dict, Any, Union, Tuple, Optional
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
 import re
 
 def _clean_name(name: str) -> str:
@@ -114,7 +112,6 @@ class ObjectInteraction(BaseVerb):
         target_name = " ".join(self.args).lower()
         
         # 1. Find the target object in the room
-        # We manually check ALL objects because static objects (like windlass) might not identify as "items"
         found_obj = None
         clean_target = _clean_name(target_name)
         
@@ -150,6 +147,10 @@ class ObjectInteraction(BaseVerb):
 @VerbRegistry.register(["get", "take"])
 class Get(BaseVerb):
     def execute(self):
+        # Delayed Import to avoid circular dependency
+        from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+        from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
+
         if _check_action_roundtime(self.player, action_type="other"):
             return
         if not self.args:
@@ -252,9 +253,6 @@ class Get(BaseVerb):
                         for p_obj in persistent_objs:
                             if p_obj.get("uid") == container_obj["uid"]:
                                 if "container_storage" in p_obj and found_prep in p_obj["container_storage"]:
-                                    # We need to find the matching item in persistence
-                                    # Since items in storage might not have UIDs, we rely on index if possible
-                                    # But since we just popped index 'idx' from active, we can try to pop 'idx' from persistent
                                     try:
                                         if len(p_obj["container_storage"][found_prep]) > idx:
                                             p_obj["container_storage"][found_prep].pop(idx)

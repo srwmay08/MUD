@@ -3,6 +3,7 @@ import time
 import pkgutil
 import importlib
 import os
+import traceback
 from typing import List
 from typing import Dict
 from typing import Any
@@ -48,7 +49,11 @@ def _load_verbs():
     for _, name, _ in pkgutil.iter_modules([verbs_path]):
         full_module_name = f"mud_backend.verbs.{name}"
         if full_module_name not in importlib.sys.modules:
-            importlib.import_module(full_module_name)
+            try:
+                importlib.import_module(full_module_name)
+            except Exception as e:
+                print(f"[ERROR] Failed to load verb module '{name}': {e}")
+                traceback.print_exc()
 
 # Load verbs at module level
 _load_verbs()
