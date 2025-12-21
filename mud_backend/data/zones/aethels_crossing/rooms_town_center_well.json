@@ -109,7 +109,7 @@
     {
         "ambient_events": [],
         "description": {
-            "default": ""
+            "default": "You stand under the northern eaves of the town's massive central well. The conical roof creates a deep, permanent shadow here, and the rough-hewn grey stones of the base are coated in a thick, velvety moss. One of the four heavy timber posts supporting the roof rises here, its wood darkened by soot and damp. A sturdy, iron-bound oak bench sits between the timber post and the mossy stone base."
         },
         "exits": {
             "southeast": "room_1766107071981_571",
@@ -128,7 +128,31 @@
             "sneak_in_allowed": true,
             "sneak_out_allowed": true
         },
-        "hidden_objects": [],
+        "hidden_objects": [
+            {
+                "name": "a rope",
+                "description": "",
+                "keywords": [
+                    "rope"
+                ],
+                "verbs": [
+                    "look",
+                    "climb",
+                    "look at"
+                ],
+                "interactions": {
+                    "climb": {
+                        "type": "move",
+                        "value": "well_bottom"
+                    },
+                    "look at": {
+                        "type": "text",
+                        "value": "A thick, braided hemp rope hangs from the central windlass beam, disappearing into the pitch-black depth of the well. It looks thick and incredibly sturdy\u2014easily strong enough to hold the weight of a fully armored adventurer if one were to climb down."
+                    }
+                },
+                "perception_dc": 1
+            }
+        ],
         "illumination": 50,
         "interior_id": "town_center_well",
         "is_outdoor": true,
@@ -144,12 +168,12 @@
                 ],
                 "verbs": [
                     "look",
-                    "Climb"
+                    "look at"
                 ],
                 "interactions": {
-                    "Climb": {
-                        "type": "move",
-                        "value": "well_bottom"
+                    "look at": {
+                        "type": "text",
+                        "value": "The well is a fortress of water storage. On this side, the grey stones are slick with green moss and stained black by coal dust. The heavy timber beams hold up the shingled roof, protecting the shaft from the city's grime. It looks ancient and immovable."
                     }
                 }
             }
