@@ -54,7 +54,13 @@ class ScriptAPI:
         Sends a message to everyone in the room.
         Usage: echo_room("The ground shakes.", skip_player=True)
         """
-        skip_sid = self.player.uid if skip_player else None
+        skip_sid = None
+        if skip_player:
+            # FIX: Look up the Session ID (sid), do not use player.uid
+            player_info = self.world.get_player_info(self.player.name.lower())
+            if player_info:
+                skip_sid = player_info.get("sid")
+
         self.world.broadcast_to_room(self.room.room_id, message, "message", skip_sid=skip_sid)
 
     def heal(self, amount: int):
