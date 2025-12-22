@@ -1,7 +1,7 @@
 # mud_backend/verbs/equipment.py
 from mud_backend.verbs.base_verb import BaseVerb
 from typing import Dict, Any, Tuple, Optional
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core.item_utils import (
     find_item_in_inventory, 
@@ -16,7 +16,7 @@ import uuid
 @VerbRegistry.register(["wear", "wield"])
 class Wear(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"): return
+        if check_action_roundtime(self.player, action_type="other"): return
         if not self.args:
             self.player.send_message("Wear what?")
             return
@@ -63,12 +63,12 @@ class Wear(BaseVerb):
         self.player.worn_items[target_slot] = item_id
         verb = "wield" if item_data.get("item_type") in ["weapon", "shield"] else "wear"
         self.player.send_message(f"You {verb} {item_data.get('name')}.")
-        _set_action_roundtime(self.player, 1.0)
+        set_action_roundtime(self.player, 1.0)
 
 @VerbRegistry.register(["remove"])
 class Remove(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"): return
+        if check_action_roundtime(self.player, action_type="other"): return
         if not self.args:
             self.player.send_message("Remove what?")
             return
@@ -95,7 +95,7 @@ class Remove(BaseVerb):
             self.player.worn_items[slot] = None 
             self.player.inventory.append(item_id) 
             self.player.send_message(f"You remove {item_data.get('name')} and put it in your pack.")
-        _set_action_roundtime(self.player, 1.0)
+        set_action_roundtime(self.player, 1.0)
 
 @VerbRegistry.register(["pour"])
 class Pour(BaseVerb):
