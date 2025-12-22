@@ -1,21 +1,10 @@
 # mud_backend/verbs/trading.py
 import time
-import re
 from mud_backend.verbs.base_verb import BaseVerb
 from typing import Dict, Any, Tuple, Optional
-from mud_backend import config
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
-from mud_backend.core.quest_handler import get_active_quest_for_npc
 from mud_backend.core.registry import VerbRegistry
-
-def _find_item_in_inventory(player, target_name: str) -> str | None:
-    for item_id in player.inventory:
-        item_data = player.world.game_items.get(item_id)
-        if item_data:
-            if (target_name == item_data.get("name", "").lower() or 
-                target_name in item_data.get("keywords", [])):
-                return item_id
-    return None
+from mud_backend.core.item_utils import find_item_in_inventory, find_item_in_hands
 
 def _count_item_in_inventory(player, target_item_id: str) -> int:
     count = 0
@@ -24,17 +13,6 @@ def _count_item_in_inventory(player, target_item_id: str) -> int:
             count += 1
     return count
 
-def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
-    for slot in ["mainhand", "offhand"]:
-        item_id = player.worn_items.get(slot)
-        if item_id:
-            item_data = player.world.game_items.get(item_id)
-            if item_data:
-                if (target_name == item_data.get("name", "").lower() or 
-                    target_name in item_data.get("keywords", [])):
-                    return item_id, slot
-    return None, None
-
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
     for obj in room.objects:
         if obj.get("quest_giver_ids") or obj.get("is_npc"):
@@ -42,7 +20,6 @@ def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
                 target_name in obj.get("keywords", [])):
                 return obj
     return None
-
 
 @VerbRegistry.register(["give"]) 
 class Give(BaseVerb):
@@ -91,9 +68,11 @@ class Give(BaseVerb):
             target_npc = _find_npc_in_room(self.room, target_name_input)
             if target_npc:
                 npc_name = target_npc.get("name", "the NPC")
-                item_id_to_give, item_source_location = _find_item_in_hands(self.player, target_item_name)
+                
+                # Use Core functions
+                item_id_to_give, item_source_location = find_item_in_hands(self.player, self.world.game_items, target_item_name)
                 if not item_id_to_give:
-                    item_id_to_give = _find_item_in_inventory(self.player, target_item_name)
+                    item_id_to_give = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
                     if item_id_to_give:
                         item_source_location = "inventory"
                 
@@ -101,7 +80,8 @@ class Give(BaseVerb):
                     self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
                     return
                 
-                item_name = self.world.game_items.get(item_id_to_give, {}).get("name", "that item")
+                item_data = self.world.game_items.get(item_id_to_give, {}) if isinstance(item_id_to_give, str) else item_id_to_give
+                item_name = item_data.get("name", "that item")
 
                 active_quest = None
                 quest_id_for_item = None
@@ -171,8 +151,8 @@ class Give(BaseVerb):
                     reward_item = active_quest.get("reward_item")
                     if reward_item:
                         self.player.inventory.append(reward_item)
-                        item_data = self.world.game_items.get(reward_item, {})
-                        self.player.send_message(f"You are given {item_data.get('name', 'an item')}.")
+                        r_item_data = self.world.game_items.get(reward_item, {})
+                        self.player.send_message(f"You are given {r_item_data.get('name', 'an item')}.")
                     
                     reward_spell = active_quest.get("reward_spell")
                     if reward_spell:
@@ -225,12 +205,13 @@ class Give(BaseVerb):
             item_id_to_give = None
             item_source_location = None 
             
-            item_id_hand, hand_slot = _find_item_in_hands(self.player, target_item_name)
+            # Use Core
+            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
             if item_id_hand:
                 item_id_to_give = item_id_hand
                 item_source_location = hand_slot
             else:
-                item_id_inv = _find_item_in_inventory(self.player, target_item_name)
+                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
                 if item_id_inv:
                     item_id_to_give = item_id_inv
                     item_source_location = "inventory"
@@ -238,8 +219,9 @@ class Give(BaseVerb):
             if not item_id_to_give:
                 self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
                 return
-                
-            item_data = self.world.game_items.get(item_id_to_give)
+            
+            # Handle Item Ref vs ID
+            item_data = self.world.game_items.get(item_id_to_give) if isinstance(item_id_to_give, str) else item_id_to_give
             
             trade_offer.update({
                 "trade_type": "item",
@@ -482,12 +464,12 @@ class Exchange(BaseVerb):
             item_source_location = "mainhand"
         
         if not item_id_to_give:
-            item_id_hand, hand_slot = _find_item_in_hands(self.player, target_item_name)
+            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
             if item_id_hand:
                 item_id_to_give = item_id_hand
                 item_source_location = hand_slot
             else:
-                item_id_inv = _find_item_in_inventory(self.player, target_item_name)
+                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
                 if item_id_inv:
                     item_id_to_give = item_id_inv
                     item_source_location = "inventory"
@@ -496,7 +478,7 @@ class Exchange(BaseVerb):
             self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
             return
             
-        item_data = self.world.game_items.get(item_id_to_give)
+        item_data = self.world.game_items.get(item_id_to_give) if isinstance(item_id_to_give, str) else item_id_to_give
         item_name = item_data.get('name', 'an item')
         
         trade_offer = {
