@@ -68,11 +68,20 @@ function sendCommand(command) {
 }
 
 function addMessage(message, messageClass = null) {
+    if (!message) return; // Guard against empty messages
+    
     let formattedMessage = message;
-    formattedMessage = formattedMessage.replace(
-        /\*\*(.*?)\*\*/g, 
-        '<span class="room-title">[$1]</span>'
-    );
+    // Ensure message is a string before replacing
+    if (typeof formattedMessage === 'string') {
+        formattedMessage = formattedMessage.replace(
+            /\*\*(.*?)\*\*/g, 
+            '<span class="room-title">[$1]</span>'
+        );
+    } else {
+        // Fallback if somehow an object gets here
+        formattedMessage = JSON.stringify(formattedMessage);
+    }
+
     if (messageClass) {
         formattedMessage = `<span class="${messageClass}">${formattedMessage}</span>`;
     }
@@ -507,9 +516,18 @@ socket.on('command_response', (data) => {
     }
 });
 
-socket.on('message', (message) => {
-    addMessage(message);
+// --- UPDATED MESSAGE HANDLER ---
+// Handles both legacy strings and new {text, type} objects
+socket.on('message', (data) => {
+    if (typeof data === 'object' && data !== null && data.text) {
+        // Map types to CSS classes if necessary, or pass null
+        // Currently relying on addMessage to handle simple text
+        addMessage(data.text, data.type === 'error' ? 'error-message' : null);
+    } else {
+        addMessage(data);
+    }
 });
+
 socket.on('group_chat', (message) => {
     addMessage(message, 'group-chat'); 
 });
