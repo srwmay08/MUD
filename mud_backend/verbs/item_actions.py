@@ -1,7 +1,7 @@
 # mud_backend/verbs/item_actions.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.core.scripting import execute_script
+from mud_backend.core.scripting.py import execute_script
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.item_utils import (
     clean_name, 
@@ -70,6 +70,8 @@ class ObjectInteraction(BaseVerb):
             if act_type == "text":
                 self.player.send_message(act_val)
             elif act_type == "script":
+                # Ensure the script engine is imported correctly at the top
+                from mud_backend.core.scripting import execute_script
                 execute_script(self.world, self.player, self.room, act_val)
             elif act_type == "move":
                 self.player.move_to_room(act_val)
@@ -154,7 +156,6 @@ class Get(BaseVerb):
             if container_obj:
                 # Shop Table Check
                 if "table" in container_obj.get("keywords", []):
-                    # UPDATED: Use core economy function
                     shop_data = get_shop_data(self.room)
                     if shop_data:
                         clean_item = clean_name(target_item_name)
@@ -163,7 +164,6 @@ class Get(BaseVerb):
                             if item_data:
                                 i_name = item_data.get("name", "").lower()
                                 if clean_item == i_name or clean_item in item_data.get("keywords", []):
-                                    # UPDATED: Use core economy function
                                     price = get_item_buy_price(item_ref, game_items, shop_data)
                                     self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} costs {price} silvers.'")
                                     return
@@ -287,13 +287,11 @@ class Get(BaseVerb):
                     set_action_roundtime(self.player, 1.0); return
 
             # Shop Inventory
-            # UPDATED: Use core economy function
             shop_data = get_shop_data(self.room)
             if shop_data:
                 for item_ref in shop_data.get("inventory", []):
                     item_data = get_item_data(item_ref, game_items)
                     if item_data and (target_item_name == item_data.get("name", "").lower() or target_item_name in item_data.get("keywords", [])):
-                        # UPDATED: Use core economy function
                         price = get_item_buy_price(item_ref, game_items, shop_data)
                         self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} will cost you {price} silvers.'"); return
 

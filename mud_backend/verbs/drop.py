@@ -137,7 +137,7 @@ class Drop(BaseVerb):
 
         target_room_id = "well_bottom" 
         
-        # FIX: Use world.get_room instead of world.room_handler.get_room
+        # FIX: Use world.get_room instead of world.room_handler.get_room (which caused the error)
         target_room_data = self.world.get_room(target_room_id)
         
         # If the bottom room is active (someone is down there), we need that instance.

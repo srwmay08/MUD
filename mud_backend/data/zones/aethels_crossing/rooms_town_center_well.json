@@ -119,11 +119,11 @@
                 "interactions": {
                     "turn": {
                         "type": "script",
-                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.'); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
+                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.', skip_player=True); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
                     },
                     "crank": {
                         "type": "script",
-                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.'); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
+                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.', skip_player=True); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
                     }
                 }
             },

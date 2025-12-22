@@ -21,7 +21,7 @@ class ConnectionManager:
         if player_info:
             sid = player_info.get("sid")
             if sid: 
-                self.socketio.emit(msg_type, message, to=sid)
+                self.socketio.emit("message", {'text': message, 'type': msg_type}, to=sid)
             
             # Handle Snooping
             player_obj = player_info.get("player_obj")
@@ -32,33 +32,36 @@ class ConnectionManager:
                     for snooper_name in snoopers:
                         snooper_info = self.world.get_player_info(snooper_name)
                         if snooper_info and snooper_info.get("sid"):
-                            self.socketio.emit("message", snoop_msg, to=snooper_info["sid"])
+                            self.socketio.emit("message", {'text': snoop_msg, 'type': 'message'}, to=snooper_info["sid"])
 
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         if not self.socketio: return
         
-        # Normalize skip_sid to a set
-        skip_sids_set = set()
+        # Normalize skip_sid to a list for Flask-SocketIO
+        skip_list = []
         if skip_sid:
             if isinstance(skip_sid, str):
-                skip_sids_set.add(skip_sid)
+                skip_list.append(skip_sid)
             elif isinstance(skip_sid, (list, set, tuple)):
-                skip_sids_set.update(skip_sid)
+                skip_list.extend(list(skip_sid))
         
         # Simple broadcast (for things that don't check flags)
         is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
         
         if not is_flag_checked:
-            # Convert to list for Flask-SocketIO which expects list or str
-            skip_list = list(skip_sids_set)
-            if skip_list: 
-                self.socketio.emit(msg_type, message, to=room_id, skip_sid=skip_list)
-            else: 
-                self.socketio.emit(msg_type, message, to=room_id)
+            # Flask-SocketIO's skip_sid expects a list of SIDs to exclude
+            self.socketio.emit(
+                'message', 
+                {'text': message, 'type': msg_type}, 
+                room=room_id, 
+                skip_sid=skip_list
+            )
             return
 
         # Flag-checked broadcast (iterate players to check preferences)
+        # We manually iterate here because we need logic (flags) per player
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
+        skip_set = set(skip_list)
         
         for player_name in players_in_room:
             player_info = self.world.get_player_info(player_name)
@@ -67,12 +70,16 @@ class ConnectionManager:
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
-            if not player_obj or not sid or sid in skip_sids_set: continue
+            if not player_obj or not sid or sid in skip_set: continue
             
             if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
             if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
             
-            self.socketio.emit(msg_type, message, to=sid)
+            self.socketio.emit(
+                'message', 
+                {'text': message, 'type': msg_type}, 
+                to=sid
+            )
 
     def broadcast_to_world(self, message: str, msg_type: str = "global_chat", skip_player_name: str = None):
         """Sends a message to every connected player."""
@@ -85,7 +92,11 @@ class ConnectionManager:
             
             sid = p_info.get("sid")
             if sid:
-                self.socketio.emit(msg_type, message, to=sid)
+                self.socketio.emit(
+                    'message', 
+                    {'text': message, 'type': msg_type}, 
+                    to=sid
+                )
 
     def broadcast_to_radius(self, start_room_id: str, radius: int, message: str, msg_type: str = "message", skip_player_name: str = None):
         """
@@ -149,7 +160,23 @@ class ConnectionManager:
             if p_room_id in rooms_in_range:
                 sid = p_info.get("sid")
                 if sid:
-                    self.socketio.emit(msg_type, message, to=sid)
+                    self.socketio.emit(
+                        'message', 
+                        {'text': message, 'type': msg_type}, 
+                        to=sid
+                    )
+
+    def disconnect_player(self, sid: str):
+        """Handle disconnection logic via SID lookup."""
+        player_to_remove = None
+        for p_name, info in self.world.get_all_players_info():
+            if info.get("sid") == sid:
+                player_to_remove = p_name
+                break
+        
+        if player_to_remove:
+            print(f"[CONNECTION] Player {player_to_remove} disconnected.")
+            self.world.remove_player(player_to_remove)
 
 
 class RoomManager:
