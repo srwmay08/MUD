@@ -285,7 +285,13 @@ def handle_command_event(data):
                 result_data["messages"] = player_obj.message_history + result_data["messages"]
 
             if room_id:
+                # --- FIXED & DEBUGGED ---
+                print(f"[DEBUG LOGIN] {char_name} joining room {room_id} (SID: {sid})")
                 join_room(room_id, sid=sid)
+                
+                # CRITICAL: Manually add to room index so broadcast finds them
+                world.add_player_to_room_index(char_name.lower(), room_id)
+                
                 world.broadcast_to_room(room_id, f"{char_name} arrives.", "message", skip_sid=sid)
 
         emit("command_response", result_data, to=sid)

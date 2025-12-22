@@ -11,7 +11,6 @@ from mud_backend.core.item_utils import (
     find_item_in_obj_storage, 
     find_container_on_player
 )
-# UPDATED: Import from core.economy
 from mud_backend.core.economy import get_shop_data, get_item_buy_price
 from mud_backend.core import db
 import re
@@ -64,18 +63,22 @@ class ObjectInteraction(BaseVerb):
         
         if cmd_name in interactions:
             # --- BROADCAST ACTION TO ROOM ---
-            # This ensures observers see "Sevax turns the windlass."
             if not self.player.is_hidden:
-                # Resolve a nice display name
                 obj_display_name = found_obj.get("name", target_name)
-                # Helper to conjugate verb roughly (turns vs turn) - simplistic approach:
                 verb_display = cmd_name + "s"
                 msg = f"{self.player.name} {verb_display} the {obj_display_name}."
+                
+                # Retrieve SID to skip correctly
+                p_info = self.world.get_player_info(self.player.name.lower())
+                p_sid = p_info.get("sid") if p_info else None
+                
+                print(f"[DEBUG INTERACTION] Action: {msg} | Room: {self.room.room_id} | Actor SID: {p_sid}")
+
                 self.world.broadcast_to_room(
                     self.room.room_id, 
                     msg, 
                     "message", 
-                    skip_player=self.player # The actor gets specific feedback from the interaction logic below
+                    skip_sid=p_sid
                 )
             # --------------------------------
 
@@ -86,7 +89,6 @@ class ObjectInteraction(BaseVerb):
             if act_type == "text":
                 self.player.send_message(act_val)
             elif act_type == "script":
-                # Ensure the script engine is imported correctly at the top
                 from mud_backend.core.scripting import execute_script
                 execute_script(self.world, self.player, self.room, act_val)
             elif act_type == "move":

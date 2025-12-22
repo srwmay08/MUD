@@ -49,7 +49,6 @@ class ConnectionManager:
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         """
         Broadcasts to all players in a room by iterating the Entity Manager's player list.
-        This ensures perfect sync between game state (who is here) and network state (who gets msg).
         """
         if not self.socketio: return
         
@@ -64,21 +63,34 @@ class ConnectionManager:
         # We rely on the Entity Manager for truth about who is in the room.
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
         
+        # [DEBUG] Show who is in the room index
+        print(f"[DEBUG BROADCAST] Room: {room_id} | Msg: {message[:30]}... | Candidates: {players_in_room}")
+
         for player_name in players_in_room:
             player_info = self.world.get_player_info(player_name)
-            if not player_info: continue
+            if not player_info: 
+                print(f"[DEBUG BROADCAST] Skipped {player_name} (No Info)")
+                continue
             
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
             # Skip invalid, offline, or explicitly skipped players
-            if not player_obj or not sid or sid in skip_sids_set: 
+            if not player_obj or not sid: 
+                print(f"[DEBUG BROADCAST] Skipped {player_name} (No SID/Obj)")
+                continue
+            
+            if sid in skip_sids_set:
+                print(f"[DEBUG BROADCAST] Skipped {player_name} (SID {sid} is in skip list)")
                 continue
             
             # Flag Checks
             if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
             if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
             
+            # [DEBUG] Confirm sending
+            print(f"[DEBUG BROADCAST] Sending to {player_name} (SID: {sid})")
+
             self.socketio.emit(
                 'message', 
                 {'text': message, 'type': msg_type}, 
