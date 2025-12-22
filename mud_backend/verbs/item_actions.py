@@ -1,4 +1,6 @@
 # mud_backend/verbs/item_actions.py
+print("\n[LOADED] item_actions.py - DEBUG ENABLED\n")
+
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
