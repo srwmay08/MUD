@@ -1,0 +1,98 @@
+# mud_backend/core/item_utils.py
+import re
+from typing import Dict, Any, Union, Tuple, Optional
+
+def clean_name(name: str) -> str:
+    """Helper to strip articles from names using regex."""
+    if not name:
+        return ""
+    # Remove 'my', 'the', 'a', 'an' at the start of the string
+    cleaned = re.sub(r'^(my|the|a|an)\s+', '', name.strip().lower())
+    return cleaned.strip()
+
+def get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
+    if isinstance(item_ref, dict):
+        return item_ref
+    return game_items_data.get(item_ref, {})
+
+def find_item_in_room(room_objects: list, target_name: str) -> Dict[str, Any] | None:
+    clean_target = clean_name(target_name)
+    for obj in room_objects:
+        if not obj.get("is_item"):
+            continue
+        obj_name = obj.get("name", "").lower()
+        if clean_target == obj_name or clean_target == clean_name(obj_name) or clean_target in obj.get("keywords", []):
+            return obj
+    return None
+
+def find_item_in_inventory(player, game_items_data: Dict[str, Any], target_name: str) -> Union[str, Dict[str, Any], None]:
+    clean_target = clean_name(target_name)
+    for item in player.inventory:
+        item_data = get_item_data(item, game_items_data)
+        if item_data:
+            i_name = item_data.get("name", "").lower()
+            if clean_target == i_name or clean_target == clean_name(i_name) or clean_target in item_data.get("keywords", []):
+                return item
+    return None
+
+def find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: str) -> Tuple[Any, Optional[str]]:
+    clean_target = clean_name(target_name)
+    for slot in ["mainhand", "offhand"]:
+        item_ref = player.worn_items.get(slot)
+        if item_ref:
+            item_data = get_item_data(item_ref, game_items_data)
+            if item_data:
+                i_name = item_data.get("name", "").lower()
+                if clean_target == i_name or clean_target == clean_name(i_name) or clean_target in item_data.get("keywords", []):
+                    return item_ref, slot
+    return None, None
+
+def find_item_worn(player, target_name: str) -> Tuple[str | None, str | None]:
+    clean_target = clean_name(target_name)
+    for slot, item_id in player.worn_items.items():
+        if item_id:
+            item_data = get_item_data(item_id, player.world.game_items)
+            if item_data:
+                i_name = item_data.get("name", "").lower()
+                if clean_target == i_name or clean_target == clean_name(i_name) or clean_target in item_data.get("keywords", []):
+                    return item_id, slot
+    return None, None
+
+def find_container_on_player(player, game_items_data: Dict[str, Any], target_name: str) -> Dict[str, Any] | None:
+    clean_target = clean_name(target_name)
+    # Worn
+    for slot, item in player.worn_items.items():
+        if item:
+            item_data = get_item_data(item, game_items_data)
+            if item_data and item_data.get("is_container"):
+                i_name = item_data.get("name", "").lower()
+                if clean_target == i_name or clean_target == clean_name(i_name) or clean_target in item_data.get("keywords", []):
+                    # Attach ref for runtime use
+                    item_data_copy = item_data.copy()
+                    item_data_copy["_runtime_item_ref"] = item
+                    return item_data_copy
+    # Inventory
+    for item in player.inventory:
+        item_data = get_item_data(item, game_items_data)
+        if item_data and item_data.get("is_container"):
+            i_name = item_data.get("name", "").lower()
+            if clean_target == i_name or clean_target == clean_name(i_name) or clean_target in item_data.get("keywords", []):
+                item_data_copy = item_data.copy()
+                item_data_copy["_runtime_item_ref"] = item
+                return item_data_copy
+    return None
+
+def find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep=None):
+    clean_target = clean_name(target_item_name)
+    storage = obj.get("container_storage", {})
+    preps_to_check = [specific_prep] if specific_prep else storage.keys()
+
+    for prep in preps_to_check:
+        items_list = storage.get(prep, [])
+        for i, item_ref in enumerate(items_list):
+            item_data = get_item_data(item_ref, game_items)
+            if item_data:
+                i_name = item_data.get("name", "").lower()
+                if clean_target == i_name or clean_target == clean_name(i_name) or clean_target in item_data.get("keywords", []):
+                    return item_ref, prep, i
+    return None, None, -1

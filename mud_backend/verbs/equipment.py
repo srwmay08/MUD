@@ -3,7 +3,13 @@ from mud_backend.verbs.base_verb import BaseVerb
 from typing import Dict, Any, Tuple, Optional
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.item_actions import _find_item_in_inventory, _get_item_data, _find_item_in_hands, _find_item_worn, _find_container_on_player
+from mud_backend.core.item_utils import (
+    find_item_in_inventory, 
+    get_item_data, 
+    find_item_in_hands, 
+    find_item_worn, 
+    find_container_on_player
+)
 from mud_backend.core import db
 import uuid
 
@@ -20,13 +26,13 @@ class Wear(BaseVerb):
         source_type = None 
         source_slot = None
         
-        hand_item_id, hand_slot = _find_item_in_hands(self.player, self.world.game_items, target_name)
+        hand_item_id, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
         if hand_item_id:
             item_id = hand_item_id
             source_type = "hand"
             source_slot = hand_slot
         else:
-            inv_item_id = _find_item_in_inventory(self.player, self.world.game_items, target_name)
+            inv_item_id = find_item_in_inventory(self.player, self.world.game_items, target_name)
             if inv_item_id:
                 item_id = inv_item_id
                 source_type = "inventory"
@@ -67,7 +73,7 @@ class Remove(BaseVerb):
             self.player.send_message("Remove what?")
             return
         target_name = " ".join(self.args).lower()
-        item_id, slot = _find_item_worn(self.player, target_name)
+        item_id, slot = find_item_worn(self.player, target_name)
         if not item_id:
             self.player.send_message(f"You are not wearing a {target_name}.")
             return

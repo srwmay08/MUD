@@ -3,9 +3,9 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.verbs.item_actions import _get_item_data, _find_item_in_hands
+from mud_backend.core.item_utils import get_item_data, find_item_in_hands
 from mud_backend.core.skill_handler import attempt_skill_learning
-from mud_backend.core.registry import VerbRegistry # <-- Added
+from mud_backend.core.registry import VerbRegistry
 
 RECIPES = {
     "ash_wood": [
@@ -36,7 +36,7 @@ class Carve(BaseVerb):
         for slot in ["mainhand", "offhand"]:
             item_ref = self.player.worn_items.get(slot)
             if item_ref:
-                data = _get_item_data(item_ref, self.world.game_items)
+                data = get_item_data(item_ref, self.world.game_items)
                 if data.get("skill") == "small_edged" or data.get("tool_type") == "knife":
                     has_knife = True
                     knife_ref = item_ref
@@ -46,15 +46,13 @@ class Carve(BaseVerb):
             self.player.send_message("You need a knife or dagger to carve wood.")
             return
 
-        # --- FIX: Pass world.game_items to _find_item_in_hands ---
-        wood_ref, wood_slot = _find_item_in_hands(self.player, self.world.game_items, wood_target)
-        # ---------------------------------------------------------
+        wood_ref, wood_slot = find_item_in_hands(self.player, self.world.game_items, wood_target)
         
         if not wood_ref:
             self.player.send_message(f"You aren't holding '{wood_target}'.")
             return
             
-        wood_data = _get_item_data(wood_ref, self.world.game_items)
+        wood_data = get_item_data(wood_ref, self.world.game_items)
         
         recipe_key = wood_ref 
         if isinstance(wood_ref, dict):

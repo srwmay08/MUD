@@ -4,12 +4,11 @@ import time
 import math
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.verbs.item_actions import _get_item_data, _find_item_in_inventory
-from mud_backend.verbs.equipment import _find_item_in_hands
+from mud_backend.core.item_utils import get_item_data, find_item_in_inventory, find_item_in_hands
 from typing import Dict, Any
 from mud_backend.core import loot_system
 from mud_backend import config
-from mud_backend.core.registry import VerbRegistry # <-- Added
+from mud_backend.core.registry import VerbRegistry
 
 def _find_furnace(room) -> Dict[str, Any] | None:
     for obj in room.objects:
@@ -31,7 +30,7 @@ class Crush(BaseVerb):
         for slot in ["mainhand", "offhand"]:
             item_ref = self.player.worn_items.get(slot)
             if item_ref:
-                data = _get_item_data(item_ref, self.world.game_items)
+                data = get_item_data(item_ref, self.world.game_items)
                 if data.get("tool_type") == "hammer":
                     has_hammer = True
                     break
@@ -39,12 +38,12 @@ class Crush(BaseVerb):
             self.player.send_message("You need a hammer to crush ore.")
             return
 
-        ore_ref, ore_slot = _find_item_in_hands(self.player, "ore")
+        ore_ref, ore_slot = find_item_in_hands(self.player, self.world.game_items, "ore")
         if not ore_ref:
             self.player.send_message("You need to be holding ore to crush it.")
             return
         
-        ore_data = _get_item_data(ore_ref, self.world.game_items)
+        ore_data = get_item_data(ore_ref, self.world.game_items)
         material = ore_data.get("material")
         
         if not material or material not in METAL_PROPERTIES or ore_data.get("item_type") != "ore":
@@ -71,9 +70,6 @@ class Crush(BaseVerb):
         gem_found = False
         if dropped_items:
              for item_data in dropped_items: 
-                 item_id = item_data.get("item_id") # generate_loot returns DICT objects in new system? No, old system returned ID strings from mocked world...
-                 # Wait, the new loot_system returns Dicts.
-                 # Let's fix the logic to support the new loot system return type.
                  item_id = item_data.get("item_id")
                  if item_id:
                      self.player.inventory.append(item_id)
@@ -96,12 +92,12 @@ class Wash(BaseVerb):
     def execute(self):
         if _check_action_roundtime(self.player, "other"): return
         
-        ore_ref, ore_slot = _find_item_in_hands(self.player, "ore")
+        ore_ref, ore_slot = find_item_in_hands(self.player, self.world.game_items, "ore")
         if not ore_ref:
             self.player.send_message("You need to be holding crushed ore to wash it.")
             return
             
-        ore_data = _get_item_data(ore_ref, self.world.game_items)
+        ore_data = get_item_data(ore_ref, self.world.game_items)
         material = ore_data.get("material")
         
         if not material or material not in METAL_PROPERTIES or ore_data.get("item_type") != "ore_gravel":
@@ -146,17 +142,17 @@ class Charge(BaseVerb):
         slot = None
         
         if target_arg in ["ore", "coal", "flux"]:
-             item_ref, slot = _find_item_in_hands(self.player, target_arg)
+             item_ref, slot = find_item_in_hands(self.player, self.world.game_items, target_arg)
         
         if not item_ref:
-             item_ref, slot = _find_item_in_hands(self.player, target_arg) 
+             item_ref, slot = find_item_in_hands(self.player, self.world.game_items, target_arg) 
 
         if not item_ref:
             self.player.send_message(f"You aren't holding '{target_arg}'.")
             return
             
         state = furnace["state"]
-        item_data = _get_item_data(item_ref, self.world.game_items)
+        item_data = get_item_data(item_ref, self.world.game_items)
         item_type = item_data.get("item_type")
         item_material = item_data.get("material")
         current_metal_type = state.get("metal_type")
@@ -304,7 +300,7 @@ class Shingle(BaseVerb):
         for slot in ["mainhand", "offhand"]:
             item_ref = self.player.worn_items.get(slot)
             if item_ref:
-                data = _get_item_data(item_ref, self.world.game_items)
+                data = get_item_data(item_ref, self.world.game_items)
                 if data.get("tool_type") == "hammer":
                     has_hammer = True
         if not has_hammer:

@@ -1,10 +1,10 @@
-# mud_backend/verbs/temple.py
+# mud_backend/verbs/aethelion.py
 import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.verbs.item_actions import _find_item_in_inventory
+from mud_backend.core.item_utils import find_item_in_inventory
 
 @VerbRegistry.register(["polish"])
 class Polish(BaseVerb):
@@ -65,7 +65,7 @@ class Light(BaseVerb):
             return
 
         # Check for Coal
-        coal_id = _find_item_in_inventory(self.player, self.world.game_items, "coal")
+        coal_id = find_item_in_inventory(self.player, self.world.game_items, "coal")
         if not coal_id:
             self.player.send_message("You need fuel (coal) to light the brazier.")
             return

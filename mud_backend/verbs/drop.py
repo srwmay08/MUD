@@ -2,11 +2,11 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.verbs.item_actions import (
-    _clean_name, 
-    _find_item_in_hands, 
-    _find_item_in_inventory, 
-    _get_item_data
+from mud_backend.core.item_utils import (
+    clean_name, 
+    find_item_in_hands, 
+    find_item_in_inventory, 
+    get_item_data
 )
 import uuid
 
@@ -25,15 +25,15 @@ class Drop(BaseVerb):
             self.args = self.args[:-1]
 
         args_str = " ".join(self.args).lower()
-        target_item_name = _clean_name(args_str)
+        target_item_name = clean_name(args_str)
         game_items = self.world.game_items
         
         # Logic to find item to drop (Hands -> Inventory)
-        item_ref, hand_slot = _find_item_in_hands(self.player, game_items, target_item_name)
+        item_ref, hand_slot = find_item_in_hands(self.player, game_items, target_item_name)
         from_inventory = False
 
         if not item_ref:
-            item_ref = _find_item_in_inventory(self.player, game_items, target_item_name)
+            item_ref = find_item_in_inventory(self.player, game_items, target_item_name)
             if item_ref:
                 from_inventory = True
 
@@ -41,7 +41,7 @@ class Drop(BaseVerb):
             self.player.send_message(f"You don't have a '{target_item_name}'.")
             return
 
-        item_data = _get_item_data(item_ref, game_items)
+        item_data = get_item_data(item_ref, game_items)
         item_name = item_data.get("name", "the item")
 
         # SAFEDROP Check

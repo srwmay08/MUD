@@ -4,7 +4,7 @@ import uuid
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
-from mud_backend.verbs.item_actions import _find_item_in_inventory, _find_item_in_hands
+from mud_backend.core.item_utils import find_item_in_inventory, find_item_in_hands
 
 @VerbRegistry.register(["auction"])
 class AuctionVerb(BaseVerb):
@@ -82,7 +82,7 @@ class AuctionVerb(BaseVerb):
                 return
 
             # Check Hands FIRST
-            item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, item_name)
+            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, item_name)
             item_id_inv = None
             
             item_source = None
@@ -92,7 +92,7 @@ class AuctionVerb(BaseVerb):
                 item_id = item_id_hand
                 item_source = "hand"
             else:
-                item_id_inv = _find_item_in_inventory(self.player, self.world.game_items, item_name)
+                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, item_name)
                 if item_id_inv:
                     item_id = item_id_inv
                     item_source = "inventory"
@@ -247,7 +247,7 @@ class MailVerb(BaseVerb):
             item_name = " ".join(self.args[1:])
             
             # Check hands first, then inventory for attachments
-            item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, item_name)
+            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, item_name)
             item_id_inv = None
             item_id = None
             item_source = None
@@ -256,7 +256,7 @@ class MailVerb(BaseVerb):
                 item_id = item_id_hand
                 item_source = "hand"
             else:
-                item_id_inv = _find_item_in_inventory(self.player, self.world.game_items, item_name)
+                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, item_name)
                 if item_id_inv:
                     item_id = item_id_inv
                     item_source = "inventory"

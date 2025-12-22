@@ -1,158 +1,69 @@
 # mud_backend/verbs/item_actions.py
-print("\n[LOADED] item_actions.py - DEBUG ENABLED\n")
+print("\n[DEBUG] LOADING mud_backend/verbs/item_actions.py ...\n")
 
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.core import db
 from mud_backend.core.scripting import execute_script
-from typing import Dict, Any, Union, Tuple, Optional
+from mud_backend.core import db
+from mud_backend.core.item_utils import (
+    clean_name, 
+    get_item_data, 
+    find_item_in_room, 
+    find_item_in_inventory,
+    find_item_in_obj_storage, 
+    find_container_on_player
+)
 import re
 
-def _clean_name(name: str) -> str:
-    """Helper to strip articles from names using regex."""
-    if not name:
-        return ""
-    # Remove 'my', 'the', 'a', 'an' at the start of the string
-    cleaned = re.sub(r'^(my|the|a|an)\s+', '', name.strip().lower())
-    return cleaned.strip()
-
-def _get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
-    if isinstance(item_ref, dict):
-        return item_ref
-    return game_items_data.get(item_ref, {})
-
-def _find_item_in_room(room_objects: list, target_name: str) -> Dict[str, Any] | None:
-    clean_target = _clean_name(target_name)
-    matches = []
-    for obj in room_objects:
-        if not obj.get("is_item"):
-            continue
-        obj_name = obj.get("name", "").lower()
-        if clean_target == obj_name or clean_target == _clean_name(obj_name) or clean_target in obj.get("keywords", []):
-            matches.append(obj)
-    return matches[0] if matches else None
-
-def _find_item_in_inventory(player, game_items_data: Dict[str, Any], target_name: str) -> Union[str, Dict[str, Any], None]:
-    clean_target = _clean_name(target_name)
-    for item in player.inventory:
-        item_data = _get_item_data(item, game_items_data)
-        if item_data:
-            i_name = item_data.get("name", "").lower()
-            if clean_target == i_name or clean_target == _clean_name(i_name) or clean_target in item_data.get("keywords", []):
-                return item
-    return None
-
-def _find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: str) -> Tuple[Any, Optional[str]]:
-    clean_target = _clean_name(target_name)
-    for slot in ["mainhand", "offhand"]:
-        item_ref = player.worn_items.get(slot)
-        if item_ref:
-            item_data = _get_item_data(item_ref, game_items_data)
-            if item_data:
-                i_name = item_data.get("name", "").lower()
-                if clean_target == i_name or clean_target == _clean_name(i_name) or clean_target in item_data.get("keywords", []):
-                    return item_ref, slot
-    return None, None
-
-def _find_item_worn(player, target_name: str) -> Tuple[str | None, str | None]:
-    clean_target = _clean_name(target_name)
-    for slot, item_id in player.worn_items.items():
-        if item_id:
-            item_data = _get_item_data(item_id, player.world.game_items)
-            if item_data:
-                i_name = item_data.get("name", "").lower()
-                if clean_target == i_name or clean_target == _clean_name(i_name) or clean_target in item_data.get("keywords", []):
-                    return item_id, slot
-    return None, None
-
-def _find_container_on_player(player, game_items_data: Dict[str, Any], target_name: str) -> Dict[str, Any] | None:
-    clean_target = _clean_name(target_name)
-    # Worn
-    for slot, item in player.worn_items.items():
-        if item:
-            item_data = _get_item_data(item, game_items_data)
-            if item_data and item_data.get("is_container"):
-                i_name = item_data.get("name", "").lower()
-                if clean_target == i_name or clean_target == _clean_name(i_name) or clean_target in item_data.get("keywords", []):
-                    # Attach ref for runtime use
-                    item_data_copy = item_data.copy()
-                    item_data_copy["_runtime_item_ref"] = item
-                    return item_data_copy
-    # Inventory
-    for item in player.inventory:
-        item_data = _get_item_data(item, game_items_data)
-        if item_data and item_data.get("is_container"):
-            i_name = item_data.get("name", "").lower()
-            if clean_target == i_name or clean_target == _clean_name(i_name) or clean_target in item_data.get("keywords", []):
-                item_data_copy = item_data.copy()
-                item_data_copy["_runtime_item_ref"] = item
-                return item_data_copy
-    return None
-
-def _find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep=None):
-    clean_target = _clean_name(target_item_name)
-    storage = obj.get("container_storage", {})
-    preps_to_check = [specific_prep] if specific_prep else storage.keys()
-
-    for prep in preps_to_check:
-        items_list = storage.get(prep, [])
-        for i, item_ref in enumerate(items_list):
-            item_data = _get_item_data(item_ref, game_items)
-            if item_data:
-                i_name = item_data.get("name", "").lower()
-                if clean_target == i_name or clean_target == _clean_name(i_name) or clean_target in item_data.get("keywords", []):
-                    return item_ref, prep, i
-    return None, None, -1
+print("[DEBUG] REGISTERING ObjectInteraction for 'turn', 'crank', 'push', 'pull', 'touch', 'press'...")
 
 @VerbRegistry.register(["turn", "crank", "push", "pull", "touch", "press"])
 class ObjectInteraction(BaseVerb):
     def execute(self):
-        # Use self.command (standard) instead of command_trigger
-        cmd = self.command.lower() if self.command else "interact"
-        print(f"\n[DEBUG] ObjectInteraction Triggered: Verb='{cmd}' Args={self.args}")
+        # Using getattr to be safe if command isn't set, though BaseVerb sets it.
+        cmd_name = getattr(self, 'command', 'interact').lower()
+        print(f"\n[DEBUG] ObjectInteraction.execute() CALLED. Command: {cmd_name}")
         
         if not self.args:
-            self.player.send_message(f"{cmd.capitalize()} what?")
+            self.player.send_message(f"{cmd_name.capitalize()} what?")
             return
 
         target_name = " ".join(self.args).lower()
-        clean_target = _clean_name(target_name)
-        print(f"[DEBUG] Target Name: '{target_name}' | Cleaned: '{clean_target}'")
+        clean_target = clean_name(target_name)
+        print(f"[DEBUG] Target: '{target_name}' (Clean: '{clean_target}')")
         
-        # 1. Find the target object in the room (Dynamic Objects)
         found_obj = None
         
+        # 1. Search Room Objects (Dynamic items/mobs)
         print(f"[DEBUG] Scanning {len(self.room.objects)} Room Objects...")
         for obj in self.room.objects:
-            obj_name = obj.get("name", "").lower()
-            keywords = obj.get("keywords", [])
-            
-            if clean_target == obj_name or clean_target == _clean_name(obj_name) or clean_target in keywords:
+            n = obj.get("name", "").lower()
+            k = obj.get("keywords", [])
+            if clean_target == n or clean_target == clean_name(n) or clean_target in k:
                 found_obj = obj
-                print(f"[DEBUG] MATCH FOUND in Room Objects: '{obj_name}'")
+                print(f"[DEBUG] MATCH FOUND in Room Objects: '{n}'")
                 break
 
-        # 2. Check Room Details (Static Features) if not found in objects
-        # This is CRITICAL for things like the Windlass that are part of the room description
+        # 2. Search Room Details (Static features) - THIS IS CRITICAL FOR THE WINDLASS
         if not found_obj:
             details = self.room.data.get("details", [])
-            # Also check 'objects' in room data just in case it's a static object definition
-            static_objects = self.room.data.get("objects", [])
+            static_objs = self.room.data.get("objects", [])
+            # Some builders put static features in 'objects' list in JSON, handled here
+            all_statics = details + static_objs
             
-            all_statics = details + static_objects
             print(f"[DEBUG] Scanning {len(all_statics)} Static Room Details/Features...")
             
             for detail in all_statics:
                 d_name = detail.get("name", "").lower()
-                d_keywords = detail.get("keywords", [])
-
+                d_keys = detail.get("keywords", [])
+                
                 # Check keywords (most common for details)
-                if clean_target in d_keywords:
+                if clean_target in d_keys:
                     found_obj = detail
                     print(f"[DEBUG] MATCH FOUND in Room Details (via Keyword): '{d_name}'")
                     break
-                # Check explicit name if present
-                if d_name and (clean_target == d_name or clean_target == _clean_name(d_name)):
+                # Check explicit name
+                if d_name and (clean_target == d_name or clean_target == clean_name(d_name)):
                     found_obj = detail
                     print(f"[DEBUG] MATCH FOUND in Room Details (via Name): '{d_name}'")
                     break
@@ -162,12 +73,12 @@ class ObjectInteraction(BaseVerb):
             self.player.send_message(f"You don't see a '{target_name}' here.")
             return
 
-        # 3. Check for defined interactions
+        # 3. Check Interactions
         interactions = found_obj.get("interactions", {})
         print(f"[DEBUG] Interactions available on target: {list(interactions.keys())}")
         
-        if cmd in interactions:
-            action = interactions[cmd]
+        if cmd_name in interactions:
+            action = interactions[cmd_name]
             act_type = action.get("type")
             act_val = action.get("value")
             
@@ -182,13 +93,13 @@ class ObjectInteraction(BaseVerb):
                 self.player.move_to_room(act_val)
             return
 
-        print(f"[DEBUG] RESULT: Verb '{cmd}' NOT found in interactions.")
-        self.player.send_message(f"You can't {cmd} that.")
+        print(f"[DEBUG] RESULT: Verb '{cmd_name}' NOT found in interactions.")
+        self.player.send_message(f"You can't {cmd_name} that.")
 
 @VerbRegistry.register(["get", "take"])
 class Get(BaseVerb):
     def execute(self):
-        # Delayed Import to avoid circular dependency
+        # Delayed Import to avoid circular dependency with specific verbs
         from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
         from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
 
@@ -213,11 +124,11 @@ class Get(BaseVerb):
 
             locker = self.player.locker
             found_item = None; found_idx = -1
-            clean_t = _clean_name(target)
+            clean_t = clean_name(target)
 
             for i, item in enumerate(locker["items"]):
                 i_name = item["name"].lower()
-                if clean_t == i_name or clean_t == _clean_name(i_name) or clean_t in item.get("keywords", []):
+                if clean_t == i_name or clean_t == clean_name(i_name) or clean_t in item.get("keywords", []):
                     found_item = item; found_idx = i; break
 
             if not found_item:
@@ -255,11 +166,11 @@ class Get(BaseVerb):
 
         # --- GET FROM CONTAINER / OBJECT ---
         if target_container_name:
-            clean_cont = _clean_name(target_container_name)
+            clean_cont = clean_name(target_container_name)
             container_obj = None
             for obj in self.room.objects:
                 o_name = obj.get("name", "").lower()
-                if clean_cont == o_name or clean_cont == _clean_name(o_name) or clean_cont in obj.get("keywords", []):
+                if clean_cont == o_name or clean_cont == clean_name(o_name) or clean_cont in obj.get("keywords", []):
                     container_obj = obj
                     break
 
@@ -268,10 +179,9 @@ class Get(BaseVerb):
                 if "table" in container_obj.get("keywords", []):
                     shop_data = _get_shop_data(self.room)
                     if shop_data:
-                        # Shop retrieval logic not fully implemented for GET, usually handled by BUY
-                        clean_item = _clean_name(target_item_name)
+                        clean_item = clean_name(target_item_name)
                         for item_ref in shop_data.get("inventory", []):
-                            item_data = _get_item_data(item_ref, game_items)
+                            item_data = get_item_data(item_ref, game_items)
                             if item_data:
                                 i_name = item_data.get("name", "").lower()
                                 if clean_item == i_name or clean_item in item_data.get("keywords", []):
@@ -280,7 +190,7 @@ class Get(BaseVerb):
                                     return
 
                 # Container Storage Check
-                item_ref, found_prep, idx = _find_item_in_obj_storage(container_obj, target_item_name, game_items, specific_prep=target_prep)
+                item_ref, found_prep, idx = find_item_in_obj_storage(container_obj, target_item_name, game_items, specific_prep=target_prep)
                 if item_ref:
                     if not target_hand_slot:
                         self.player.send_message("Your hands are full."); return
@@ -303,7 +213,7 @@ class Get(BaseVerb):
                     # ---------------------------------
 
                     self.player.worn_items[target_hand_slot] = item_ref
-                    item_data = _get_item_data(item_ref, game_items)
+                    item_data = get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {container_obj['name']}.")
                     self.world.save_room(self.room)
                     _set_action_roundtime(self.player, 1.0); return
@@ -312,11 +222,11 @@ class Get(BaseVerb):
                 self.player.send_message(f"You don't see a '{target_item_name}' {loc_str}the {container_obj['name']}."); return
 
             # Player Containers
-            container_data = _find_container_on_player(self.player, game_items, target_container_name)
+            container_data = find_container_on_player(self.player, game_items, target_container_name)
             if not container_data:
                 self.player.send_message(f"You don't have a container called '{target_container_name}'."); return
 
-            item_ref = _find_item_in_inventory(self.player, game_items, target_item_name)
+            item_ref = find_item_in_inventory(self.player, game_items, target_item_name)
             if not item_ref:
                 self.player.send_message(f"You don't have a {target_item_name} in your {container_data.get('name')}."); return
 
@@ -324,13 +234,13 @@ class Get(BaseVerb):
                 self.player.send_message("Your hands are full."); return
             self.player.inventory.remove(item_ref)
             self.player.worn_items[target_hand_slot] = item_ref
-            item_data = _get_item_data(item_ref, game_items)
+            item_data = get_item_data(item_ref, game_items)
             self.player.send_message(f"You get {item_data.get('name', 'item')} from your {container_data.get('name')} and hold it.")
             _set_action_roundtime(self.player, 1.0)
 
         # --- GET FROM GROUND / SURFACES ---
         else:
-            item_obj = _find_item_in_room(self.room.objects, target_item_name)
+            item_obj = find_item_in_room(self.room.objects, target_item_name)
             if item_obj:
                 if item_obj.get("dynamic") or "temp" in item_obj or "quality" in item_obj:
                     item_to_pickup = item_obj
@@ -370,7 +280,7 @@ class Get(BaseVerb):
 
             # Check Surfaces (ON) - Implicit check
             for obj in self.room.objects:
-                item_ref, found_prep, idx = _find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep="on")
+                item_ref, found_prep, idx = find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep="on")
                 if item_ref:
                     if not target_hand_slot:
                         self.player.send_message("Your hands are full."); return
@@ -393,7 +303,7 @@ class Get(BaseVerb):
                     # ---------------------------------
 
                     self.player.worn_items[target_hand_slot] = item_ref
-                    item_data = _get_item_data(item_ref, game_items)
+                    item_data = get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {obj['name']}.")
                     self.world.save_room(self.room)
                     _set_action_roundtime(self.player, 1.0); return
@@ -402,19 +312,19 @@ class Get(BaseVerb):
             shop_data = _get_shop_data(self.room)
             if shop_data:
                 for item_ref in shop_data.get("inventory", []):
-                    item_data = _get_item_data(item_ref, game_items)
+                    item_data = get_item_data(item_ref, game_items)
                     if item_data and (target_item_name == item_data.get("name", "").lower() or target_item_name in item_data.get("keywords", [])):
                         price = _get_item_buy_price(item_ref, game_items, shop_data)
                         self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} will cost you {price} silvers.'"); return
 
             # Inventory Unstow
-            item_ref_from_pack = _find_item_in_inventory(self.player, game_items, target_item_name)
+            item_ref_from_pack = find_item_in_inventory(self.player, game_items, target_item_name)
             if not item_ref_from_pack:
                 self.player.send_message(f"You don't see a **{target_item_name}** here."); return
             if not target_hand_slot:
                 self.player.send_message("Your hands are full."); return
             self.player.inventory.remove(item_ref_from_pack)
             self.player.worn_items[target_hand_slot] = item_ref_from_pack
-            item_data = _get_item_data(item_ref_from_pack, game_items)
+            item_data = get_item_data(item_ref_from_pack, game_items)
             self.player.send_message(f"You get {item_data.get('name', 'item')} from your pack and hold it.")
             _set_action_roundtime(self.player, 1.0)
