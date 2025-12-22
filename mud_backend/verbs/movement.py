@@ -150,6 +150,7 @@ def _handle_group_move(
                 else: follower_move_msg = f"You follow {leader_name}..."
 
                 member_obj.messages.clear()
+                # Use standard move_to_room which handles sockets now
                 member_obj.move_to_room(target_room_id, follower_move_msg) 
                 
                 new_room_data = world.get_room(target_room_id)
@@ -159,9 +160,6 @@ def _handle_group_move(
 
                 new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
                 show_room_to_player(member_obj, new_room)
-                
-                # Use Manager to Switch Rooms
-                world.connection_manager.leave_room(sid, original_room_id)
                 
                 leader_info = world.get_player_info(leader_name.lower())
                 leader_sid = leader_info.get("sid") if leader_info else None
@@ -173,13 +171,10 @@ def _handle_group_move(
                 
                 world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=list(sids_to_skip_for_leave))
                 
-                world.connection_manager.join_room(sid, target_room_id)
                 arrives_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> arrives.'
                 world.broadcast_to_room(target_room_id, arrives_message, "message", skip_sid=sid)
 
                 # Send response manually because movement is often async/secondary
-                # (Note: This might be redundant if the main loop handles it, but good for instant feedback)
-                # For groups, we probably want to trigger a client update
                 world.socketio.emit(
                     'command_response', 
                     {'messages': member_obj.messages, 'vitals': member_obj.get_vitals()}, 
@@ -312,7 +307,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         set_action_roundtime(player_obj, 3.0) 
         
         if original_room_id and target_room_id_step != original_room_id:
-            world.connection_manager.leave_room(sid, original_room_id)
+            # Socket handling is now in move_to_room
             
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> {leave_msg_suffix}'
             
@@ -327,7 +322,6 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                             sids_to_skip_leave.add(member_sid)
             world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=list(sids_to_skip_leave))
             
-            world.connection_manager.join_room(sid, target_room_id_step)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
             
             sids_to_skip_arrive = {sid}
@@ -552,13 +546,11 @@ class Enter(BaseVerb):
         sid = player_info.get("sid") if player_info else None
         
         if original_room_id and target_room_id != original_room_id:
-            # Use Manager to Switch Rooms
-            self.world.connection_manager.leave_room(sid, original_room_id)
+            # Sockets handled in move_to_room
             if leave_suffix: 
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
                 self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
             
-            self.world.connection_manager.join_room(sid, target_room_id)
             if not self.player.is_hidden:
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
                 self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)
@@ -685,13 +677,11 @@ class Climb(BaseVerb):
         sid = player_info.get("sid") if player_info else None
         
         if original_room_id and target_room_id != original_room_id:
-            # Use Manager to Switch Rooms
-            self.world.connection_manager.leave_room(sid, original_room_id)
+            # Sockets handled in move_to_room
             if leave_suffix:
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
                 self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
             
-            self.world.connection_manager.join_room(sid, target_room_id)
             if not self.player.is_hidden:
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
                 self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)
@@ -902,16 +892,13 @@ class Move(BaseVerb):
             sid = player_info.get("sid") if player_info else None
             
             if original_room_id and target_room_id != original_room_id:
-                # Use Manager to Switch Rooms
-                self.world.connection_manager.leave_room(sid, original_room_id)
+                # Socket handling now done in move_to_room
                 
                 # Broadcast LEAVE
                 if leave_suffix:
                     leaves_message = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
                     sids_to_skip = {sid}
                     self.world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=list(sids_to_skip))
-                
-                self.world.connection_manager.join_room(sid, target_room_id)
                 
                 # Broadcast ARRIVE (if not hidden)
                 if not self.player.is_hidden:
@@ -1053,13 +1040,11 @@ class Exit(BaseVerb):
                 sid = player_info.get("sid") if player_info else None
                 
                 if original_room_id and target_room_id != original_room_id:
-                    # Use Manager to Switch Rooms
-                    self.world.connection_manager.leave_room(sid, original_room_id)
+                    # Sockets handled in move_to_room
                     if leave_suffix:
                         msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
                         self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
                     
-                    self.world.connection_manager.join_room(sid, target_room_id)
                     if not self.player.is_hidden:
                         msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
                         self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)

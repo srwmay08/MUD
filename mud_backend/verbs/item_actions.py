@@ -67,6 +67,29 @@ class ObjectInteraction(BaseVerb):
             act_type = action.get("type")
             act_val = action.get("value")
             
+            # --- BROADCAST INTERACTION TO ROOM ---
+            # Conjugate verb (simple approximation)
+            verb_display = cmd_name
+            if verb_display.endswith(('s', 'x', 'z', 'ch', 'sh')):
+                verb_display += "es"
+            else:
+                verb_display += "s"
+                
+            obj_name = found_obj.get("name", target_name)
+            
+            # Message: "Sevax turns the windlass."
+            room_msg = (
+                f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> '
+                f'{verb_display} the {obj_name}.'
+            )
+            
+            # Get SID to skip the acting player
+            player_info = self.world.get_player_info(self.player.name.lower())
+            skip_sid = player_info.get("sid") if player_info else None
+            
+            self.world.broadcast_to_room(self.room.room_id, room_msg, "message", skip_sid=skip_sid)
+            # -------------------------------------
+
             if act_type == "text":
                 self.player.send_message(act_val)
             elif act_type == "script":

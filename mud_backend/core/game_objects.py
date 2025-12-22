@@ -556,15 +556,19 @@ class Player(GameEntity):
         self.current_room_id = target_room_id
         
         # --- CRITICAL FIX: Update Indexes AND Socket Rooms ---
+        # This handles the actual network sync so messages like "turn windlass" are received.
         self.world.remove_player_from_room_index(self.name.lower(), old_room)
         self.world.add_player_to_room_index(self.name.lower(), target_room_id)
         
-        # Ensure SocketIO rooms stay synced with game rooms
         player_info = self.world.get_player_info(self.name.lower())
         if player_info and "sid" in player_info:
             sid = player_info["sid"]
-            self.world.connection_manager.leave_room(sid, old_room)
-            self.world.connection_manager.join_room(sid, target_room_id)
+            # Ensure we leave the old channel
+            if old_room:
+                self.world.connection_manager.leave_room(sid, old_room)
+            # And join the new one
+            if target_room_id:
+                self.world.connection_manager.join_room(sid, target_room_id)
         # ---------------------------------------------------
         
         target_room_obj = self.world.get_active_room_safe(target_room_id)
