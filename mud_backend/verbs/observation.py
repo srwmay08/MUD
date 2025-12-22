@@ -7,7 +7,8 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price, _get_item_type
+# UPDATED: Import from core.economy
+from mud_backend.core.economy import get_shop_data, get_item_buy_price, get_item_type
 import re
 
 def _clean_name(name: str) -> str:
@@ -45,7 +46,6 @@ def _get_table_occupants(world, table_obj):
     target_room_id = table_obj.get("target_room") or _resolve_interaction_target(table_obj, "enter")
 
     if not target_room_id:
-        # Fallback: check table proxy naming convention if no direct link
         table_name_lower = table_obj.get("name", "").lower()
         for rid, room in world.active_rooms.items():
             if room.name.lower() == table_name_lower and getattr(room, "is_table", False):
@@ -58,11 +58,9 @@ def _get_table_occupants(world, table_obj):
     return []
 
 def _resolve_interaction_target(obj, verb):
-    """Helper to find move targets from interactions."""
     interactions = obj.get("interactions", {})
     if verb in interactions and interactions[verb].get("type") == "move":
         return interactions[verb].get("value")
-    # Legacy fallback
     if verb == "enter" and "target_room" in obj:
         return obj["target_room"]
     return None
@@ -73,7 +71,6 @@ def _get_item_data_safe(item_ref, world):
     return world.game_items.get(item_ref, {})
 
 def _list_container_storage(player, obj, prep):
-    """Lists items stored ON/UNDER/IN/BEHIND an object via container_storage."""
     storage = obj.get("container_storage", {})
     items = storage.get(prep, [])
 
@@ -85,7 +82,6 @@ def _list_container_storage(player, obj, prep):
         item_data = _get_item_data_safe(item_ref, player.world)
         if item_data:
             name = item_data.get('name', 'something')
-            # FIX: Use data-verbs instead of data-command to enable context menu
             verbs = item_data.get('verbs', ['look', 'examine', 'get'])
             verb_str = ','.join(verbs).lower()
             item_list.append(f"<span class='keyword' data-name='{name}' data-verbs='{verb_str}'>{name}</span>")
@@ -96,7 +92,8 @@ def _list_container_storage(player, obj, prep):
     return True
 
 def _list_items_on_table(player, room, table_obj):
-    shop_data = _get_shop_data(room)
+    # UPDATED: Use core economy function
+    shop_data = get_shop_data(room)
     has_shop_items = False
 
     # 1. Shop Items
@@ -123,7 +120,8 @@ def _list_items_on_table(player, room, table_obj):
             if not item_data:
                 continue
 
-            itype = _get_item_type(item_data)
+            # UPDATED: Use core economy function
+            itype = get_item_type(item_data)
             match = False
             if category == "weapon" and itype == "weapon":
                 match = True
@@ -137,7 +135,8 @@ def _list_items_on_table(player, room, table_obj):
             if match:
                 name = item_data.get('name', 'Item')
                 if name not in displayed_names:
-                    price = _get_item_buy_price(item_ref, game_items, shop_data)
+                    # UPDATED: Use core economy function
+                    price = get_item_buy_price(item_ref, game_items, shop_data)
                     items_on_table.append((name, price))
                     displayed_names.add(name)
 
@@ -145,7 +144,6 @@ def _list_items_on_table(player, room, table_obj):
             has_shop_items = True
             player.send_message(f"--- On the {table_obj.get('name', 'Table')} (For Sale) ---")
             for name, price in items_on_table:
-                # Shop items still use data-command for quick buying, or you can change this to data-verbs="buy,look"
                 player.send_message(f"- <span class='keyword' data-command='buy {name}'>{name}</span> : {price} silver")
 
     # 2. Player Placed Items (container_storage)
@@ -162,9 +160,6 @@ def _list_items_on_table(player, room, table_obj):
                 player.send_message(f"The {table_obj.get('name', 'Table')} is currently empty.")
 
 def _show_room_filtered(player, room, world):
-    """
-    Local replacement for show_room_to_player to filter hidden entities and provide HTML.
-    """
     player.send_message(f"<span class='room-title'>[ {room.name} ]</span>")
 
     desc = room.description
@@ -185,14 +180,10 @@ def _show_room_filtered(player, room, world):
     # Highlight Objects (No grouping)
     visible_objects = []
     for obj in room.objects:
-        # Respect the hidden flag to exclude embedded/hidden objects from this list
         if obj.get("hidden", False):
             continue
 
         obj_name = obj.get("name", "something")
-        
-        # FIX: Use data-verbs instead of data-command to enable context menu
-        # Default to standard verbs if none are defined on the object
         verbs = obj.get('verbs', ['look', 'examine', 'get'])
         verb_str = ','.join(verbs).lower()
         
@@ -236,7 +227,6 @@ class Examine(BaseVerb):
         if target_name.startswith("at "):
             target_name = target_name[3:]
 
-        # Clean articles from examine target
         target_name = _clean_name(target_name)
 
         found_object = None
@@ -247,7 +237,6 @@ class Examine(BaseVerb):
                 break
 
         if not found_object:
-            # Check inventory/worn
             item_data, loc = _find_item_on_player(self.player, target_name)
             if item_data:
                 found_object = item_data
@@ -259,10 +248,10 @@ class Examine(BaseVerb):
         self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
 
         # Check table contents
-        if "table" in found_object.get("keywords", []) and _get_shop_data(self.room):
+        # UPDATED: Use core economy function
+        if "table" in found_object.get("keywords", []) and get_shop_data(self.room):
             _list_items_on_table(self.player, self.room, found_object)
         elif "table" in found_object.get("keywords", []) or found_object.get("is_table_proxy"):
-            # Check for placed items first
             if not _list_container_storage(self.player, found_object, "on"):
                 occupants = _get_table_occupants(self.world, found_object)
                 if occupants:
@@ -305,10 +294,8 @@ class Look(BaseVerb):
                 target_name = full_command[len(prep)+1:].strip()
                 break
             elif f" {prep} " in full_command:
-                # Handle mid-sentence if needed, but strict startswith is safer for LOOK
                 pass
 
-        # Clean articles
         target_name = _clean_name(target_name)
 
         # 2. Find Target
@@ -355,7 +342,6 @@ class Look(BaseVerb):
 
             found_any = False
             
-            # A) Check Interactions (Static) - Display first to give context
             interactions = found_obj.get("interactions", {})
             look_key = f"look {found_prep}"
             if look_key in interactions:
@@ -364,18 +350,14 @@ class Look(BaseVerb):
                     self.player.send_message(val.get("value"))
                     found_any = True
 
-            # B) Check Container Storage (Dynamic)
-            # This handles listing items put BEHIND/ON/UNDER/IN the object
             has_items = _list_container_storage(self.player, found_obj, found_prep)
             if has_items:
                 found_any = True
 
-            # C) Special case for ON (Tables/Shop) - Legacy support
             if found_prep == "on" and "table" in found_obj.get("keywords", []) and not has_items:
                 _list_items_on_table(self.player, self.room, found_obj)
                 return
 
-            # D) Container Default
             if found_prep == "in":
                 if found_obj.get("is_container"):
                     if found_obj.get("wearable_slot") == "back" and source_loc == "worn":
@@ -403,19 +385,15 @@ class Look(BaseVerb):
                 self.player.send_message(f"You see nothing special {found_prep} the {found_obj['name']}.")
             return
 
-        # 4. Default Look At (No specific preposition provided)
+        # 4. Default Look At
         interactions = found_obj.get("interactions", {})
         
-        # Priority 1: Check if 'look at' interaction is defined.
         if "look at" in interactions and interactions["look at"].get("type") == "text":
              self.player.send_message(interactions["look at"]["value"])
-        
-        # Priority 2: Fallback to description field
         else:
              self.player.send_message(f"You look at the **{found_obj.get('name', 'object')}**.")
              self.player.send_message(found_obj.get('description', 'It is a nondescript object.'))
 
-        # Check table contents (always happens for tables regardless of description source)
         if "table" in found_obj.get("keywords", []):
             _list_items_on_table(self.player, self.room, found_obj)
 
@@ -430,7 +408,6 @@ class Investigate(BaseVerb):
         self.player.send_message("You investigate the area...")
         attempt_skill_learning(self.player, "investigation")
 
-        # 1. Reveal Hidden Objects
         found_obj = False
         hidden_objects = self.room.data.get("hidden_objects", [])
         if hidden_objects:
@@ -521,7 +498,8 @@ class Inspect(BaseVerb):
         item_data, loc = _find_item_on_player(self.player, target_name)
 
         if not item_data:
-            shop_data = _get_shop_data(self.room)
+            # UPDATED: Use core economy function
+            shop_data = get_shop_data(self.room)
             if shop_data:
                 for item_ref in shop_data.get("inventory", []):
                     t_data = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref, {})
@@ -547,7 +525,9 @@ class Inspect(BaseVerb):
         if "armor_class" in item_data:
             self.player.send_message(f"Armor Class: {item_data['armor_class']}")
 
-        shop_data = _get_shop_data(self.room)
+        # UPDATED: Use core economy function
+        shop_data = get_shop_data(self.room)
         if shop_data:
-            price = _get_item_buy_price(item_data, self.world.game_items, shop_data)
+            # UPDATED: Use core economy function
+            price = get_item_buy_price(item_data, self.world.game_items, shop_data)
             self.player.send_message(f"Estimated Shop Price: {price} silver")

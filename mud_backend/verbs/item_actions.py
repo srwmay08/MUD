@@ -1,6 +1,4 @@
 # mud_backend/verbs/item_actions.py
-print("\n[DEBUG] LOADING mud_backend/verbs/item_actions.py ...\n")
-
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core.scripting import execute_script
@@ -13,18 +11,15 @@ from mud_backend.core.item_utils import (
     find_item_in_obj_storage, 
     find_container_on_player
 )
-from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
+# UPDATED: Import from core.economy
+from mud_backend.core.economy import get_shop_data, get_item_buy_price
 from mud_backend.core import db
 import re
-
-print("[DEBUG] REGISTERING ObjectInteraction for 'turn', 'crank', 'push', 'pull', 'touch', 'press'...")
 
 @VerbRegistry.register(["turn", "crank", "push", "pull", "touch", "press"])
 class ObjectInteraction(BaseVerb):
     def execute(self):
-        # Using getattr to be safe if command isn't set, though BaseVerb sets it.
         cmd_name = getattr(self, 'command', 'interact').lower()
-        print(f"\n[DEBUG] ObjectInteraction.execute() CALLED. Command: {cmd_name}")
         
         if not self.args:
             self.player.send_message(f"{cmd_name.capitalize()} what?")
@@ -32,70 +27,54 @@ class ObjectInteraction(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         clean_target = clean_name(target_name)
-        print(f"[DEBUG] Target: '{target_name}' (Clean: '{clean_target}')")
         
         found_obj = None
         
         # 1. Search Room Objects (Dynamic items/mobs)
-        print(f"[DEBUG] Scanning {len(self.room.objects)} Room Objects...")
         for obj in self.room.objects:
             n = obj.get("name", "").lower()
             k = obj.get("keywords", [])
             if clean_target == n or clean_target == clean_name(n) or clean_target in k:
                 found_obj = obj
-                print(f"[DEBUG] MATCH FOUND in Room Objects: '{n}'")
                 break
 
-        # 2. Search Room Details (Static features) - THIS IS CRITICAL FOR THE WINDLASS
+        # 2. Search Room Details (Static features)
         if not found_obj:
             details = self.room.data.get("details", [])
             static_objs = self.room.data.get("objects", [])
-            # Some builders put static features in 'objects' list in JSON, handled here
             all_statics = details + static_objs
-            
-            print(f"[DEBUG] Scanning {len(all_statics)} Static Room Details/Features...")
             
             for detail in all_statics:
                 d_name = detail.get("name", "").lower()
                 d_keys = detail.get("keywords", [])
                 
-                # Check keywords (most common for details)
                 if clean_target in d_keys:
                     found_obj = detail
-                    print(f"[DEBUG] MATCH FOUND in Room Details (via Keyword): '{d_name}'")
                     break
-                # Check explicit name
                 if d_name and (clean_target == d_name or clean_target == clean_name(d_name)):
                     found_obj = detail
-                    print(f"[DEBUG] MATCH FOUND in Room Details (via Name): '{d_name}'")
                     break
 
         if not found_obj:
-            print("[DEBUG] RESULT: No matching object found.")
             self.player.send_message(f"You don't see a '{target_name}' here.")
             return
 
         # 3. Check Interactions
         interactions = found_obj.get("interactions", {})
-        print(f"[DEBUG] Interactions available on target: {list(interactions.keys())}")
         
         if cmd_name in interactions:
             action = interactions[cmd_name]
             act_type = action.get("type")
             act_val = action.get("value")
             
-            print(f"[DEBUG] Action Found! Type='{act_type}' Value='{act_val}'")
-            
             if act_type == "text":
                 self.player.send_message(act_val)
             elif act_type == "script":
-                print(f"[DEBUG] Executing Script: {act_val}")
                 execute_script(self.world, self.player, self.room, act_val)
             elif act_type == "move":
                 self.player.move_to_room(act_val)
             return
 
-        print(f"[DEBUG] RESULT: Verb '{cmd_name}' NOT found in interactions.")
         self.player.send_message(f"You can't {cmd_name} that.")
 
 @VerbRegistry.register(["get", "take"])
@@ -175,7 +154,8 @@ class Get(BaseVerb):
             if container_obj:
                 # Shop Table Check
                 if "table" in container_obj.get("keywords", []):
-                    shop_data = _get_shop_data(self.room)
+                    # UPDATED: Use core economy function
+                    shop_data = get_shop_data(self.room)
                     if shop_data:
                         clean_item = clean_name(target_item_name)
                         for item_ref in shop_data.get("inventory", []):
@@ -183,7 +163,8 @@ class Get(BaseVerb):
                             if item_data:
                                 i_name = item_data.get("name", "").lower()
                                 if clean_item == i_name or clean_item in item_data.get("keywords", []):
-                                    price = _get_item_buy_price(item_ref, game_items, shop_data)
+                                    # UPDATED: Use core economy function
+                                    price = get_item_buy_price(item_ref, game_items, shop_data)
                                     self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} costs {price} silvers.'")
                                     return
 
@@ -263,7 +244,6 @@ class Get(BaseVerb):
                 if item_obj in self.room.objects:
                     self.room.objects.remove(item_obj)
                 
-                # Remove from room.data["objects"] using UID
                 target_uid = item_obj.get("uid")
                 if target_uid:
                     persistent_objs = self.room.data.get("objects", [])
@@ -307,12 +287,14 @@ class Get(BaseVerb):
                     set_action_roundtime(self.player, 1.0); return
 
             # Shop Inventory
-            shop_data = _get_shop_data(self.room)
+            # UPDATED: Use core economy function
+            shop_data = get_shop_data(self.room)
             if shop_data:
                 for item_ref in shop_data.get("inventory", []):
                     item_data = get_item_data(item_ref, game_items)
                     if item_data and (target_item_name == item_data.get("name", "").lower() or target_item_name in item_data.get("keywords", [])):
-                        price = _get_item_buy_price(item_ref, game_items, shop_data)
+                        # UPDATED: Use core economy function
+                        price = get_item_buy_price(item_ref, game_items, shop_data)
                         self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} will cost you {price} silvers.'"); return
 
             # Inventory Unstow

@@ -7,7 +7,6 @@ def get_shop_data(room) -> dict | None:
     for obj in room.objects:
         if "shop_data" in obj:
             s_data = obj.get("shop_data")
-            # Handle empty list from JSON by initializing defaults
             if isinstance(s_data, list):
                 s_data = {"inventory": [], "sold_counts": {}}
                 obj["shop_data"] = s_data
@@ -20,10 +19,7 @@ def get_shop_data(room) -> dict | None:
     return None
 
 def sync_shop_data_to_storage(room, updated_shop_data):
-    """
-    Syncs the modified shop_data from the live object (room.objects)
-    back to the raw persistent storage (room.data['objects']).
-    """
+    """Syncs the modified shop_data from the live object back to raw persistent storage."""
     target_name = None
     for obj in room.objects:
         if obj.get("shop_data") is updated_shop_data:
@@ -40,7 +36,7 @@ def sync_shop_data_to_storage(room, updated_shop_data):
             break
 
 def get_item_type(item_data: dict) -> str:
-    """Helper to safely determine item type from various schema versions."""
+    """Helper to safely determine item type."""
     base_type = item_data.get("item_type") or item_data.get("type", "misc")
     if "weapon_type" in item_data: return "weapon"
     if "armor_type" in item_data: return "armor"
