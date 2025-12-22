@@ -292,6 +292,7 @@ function createMarker(x, y, rank, isScar=false, location=null, isBandaged=false)
                 const item = document.createElement('div');
                 item.innerText = `${verb.toUpperCase()} ${readableLoc}`;
                 item.dataset.command = `${verb} my ${readableLoc}`; // Implicitly 'my'
+                item.dataset.pretty = `${verb} my ${readableLoc}`; // For display consistency
                 contextMenu.appendChild(item);
             });
 
@@ -676,6 +677,9 @@ output.addEventListener('click', function(event) {
             return; 
         }
         const keyword = target.dataset.name || target.innerText;
+        // Check for specific ID (Shadow Command pattern)
+        const targetId = target.dataset.id;
+
         if (currentGameState === "chargen") {
             input.value = '';
             addMessage(`> ${target.innerText}`, 'command-echo');
@@ -687,7 +691,18 @@ output.addEventListener('click', function(event) {
             verbs.forEach(verb => {
                 const item = document.createElement('div');
                 item.innerText = `${verb} ${activeKeyword}`;
-                item.dataset.command = `${verb} ${activeKeyword}`;
+                
+                // Shadow Command Pattern:
+                // If we have a specific ID, use it for the actual command (data-command)
+                // but use the pretty keyword for the client-side echo (data-pretty).
+                if (targetId) {
+                    item.dataset.command = `${verb} #${targetId}`;
+                    item.dataset.pretty = `${verb} ${activeKeyword}`;
+                } else {
+                    item.dataset.command = `${verb} ${activeKeyword}`;
+                    item.dataset.pretty = `${verb} ${activeKeyword}`;
+                }
+                
                 contextMenu.appendChild(item);
             });
             contextMenu.style.left = `${event.pageX}px`;
@@ -703,9 +718,12 @@ document.addEventListener('click', function(event) {
 });
 contextMenu.addEventListener('click', function(event) {
     const command = event.target.dataset.command;
+    const pretty = event.target.dataset.pretty; // Get pretty version for display
     if (command && currentClientState === "in_game") {
         input.value = ''; 
-        addMessage(`> ${command}`, 'command-echo');
+        // Display the "immersive" version (or fallback to command)
+        addMessage(`> ${pretty || command}`, 'command-echo');
+        // Send the "technical" version
         sendCommand(command); 
     }
 });

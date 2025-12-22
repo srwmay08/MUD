@@ -25,34 +25,56 @@ class ObjectInteraction(BaseVerb):
             return
 
         target_name = " ".join(self.args).lower()
-        clean_target = clean_name(target_name)
-        
         found_obj = None
-        
-        # 1. Search Room Objects (Dynamic items/mobs)
-        for obj in self.room.objects:
-            n = obj.get("name", "").lower()
-            k = obj.get("keywords", [])
-            if clean_target == n or clean_target == clean_name(n) or clean_target in k:
-                found_obj = obj
-                break
 
-        # 2. Search Room Details (Static features)
-        if not found_obj:
-            details = self.room.data.get("details", [])
-            static_objs = self.room.data.get("objects", [])
-            all_statics = details + static_objs
+        # --- ID MATCHING (Precision) ---
+        if target_name.startswith('#'):
+            target_uid = target_name[1:]
             
-            for detail in all_statics:
-                d_name = detail.get("name", "").lower()
-                d_keys = detail.get("keywords", [])
+            # 1. Search Room Objects (Dynamic) by UID
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == target_uid:
+                    found_obj = obj
+                    break
+            
+            # 2. Search Room Details (Static) by UID
+            if not found_obj:
+                details = self.room.data.get("details", [])
+                static_objs = self.room.data.get("objects", [])
+                all_statics = details + static_objs
+                for obj in all_statics:
+                    if str(obj.get("uid")) == target_uid:
+                        found_obj = obj
+                        break
+                        
+        # --- NAME MATCHING (Standard) ---
+        else:
+            clean_target = clean_name(target_name)
+            
+            # 1. Search Room Objects (Dynamic items/mobs)
+            for obj in self.room.objects:
+                n = obj.get("name", "").lower()
+                k = obj.get("keywords", [])
+                if clean_target == n or clean_target == clean_name(n) or clean_target in k:
+                    found_obj = obj
+                    break
+
+            # 2. Search Room Details (Static features)
+            if not found_obj:
+                details = self.room.data.get("details", [])
+                static_objs = self.room.data.get("objects", [])
+                all_statics = details + static_objs
                 
-                if clean_target in d_keys:
-                    found_obj = detail
-                    break
-                if d_name and (clean_target == d_name or clean_target == clean_name(d_name)):
-                    found_obj = detail
-                    break
+                for detail in all_statics:
+                    d_name = detail.get("name", "").lower()
+                    d_keys = detail.get("keywords", [])
+                    
+                    if clean_target in d_keys:
+                        found_obj = detail
+                        break
+                    if d_name and (clean_target == d_name or clean_target == clean_name(d_name)):
+                        found_obj = detail
+                        break
 
         if not found_obj:
             self.player.send_message(f"You don't see a '{target_name}' here.")
@@ -65,6 +87,10 @@ class ObjectInteraction(BaseVerb):
             # --- BROADCAST ACTION TO ROOM ---
             if not self.player.is_hidden:
                 obj_display_name = found_obj.get("name", target_name)
+                # Remove ID from display name if it leaked in
+                if obj_display_name.startswith('#'):
+                    obj_display_name = "item"
+
                 verb_display = cmd_name + "s"
                 msg = f"{self.player.name} {verb_display} the {obj_display_name}."
                 
@@ -179,11 +205,20 @@ class Get(BaseVerb):
         if target_container_name:
             clean_cont = clean_name(target_container_name)
             container_obj = None
-            for obj in self.room.objects:
-                o_name = obj.get("name", "").lower()
-                if clean_cont == o_name or clean_cont == clean_name(o_name) or clean_cont in obj.get("keywords", []):
-                    container_obj = obj
-                    break
+            
+            # Check for ID match on container first
+            if target_container_name.startswith('#'):
+                uid = target_container_name[1:]
+                for obj in self.room.objects:
+                    if str(obj.get("uid")) == uid:
+                        container_obj = obj; break
+            
+            if not container_obj:
+                for obj in self.room.objects:
+                    o_name = obj.get("name", "").lower()
+                    if clean_cont == o_name or clean_cont == clean_name(o_name) or clean_cont in obj.get("keywords", []):
+                        container_obj = obj
+                        break
 
             if container_obj:
                 # Shop Table Check
@@ -388,9 +423,16 @@ class Get(BaseVerb):
                         self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} will cost you {price} silvers.'"); return
 
             # Inventory Unstow
+            # Note: If target_item_name was an ID (#UID), find_item_in_inventory now supports it.
             item_ref_from_pack = find_item_in_inventory(self.player, game_items, target_item_name)
+            
+            # Message adjustment for ID fail
+            display_name = target_item_name
+            if display_name.startswith("#"):
+                display_name = "item"
+                
             if not item_ref_from_pack:
-                self.player.send_message(f"You don't see a **{target_item_name}** here."); return
+                self.player.send_message(f"You don't see a **{display_name}** here."); return
             if not target_hand_slot:
                 self.player.send_message("Your hands are full."); return
             self.player.inventory.remove(item_ref_from_pack)
