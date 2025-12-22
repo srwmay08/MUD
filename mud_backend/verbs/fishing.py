@@ -6,22 +6,12 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
+from mud_backend.core.item_utils import has_tool_equipped
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
 
 @VerbRegistry.register(["fish"])
-
-def _has_tool(player, required_tool_type: str) -> bool:
-    """Checks if the player is wielding a tool of the required type."""
-    for slot in ["mainhand", "offhand"]:
-        item_id = player.worn_items.get(slot)
-        if item_id:
-            item_data = player.world.game_items.get(item_id)
-            if item_data and item_data.get("tool_type") == required_tool_type:
-                return True
-    return False
-
 class Fish(BaseVerb):
     """
     Handles the 'fish' command.
@@ -31,13 +21,12 @@ class Fish(BaseVerb):
         if check_action_roundtime(self.player, action_type="other"):
             return
 
-        # 1. Check for required tool
-        if not _has_tool(self.player, "fishing"):
+        # 1. Check for required tool using core utility
+        if not has_tool_equipped(self.player, "fishing", self.world.game_items):
             self.player.send_message("You need to be wielding a fishing pole to fish.")
             return
 
         # 2. Check if this is a valid fishing spot
-        # --- FIX: Use self.room.data ---
         if not self.room.data.get("is_fishing_spot", False):
             self.player.send_message("You can't fish here.")
             return
@@ -58,7 +47,6 @@ class Fish(BaseVerb):
         attempt_skill_learning(self.player, "fishing")
         
         # Roll: Skill + d100 vs Room DC
-        # --- FIX: Use self.room.data ---
         skill_dc = self.room.data.get("fishing_dc", 50)
         roll = fishing_skill + random.randint(1, 100)
         
@@ -67,7 +55,6 @@ class Fish(BaseVerb):
             return
 
         # 5. Get Loot
-        # --- FIX: Use self.room.data ---
         loot_table_id = self.room.data.get("fishing_loot_table_id")
         if not loot_table_id:
             self.player.send_message("...but nothing seems to be biting.")

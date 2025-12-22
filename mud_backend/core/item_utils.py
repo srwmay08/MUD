@@ -1,14 +1,10 @@
 # mud_backend/core/item_utils.py
 import re
-from typing import Dict, Any, Union, Tuple, Optional
+from typing import Dict, Any, Union, Tuple, Optional, TYPE_CHECKING
+from mud_backend.core.utils import clean_name
 
-def clean_name(name: str) -> str:
-    """Helper to strip articles from names using regex."""
-    if not name:
-        return ""
-    # Remove 'my', 'the', 'a', 'an' at the start of the string
-    cleaned = re.sub(r'^(my|the|a|an)\s+', '', name.strip().lower())
-    return cleaned.strip()
+if TYPE_CHECKING:
+    from mud_backend.core.game_objects import Player
 
 def get_item_data(item_ref: Union[str, Dict[str, Any]], game_items_data: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(item_ref, dict):
@@ -96,3 +92,23 @@ def find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep=No
                 if clean_target == i_name or clean_target == clean_name(i_name) or clean_target in item_data.get("keywords", []):
                     return item_ref, prep, i
     return None, None, -1
+
+def has_tool_equipped(player: 'Player', required_tool_type: str, game_items: Dict[str, Any]) -> bool:
+    """
+    Checks if the player is wielding a tool of the required type in either hand.
+    Checks 'tool_type' (e.g., 'knife', 'hammer') or 'skill' (e.g., 'small_edged').
+    """
+    for slot in ["mainhand", "offhand"]:
+        item_ref = player.worn_items.get(slot)
+        if item_ref:
+            # Handle both string IDs and dictionary item instances
+            item_data = get_item_data(item_ref, game_items)
+            
+            if item_data:
+                # Check specific tool type tag
+                if item_data.get("tool_type") == required_tool_type:
+                    return True
+                # Fallback: Some knives might just be weapons with small_edged skill
+                if required_tool_type == "knife" and item_data.get("skill") == "small_edged":
+                    return True
+    return False

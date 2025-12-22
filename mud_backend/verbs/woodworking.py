@@ -3,7 +3,7 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
-from mud_backend.core.item_utils import get_item_data, find_item_in_hands
+from mud_backend.core.item_utils import get_item_data, find_item_in_hands, has_tool_equipped
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.core.registry import VerbRegistry
 
@@ -31,18 +31,8 @@ class Carve(BaseVerb):
         wood_target = parts[0].strip()
         result_target = parts[1].strip()
         
-        has_knife = False
-        knife_ref = None
-        for slot in ["mainhand", "offhand"]:
-            item_ref = self.player.worn_items.get(slot)
-            if item_ref:
-                data = get_item_data(item_ref, self.world.game_items)
-                if data.get("skill") == "small_edged" or data.get("tool_type") == "knife":
-                    has_knife = True
-                    knife_ref = item_ref
-                    break
-                    
-        if not has_knife:
+        # Use shared core function to check for knife
+        if not has_tool_equipped(self.player, "knife", self.world.game_items):
             self.player.send_message("You need a knife or dagger to carve wood.")
             return
 

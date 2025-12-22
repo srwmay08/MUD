@@ -2,15 +2,14 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.config import DIRECTION_MAP 
 from mud_backend.core.registry import VerbRegistry 
-from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime, clean_name
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
+from mud_backend.core.room_handler import show_room_to_player, _get_map_data, resolve_interaction_room, find_path
 import time
 import random
 import uuid
-from collections import deque
 from typing import Optional, List, Dict, Set, TYPE_CHECKING
 from mud_backend.core.game_objects import Room
-from mud_backend.core.room_handler import show_room_to_player, _get_map_data
 from mud_backend.core.skill_handler import attempt_skill_learning
 
 if TYPE_CHECKING:
@@ -46,84 +45,12 @@ GOTO_MAP = {
     "broker": "room_1765223469151_21"
 }
 
-def _clean_name(name: str) -> str:
-    """Helper to strip articles for better message formatting."""
-    lower_name = name.lower()
-    if lower_name.startswith("a "): return name[2:]
-    if lower_name.startswith("an "): return name[3:]
-    if lower_name.startswith("the "): return name[4:]
-    return name
-
-def _resolve_interaction_room(obj: Dict, verb: str) -> Optional[str]:
-    """
-    Helper to resolve target room from either legacy 'target_room' 
-    or new 'interactions' dict.
-    """
-    # 1. Legacy Check (Direct property)
-    if "target_room" in obj:
-        return obj["target_room"]
-    
-    # 2. Interactions Check (Nested property)
-    interactions = obj.get("interactions", {})
-    # Attempt to find the verb in interactions (case-insensitive key search)
-    for key, data in interactions.items():
-        if key.upper() == verb.upper():
-            if data.get("type") == "move":
-                return data.get("value")
-    return None
-
 def _check_toll_gate(player, target_room_id: str) -> bool:
     if player.current_room_id == "north_gate_outside" and target_room_id == "north_gate_inside":
         if "gate_pass" not in player.inventory:
             player.send_message("The guard blocks your way. 'You need a pass to enter the city.'")
             return True 
     return False
-
-def _find_path(world, start_room_id: str, end_room_id: str) -> Optional[List[str]]:
-    queue = deque([(start_room_id, [])]) 
-    visited: Set[str] = {start_room_id}
-
-    while queue:
-        current_room_id, path = queue.popleft()
-
-        if current_room_id == end_room_id:
-            return path 
-
-        room = world.get_room(current_room_id)
-        if not room:
-            continue
-
-        exits = room.get("exits", {}).copy() 
-        
-        objects = room.get("objects", [])
-        for obj in objects:
-            verbs = [v.upper() for v in obj.get("verbs", [])]
-            target_room = None
-            
-            # Check for ENTER or CLIMB interactions
-            if "ENTER" in verbs:
-                target_room = _resolve_interaction_room(obj, "ENTER")
-            
-            if not target_room and "CLIMB" in verbs:
-                target_room = _resolve_interaction_room(obj, "CLIMB")
-
-            if target_room:
-                obj_keywords = obj.get("keywords", [])
-                for keyword in obj_keywords:
-                    if keyword not in exits:
-                        exits[keyword] = target_room
-                
-                obj_name = obj.get("name", "").lower()
-                if obj_name and obj_name not in exits:
-                        exits[obj_name] = target_room
-
-        for direction, next_room_id in exits.items():
-            if next_room_id not in visited:
-                visited.add(next_room_id)
-                new_path = path + [direction]
-                queue.append((next_room_id, new_path))
-
-    return None 
 
 def _handle_stalker_move(
     world: 'World', 
@@ -346,21 +273,21 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             enter_obj = next((obj for obj in current_room_data.get("objects", []) 
                               if ((move_direction in obj.get("keywords", []) or 
                                    move_direction == obj.get("name", "").lower()) and
-                                  (_resolve_interaction_room(obj, "ENTER") or _resolve_interaction_room(obj, "CLIMB")))
+                                  (resolve_interaction_room(obj, "ENTER") or resolve_interaction_room(obj, "CLIMB")))
                              ), None)
             
             if enter_obj:
-                clean_obj_name = _clean_name(enter_obj.get('name', 'something'))
+                clean_obj_name = clean_name(enter_obj.get('name', 'something'))
                 obj_verbs = [v.upper() for v in enter_obj.get("verbs", [])]
                 
                 if "CLIMB" in obj_verbs:
-                    target_room_id_step = _resolve_interaction_room(enter_obj, "CLIMB")
+                    target_room_id_step = resolve_interaction_room(enter_obj, "CLIMB")
                     move_verb = "climb"
                     skill_dc = 20 
                     move_msg = f"You climb the {enter_obj.get('name')}..."
                     leave_msg_suffix = f"climbs the {clean_obj_name}."
                 else: 
-                    target_room_id_step = _resolve_interaction_room(enter_obj, "ENTER")
+                    target_room_id_step = resolve_interaction_room(enter_obj, "ENTER")
                     move_verb = "enter"
                     move_msg = f"You enter the {enter_obj.get('name')}..."
                     leave_msg_suffix = f"enters the {clean_obj_name}."
@@ -394,8 +321,6 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
             world, player_obj, original_room_id, target_room_id_step,
             move_msg, move_verb, skill_dc, leave_msg_suffix
         )
-        
-        # NOTE: Autosneak/Stalk logic skipped for GOTO (Fast Travel) to prevent spam/lag
         
         new_room_data = world.get_room(target_room_id_step)
         
@@ -494,7 +419,7 @@ class Enter(BaseVerb):
                     possible_tables.append(obj)
             
             for table in possible_tables:
-                t_room_id = _resolve_interaction_room(table, "ENTER")
+                t_room_id = resolve_interaction_room(table, "ENTER")
                 if t_room_id:
                     occupants = self.world.room_players.get(t_room_id, set())
                     if not occupants:
@@ -511,7 +436,7 @@ class Enter(BaseVerb):
             self.player.send_message(f"You cannot enter the **{target_name}**.")
             return
 
-        target_room_id = _resolve_interaction_room(enterable_object, "ENTER")
+        target_room_id = resolve_interaction_room(enterable_object, "ENTER")
 
         if not target_room_id:
             self.player.send_message(f"The {target_name} leads nowhere right now.")
@@ -557,7 +482,7 @@ class Enter(BaseVerb):
         obj_keywords = enterable_object.get("keywords", [])
         is_door_or_gate = "door" in obj_keywords or "gate" in obj_keywords
         
-        obj_clean_name = _clean_name(enterable_object.get('name', target_name))
+        obj_clean_name = clean_name(enterable_object.get('name', target_name))
         leave_suffix = ""
 
         if current_posture == "standing":
@@ -695,8 +620,7 @@ class Climb(BaseVerb):
             self.player.send_message(f"You cannot climb the **{target_name}** here.")
             return
 
-        # Resolve target via helper (handles legacy and new Interaction schema)
-        target_room_id = _resolve_interaction_room(climbable_object, "CLIMB")
+        target_room_id = resolve_interaction_room(climbable_object, "CLIMB")
 
         if not target_room_id:
             self.player.send_message(f"The {target_name} leads nowhere right now.")
@@ -725,7 +649,7 @@ class Climb(BaseVerb):
         else:
             rt = max(1.0, 5.0 - (success_margin / 20.0))
             move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
-            obj_clean_name = _clean_name(climbable_object.get('name', target_name))
+            obj_clean_name = clean_name(climbable_object.get('name', target_name))
             leave_suffix = f"climbs the {obj_clean_name}."
             self.player.temp_leave_message = leave_suffix
             
@@ -857,7 +781,7 @@ class Move(BaseVerb):
                         # Then try to resolve via interactions using matched verbs
                         if not t_room:
                             for v in matching_verbs:
-                                t_room = _resolve_interaction_room(obj, v)
+                                t_room = resolve_interaction_room(obj, v)
                                 if t_room: break
 
                         if t_room:
@@ -890,7 +814,7 @@ class Move(BaseVerb):
                     move_msg = f"You move {move_dir_name}..."
                     leave_suffix = f"heads {move_dir_name}."
                 else:
-                    clean_obj = _clean_name(move_dir_name)
+                    clean_obj = clean_name(move_dir_name)
                     move_msg = f"You move towards the {move_dir_name}..."
                     leave_suffix = f"heads towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
@@ -899,7 +823,7 @@ class Move(BaseVerb):
                     move_msg = f"You creep {move_dir_name}..."
                     leave_suffix = f"creeps {move_dir_name}."
                 else:
-                    clean_obj = _clean_name(move_dir_name)
+                    clean_obj = clean_name(move_dir_name)
                     move_msg = f"You creep towards the {move_dir_name}..."
                     leave_suffix = f"creeps towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
@@ -908,7 +832,7 @@ class Move(BaseVerb):
                     move_msg = f"You crawl {move_dir_name}..."
                     leave_suffix = f"crawls {move_dir_name}."
                 else:
-                    clean_obj = _clean_name(move_dir_name)
+                    clean_obj = clean_name(move_dir_name)
                     move_msg = f"You crawl towards the {move_dir_name}..."
                     leave_suffix = f"crawls towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
@@ -1227,7 +1151,7 @@ class GOTO(BaseVerb):
             
         target_room_name = target_room_data.get("name", "your destination")
         
-        path = _find_path(self.world, self.player.current_room_id, target_room_id)
+        path = find_path(self.world, self.player.current_room_id, target_room_id)
         
         if not path:
             self.player.send_message(f"You can't seem to find a path to {target_room_name} from here.")

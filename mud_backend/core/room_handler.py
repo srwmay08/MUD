@@ -1,10 +1,11 @@
 # mud_backend/core/room_handler.py
 import copy
 import uuid
-import random 
+import random
+from collections import deque
+from typing import Dict, Any, Optional, List, Set, TYPE_CHECKING
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.game_loop import environment
-from typing import Dict, Any, Optional, TYPE_CHECKING
 from mud_backend.core.quest_handler import get_active_quest_for_npc
 
 if TYPE_CHECKING:
@@ -79,8 +80,6 @@ def hydrate_room_objects(room: Room, world: 'World'):
     merged_objects = []
     
     # Merging logic: Combine standard objects and legacy hidden_objects
-    # This ensures items hidden in the builder are still 'physically' in the room
-    # so players can LOOK AT them, even if they don't appear in the 'Also here' list.
     all_objects_stubs = []
     
     standard_objs = room.data.get("objects", [])
@@ -342,3 +341,72 @@ def _handle_npc_idle_dialogue(world: 'World', player_name: str, room_id: str):
                         
     except Exception as e:
         print(f"[IDLE_DIALOGUE_ERROR] Error in _handle_npc_idle_dialogue: {e}")
+
+def resolve_interaction_room(obj: Dict, verb: str) -> Optional[str]:
+    """
+    Helper to resolve target room from either legacy 'target_room' 
+    or new 'interactions' dict.
+    """
+    # 1. Legacy Check (Direct property)
+    if "target_room" in obj:
+        return obj["target_room"]
+    
+    # 2. Interactions Check (Nested property)
+    interactions = obj.get("interactions", {})
+    # Attempt to find the verb in interactions (case-insensitive key search)
+    for key, data in interactions.items():
+        if key.upper() == verb.upper():
+            if data.get("type") == "move":
+                return data.get("value")
+    return None
+
+def find_path(world: 'World', start_room_id: str, end_room_id: str) -> Optional[List[str]]:
+    """
+    BFS Pathfinding to find a route between two rooms.
+    Considers standard exits and interactive objects (ENTER/CLIMB).
+    """
+    queue = deque([(start_room_id, [])]) 
+    visited: Set[str] = {start_room_id}
+
+    while queue:
+        current_room_id, path = queue.popleft()
+
+        if current_room_id == end_room_id:
+            return path 
+
+        room = world.get_room(current_room_id)
+        if not room:
+            continue
+
+        exits = room.get("exits", {}).copy() 
+        
+        objects = room.get("objects", [])
+        for obj in objects:
+            verbs = [v.upper() for v in obj.get("verbs", [])]
+            target_room = None
+            
+            # Check for ENTER or CLIMB interactions
+            if "ENTER" in verbs:
+                target_room = resolve_interaction_room(obj, "ENTER")
+            
+            if not target_room and "CLIMB" in verbs:
+                target_room = resolve_interaction_room(obj, "CLIMB")
+
+            if target_room:
+                # Add object keywords as "directions"
+                obj_keywords = obj.get("keywords", [])
+                for keyword in obj_keywords:
+                    if keyword not in exits:
+                        exits[keyword] = target_room
+                
+                obj_name = obj.get("name", "").lower()
+                if obj_name and obj_name not in exits:
+                        exits[obj_name] = target_room
+
+        for direction, next_room_id in exits.items():
+            if next_room_id not in visited:
+                visited.add(next_room_id)
+                new_path = path + [direction]
+                queue.append((next_room_id, new_path))
+
+    return None

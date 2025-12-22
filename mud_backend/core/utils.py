@@ -2,7 +2,16 @@
 import math
 import random
 import time
+import re
 from typing import Dict, Any
+
+def clean_name(name: str) -> str:
+    """Helper to strip articles from names using regex."""
+    if not name:
+        return ""
+    # Remove 'my', 'the', 'a', 'an' at the start of the string
+    cleaned = re.sub(r'^(my|the|a|an)\s+', '', name.strip().lower())
+    return cleaned.strip()
 
 def get_stat_bonus(stat_value: int, stat_name: str, race_modifiers: Dict[str, int]) -> int:
     """
