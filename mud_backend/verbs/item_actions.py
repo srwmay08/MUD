@@ -1,7 +1,7 @@
 # mud_backend/verbs/item_actions.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.core.scripting.py import execute_script
+from mud_backend.core.scripting import execute_script
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.item_utils import (
     clean_name, 
