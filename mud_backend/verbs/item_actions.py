@@ -225,13 +225,20 @@ class Get(BaseVerb):
 
                     self.player.worn_items[target_hand_slot] = item_ref
                     item_data = get_item_data(item_ref, game_items)
-                    self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {container_obj['name']}.")
+                    
+                    # FIX: Clean name for display to avoid "the a bench"
+                    c_name = container_obj['name']
+                    if c_name.lower().startswith("a "): c_name = c_name[2:]
+                    elif c_name.lower().startswith("an "): c_name = c_name[3:]
+                    elif c_name.lower().startswith("the "): c_name = c_name[4:]
+
+                    self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {c_name}.")
                     
                     # Broadcast Container Retrieval
                     if not self.player.is_hidden:
                         self.world.broadcast_to_room(
                             self.room.room_id, 
-                            f"{self.player.name} gets {item_data.get('name', 'item')} from {found_prep} the {container_obj['name']}.", 
+                            f"{self.player.name} gets {item_data.get('name', 'item')} from {found_prep} the {c_name}.", 
                             "message", 
                             skip_sid=p_sid
                         )
@@ -350,13 +357,20 @@ class Get(BaseVerb):
 
                     self.player.worn_items[target_hand_slot] = item_ref
                     item_data = get_item_data(item_ref, game_items)
-                    self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {obj['name']}.")
+                    
+                    # FIX: Clean name for display to avoid "the a bench"
+                    c_name = obj['name']
+                    if c_name.lower().startswith("a "): c_name = c_name[2:]
+                    elif c_name.lower().startswith("an "): c_name = c_name[3:]
+                    elif c_name.lower().startswith("the "): c_name = c_name[4:]
+
+                    self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {c_name}.")
                     
                     # Broadcast Surface Retrieval
                     if not self.player.is_hidden:
                         self.world.broadcast_to_room(
                             self.room.room_id, 
-                            f"{self.player.name} gets {item_data.get('name', 'item')} from {found_prep} the {obj['name']}.", 
+                            f"{self.player.name} gets {item_data.get('name', 'item')} from {found_prep} the {c_name}.", 
                             "message", 
                             skip_sid=p_sid
                         )

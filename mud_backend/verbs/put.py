@@ -234,13 +234,19 @@ class Put(BaseVerb):
         
         container_obj["container_storage"][target_prep].append(item_ref)
 
-        self.player.send_message(f"You put {item_name} {target_prep} the {container_obj['name']}.")
+        # FIX: Clean name for display to avoid "the a bench"
+        c_name = container_obj['name']
+        if c_name.lower().startswith("a "): c_name = c_name[2:]
+        elif c_name.lower().startswith("an "): c_name = c_name[3:]
+        elif c_name.lower().startswith("the "): c_name = c_name[4:]
+
+        self.player.send_message(f"You put {item_name} {target_prep} the {c_name}.")
         
         # Broadcast Regular Put
         if not self.player.is_hidden:
              self.world.broadcast_to_room(
                 self.room.room_id, 
-                f"{self.player.name} puts {item_name} {target_prep} the {container_obj['name']}.", 
+                f"{self.player.name} puts {item_name} {target_prep} the {c_name}.", 
                 "message", 
                 skip_sid=p_sid
              )
