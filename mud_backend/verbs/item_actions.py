@@ -111,7 +111,7 @@ class ObjectInteraction(BaseVerb):
 
         target_name = " ".join(self.args).lower()
         
-        # 1. Find the target object in the room
+        # 1. Find the target object in the room (Dynamic Objects)
         found_obj = None
         clean_target = _clean_name(target_name)
         
@@ -121,11 +121,25 @@ class ObjectInteraction(BaseVerb):
                 found_obj = obj
                 break
 
+        # 2. Check Room Details (Static Features) if not found in objects
+        if not found_obj:
+            details = self.room.data.get("details", [])
+            for detail in details:
+                # Check keywords (most common for details)
+                if clean_target in detail.get("keywords", []):
+                    found_obj = detail
+                    break
+                # Check explicit name if present
+                d_name = detail.get("name", "").lower()
+                if d_name and (clean_target == d_name or clean_target == _clean_name(d_name)):
+                    found_obj = detail
+                    break
+
         if not found_obj:
             self.player.send_message(f"You don't see a '{target_name}' here.")
             return
 
-        # 2. Check for defined interactions
+        # 3. Check for defined interactions
         interactions = found_obj.get("interactions", {})
         verb = self.command_trigger.lower()
         
