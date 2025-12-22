@@ -11,7 +11,6 @@ class Forage(BaseVerb):
     def execute(self):
         if check_action_roundtime(self.player, "other"): return
         
-        # Check room forageable data
         room_data = self.room.data
         if not room_data.get("forageable"):
             self.player.send_message("You don't see anything worth foraging here.")
@@ -61,7 +60,6 @@ class Eat(BaseVerb):
             
         target_name = " ".join(self.args).lower()
         
-        # Check hands first
         item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
         from_inventory = False
         
@@ -81,12 +79,10 @@ class Eat(BaseVerb):
             
         self.player.send_message(f"You eat the {item_data['name']}.")
         
-        # Apply effects
         if "nutrition" in item_data:
             self.player.stamina = min(self.player.max_stamina, self.player.stamina + item_data["nutrition"])
             self.player.send_message("You feel refreshed.")
             
-        # Remove item
         if from_inventory:
             self.player.inventory.remove(item_ref)
         else:
@@ -104,7 +100,6 @@ class Drink(BaseVerb):
             
         target_name = " ".join(self.args).lower()
         
-        # Check hands first
         item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
         from_inventory = False
         
@@ -124,16 +119,12 @@ class Drink(BaseVerb):
             
         self.player.send_message(f"You drink from the {item_data['name']}.")
         
-        # Apply effects
         if "hydration" in item_data:
-            # Simple stamina restore for now
             self.player.stamina = min(self.player.max_stamina, self.player.stamina + item_data["hydration"])
             self.player.send_message("That hit the spot.")
             
-        # Handle consumption (remove item or transform it)
         remaining_sips = item_data.get("sips", 1) - 1
         
-        # Handle Dynamic Item Updates
         if isinstance(item_ref, dict):
             if remaining_sips > 0:
                 item_ref["sips"] = remaining_sips
@@ -144,7 +135,6 @@ class Drink(BaseVerb):
                 else:
                     self.player.worn_items[hand_slot] = None
                 self.player.send_message(f"You finish the {item_data['name']}.")
-        # Handle Static Item References
         else:
             if from_inventory:
                 self.player.inventory.remove(item_ref)

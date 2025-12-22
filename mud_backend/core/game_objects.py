@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 class Player(GameEntity):
     def __init__(self, world: 'World', name: str, current_room_id: str, db_data: Optional[dict] = None):
         uid = db_data.get("_id") if db_data else None
-        if not uid: uid = uuid.uuid4().hex
+        if not uid:
+            uid = uuid.uuid4().hex
         super().__init__(uid=str(uid), name=name, data=db_data)
         
         self.is_player = True
@@ -67,7 +68,8 @@ class Player(GameEntity):
         self.inventory = self.data.get("inventory", [])
         self.worn_items = self.data.get("worn_items", {})
         for slot_key in config.EQUIPMENT_SLOTS.keys():
-            if slot_key not in self.worn_items: self.worn_items[slot_key] = None
+            if slot_key not in self.worn_items:
+                self.worn_items[slot_key] = None
             
         self.wealth = self.data.get("wealth", {"silvers": 0, "notes": [], "bank_silvers": 0})
         self.stance = self.data.get("stance", "neutral")
@@ -131,7 +133,8 @@ class Player(GameEntity):
         # Transient list for investigating hidden players
         self.detected_hiders: List[str] = []
 
-    def mark_dirty(self): self._is_dirty = True
+    def mark_dirty(self):
+        self._is_dirty = True
 
     @property
     def is_hidden(self) -> bool:
@@ -238,36 +241,42 @@ class Player(GameEntity):
         total_weight = 0.0
         for item_id in self.inventory:
             item = self.world.game_items.get(item_id)
-            if item: total_weight += item.get("weight", 1) 
+            if item:
+                total_weight += item.get("weight", 1) 
         for slot, item_id in self.worn_items.items():
             if item_id:
                 item = self.world.game_items.get(item_id)
-                if item: total_weight += item.get("weight", 1)
+                if item:
+                    total_weight += item.get("weight", 1)
         return total_weight
 
     @property
-    def hp(self): return self._hp
+    def hp(self):
+        return self._hp
     @hp.setter
     def hp(self, value):
         if self._hp != value:
             self._hp = value
             self.mark_dirty()
     @property
-    def mana(self): return self._mana
+    def mana(self):
+        return self._mana
     @mana.setter
     def mana(self, value):
         if self._mana != value:
             self._mana = value
             self.mark_dirty()
     @property
-    def stamina(self): return self._stamina
+    def stamina(self):
+        return self._stamina
     @stamina.setter
     def stamina(self, value):
         if self._stamina != value:
             self._stamina = value
             self.mark_dirty()
     @property
-    def spirit(self): return self._spirit
+    def spirit(self):
+        return self._spirit
     @spirit.setter
     def spirit(self, value):
         if self._spirit != value:
@@ -279,7 +288,8 @@ class Player(GameEntity):
         pf_ranks = self.skills.get("physical_fitness", 0)
         base_regen = 2
         regen = base_regen + math.trunc(pf_ranks / 20)
-        if self.death_sting_points > 0: regen = math.trunc(regen * 0.5)
+        if self.death_sting_points > 0:
+            regen = math.trunc(regen * 0.5)
         return max(0, regen)
 
     @property
@@ -287,11 +297,14 @@ class Player(GameEntity):
         con_b = get_stat_bonus(self.stats.get("CON", 50), "CON", self.stat_modifiers)
         bonus = 0
         if self.posture in ["sitting", "kneeling", "prone", "crouching", "meditating"]:
-            if self.worn_items.get("mainhand") is None: bonus = 5
+            if self.worn_items.get("mainhand") is None:
+                bonus = 5
         sr_percent = 20 + math.trunc(con_b / 4.5) + bonus
         enhancive_bonus = 0
-        if self.stamina_burst_pulses > 0: enhancive_bonus = 15
-        elif self.stamina_burst_pulses < 0: enhancive_bonus = -15
+        if self.stamina_burst_pulses > 0:
+            enhancive_bonus = 15
+        elif self.stamina_burst_pulses < 0:
+            enhancive_bonus = -15
         gain = round(self.max_stamina * (sr_percent / 100.0)) + enhancive_bonus
         return int(gain)
 
