@@ -37,9 +37,6 @@ class ConnectionManager:
     def join_room(self, sid: str, room_id: str):
         """Adds a socket to a room channel."""
         if not self.socketio: return
-        # Use the underlying server to manipulate rooms for a specific SID
-        # Note: Flask-SocketIO 'join_room' only works in request context.
-        # 'server.enter_room' is the python-socketio method.
         if hasattr(self.socketio, 'server'):
             self.socketio.server.enter_room(sid, room_id)
 
@@ -50,31 +47,22 @@ class ConnectionManager:
             self.socketio.server.leave_room(sid, room_id)
 
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
+        """
+        Broadcasts to all players in a room by iterating the Entity Manager's player list.
+        This ensures perfect sync between game state (who is here) and network state (who gets msg).
+        """
         if not self.socketio: return
         
-        # Normalize skip_sid to a list for Flask-SocketIO
-        skip_list = []
+        # Normalize skip_sid to a set
+        skip_sids_set = set()
         if skip_sid:
             if isinstance(skip_sid, str):
-                skip_list.append(skip_sid)
+                skip_sids_set.add(skip_sid)
             elif isinstance(skip_sid, (list, set, tuple)):
-                skip_list.extend(list(skip_sid))
+                skip_sids_set.update(skip_sid)
         
-        # Simple broadcast
-        is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
-        
-        if not is_flag_checked:
-            self.socketio.emit(
-                'message', 
-                {'text': message, 'type': msg_type}, 
-                room=room_id, 
-                skip_sid=skip_list
-            )
-            return
-
-        # Flag-checked broadcast
+        # We rely on the Entity Manager for truth about who is in the room.
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
-        skip_set = set(skip_list)
         
         for player_name in players_in_room:
             player_info = self.world.get_player_info(player_name)
@@ -83,8 +71,11 @@ class ConnectionManager:
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
-            if not player_obj or not sid or sid in skip_set: continue
+            # Skip invalid, offline, or explicitly skipped players
+            if not player_obj or not sid or sid in skip_sids_set: 
+                continue
             
+            # Flag Checks
             if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
             if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
             
