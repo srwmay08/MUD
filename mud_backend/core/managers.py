@@ -49,6 +49,7 @@ class ConnectionManager:
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         """
         Broadcasts to all players in a room by iterating the Entity Manager's player list.
+        This ensures perfect sync between game state (who is here) and network state (who gets msg).
         """
         if not self.socketio: return
         
@@ -60,6 +61,7 @@ class ConnectionManager:
             elif isinstance(skip_sid, (list, set, tuple)):
                 skip_sids_set.update(skip_sid)
         
+        # We rely on the Entity Manager for truth about who is in the room.
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
         
         for player_name in players_in_room:
@@ -69,6 +71,7 @@ class ConnectionManager:
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
+            # Skip invalid, offline, or explicitly skipped players
             if not player_obj or not sid or sid in skip_sids_set: 
                 continue
             

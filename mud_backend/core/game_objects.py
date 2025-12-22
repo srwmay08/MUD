@@ -555,8 +555,17 @@ class Player(GameEntity):
 
         self.current_room_id = target_room_id
         
+        # --- CRITICAL FIX: Update Indexes AND Socket Rooms ---
         self.world.remove_player_from_room_index(self.name.lower(), old_room)
         self.world.add_player_to_room_index(self.name.lower(), target_room_id)
+        
+        # Ensure SocketIO rooms stay synced with game rooms
+        player_info = self.world.get_player_info(self.name.lower())
+        if player_info and "sid" in player_info:
+            sid = player_info["sid"]
+            self.world.connection_manager.leave_room(sid, old_room)
+            self.world.connection_manager.join_room(sid, target_room_id)
+        # ---------------------------------------------------
         
         target_room_obj = self.world.get_active_room_safe(target_room_id)
         if target_room_obj and getattr(target_room_obj, "is_table", False):
@@ -786,7 +795,7 @@ class Player(GameEntity):
             "rt_end_time_ms": real_next_action * 1000,
             "rt_duration_ms": real_duration * 1000, 
             "rt_type": real_rt_type,
-            "is_hidden": self.is_hidden # --- NEW ---
+            "is_hidden": self.is_hidden 
         }
 
 class Room(GameEntity):
