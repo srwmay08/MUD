@@ -4,7 +4,7 @@ from mud_backend.config import DIRECTION_MAP
 from mud_backend.core.registry import VerbRegistry 
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime, clean_name
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
-from mud_backend.core.room_handler import show_room_to_player, _get_map_data, resolve_interaction_room, find_path
+from mud_backend.core.room_handler import show_room_to_player, resolve_interaction_room, find_path
 import time
 import random
 import uuid
@@ -59,10 +59,6 @@ def _handle_stalker_move(
     target_room_id: str,
     move_direction: str
 ):
-    """
-    Checks for players in the original room who are stalking the leader.
-    Triggers them to follow via Sneak logic.
-    """
     potential_stalkers = world.room_players.get(original_room_id, [])
     
     for stalker_name in potential_stalkers:
@@ -74,16 +70,13 @@ def _handle_stalker_move(
         if stalker_obj.stalking_target_uid == leader_player.uid:
             def delayed_stalk():
                 world.socketio.sleep(random.uniform(1.0, 2.5))
-                # Re-verify stalker is still there and valid
                 if stalker_obj.current_room_id != original_room_id: return
                 if stalker_obj.stalking_target_uid != leader_player.uid: return
                 
-                # Execute Sneak Move
                 args = move_direction.split()
                 move_verb = Move(world, stalker_obj, world.get_active_room_safe(original_room_id), args)
                 move_verb.force_sneak = True
                 
-                # Check RT before executing
                 if not check_action_roundtime(stalker_obj, action_type="move"):
                     stalker_obj.send_message(f"(Stalking) You pursue {leader_player.name}...")
                     move_verb.execute()
@@ -167,7 +160,8 @@ def _handle_group_move(
                 new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
                 show_room_to_player(member_obj, new_room)
                 
-                world.socketio.server.leave_room(sid, original_room_id)
+                # Use Manager to Switch Rooms
+                world.connection_manager.leave_room(sid, original_room_id)
                 
                 leader_info = world.get_player_info(leader_name.lower())
                 leader_sid = leader_info.get("sid") if leader_info else None
@@ -177,17 +171,18 @@ def _handle_group_move(
 
                 leaves_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> {leave_msg_suffix}'
                 
-                world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sids_to_skip_for_leave)
+                world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=list(sids_to_skip_for_leave))
                 
-                world.socketio.server.enter_room(sid, target_room_id)
+                world.connection_manager.join_room(sid, target_room_id)
                 arrives_message = f'<span class="keyword" data-name="{member_obj.name}" data-verbs="look">{member_obj.name}</span> arrives.'
                 world.broadcast_to_room(target_room_id, arrives_message, "message", skip_sid=sid)
 
-                vitals_data = member_obj.get_vitals()
-                map_data = _get_map_data(member_obj, world)
+                # Send response manually because movement is often async/secondary
+                # (Note: This might be redundant if the main loop handles it, but good for instant feedback)
+                # For groups, we probably want to trigger a client update
                 world.socketio.emit(
                     'command_response', 
-                    {'messages': member_obj.messages, 'vitals': vitals_data, 'map_data': map_data}, 
+                    {'messages': member_obj.messages, 'vitals': member_obj.get_vitals()}, 
                     to=sid
                 )
             else:
@@ -211,9 +206,6 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         
         if not player_obj.is_goto_active or player_obj.goto_id != goto_id:
             player_obj.send_message("You stop moving.")
-            world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                 to=sid)
             return 
 
         while True:
@@ -232,17 +224,11 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         if not player_obj: return
         if not player_obj.is_goto_active or player_obj.goto_id != goto_id:
             player_obj.send_message("You stop moving.")
-            world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                 to=sid)
             return
             
         player_state = world.get_combat_state(player_id)
         if player_state and player_state.get("state_type") == "combat":
             player_obj.send_message("You are attacked and your movement stops!")
-            world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                 to=sid)
             player_obj.is_goto_active = False
             player_obj.goto_id = None
             return
@@ -251,9 +237,6 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         current_room_data = world.get_room(original_room_id)
         if not current_room_data:
             player_obj.send_message("Your path seems to have vanished. Stopping.")
-            world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                     to=sid)
             player_obj.is_goto_active = False
             player_obj.goto_id = None
             return
@@ -293,18 +276,12 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                     leave_msg_suffix = f"enters the {clean_obj_name}."
             else:
                 player_obj.send_message(f"Your path is blocked at '{move_direction}'. Stopping.")
-                world.socketio.emit('command_response', 
-                                         {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                         to=sid)
                 player_obj.is_goto_active = False
                 player_obj.goto_id = None
                 return
         
         if _check_toll_gate(player_obj, target_room_id_step):
             player_obj.send_message("Your movement is blocked. Stopping.")
-            world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                     to=sid)
             player_obj.is_goto_active = False
             player_obj.goto_id = None
             return
@@ -329,27 +306,13 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
              player_obj.is_goto_active = False
              return
         
-        new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
+        new_room = Room(target_room_id_step, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(player_obj, new_room)
         
-        if (target_room_id_step == "town_hall" and
-            "intro_give_clerk" not in player_obj.completed_quests):
-            
-            has_payment = "lodging_tax_payment" in player_obj.inventory or \
-                          player_obj.worn_items.get("mainhand") == "lodging_tax_payment" or \
-                          player_obj.worn_items.get("offhand") == "lodging_tax_payment"
-            
-            if has_payment:
-                player_obj.send_message(
-                    "\nYou have arrived at the Town Hall. You should "
-                    "<span class='keyword' data-command='give clerk payment'>GIVE</span> the <span class='keyword' data-command='look at payment'>payment</span> to the <span class='keyword' data-command='look at clerk'>clerk</span>."
-                )
-                player_obj.completed_quests.append("intro_give_clerk")
-
         set_action_roundtime(player_obj, 3.0) 
         
         if original_room_id and target_room_id_step != original_room_id:
-            world.socketio.server.leave_room(sid, original_room_id)
+            world.connection_manager.leave_room(sid, original_room_id)
             
             leaves_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> {leave_msg_suffix}'
             
@@ -362,9 +325,9 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                         member_sid = member_info.get("sid")
                         if member_sid:
                             sids_to_skip_leave.add(member_sid)
-            world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sids_to_skip_leave)
+            world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=list(sids_to_skip_leave))
             
-            world.socketio.server.enter_room(sid, target_room_id_step)
+            world.connection_manager.join_room(sid, target_room_id_step)
             arrives_message = f'<span class="keyword" data-name="{player_obj.name}" data-verbs="look">{player_obj.name}</span> arrives.'
             
             sids_to_skip_arrive = {sid}
@@ -377,11 +340,14 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                         if member_sid:
                             sids_to_skip_arrive.add(member_sid)
             
-            world.broadcast_to_room(target_room_id_step, arrives_message, "message", skip_sid=sids_to_skip_arrive)
+            world.broadcast_to_room(target_room_id_step, arrives_message, "message", skip_sid=list(sids_to_skip_arrive))
         
-        world.socketio.emit('command_response', 
-                                 {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                 to=sid)
+        # Send update
+        world.socketio.emit(
+            'command_response', 
+            {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+            to=sid
+        )
         
         world.socketio.sleep(3.0) 
 
@@ -392,9 +358,12 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
         if player_obj.current_room_id == final_destination_room_id:
             world.remove_combat_state(player_id) 
             player_obj.send_message("You have arrived.")
-            world.socketio.emit('command_response', 
-                                     {'messages': player_obj.messages, 'vitals': player_obj.get_vitals(), 'map_data': _get_map_data(player_obj, world)}, 
-                                     to=sid)
+            # Send update
+            world.socketio.emit(
+                'command_response', 
+                {'messages': player_obj.messages, 'vitals': player_obj.get_vitals()}, 
+                to=sid
+            )
 
 @VerbRegistry.register(["enter"]) 
 class Enter(BaseVerb):
@@ -583,12 +552,13 @@ class Enter(BaseVerb):
         sid = player_info.get("sid") if player_info else None
         
         if original_room_id and target_room_id != original_room_id:
-            self.world.socketio.server.leave_room(sid, original_room_id)
-            if leave_suffix: # Only broadcast if visible
+            # Use Manager to Switch Rooms
+            self.world.connection_manager.leave_room(sid, original_room_id)
+            if leave_suffix: 
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
                 self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
             
-            self.world.socketio.server.enter_room(sid, target_room_id)
+            self.world.connection_manager.join_room(sid, target_room_id)
             if not self.player.is_hidden:
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
                 self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)
@@ -715,12 +685,13 @@ class Climb(BaseVerb):
         sid = player_info.get("sid") if player_info else None
         
         if original_room_id and target_room_id != original_room_id:
-            self.world.socketio.server.leave_room(sid, original_room_id)
+            # Use Manager to Switch Rooms
+            self.world.connection_manager.leave_room(sid, original_room_id)
             if leave_suffix:
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
                 self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
             
-            self.world.socketio.server.enter_room(sid, target_room_id)
+            self.world.connection_manager.join_room(sid, target_room_id)
             if not self.player.is_hidden:
                 msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
                 self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)
@@ -931,16 +902,16 @@ class Move(BaseVerb):
             sid = player_info.get("sid") if player_info else None
             
             if original_room_id and target_room_id != original_room_id:
-                self.world.socketio.server.leave_room(sid, original_room_id)
+                # Use Manager to Switch Rooms
+                self.world.connection_manager.leave_room(sid, original_room_id)
                 
                 # Broadcast LEAVE
                 if leave_suffix:
                     leaves_message = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
-                    # Filter self
                     sids_to_skip = {sid}
-                    self.world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=sids_to_skip)
+                    self.world.broadcast_to_room(original_room_id, leaves_message, "message", skip_sid=list(sids_to_skip))
                 
-                self.world.socketio.server.enter_room(sid, target_room_id)
+                self.world.connection_manager.join_room(sid, target_room_id)
                 
                 # Broadcast ARRIVE (if not hidden)
                 if not self.player.is_hidden:
@@ -1082,12 +1053,13 @@ class Exit(BaseVerb):
                 sid = player_info.get("sid") if player_info else None
                 
                 if original_room_id and target_room_id != original_room_id:
-                    self.world.socketio.server.leave_room(sid, original_room_id)
+                    # Use Manager to Switch Rooms
+                    self.world.connection_manager.leave_room(sid, original_room_id)
                     if leave_suffix:
                         msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> {leave_suffix}'
                         self.world.broadcast_to_room(original_room_id, msg, "message", skip_sid=sid)
                     
-                    self.world.socketio.server.enter_room(sid, target_room_id)
+                    self.world.connection_manager.join_room(sid, target_room_id)
                     if not self.player.is_hidden:
                         msg = f'<span class="keyword" data-name="{self.player.name}" data-verbs="look">{self.player.name}</span> arrives.'
                         self.world.broadcast_to_room(target_room_id, msg, "message", skip_sid=sid)

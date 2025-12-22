@@ -34,6 +34,21 @@ class ConnectionManager:
                         if snooper_info and snooper_info.get("sid"):
                             self.socketio.emit("message", {'text': snoop_msg, 'type': 'message'}, to=snooper_info["sid"])
 
+    def join_room(self, sid: str, room_id: str):
+        """Adds a socket to a room channel."""
+        if not self.socketio: return
+        # Use the underlying server to manipulate rooms for a specific SID
+        # Note: Flask-SocketIO 'join_room' only works in request context.
+        # 'server.enter_room' is the python-socketio method.
+        if hasattr(self.socketio, 'server'):
+            self.socketio.server.enter_room(sid, room_id)
+
+    def leave_room(self, sid: str, room_id: str):
+        """Removes a socket from a room channel."""
+        if not self.socketio: return
+        if hasattr(self.socketio, 'server'):
+            self.socketio.server.leave_room(sid, room_id)
+
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         if not self.socketio: return
         
@@ -45,11 +60,10 @@ class ConnectionManager:
             elif isinstance(skip_sid, (list, set, tuple)):
                 skip_list.extend(list(skip_sid))
         
-        # Simple broadcast (for things that don't check flags)
+        # Simple broadcast
         is_flag_checked = msg_type in ["ambient", "ambient_move", "ambient_spawn", "ambient_decay", "combat_death"]
         
         if not is_flag_checked:
-            # Flask-SocketIO's skip_sid expects a list of SIDs to exclude
             self.socketio.emit(
                 'message', 
                 {'text': message, 'type': msg_type}, 
@@ -58,8 +72,7 @@ class ConnectionManager:
             )
             return
 
-        # Flag-checked broadcast (iterate players to check preferences)
-        # We manually iterate here because we need logic (flags) per player
+        # Flag-checked broadcast
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
         skip_set = set(skip_list)
         
@@ -82,7 +95,6 @@ class ConnectionManager:
             )
 
     def broadcast_to_world(self, message: str, msg_type: str = "global_chat", skip_player_name: str = None):
-        """Sends a message to every connected player."""
         if not self.socketio: return
         
         all_players = self.world.get_all_players_info()
@@ -99,27 +111,17 @@ class ConnectionManager:
                 )
 
     def broadcast_to_radius(self, start_room_id: str, radius: int, message: str, msg_type: str = "message", skip_player_name: str = None):
-        """
-        Broadcasts to rooms within 'radius' steps.
-        Applies a +1 cost penalty when transitioning between Indoor/Outdoor to dampen sound.
-        """
         if not self.socketio: return
 
         # BFS to find valid rooms and their distances
         rooms_in_range = set()
-        
-        # Queue: (room_id, current_cost)
         queue = deque([(start_room_id, 0)])
         visited_costs = {start_room_id: 0}
         
         while queue:
             curr_id, curr_cost = queue.popleft()
-            
-            # If we are within range, add to target list
             if curr_cost <= radius:
                 rooms_in_range.add(curr_id)
-            
-            # If we hit the limit, don't scan neighbors
             if curr_cost >= radius:
                 continue
 
@@ -131,31 +133,19 @@ class ConnectionManager:
             for direction, next_room_id in curr_room.get("exits", {}).items():
                 next_room = self.world.room_manager.get_room(next_room_id)
                 if not next_room: continue
-                
                 is_next_outdoor = next_room.get("is_outdoor", False)
-                
-                # Base movement cost is 1
                 move_cost = 1
-                
-                # Penalty: Outdoor <-> Indoor transition adds +1 cost (reducing range)
-                # e.g. From Street (Outdoor) to House (Indoor) costs 2 movement points.
                 if is_curr_outdoor != is_next_outdoor:
                     move_cost += 1
-                
                 new_total_cost = curr_cost + move_cost
-                
-                # If we found a cheaper way to this room, or haven't visited it
                 if next_room_id not in visited_costs or new_total_cost < visited_costs[next_room_id]:
                     visited_costs[next_room_id] = new_total_cost
                     queue.append((next_room_id, new_total_cost))
 
-        # Now broadcast to the identified set of rooms
         all_players = self.world.get_all_players_info()
-        
         for p_name, p_info in all_players:
             if skip_player_name and p_name == skip_player_name:
                 continue
-                
             p_room_id = p_info.get("current_room_id")
             if p_room_id in rooms_in_range:
                 sid = p_info.get("sid")
@@ -167,7 +157,6 @@ class ConnectionManager:
                     )
 
     def disconnect_player(self, sid: str):
-        """Handle disconnection logic via SID lookup."""
         player_to_remove = None
         for p_name, info in self.world.get_all_players_info():
             if info.get("sid") == sid:
@@ -180,7 +169,6 @@ class ConnectionManager:
 
 
 class RoomManager:
-    """Handles Room loading, hydration, and active room cache."""
     def __init__(self, world: 'World'):
         self.world = world
         self.active_rooms: Dict[str, Room] = {}
@@ -191,16 +179,11 @@ class RoomManager:
             return self.active_rooms.get(room_id)
 
     def get_room(self, room_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Retrieves room data. If not active, hydrates it from Assets/DB.
-        Returns dict representation for backward compatibility.
-        """
         room_obj = None
         with self.directory_lock:
             room_obj = self.active_rooms.get(room_id)
         
         if not room_obj:
-            # Load template
             template = self.world.assets.get_room_template(room_id)
             if template:
                 room_obj = self._hydrate_room(template)
@@ -215,7 +198,6 @@ class RoomManager:
         active_objects = []
         room_id = template["room_id"]
         
-        # Hydrate objects within the room
         for obj_stub in template.get("objects", []):
             node_id = obj_stub.get("node_id")
             monster_id = obj_stub.get("monster_id")
@@ -233,19 +215,14 @@ class RoomManager:
                 if not uid:
                     uid = uuid.uuid4().hex
                     merged_obj["uid"] = uid
-                
-                # Check if defeated
                 if self.world.get_defeated_monster(uid):
                     continue 
-                    
                 mob_template = self.world.assets.monster_templates.get(monster_id)
                 if mob_template:
                     full_mob = copy.deepcopy(mob_template)
                     full_mob.update(merged_obj)
                     merged_obj = full_mob
-                    # Register in Entity/Spatial Manager
                     self.world.entity_manager.register_mob(uid, room_id)
-            
             elif item_id:
                 item_template = self.world.game_items.get(item_id)
                 if item_template:
@@ -255,25 +232,20 @@ class RoomManager:
                     merged_obj["is_item"] = True
                     if "uid" not in merged_obj:
                         merged_obj["uid"] = uuid.uuid4().hex
-            
             elif merged_obj.get("is_npc") and not merged_obj.get("uid"):
                  uid = uuid.uuid4().hex
                  merged_obj["uid"] = uid
                  self.world.entity_manager.register_mob(uid, room_id)
 
-            # --- FORCE FIX: Inject Shop Data if Missing in Manager ---
             if "pawnbroker" in merged_obj.get("keywords", []) or "merchant" in merged_obj.get("keywords", []):
                 if "shop_data" not in merged_obj and "shop_data" in obj_stub:
                      merged_obj["shop_data"] = copy.deepcopy(obj_stub["shop_data"])
-                
-                # Double fallback: If even obj_stub didn't have it (stale DB), inject default
                 if "shop_data" not in merged_obj and "pawnbroker" in merged_obj.get("keywords", []):
                     merged_obj["shop_data"] = {
                         "inventory": [],
                         "sold_counts": {},
                         "type": "pawnshop"
                     }
-            # ---------------------------------------------------------
 
             active_objects.append(merged_obj)
         
@@ -293,13 +265,12 @@ class RoomManager:
 
 
 class EntityManager:
-    """Handles Mob/Player tracking and spatial indexing."""
     def __init__(self, world: 'World'):
         self.world = world
         self.index_lock = threading.RLock()
-        self.room_players: Dict[str, Set[str]] = {} # room_id -> set(player_names)
+        self.room_players: Dict[str, Set[str]] = {} 
         self.active_mob_uids: Set[str] = set()
-        self.mob_locations: Dict[str, str] = {} # mob_uid -> room_id
+        self.mob_locations: Dict[str, str] = {} 
 
     def register_mob(self, uid: str, room_id: str):
         with self.index_lock:
