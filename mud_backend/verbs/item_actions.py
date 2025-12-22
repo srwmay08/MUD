@@ -107,6 +107,10 @@ class Get(BaseVerb):
             return
 
         args_str = " ".join(self.args).lower()
+        
+        # Helper to get SID for skipping broadcast to self
+        p_info = self.world.get_player_info(self.player.name.lower())
+        p_sid = p_info.get("sid") if p_info else None
 
         # --- LOCKER ---
         if "from locker" in args_str or "from vault" in args_str:
@@ -136,7 +140,17 @@ class Get(BaseVerb):
             locker["items"].pop(found_idx)
             self.player.inventory.append(found_item)
             db.update_player_locker(self.player.name, locker)
-            self.player.send_message(f"You get {found_item['name']} from your locker."); return
+            self.player.send_message(f"You get {found_item['name']} from your locker.")
+            
+            # Broadcast Locker retrieval
+            if not self.player.is_hidden:
+                self.world.broadcast_to_room(
+                    self.room.room_id, 
+                    f"{self.player.name} retrieves {found_item['name']} from their locker.", 
+                    "message", 
+                    skip_sid=p_sid
+                )
+            return
 
         # --- PARSE ARGS (Item vs Container) ---
         target_item_name = args_str
@@ -212,6 +226,16 @@ class Get(BaseVerb):
                     self.player.worn_items[target_hand_slot] = item_ref
                     item_data = get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {container_obj['name']}.")
+                    
+                    # Broadcast Container Retrieval
+                    if not self.player.is_hidden:
+                        self.world.broadcast_to_room(
+                            self.room.room_id, 
+                            f"{self.player.name} gets {item_data.get('name', 'item')} from {found_prep} the {container_obj['name']}.", 
+                            "message", 
+                            skip_sid=p_sid
+                        )
+
                     self.world.save_room(self.room)
                     set_action_roundtime(self.player, 1.0); return
 
@@ -233,6 +257,16 @@ class Get(BaseVerb):
             self.player.worn_items[target_hand_slot] = item_ref
             item_data = get_item_data(item_ref, game_items)
             self.player.send_message(f"You get {item_data.get('name', 'item')} from your {container_data.get('name')} and hold it.")
+            
+            # Broadcast Player Container retrieval
+            if not self.player.is_hidden:
+                self.world.broadcast_to_room(
+                    self.room.room_id, 
+                    f"{self.player.name} gets {item_data.get('name', 'item')} from their {container_data.get('name')}.", 
+                    "message", 
+                    skip_sid=p_sid
+                )
+            
             set_action_roundtime(self.player, 1.0)
 
         # --- GET FROM GROUND / SURFACES ---
@@ -254,9 +288,25 @@ class Get(BaseVerb):
                 if not target_hand_slot:
                     self.player.inventory.append(item_to_pickup)
                     self.player.send_message(f"Both hands are full. You get {item_name} and put it in your pack.")
+                    # Broadcast Ground Retrieval (to pack)
+                    if not self.player.is_hidden:
+                        self.world.broadcast_to_room(
+                            self.room.room_id, 
+                            f"{self.player.name} picks up {item_name} and puts it in their pack.", 
+                            "message", 
+                            skip_sid=p_sid
+                        )
                 else:
                     self.player.worn_items[target_hand_slot] = item_to_pickup
                     self.player.send_message(f"You get {item_name} and hold it.")
+                    # Broadcast Ground Retrieval (to hand)
+                    if not self.player.is_hidden:
+                        self.world.broadcast_to_room(
+                            self.room.room_id, 
+                            f"{self.player.name} picks up {item_name}.", 
+                            "message", 
+                            skip_sid=p_sid
+                        )
                 
                 # --- REMOVE FROM ROOM (Persistent Sync) ---
                 if item_obj in self.room.objects:
@@ -301,6 +351,16 @@ class Get(BaseVerb):
                     self.player.worn_items[target_hand_slot] = item_ref
                     item_data = get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {obj['name']}.")
+                    
+                    # Broadcast Surface Retrieval
+                    if not self.player.is_hidden:
+                        self.world.broadcast_to_room(
+                            self.room.room_id, 
+                            f"{self.player.name} gets {item_data.get('name', 'item')} from {found_prep} the {obj['name']}.", 
+                            "message", 
+                            skip_sid=p_sid
+                        )
+
                     self.world.save_room(self.room)
                     set_action_roundtime(self.player, 1.0); return
 
@@ -323,4 +383,14 @@ class Get(BaseVerb):
             self.player.worn_items[target_hand_slot] = item_ref_from_pack
             item_data = get_item_data(item_ref_from_pack, game_items)
             self.player.send_message(f"You get {item_data.get('name', 'item')} from your pack and hold it.")
+            
+            # Broadcast Unstow
+            if not self.player.is_hidden:
+                self.world.broadcast_to_room(
+                    self.room.room_id, 
+                    f"{self.player.name} gets {item_data.get('name', 'item')} from their pack.", 
+                    "message", 
+                    skip_sid=p_sid
+                )
+                
             set_action_roundtime(self.player, 1.0)

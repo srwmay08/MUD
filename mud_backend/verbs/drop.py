@@ -105,6 +105,21 @@ class Drop(BaseVerb):
         self.room.data["objects"].append(new_obj)
 
         self.player.send_message(f"You drop {new_obj['name']} on the ground.")
+        
+        # --- ADDED BROADCAST ---
+        if not self.player.is_hidden:
+            # FIX: Look up SID to skip properly
+            player_info = self.world.get_player_info(self.player.name.lower())
+            skip_sid = player_info.get("sid") if player_info else None
+            
+            self.world.broadcast_to_room(
+                self.room.room_id, 
+                f"{self.player.name} drops {new_obj['name']}.", 
+                "message", 
+                skip_sid=skip_sid
+            )
+        # -----------------------
+
         self.world.save_room(self.room)
         set_action_roundtime(self.player, 1.0)
 

@@ -24,6 +24,10 @@ class Put(BaseVerb):
             return
 
         args_str = " ".join(self.args).lower()
+        
+        # Helper for broadcast skipping
+        p_info = self.world.get_player_info(self.player.name.lower())
+        p_sid = p_info.get("sid") if p_info else None
 
         # --- LOCKER LOGIC ---
         if "in locker" in args_str or "in vault" in args_str:
@@ -75,6 +79,15 @@ class Put(BaseVerb):
                 locker["items"].append(item_data)
                 db.update_player_locker(self.player.name, locker)
                 self.player.send_message(f"You put {item_data['name']} in your locker.")
+                
+                # Broadcast Locker Put
+                if not self.player.is_hidden:
+                    self.world.broadcast_to_room(
+                        self.room.room_id, 
+                        f"{self.player.name} puts {item_data['name']} in their locker.", 
+                        "message", 
+                        skip_sid=p_sid
+                    )
             return
 
         # --- REGULAR PUT LOGIC ---
@@ -201,6 +214,15 @@ class Put(BaseVerb):
         # Add to destination
         if is_trash:
              self.player.send_message(f"You discard {item_name} into the {container_obj['name']}.")
+             
+             if not self.player.is_hidden:
+                 self.world.broadcast_to_room(
+                    self.room.room_id, 
+                    f"{self.player.name} discards {item_name} into the {container_obj['name']}.", 
+                    "message", 
+                    skip_sid=p_sid
+                 )
+             
              set_action_roundtime(self.player, 1.0)
              return
 
@@ -213,6 +235,15 @@ class Put(BaseVerb):
         container_obj["container_storage"][target_prep].append(item_ref)
 
         self.player.send_message(f"You put {item_name} {target_prep} the {container_obj['name']}.")
+        
+        # Broadcast Regular Put
+        if not self.player.is_hidden:
+             self.world.broadcast_to_room(
+                self.room.room_id, 
+                f"{self.player.name} puts {item_name} {target_prep} the {container_obj['name']}.", 
+                "message", 
+                skip_sid=p_sid
+             )
         
         # --- SYNC WITH PERSISTENT DATA ---
         if container_obj.get("_runtime_item_ref"):
