@@ -179,18 +179,14 @@ class Cast(BaseVerb):
         uid = target.get("uid")
         new_hp = self.world.modify_monster_hp(uid, target.get("max_hp", 10), damage)
         
+        if new_hp > 0:
+            # Trigger social aggro on hit
+            combat_system.trigger_social_aggro(self.world, self.room, target, self.player)
+
         if new_hp <= 0:
             self.player.send_message(f"**The {target['name']} is destroyed!**")
-            self.world.set_defeated_monster(uid, {
-                "room_id": self.room.room_id,
-                "template_key": target.get("monster_id"),
-                "type": "monster",
-                "eligible_at": time.time() + 60,
-                "chance": 1.0
-            })
-            if target in self.room.objects:
-                self.room.objects.remove(target)
-            self.world.stop_combat_for_all(self.player.name.lower(), uid)
             
-            # Simple XP
-            self.player.grant_experience(damage, source="combat")
+            # Use shared death handler (grants loot/xp/etc)
+            death_msgs = combat_system.handle_monster_death(self.world, self.player, target, self.room)
+            for msg in death_msgs:
+                self.player.send_message(msg)

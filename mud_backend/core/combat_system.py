@@ -15,6 +15,9 @@ from mud_backend.core.game_objects import Player
 from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend.core.utils import get_stat_bonus
 from mud_backend import config
+# NEW IMPORTS FOR DEATH HANDLER
+from mud_backend.core import loot_system
+from mud_backend.core import faction_handler
 
 class CombatLogBuilder:
     PLAYER_MISS_MESSAGES = [
@@ -866,7 +869,6 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             continue
 
         # [FIX] Check for Room/Distance integrity
-        # Attacks should not happen if the target has left the room
         attacker_loc = None
         if isinstance(attacker, Player):
             attacker_loc = attacker.current_room_id
@@ -887,7 +889,6 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             continue
 
         # [FIX] Check if Monster Attacker is Dead
-        # Prevents "zombie" attacks from defeated monsters that haven't been cleaned up yet
         if not isinstance(attacker, Player):
             att_uid = attacker.get("uid")
             att_hp = world.get_monster_hp(att_uid)
@@ -897,7 +898,7 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
 
         is_defender_player = isinstance(defender, Player)
 
-        # Monster Attack (Simplified for single attack per tick)
+        # Monster Attack
         attack_results = resolve_attack(world, attacker, defender, world.game_items, is_offhand=False)
 
         sid_to_skip = None
@@ -946,7 +947,7 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     defender.death_sting_points += 2000
                     send_to_player_callback(defender.name, "You feel the sting of death... (XP gain is reduced)", "system_error")
                     defender.posture = "prone"
-                    defender.mark_dirty() # Ensure changes are saved
+                    defender.mark_dirty() 
                     continue
                 else:
                     vitals_data = defender.get_vitals()
@@ -954,15 +955,30 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     send_to_player_callback(defender.name, f"(You have {defender.hp}/{defender.max_hp} HP remaining)", "system_info")
                     defender.mark_dirty()
             else:
+                # Monster killed by Monster (uncommon but possible)
                 defender_uid = defender.get("uid")
                 new_hp = world.modify_monster_hp(defender_uid, defender.get("max_hp", 1), damage)
                 if new_hp <= 0 or is_fatal:
                     consequence_msg = f"**The {defender['name']} has been DEFEATED!**"
                     broadcast_callback(attacker_room_id, consequence_msg, "combat_death", skip_sid=sid_to_skip)
-                    # Assuming loot_system is imported or available in scope in your original file
-                    # If not, this block relies on global scope availability of loot_system/config which seems to be the case in your file.
-                    # Simplified for safety based on your provided file structure.
-
+                    
+                    # Monster vs Monster cleanup
+                    world.set_defeated_monster(defender_uid, {
+                        "room_id": attacker_room_id,
+                        "template_key": defender.get("monster_id"),
+                        "type": "monster",
+                        "eligible_at": time.time() + 300, # Default wait
+                        "chance": 1.0,
+                        "faction": defender.get("faction")
+                    })
+                    
+                    room = world.get_active_room_safe(attacker_room_id)
+                    if room:
+                         with room.lock:
+                             if defender in room.objects:
+                                 room.objects.remove(defender)
+                    world.unregister_mob(defender_uid)
+                    
                     world.stop_combat_for_all(combatant_id, state["target_id"])
                     continue
 
@@ -972,3 +988,176 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
             data["next_action_time"] = current_time + rt_seconds
             data["duration"] = rt_seconds
             world.set_combat_state(combatant_id, data)
+
+# --- SHARED COMBAT SYSTEMS ---
+
+def trigger_social_aggro(world: 'World', room: Any, target_monster_data: dict, player: Player):
+    """
+    Causes monsters of the same faction in the room to attack the player.
+    """
+    target_faction = target_monster_data.get("faction")
+    if not target_faction:
+        return
+
+    target_uid = target_monster_data.get("uid")
+    player_id = player.name.lower()
+    current_time = time.time()
+
+    for obj in room.objects:
+        if obj.get("uid") == target_uid:
+            continue
+        if not (obj.get("is_monster") or obj.get("is_npc")):
+            continue
+        if obj.get("faction") != target_faction:
+            continue
+
+        mob_uid = obj.get("uid")
+        combat_state = world.get_combat_state(mob_uid)
+        if combat_state and combat_state.get("state_type") == "combat":
+            continue
+
+        monster_name = obj.get("name", "A creature")
+        player.send_message(f"The {monster_name} comes to the aid of its kin!")
+        world.broadcast_to_room(room.room_id, f"The {monster_name} joins the fight!", "combat_broadcast", skip_sid=player.uid)
+
+        monster_agi = obj.get("stats", {}).get("AGI", 50)
+        monster_rt = calculate_roundtime(monster_agi)
+
+        world.set_combat_state(mob_uid, {
+            "state_type": "combat",
+            "target_id": player_id,
+            "next_action_time": current_time + (monster_rt / 2),
+            "current_room_id": room.room_id
+        })
+        if world.get_monster_hp(mob_uid) is None:
+            world.set_monster_hp(mob_uid, obj.get("max_hp", 50))
+
+def calculate_combat_xp(present_group_members: List[Player], monster_level: int) -> int:
+    """
+    Calculates XP share for a group killing a monster.
+    """
+    # Use the highest level member to calculate base XP to prevent power-leveling exploits
+    if not present_group_members:
+        return 0
+        
+    max_level = max(p.level for p in present_group_members)
+    level_diff = max_level - monster_level
+    
+    nominal_xp = 0
+    if level_diff >= 10:
+        nominal_xp = 0
+    elif 1 <= level_diff <= 9:
+        nominal_xp = 100 - (10 * level_diff)
+    elif level_diff == 0:
+        nominal_xp = 100
+    elif -4 <= level_diff <= -1:
+        nominal_xp = 100 + (10 * abs(level_diff))
+    elif level_diff <= -5:
+        nominal_xp = 150
+    nominal_xp = max(0, nominal_xp)
+
+    if nominal_xp > 0:
+        member_count = len(present_group_members)
+        # Group Bonus: 10% bonus per extra person
+        bonus_multiplier = 1.0 + (0.1 * (member_count - 1)) if member_count > 1 else 1.0
+        total_xp = nominal_xp * bonus_multiplier
+        
+        # Split XP evenly
+        share_xp = int(total_xp / member_count)
+        return share_xp
+    
+    return 0
+
+def handle_monster_death(world: 'World', player: Player, target_monster_data: dict, room: Any) -> List[str]:
+    """
+    Centralized handler for monster death.
+    Handles: Treasure system, Quests, XP, Faction, Corpses, Respawn.
+    Returns: A list of result strings to display.
+    """
+    messages = []
+    monster_uid = target_monster_data.get("uid")
+    
+    # 1. Treasure System
+    monster_id = target_monster_data.get("monster_id")
+    if monster_id and hasattr(world, 'treasure_manager'):
+        world.treasure_manager.register_kill(monster_id)
+
+    # 2. Group Identification
+    present_group_members = []
+    if player.group_id:
+        group_data = world.get_group(player.group_id)
+        if group_data:
+            for member_name in group_data.get("members", []):
+                p_info = world.get_player_info(member_name)
+                if p_info:
+                    p_obj = p_info.get("player_obj")
+                    # Only include members in the same room
+                    if p_obj and p_obj.current_room_id == room.room_id:
+                        present_group_members.append(p_obj)
+    
+    if not present_group_members:
+        present_group_members = [player]
+
+    # 3. Quest Counters (Shared)
+    monster_family = target_monster_data.get("family")
+    for member in present_group_members:
+        if monster_id:
+            key = f"{monster_id}_kills"
+            member.quest_counters[key] = member.quest_counters.get(key, 0) + 1
+        if monster_family:
+            key = f"{monster_family}_kills"
+            member.quest_counters[key] = member.quest_counters.get(key, 0) + 1
+
+    # 4. XP Logic (Shared)
+    monster_level = target_monster_data.get("level", 1)
+    share_xp = calculate_combat_xp(present_group_members, monster_level)
+    
+    if share_xp > 0:
+        member_count = len(present_group_members)
+        for member in present_group_members:
+            member.grant_experience(share_xp, source="combat")
+            if member == player:
+                if member_count > 1:
+                    messages.append(f"Group kill! You share experience and gain {share_xp} XP.")
+                else:
+                    messages.append(f"You have gained {share_xp} experience from the kill.")
+            else:
+                member.send_message(f"Your group killed a {target_monster_data['name']}! You share experience and gain {share_xp} XP.")
+
+    # 5. Faction Adjustments (Applied to killer only for now)
+    monster_faction = target_monster_data.get("faction")
+    if monster_faction:
+        adjustments = faction_handler.get_faction_adjustments_on_kill(world, monster_faction)
+        for fac_id, amount in adjustments.items():
+            faction_handler.adjust_player_faction(player, fac_id, amount)
+
+    # 6. Corpse Creation
+    corpse_data = loot_system.create_corpse_object_data(
+        target_monster_data, monster_uid, world.game_items, world.game_loot_tables, {}
+    )
+    room.objects.append(corpse_data)
+    
+    # 7. Removal & Cleanup
+    if target_monster_data in room.objects:
+        room.objects.remove(target_monster_data)
+
+    world.save_room(room)
+    world.unregister_mob(monster_uid)
+
+    messages.append(f"The {corpse_data['name']} falls to the ground.")
+
+    # 8. Respawn Scheduling
+    respawn_time = target_monster_data.get("respawn_time_seconds", 300)
+    respawn_chance = target_monster_data.get("respawn_chance_per_tick", getattr(config, "NPC_DEFAULT_RESPAWN_CHANCE", 0.2))
+
+    world.set_defeated_monster(monster_uid, {
+        "room_id": room.room_id,
+        "template_key": target_monster_data.get("monster_id"),
+        "type": "monster",
+        "eligible_at": time.time() + respawn_time,
+        "chance": respawn_chance,
+        "faction": monster_faction
+    })
+    world.stop_combat_for_all(player.name.lower(), monster_uid)
+    
+    return messages
