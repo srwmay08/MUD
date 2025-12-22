@@ -105,48 +105,66 @@ def _find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep=N
 @VerbRegistry.register(["turn", "crank", "push", "pull", "touch", "press"])
 class ObjectInteraction(BaseVerb):
     def execute(self):
+        print(f"\n[DEBUG] ObjectInteraction: Trigger='{self.command_trigger}' Args={self.args}")
         if not self.args:
             self.player.send_message(f"{self.command_trigger.capitalize()} what?")
             return
 
         target_name = " ".join(self.args).lower()
+        clean_target = _clean_name(target_name)
+        print(f"[DEBUG] Target Input: '{target_name}' | Cleaned: '{clean_target}'")
         
         # 1. Find the target object in the room (Dynamic Objects)
         found_obj = None
-        clean_target = _clean_name(target_name)
         
+        print("[DEBUG] Checking Room Objects (items/mobs)...")
         for obj in self.room.objects:
             obj_name = obj.get("name", "").lower()
-            if clean_target == obj_name or clean_target == _clean_name(obj_name) or clean_target in obj.get("keywords", []):
+            keywords = obj.get("keywords", [])
+            print(f"  > Checking Item: Name='{obj_name}' Keywords={keywords}")
+            
+            if clean_target == obj_name or clean_target == _clean_name(obj_name) or clean_target in keywords:
                 found_obj = obj
+                print("  >> MATCH FOUND in Room Objects!")
                 break
 
         # 2. Check Room Details (Static Features) if not found in objects
         if not found_obj:
             details = self.room.data.get("details", [])
+            print(f"[DEBUG] Checking {len(details)} Room Details (features)...")
+            
             for detail in details:
+                d_name = detail.get("name", "").lower()
+                d_keywords = detail.get("keywords", [])
+                print(f"  > Checking Detail: Name='{d_name}' Keywords={d_keywords}")
+
                 # Check keywords (most common for details)
-                if clean_target in detail.get("keywords", []):
+                if clean_target in d_keywords:
                     found_obj = detail
+                    print("  >> MATCH FOUND in Room Details (via Keyword)!")
                     break
                 # Check explicit name if present
-                d_name = detail.get("name", "").lower()
                 if d_name and (clean_target == d_name or clean_target == _clean_name(d_name)):
                     found_obj = detail
+                    print("  >> MATCH FOUND in Room Details (via Name)!")
                     break
 
         if not found_obj:
+            print("[DEBUG] RESULT: No matching object or detail found.")
             self.player.send_message(f"You don't see a '{target_name}' here.")
             return
 
         # 3. Check for defined interactions
         interactions = found_obj.get("interactions", {})
         verb = self.command_trigger.lower()
+        print(f"[DEBUG] Interactions Defined on Target: {list(interactions.keys())}")
         
         if verb in interactions:
             action = interactions[verb]
             act_type = action.get("type")
             act_val = action.get("value")
+            
+            print(f"[DEBUG] Executing Action: Type='{act_type}' Value='{act_val}'")
             
             if act_type == "text":
                 self.player.send_message(act_val)
@@ -156,6 +174,7 @@ class ObjectInteraction(BaseVerb):
                 self.player.move_to_room(act_val)
             return
 
+        print(f"[DEBUG] RESULT: Verb '{verb}' not found in target's interactions.")
         self.player.send_message(f"You can't {verb} that.")
 
 @VerbRegistry.register(["get", "take"])
