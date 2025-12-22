@@ -6,7 +6,7 @@ import copy
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
@@ -44,7 +44,7 @@ class Mine(BaseVerb):
     Attempts to mine an ore/gem node.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         # 1. Check for required tool
@@ -100,7 +100,7 @@ class Mine(BaseVerb):
         rt_reduction = mining_skill / 20.0 # 1s off per 20 ranks
         rt = max(2.0, base_rt - rt_reduction) # 2s minimum
         
-        _set_action_roundtime(self.player, rt, f"You begin mining {node_obj['name']}...", rt_type="hard")
+        set_action_roundtime(self.player, rt, f"You begin mining {node_obj['name']}...", rt_type="hard")
 
         # 5. Roll for Success (Skill vs. DC)
         skill_dc = node_obj.get("skill_dc", 20)
@@ -204,14 +204,14 @@ class Prospect(BaseVerb):
     Handles the 'prospect' (sense) command for mining.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
             
         geology_skill = self.player.skills.get("geology", 0) # <-- Use geology
         
         # No tool check needed for prospecting
 
-        _set_action_roundtime(self.player, 3.0, rt_type="hard")
+        set_action_roundtime(self.player, 3.0, rt_type="hard")
         
         self.player.send_message("You scan the area for mineral deposits...") 
         

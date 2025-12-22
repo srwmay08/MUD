@@ -2,7 +2,7 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.config import DIRECTION_MAP 
 from mud_backend.core.registry import VerbRegistry 
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 import time
 import random
@@ -157,7 +157,7 @@ def _handle_stalker_move(
                 move_verb.force_sneak = True
                 
                 # Check RT before executing
-                if not _check_action_roundtime(stalker_obj, action_type="move"):
+                if not check_action_roundtime(stalker_obj, action_type="move"):
                     stalker_obj.send_message(f"(Stalking) You pursue {leader_player.name}...")
                     move_verb.execute()
                 else:
@@ -194,7 +194,7 @@ def _handle_group_move(
         
         if member_obj and sid and member_obj.current_room_id == original_room_id:
             
-            if _check_action_roundtime(member_obj, action_type="move"):
+            if check_action_roundtime(member_obj, action_type="move"):
                 member_obj.send_message(f"You are busy and cannot follow {leader_name}.")
                 world.send_message_to_group(
                     group["id"], 
@@ -421,7 +421,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
                 )
                 player_obj.completed_quests.append("intro_give_clerk")
 
-        _set_action_roundtime(player_obj, 3.0) 
+        set_action_roundtime(player_obj, 3.0) 
         
         if original_room_id and target_room_id_step != original_room_id:
             world.socketio.server.leave_room(sid, original_room_id)
@@ -475,7 +475,7 @@ def _execute_goto_path(world, player_id: str, path: List[str], final_destination
 class Enter(BaseVerb):
     """Handles the 'enter' command to move through doors, portals, etc."""
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="move"):
+        if check_action_roundtime(self.player, action_type="move"):
             return
 
         if not self.args:
@@ -651,7 +651,7 @@ class Enter(BaseVerb):
                 self.player.completed_quests.append("intro_give_clerk")
         
         if rt > 0:
-            _set_action_roundtime(self.player, rt)
+            set_action_roundtime(self.player, rt)
             
         # Broadcast Logic
         player_info = self.world.get_player_info(self.player.name.lower())
@@ -672,7 +672,7 @@ class Enter(BaseVerb):
 class Climb(BaseVerb):
     """Handles the 'climb' command to move between connected objects (like wells/ropes)."""
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="move"):
+        if check_action_roundtime(self.player, action_type="move"):
             return
 
         if not self.args:
@@ -720,7 +720,7 @@ class Climb(BaseVerb):
         if success_margin < 0:
             rt = max(3.0, 10.0 - (climbing_skill / 10.0))
             self.player.send_message(f"You struggle with the {target_name} but fail to climb it.")
-            _set_action_roundtime(self.player, rt)
+            set_action_roundtime(self.player, rt)
             return
         else:
             rt = max(1.0, 5.0 - (success_margin / 20.0))
@@ -784,7 +784,7 @@ class Climb(BaseVerb):
         new_room = Room(target_room_id, new_room_data.get("name", ""), new_room_data.get("description", ""), db_data=new_room_data)
         show_room_to_player(self.player, new_room)
         
-        _set_action_roundtime(self.player, rt)
+        set_action_roundtime(self.player, rt)
         
         # Broadcast Logic
         player_info = self.world.get_player_info(self.player.name.lower())
@@ -817,7 +817,7 @@ class Move(BaseVerb):
         self.force_sneak = False # Set this to True to force a sneak attempt
 
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="move"):
+        if check_action_roundtime(self.player, action_type="move"):
             return
 
         target_name = None
@@ -1000,7 +1000,7 @@ class Move(BaseVerb):
                     self.player.completed_quests.append("intro_give_clerk")
 
             if base_rt > 0:
-                _set_action_roundtime(self.player, base_rt, rt_type="hard")
+                set_action_roundtime(self.player, base_rt, rt_type="hard")
                 
             # Manual Broadcast Handling to support silent moves
             player_info = self.world.get_player_info(self.player.name.lower())
@@ -1052,7 +1052,7 @@ class Exit(BaseVerb):
     Handles the 'exit' and 'out' commands.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="move"):
+        if check_action_roundtime(self.player, action_type="move"):
             return
         
         if not self.args:
@@ -1151,7 +1151,7 @@ class Exit(BaseVerb):
                     self.player.completed_quests.append("intro_talk_to_innkeeper")
                 
                 if rt > 0:
-                    _set_action_roundtime(self.player, rt)
+                    set_action_roundtime(self.player, rt)
 
                 # Manual Broadcast Handling
                 player_info = self.world.get_player_info(self.player.name.lower())
@@ -1197,7 +1197,7 @@ class GOTO(BaseVerb):
     Handles the 'goto' command for fast-travel to known locations.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="move"):
+        if check_action_roundtime(self.player, action_type="move"):
             return
             
         if self.player.posture != "standing":

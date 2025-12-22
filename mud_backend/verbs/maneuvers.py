@@ -1,19 +1,15 @@
-# mud_backend/verbs/maneuvers.py
 import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.utils import get_stat_bonus, calculate_skill_bonus
-from mud_backend.core.combat_system import _get_stat_modifiers # Import the new helper
-# --- END MODIFIED ---
+from mud_backend.core.combat_system import _get_stat_modifiers
 
 # Skills that can be used for tripping
 TRIP_WEAPON_SKILLS = ["polearms", "staves", "two_handed_blunt"]
 
 @VerbRegistry.register(["trip"])
-
 class Trip(BaseVerb):
     """
     Handles the 'trip' command.
@@ -28,7 +24,7 @@ class Trip(BaseVerb):
         # --- END NEW ---
 
         # 1. Check Roundtime
-        if _check_action_roundtime(self.player, action_type="attack"):
+        if check_action_roundtime(self.player, action_type="attack"):
             return
 
         # 2. Check Weapon
@@ -207,11 +203,11 @@ class Trip(BaseVerb):
                     self.world.stop_combat_for_all(player_uid, target_uid)
                     # --- END NEW ---
                     
-                    _set_action_roundtime(self.player, 3.0, rt_type="hard") # Shorter RT on completion
+                    set_action_roundtime(self.player, 3.0, rt_type="hard") # Shorter RT on completion
                 else:
                     # Quest in progress
                     self.player.send_message(f"The {target_name} scrambles back to his feet. 'Not bad! Again! ({count}/10)'")
-                    _set_action_roundtime(self.player, 5.0, rt_type="hard") # The 5s RT
+                    set_action_roundtime(self.player, 5.0, rt_type="hard") # The 5s RT
             
             else:
                 # --- Original success logic ---
@@ -220,7 +216,7 @@ class Trip(BaseVerb):
                 self.player.send_message(f"The {target_name} topples to the ground!")
                 
                 # Set RT for success
-                _set_action_roundtime(self.player, 5.0, rt_type="hard")
+                set_action_roundtime(self.player, 5.0, rt_type="hard")
             
         else: # Failure
             # --- NEW: Handle training failure ---
@@ -231,4 +227,4 @@ class Trip(BaseVerb):
                 # --- Original failure logic ---
                 self.player.send_message(f"You attempt to trip {target_name} but fail to knock them down.")
             
-            _set_action_roundtime(self.player, 3.0, rt_type="hard")
+            set_action_roundtime(self.player, 3.0, rt_type="hard")

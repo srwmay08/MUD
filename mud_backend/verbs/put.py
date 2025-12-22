@@ -2,7 +2,7 @@
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.item_utils import (
     clean_name, 
     find_item_in_hands, 
@@ -17,7 +17,7 @@ import uuid
 @VerbRegistry.register(["put", "stow"])
 class Put(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
         if not self.args:
             self.player.send_message("Put what where? (e.g., PUT DAGGER ON BENCH)")
@@ -201,7 +201,7 @@ class Put(BaseVerb):
         # Add to destination
         if is_trash:
              self.player.send_message(f"You discard {item_name} into the {container_obj['name']}.")
-             _set_action_roundtime(self.player, 1.0)
+             set_action_roundtime(self.player, 1.0)
              return
 
         # Update Active Object
@@ -233,4 +233,4 @@ class Put(BaseVerb):
              
              self.world.save_room(self.room)
              
-        _set_action_roundtime(self.player, 0.5)
+        set_action_roundtime(self.player, 0.5)

@@ -4,7 +4,7 @@ import math
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.foraging import _set_action_roundtime, _check_action_roundtime
+from mud_backend.core.utils import set_action_roundtime, check_action_roundtime
 from mud_backend.core.utils import get_stat_bonus
 
 # Map all valid COMMANDS (keys) to their resulting STATE (values)
@@ -39,7 +39,7 @@ class Posture(BaseVerb):
             chance = 0.40
         
         # Check for existing roundtime
-        if _check_action_roundtime(self.player, action_type="move"):
+        if check_action_roundtime(self.player, action_type="move"):
             return
 
         # Roll to see if RT is applied
@@ -64,11 +64,11 @@ class Posture(BaseVerb):
             # Final RT is 0.5s minimum
             final_rt = max(0.5, base_rt - stat_reduction) 
             
-            _set_action_roundtime(self.player, final_rt, f"You stumble slightly while trying to stand.")
+            set_action_roundtime(self.player, final_rt, f"You stumble slightly while trying to stand.")
         else:
             # Success! No roundtime.
             self.player.send_message("You move to a standing position.")
-            _set_action_roundtime(self.player, 0.5)
+            set_action_roundtime(self.player, 0.5)
         
         self.player.posture = "standing"
 
@@ -88,7 +88,7 @@ class Posture(BaseVerb):
             return
 
         # Check for existing roundtime
-        if _check_action_roundtime(self.player, action_type="stance"):
+        if check_action_roundtime(self.player, action_type="stance"):
             return
 
         if target_state == "standing":
@@ -106,4 +106,4 @@ class Posture(BaseVerb):
             else:
                 self.player.send_message(f"You move into a **{target_state}** position.")
             
-            _set_action_roundtime(self.player, 0.5) # 0.5s RT for changing posture
+            set_action_roundtime(self.player, 0.5) # 0.5s RT for changing posture

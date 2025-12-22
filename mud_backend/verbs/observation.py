@@ -4,7 +4,7 @@ from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core.chargen_handler import format_player_description
 import random
 from mud_backend.core.skill_handler import attempt_skill_learning
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price, _get_item_type
@@ -423,9 +423,9 @@ class Look(BaseVerb):
 @VerbRegistry.register(["investigate"])
 class Investigate(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
-        _set_action_roundtime(self.player, 3.0)
+        set_action_roundtime(self.player, 3.0)
 
         self.player.send_message("You investigate the area...")
         attempt_skill_learning(self.player, "investigation")
