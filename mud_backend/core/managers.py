@@ -21,7 +21,7 @@ class ConnectionManager:
         if player_info:
             sid = player_info.get("sid")
             if sid: 
-                self.socketio.emit("message", {'text': message, 'type': msg_type}, to=sid)
+                self.socketio.emit("message", {'text': message, 'type': msg_type}, room=sid)
             
             # Handle Snooping
             player_obj = player_info.get("player_obj")
@@ -32,7 +32,7 @@ class ConnectionManager:
                     for snooper_name in snoopers:
                         snooper_info = self.world.get_player_info(snooper_name)
                         if snooper_info and snooper_info.get("sid"):
-                            self.socketio.emit("message", {'text': snoop_msg, 'type': 'message'}, to=snooper_info["sid"])
+                            self.socketio.emit("message", {'text': snoop_msg, 'type': 'message'}, room=snooper_info["sid"])
 
     def join_room(self, sid: str, room_id: str):
         """Adds a socket to a room channel."""
@@ -49,11 +49,8 @@ class ConnectionManager:
     def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[Union[str, List[str], Set[str]]] = None):
         """
         Broadcasts to all players in a room by iterating the Entity Manager's player list.
-        This ensures perfect sync between game state (who is here) and network state (who gets msg).
         """
-        if not self.socketio: 
-            print("[BROADCAST ERROR] No socketio instance available.")
-            return
+        if not self.socketio: return
         
         # Normalize skip_sid to a set
         skip_sids_set = set()
@@ -63,44 +60,26 @@ class ConnectionManager:
             elif isinstance(skip_sid, (list, set, tuple)):
                 skip_sids_set.update(skip_sid)
         
-        # We rely on the Entity Manager for truth about who is in the room.
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
         
-        # DEBUG: Trace broadcast execution
-        print(f"[BROADCAST DEBUG] Room: '{room_id}' | Players: {players_in_room} | Msg: {message[:30]}...")
-
         for player_name in players_in_room:
             player_info = self.world.get_player_info(player_name)
-            if not player_info: 
-                print(f"[BROADCAST DEBUG] SKIP: Player info not found for '{player_name}'")
-                continue
+            if not player_info: continue
             
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
-            # Skip invalid, offline, or explicitly skipped players
-            if not player_obj:
-                print(f"[BROADCAST DEBUG] SKIP: No player object for '{player_name}'")
-                continue
-            if not sid:
-                print(f"[BROADCAST DEBUG] SKIP: No SID for '{player_name}'")
-                continue
-            if sid in skip_sids_set: 
-                print(f"[BROADCAST DEBUG] SKIP: SID in skip list for '{player_name}'")
+            if not player_obj or not sid or sid in skip_sids_set: 
                 continue
             
             # Flag Checks
-            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": 
-                print(f"[BROADCAST DEBUG] SKIP: Ambient disabled for '{player_name}'")
-                continue 
-            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": 
-                continue 
+            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
+            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
             
-            print(f"[BROADCAST DEBUG] EMITTING to '{player_name}' (SID: {sid})")
             self.socketio.emit(
                 'message', 
                 {'text': message, 'type': msg_type}, 
-                to=sid
+                room=sid
             )
 
     def broadcast_to_world(self, message: str, msg_type: str = "global_chat", skip_player_name: str = None):
@@ -116,7 +95,7 @@ class ConnectionManager:
                 self.socketio.emit(
                     'message', 
                     {'text': message, 'type': msg_type}, 
-                    to=sid
+                    room=sid
                 )
 
     def broadcast_to_radius(self, start_room_id: str, radius: int, message: str, msg_type: str = "message", skip_player_name: str = None):
@@ -162,7 +141,7 @@ class ConnectionManager:
                     self.socketio.emit(
                         'message', 
                         {'text': message, 'type': msg_type}, 
-                        to=sid
+                        room=sid
                     )
 
     def disconnect_player(self, sid: str):
