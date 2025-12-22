@@ -129,7 +129,7 @@ class Drop(BaseVerb):
 
         self.player.send_message(f"You drop the {item_name} into the well. It falls into the darkness...")
         
-        # FIX: Correctly look up the SID to skip, instead of using UID
+        # FIX: Look up SID to skip properly
         player_info = self.world.get_player_info(self.player.name.lower())
         skip_sid = player_info.get("sid") if player_info else None
         
@@ -137,10 +137,9 @@ class Drop(BaseVerb):
 
         target_room_id = "well_bottom" 
         
-        # FIX: Use self.world.get_room() instead of the incorrect room_handler attribute
+        # FIX: Use world.get_room instead of world.room_handler.get_room
         target_room_data = self.world.get_room(target_room_id)
         
-        # Note: If the room is not active, we might need to load it properly or just append to data
         # If the bottom room is active (someone is down there), we need that instance.
         target_room_active = self.world.active_rooms.get(target_room_id)
         
@@ -178,12 +177,6 @@ class Drop(BaseVerb):
                 target_room_data["objects"] = []
             target_room_data["objects"].append(new_obj)
             
-            # Since we modified the raw data, we should trigger a save if we have a mechanism,
-            # or rely on the persistence worker if it picks up raw changes. 
-            # In this architecture, raw modifications to 'game_rooms' might not autosave 
-            # unless wrapped in a Room object marked dirty. 
-            # Ideally, we just assume "falling into the void" if no one is there, 
-            # but appending to 'target_room_data' ensures it loads next time.
         else:
             print(f"[ERROR] Well drop target '{target_room_id}' not found.")
             

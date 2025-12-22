@@ -56,7 +56,7 @@ class ScriptAPI:
         """
         skip_sid = None
         if skip_player:
-            # FIX: Look up the Session ID (sid), do not use player.uid
+            # FIX: Look up the Session ID (sid) to correctly filter the sender
             player_info = self.world.get_player_info(self.player.name.lower())
             if player_info:
                 skip_sid = player_info.get("sid")
