@@ -51,7 +51,9 @@ class ConnectionManager:
         Broadcasts to all players in a room by iterating the Entity Manager's player list.
         This ensures perfect sync between game state (who is here) and network state (who gets msg).
         """
-        if not self.socketio: return
+        if not self.socketio: 
+            print("[BROADCAST ERROR] No socketio instance available.")
+            return
         
         # Normalize skip_sid to a set
         skip_sids_set = set()
@@ -64,21 +66,37 @@ class ConnectionManager:
         # We rely on the Entity Manager for truth about who is in the room.
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
         
+        # DEBUG: Trace broadcast execution
+        print(f"[BROADCAST DEBUG] Room: '{room_id}' | Players: {players_in_room} | Msg: {message[:30]}...")
+
         for player_name in players_in_room:
             player_info = self.world.get_player_info(player_name)
-            if not player_info: continue
+            if not player_info: 
+                print(f"[BROADCAST DEBUG] SKIP: Player info not found for '{player_name}'")
+                continue
             
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
             # Skip invalid, offline, or explicitly skipped players
-            if not player_obj or not sid or sid in skip_sids_set: 
+            if not player_obj:
+                print(f"[BROADCAST DEBUG] SKIP: No player object for '{player_name}'")
+                continue
+            if not sid:
+                print(f"[BROADCAST DEBUG] SKIP: No SID for '{player_name}'")
+                continue
+            if sid in skip_sids_set: 
+                print(f"[BROADCAST DEBUG] SKIP: SID in skip list for '{player_name}'")
                 continue
             
             # Flag Checks
-            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
-            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
+            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": 
+                print(f"[BROADCAST DEBUG] SKIP: Ambient disabled for '{player_name}'")
+                continue 
+            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": 
+                continue 
             
+            print(f"[BROADCAST DEBUG] EMITTING to '{player_name}' (SID: {sid})")
             self.socketio.emit(
                 'message', 
                 {'text': message, 'type': msg_type}, 
