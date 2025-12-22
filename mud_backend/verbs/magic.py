@@ -3,7 +3,7 @@ import time
 import math
 import random
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus
 from mud_backend.core import combat_system
 from mud_backend import config
@@ -16,7 +16,7 @@ class Prep(BaseVerb):
     Usage: PREP <spell_id>
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="cast"):
+        if check_action_roundtime(self.player, action_type="cast"):
             return
             
         if not self.args:
@@ -50,7 +50,7 @@ class Prep(BaseVerb):
         
         self.player.send_message(f"You chant the phrases for **{spell_data['name']}**.")
         self.player.send_message("Your spell is ready to CAST.")
-        _set_action_roundtime(self.player, 1.0, rt_type="hard")
+        set_action_roundtime(self.player, 1.0, rt_type="hard")
 
 @VerbRegistry.register(["cast", "incant"])
 class Cast(BaseVerb):
@@ -59,7 +59,7 @@ class Cast(BaseVerb):
     Executes the prepared spell using Warding (CS/TD), Bolt (AS/DS), or Utility logic.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="cast"):
+        if check_action_roundtime(self.player, action_type="cast"):
             return
 
         prep = self.player.prepared_spell
@@ -70,7 +70,7 @@ class Cast(BaseVerb):
         spell_id = prep["spell_id"]
         spell_data = self.world.game_spells.get(spell_id)
         self.player.prepared_spell = None # Expire prep
-        _set_action_roundtime(self.player, 3.0, rt_type="soft")
+        set_action_roundtime(self.player, 3.0, rt_type="soft")
 
         if not spell_data: return
 

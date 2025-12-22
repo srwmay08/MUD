@@ -209,7 +209,6 @@ class Attack(BaseVerb):
             self.player.send_message("Attack what?")
             return
 
-        # Changed to use new util function
         if check_action_roundtime(self.player, action_type="attack"):
             return
 

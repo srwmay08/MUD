@@ -5,7 +5,7 @@ import math
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
@@ -28,7 +28,7 @@ class Fish(BaseVerb):
     Attempts to catch fish from a valid water source.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         # 1. Check for required tool
@@ -52,7 +52,7 @@ class Fish(BaseVerb):
         rt_reduction = fishing_skill / 10.0 # 1s off per 10 ranks
         rt = max(5.0, base_rt - rt_reduction) # 5s minimum
         
-        _set_action_roundtime(self.player, rt, "You cast your line and wait...", rt_type="hard")
+        set_action_roundtime(self.player, rt, "You cast your line and wait...", rt_type="hard")
 
         # 4. Roll for Success
         attempt_skill_learning(self.player, "fishing")

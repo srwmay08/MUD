@@ -4,7 +4,7 @@ from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
 from typing import Dict, Any
 from mud_backend.core import db 
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 import time
 import math
 from mud_backend import config
@@ -86,7 +86,7 @@ class Search(BaseVerb):
     spilling them onto the ground, and removes the corpse.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         if not self.args:
@@ -101,7 +101,7 @@ class Search(BaseVerb):
             self.player.send_message(f"You don't see a **{target_name}** here to search.")
             return
 
-        _set_action_roundtime(self.player, 5.0, rt_type="hard") 
+        set_action_roundtime(self.player, 5.0, rt_type="hard") 
 
         if corpse_obj.get("searched_and_emptied", False):
             self.player.send_message(f"You search the {corpse_obj['name']} but find nothing left.")
@@ -160,7 +160,7 @@ class Skin(BaseVerb):
     Attempts to skin a corpse for pelts or hides.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         if not self.args:
@@ -188,7 +188,7 @@ class Skin(BaseVerb):
         rt_reduction = survival_skill / 10.0
         rt = max(3.0, base_rt - rt_reduction)
         
-        _set_action_roundtime(self.player, rt, rt_type="hard")
+        set_action_roundtime(self.player, rt, rt_type="hard")
 
         corpse_obj["skinned"] = True
         

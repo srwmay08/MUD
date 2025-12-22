@@ -1,11 +1,10 @@
 # mud_backend/verbs/band.py
 import time
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from typing import Optional, Dict, Any
 import uuid
 from mud_backend.core import db 
-from mud_backend.core.registry import VerbRegistry # <-- Added
+from mud_backend.core.registry import VerbRegistry
 
 MAX_BAND_MEMBERS = 10
 

@@ -2,7 +2,6 @@
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
 from typing import Optional, Dict, Any
 import uuid
 
@@ -16,8 +15,6 @@ class Group(BaseVerb):
     GROUP REMOVE <player>, GROUP OPEN, GROUP CLOSE
     """
     def execute(self):
-        # ... (Rest of code is unchanged) ...
-        # (Paste the full content of Group.execute from your previous upload here)
         if not self.args:
             self._show_group_status()
             return

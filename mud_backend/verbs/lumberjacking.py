@@ -5,12 +5,12 @@ import math
 import copy
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core import loot_system
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
 from mud_backend.core.room_handler import show_room_to_player
-from mud_backend.core.registry import VerbRegistry # <-- Added
+from mud_backend.core.registry import VerbRegistry
 
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
     for obj in room_objects:
@@ -34,7 +34,7 @@ def _has_tool(player, required_tool_type: str) -> bool:
 class Chop(BaseVerb):
     """Handles the 'chop' command."""
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
         if not _has_tool(self.player, "lumberjacking"):
             self.player.send_message("You need to be wielding an axe to chop wood.")
@@ -76,7 +76,7 @@ class Chop(BaseVerb):
         base_rt = 8.0 
         rt_reduction = forestry_skill / 20.0 
         rt = max(2.0, base_rt - rt_reduction) 
-        _set_action_roundtime(self.player, rt, f"You begin chopping {node_obj['name']}...", rt_type="hard")
+        set_action_roundtime(self.player, rt, f"You begin chopping {node_obj['name']}...", rt_type="hard")
 
         skill_dc = node_obj.get("skill_dc", 20)
         attempt_skill_learning(self.player, "lumberjacking") 
@@ -140,10 +140,10 @@ class Chop(BaseVerb):
 class Survey(BaseVerb):
     """Handles the 'survey' (sense) command for lumberjacking."""
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
         forestry_skill = self.player.skills.get("forestry", 0) 
-        _set_action_roundtime(self.player, 3.0, rt_type="hard")
+        set_action_roundtime(self.player, 3.0, rt_type="hard")
         self.player.send_message("You scan the area for useable trees...") 
 
         found_nodes_list = []

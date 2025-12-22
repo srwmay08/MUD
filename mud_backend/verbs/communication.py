@@ -2,7 +2,7 @@
 import time
 from collections import deque
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.registry import VerbRegistry
 
 # --- HELPERS ---
@@ -28,7 +28,7 @@ class Yell(BaseVerb):
     Ignores apply.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="speak"):
+        if check_action_roundtime(self.player, action_type="speak"):
             return
 
         if not self.args:
@@ -87,7 +87,7 @@ class Yell(BaseVerb):
                     self.world.socketio.emit("message", f"{sender_name} {self.command}s, \"{message}\"", to=sid)
         
         # Yelling is exhausting
-        _set_action_roundtime(self.player, 2.0, rt_type="soft")
+        set_action_roundtime(self.player, 2.0, rt_type="soft")
 
 
 # --- SIGNET RING MECHANICS ---
@@ -97,7 +97,7 @@ CHANNELS = ["General", "Trade", "Newbie", "OOC", "Guild"]
 @VerbRegistry.register(["twist"])
 class Twist(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"): return
+        if check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
         if "ring" not in target_name and "signet" not in target_name:
@@ -123,12 +123,12 @@ class Twist(BaseVerb):
             "message", 
             skip_sid=self.player.uid
         )
-        _set_action_roundtime(self.player, 1.0)
+        set_action_roundtime(self.player, 1.0)
 
 @VerbRegistry.register(["tap"])
 class Tap(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"): return
+        if check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
         if "ring" not in target_name and "signet" not in target_name:
@@ -146,12 +146,12 @@ class Tap(BaseVerb):
 
         self.player.flags['comm_ring_active'] = False
         self.player.send_message("You tap your iron signet. The humming fades as the runes go dormant.")
-        _set_action_roundtime(self.player, 0.5)
+        set_action_roundtime(self.player, 0.5)
 
 @VerbRegistry.register(["turn"])
 class Turn(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"): return
+        if check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
         if "ring" not in target_name and "signet" not in target_name:
@@ -170,7 +170,7 @@ class Turn(BaseVerb):
         
         channel_name = CHANNELS[next_idx]
         self.player.send_message(f"You turn the dial on your signet. It locks onto the **{channel_name}** frequency.")
-        _set_action_roundtime(self.player, 0.5)
+        set_action_roundtime(self.player, 0.5)
 
 
 @VerbRegistry.register(["focus", "send"])
@@ -214,7 +214,7 @@ class Focus(BaseVerb):
                 msg_type="band_chat"
             )
             self.player.send_message(f"You focus on the ring (Guild): \"{message}\"")
-            _set_action_roundtime(self.player, 1.0, rt_type="soft")
+            set_action_roundtime(self.player, 1.0, rt_type="soft")
             return
 
         # --- Global Broadcast with Ignore Check ---
@@ -233,4 +233,4 @@ class Focus(BaseVerb):
             if sid:
                 self.world.socketio.emit("global_chat", formatted_msg, to=sid)
         
-        _set_action_roundtime(self.player, 1.0, rt_type="soft")
+        set_action_roundtime(self.player, 1.0, rt_type="soft")

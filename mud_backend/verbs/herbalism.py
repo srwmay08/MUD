@@ -1,10 +1,11 @@
+# mud_backend/verbs/herbalism.py
 import random
 import time
 import math
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import loot_system
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime # We can re-use these
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend import config
 from typing import Dict, Any
@@ -41,7 +42,7 @@ class Harvest(BaseVerb):
     Attempts to harvest a plant node.
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         # --- Tool Check ---
@@ -100,7 +101,7 @@ class Harvest(BaseVerb):
         rt_reduction = botany_skill / 20.0 
         rt = max(1.5, base_rt - rt_reduction)
         
-        _set_action_roundtime(self.player, rt, f"You begin harvesting {node_obj['name']}...", rt_type="hard")
+        set_action_roundtime(self.player, rt, f"You begin harvesting {node_obj['name']}...", rt_type="hard")
 
         # 4. Roll for Success
         skill_dc = node_obj.get("skill_dc", 10)
