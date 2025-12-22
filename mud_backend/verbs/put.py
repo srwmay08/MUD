@@ -3,12 +3,13 @@ from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import db
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.verbs.item_actions import (
-    _clean_name, 
-    _find_item_in_hands, 
-    _find_item_in_inventory, 
-    _get_item_data, 
-    _find_container_on_player
+from mud_backend.core.item_utils import (
+    clean_name, 
+    find_item_in_hands, 
+    find_item_in_inventory, 
+    get_item_data, 
+    find_container_on_player,
+    find_item_in_obj_storage
 )
 import re
 import uuid
@@ -38,7 +39,7 @@ class Put(BaseVerb):
                 self.player.send_message("Your locker is full.")
                 return
 
-            item_id_hand, hand_slot = _find_item_in_hands(self.player, self.world.game_items, target_item_name)
+            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
             item_id_inv = None
             item_id = None
             item_source = None
@@ -47,7 +48,7 @@ class Put(BaseVerb):
                 item_id = item_id_hand
                 item_source = "hand"
             else:
-                item_id_inv = _find_item_in_inventory(self.player, self.world.game_items, target_item_name)
+                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
                 if item_id_inv:
                     item_id = item_id_inv
                     item_source = "inventory"
@@ -96,7 +97,7 @@ class Put(BaseVerb):
             else:
                  # Handle STOW (put in backpack)
                  if self.command == "stow":
-                     backpack = _find_container_on_player(self.player, self.world.game_items, "backpack")
+                     backpack = find_container_on_player(self.player, self.world.game_items, "backpack")
                      if backpack:
                          target_container_name = backpack.get("keywords", ["backpack"])[0]
                          target_item_name = args_str
@@ -112,8 +113,8 @@ class Put(BaseVerb):
              self.player.send_message("Put it where? (e.g., PUT DAGGER ON BENCH)")
              return
 
-        target_item_name = _clean_name(target_item_name)
-        target_container_name = _clean_name(target_container_name)
+        target_item_name = clean_name(target_item_name)
+        target_container_name = clean_name(target_container_name)
         
         game_items = self.world.game_items
         
@@ -121,11 +122,11 @@ class Put(BaseVerb):
         item_ref = None; hand_slot = None; from_inventory = False
 
         # Check Hands
-        item_ref, hand_slot = _find_item_in_hands(self.player, game_items, target_item_name)
+        item_ref, hand_slot = find_item_in_hands(self.player, game_items, target_item_name)
 
         # Check Inventory (if not in hands)
         if not item_ref:
-            item_ref = _find_item_in_inventory(self.player, game_items, target_item_name)
+            item_ref = find_item_in_inventory(self.player, game_items, target_item_name)
             if item_ref:
                 from_inventory = True
         
@@ -134,7 +135,7 @@ class Put(BaseVerb):
             self.player.send_message(f"You aren't holding a '{target_item_name}'.")
             return
 
-        item_data = _get_item_data(item_ref, game_items)
+        item_data = get_item_data(item_ref, game_items)
         item_name = item_data.get("name", "the item")
 
         # --- 3. FIND THE CONTAINER/SURFACE ---
@@ -143,13 +144,13 @@ class Put(BaseVerb):
         # Check Room Objects (Bench, Table, etc.)
         for obj in self.room.objects:
             o_name = obj.get("name", "").lower()
-            if target_container_name == o_name or target_container_name == _clean_name(o_name) or target_container_name in obj.get("keywords", []):
+            if target_container_name == o_name or target_container_name == clean_name(o_name) or target_container_name in obj.get("keywords", []):
                 container_obj = obj
                 break
         
         # Check worn containers if not found in room
         if not container_obj:
-             container_obj = _find_container_on_player(self.player, game_items, target_container_name)
+             container_obj = find_container_on_player(self.player, game_items, target_container_name)
 
         if not container_obj:
             self.player.send_message(f"You don't see a {target_container_name} here.")

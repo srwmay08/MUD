@@ -4,15 +4,17 @@ print("\n[DEBUG] LOADING mud_backend/verbs/item_actions.py ...\n")
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend.core.scripting import execute_script
-from mud_backend.core import db
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.item_utils import (
     clean_name, 
     get_item_data, 
     find_item_in_room, 
-    find_item_in_inventory,
+    find_item_in_inventory, 
     find_item_in_obj_storage, 
     find_container_on_player
 )
+from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
+from mud_backend.core import db
 import re
 
 print("[DEBUG] REGISTERING ObjectInteraction for 'turn', 'crank', 'push', 'pull', 'touch', 'press'...")
@@ -99,11 +101,7 @@ class ObjectInteraction(BaseVerb):
 @VerbRegistry.register(["get", "take"])
 class Get(BaseVerb):
     def execute(self):
-        # Delayed Import to avoid circular dependency with specific verbs
-        from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-        from mud_backend.verbs.shop import _get_shop_data, _get_item_buy_price
-
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
         if not self.args:
             self.player.send_message("Get what?")
@@ -216,7 +214,7 @@ class Get(BaseVerb):
                     item_data = get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {container_obj['name']}.")
                     self.world.save_room(self.room)
-                    _set_action_roundtime(self.player, 1.0); return
+                    set_action_roundtime(self.player, 1.0); return
 
                 loc_str = f"{target_prep} " if target_prep else "on/in "
                 self.player.send_message(f"You don't see a '{target_item_name}' {loc_str}the {container_obj['name']}."); return
@@ -236,7 +234,7 @@ class Get(BaseVerb):
             self.player.worn_items[target_hand_slot] = item_ref
             item_data = get_item_data(item_ref, game_items)
             self.player.send_message(f"You get {item_data.get('name', 'item')} from your {container_data.get('name')} and hold it.")
-            _set_action_roundtime(self.player, 1.0)
+            set_action_roundtime(self.player, 1.0)
 
         # --- GET FROM GROUND / SURFACES ---
         else:
@@ -306,7 +304,7 @@ class Get(BaseVerb):
                     item_data = get_item_data(item_ref, game_items)
                     self.player.send_message(f"You get {item_data.get('name', 'item')} from {found_prep} the {obj['name']}.")
                     self.world.save_room(self.room)
-                    _set_action_roundtime(self.player, 1.0); return
+                    set_action_roundtime(self.player, 1.0); return
 
             # Shop Inventory
             shop_data = _get_shop_data(self.room)
@@ -327,4 +325,4 @@ class Get(BaseVerb):
             self.player.worn_items[target_hand_slot] = item_ref_from_pack
             item_data = get_item_data(item_ref_from_pack, game_items)
             self.player.send_message(f"You get {item_data.get('name', 'item')} from your pack and hold it.")
-            _set_action_roundtime(self.player, 1.0)
+            set_action_roundtime(self.player, 1.0)

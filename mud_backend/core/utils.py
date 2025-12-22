@@ -1,5 +1,7 @@
 # mud_backend/core/utils.py
 import math
+import random
+import time
 from typing import Dict, Any
 
 def get_stat_bonus(stat_value: int, stat_name: str, race_modifiers: Dict[str, int]) -> int:
@@ -36,3 +38,23 @@ def calculate_skill_bonus(skill_rank: int) -> int:
         return 120 + (skill_rank - 30) * 2
         
     return 140 + (skill_rank - 40) * 1
+
+def roll_dice(num_dice, sides, modifier=0):
+    total = 0
+    for _ in range(num_dice):
+        total += random.randint(1, sides)
+    return total + modifier
+
+# --- ROUNDTIME HELPERS ---
+def check_action_roundtime(player, action_type="other") -> bool:
+    """Checks if player is in roundtime. Returns True if stuck in RT."""
+    current_time = time.time()
+    if getattr(player, 'roundtime', 0.0) > current_time:
+        remaining = player.roundtime - current_time
+        player.send_message(f"Wait {remaining:.1f} seconds.")
+        return True
+    return False
+
+def set_action_roundtime(player, seconds, rt_type="soft"):
+    """Sets player roundtime."""
+    player.roundtime = time.time() + seconds

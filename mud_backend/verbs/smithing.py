@@ -1,8 +1,7 @@
 # mud_backend/verbs/smithing.py
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.verbs.item_actions import _get_item_data
-from mud_backend.core.registry import VerbRegistry # <-- Added
+from mud_backend.core.registry import VerbRegistry
 
 @VerbRegistry.register(["stoke"]) 
 class Stoke(BaseVerb):

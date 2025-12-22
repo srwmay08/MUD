@@ -1,282 +1,155 @@
 # mud_backend/verbs/foraging.py
-import random
 import time
-import copy
+import random
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from typing import Tuple, Optional, TYPE_CHECKING 
-from mud_backend.core.room_handler import show_room_to_player
+from mud_backend.core.item_utils import get_item_data, find_item_in_hands, find_item_in_inventory
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 
-if TYPE_CHECKING:
-    from mud_backend.core.game_objects import Player
-
-def _find_item_in_hands(player, target_name: str) -> Tuple[Optional[str], Optional[str]]:
-    """
-    Finds the first item_id in a player's hands that matches.
-    Returns (item_id, slot_name) or (None, None)
-    """
-    for slot in ["mainhand", "offhand"]:
-        item_id = player.worn_items.get(slot)
-        if item_id:
-            item_data = player.world.game_items.get(item_id)
-            if item_data:
-                if (target_name == item_data.get("name", "").lower() or 
-                    target_name in item_data.get("keywords", [])):
-                    return item_id, slot
-    return None, None
-
-def _has_tool(player, required_tool_type: str) -> bool:
-    """Checks if the player is wielding a tool of the required type."""
-    for slot in ["mainhand", "offhand"]:
-        item_id = player.worn_items.get(slot)
-        if item_id:
-            item_data = player.world.game_items.get(item_id)
-            if item_data and (item_data.get("tool_type") == required_tool_type or
-                              (required_tool_type == "herbalism" and item_data.get("skill") == "small_edged")):
-                return True
-    return False
-
-# --- CENTRAL ROUNDTIME HELPER FUNCTIONS ---
-
-def _check_action_roundtime(player: 'Player', action_type: str) -> bool:
-    """
-    Checks if the player is in roundtime from any action.
-    Sends a message and returns True if they are, False otherwise.
-    
-    action_type: 'speak', 'move', 'stance', 'attack', 'cast', 'other'
-    """
-    player_id = player.name.lower()
-    current_time = time.time()
-    
-    # --- FIX: Use thread-safe accessor ---
-    rt_data = player.world.get_combat_state(player_id)
-    
-    if rt_data:
-        next_action_time = rt_data.get("next_action_time", 0)
-        if current_time < next_action_time:
-            wait_time = next_action_time - current_time
-            rt_type = rt_data.get("rt_type", "hard")
-            
-            # --- Check Hard vs Soft RT rules ---
-            if rt_type == "hard":
-                if action_type == "speak":
-                    return False # Allow speaking
-                else:
-                    player.send_message(f"You are not ready to do that yet. (Wait {wait_time:.1f}s)")
-                    return True # Block
-            
-            elif rt_type == "soft":
-                if action_type in ["move", "stance", "speak"]:
-                    return False # Allow move/stance/speak
-                else:
-                    player.send_message(f"You must wait for your concentration to return. (Wait {wait_time:.1f}s)")
-                    return True # Block attack/cast/other
-            
-            return True # Default block
-            
-    return False # Player is free
-
-def _set_action_roundtime(player: 'Player', duration_seconds: float, message: str = "", rt_type: str = "hard"):
-    """
-    Sets a non-combat action roundtime for the player and sends a message.
-    If 'message' is provided, it's used *instead* of the default RT message.
-    rt_type: 'hard' (red bar) or 'soft' (blue bar)
-    """
-    player_id = player.name.lower()
-    final_duration = max(0.5, duration_seconds) # Ensure a minimum RT
-    
-    # --- FIX: Use thread-safe accessors instead of world.combat_lock ---
-    
-    # 1. Get existing state (Thread Safe Read)
-    rt_data = player.world.get_combat_state(player_id)
-    
-    # 2. Prepare new state
-    if rt_data is None:
-        rt_data = {}
-    else:
-        # Create a shallow copy to modify before setting back
-        rt_data = rt_data.copy()
-    
-    rt_data["next_action_time"] = time.time() + final_duration
-    rt_data["duration"] = final_duration # Store duration for UI
-    rt_data["state_type"] = "action" 
-    rt_data["rt_type"] = rt_type
-    
-    # Explicitly remove combat keys in case they were stuck
-    rt_data.pop("target_id", None)
-    rt_data.pop("current_room_id", None)
-    
-    # 3. Set state (Thread Safe Write)
-    player.world.set_combat_state(player_id, rt_data)
-    # ------------------------------------------------------------------
-    
-    # Send the RT message
-    if message:
-        player.send_message(message)
-    
-    # Send the generic RT message *only* if no custom message was provided
-    elif not message and final_duration >= 0.5:
-        if rt_type == "hard":
-            player.send_message(f"Roundtime: {final_duration:.1f}s")
-
-# --- END CENTRAL RT HELPERS ---
-
-@VerbRegistry.register(["forage"]) 
+@VerbRegistry.register(["forage", "search"])
 class Forage(BaseVerb):
-    """
-    Handles the 'forage' (sense) command.
-    """
-    
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, "other"): return
+        
+        # Check room forageable data
+        room_data = self.room.data
+        if not room_data.get("forageable"):
+            self.player.send_message("You don't see anything worth foraging here.")
             return
-        
-        survival_skill = self.player.skills.get("survival", 0)
-        
-        _set_action_roundtime(self.player, 3.0, rt_type="hard")
-             
-        self.player.send_message("You scan the area for forageable plants...")
-        
-        # --- NEW REVEAL LOGIC ---
-        found_nodes_list = []
-        refresh_room = False
-        
-        # --- FIX: Use self.room.data ---
-        hidden_objects = self.room.data.get("hidden_objects", [])
-        for i in range(len(hidden_objects) - 1, -1, -1):
-            obj_stub = hidden_objects[i]
-            
-            if obj_stub.get("node_type") == "herbalism":
-                dc = obj_stub.get("perception_dc", 999)
-                roll = survival_skill + random.randint(1, 100)
-                
-                if roll >= dc:
-                    # --- FIX: Use self.room.data ---
-                    found_stub = self.room.data["hidden_objects"].pop(i)
-                    full_node = copy.deepcopy(self.world.game_nodes.get(found_stub["node_id"]))
-                    if not full_node: continue
-                    
-                    full_node.update(found_stub)
-                    self.room.objects.append(full_node)
-                    
-                    found_nodes_list.append(full_node.get("name", "a plant"))
-                    refresh_room = True
 
-        if refresh_room:
-            # 1. Save the room so the node is persistent
-            self.world.save_room(self.room)
-            
-            # 2. Get the player's SID to skip them in the broadcast
-            player_info = self.world.get_player_info(self.player.name.lower())
-            sid = player_info.get("sid") if player_info else None
-
-            # 3. Broadcast to *everyone else* in the room
-            self.world.broadcast_to_room(
-                self.room.room_id, 
-                f"{self.player.name} spots {found_nodes_list[0]}!", 
-                "message",
-                skip_sid=sid
-            )
-            
-            # 4. Send a simple message *only* to the player
-            self.player.send_message(f"You spot {found_nodes_list[0]}!")
+        skill_level = self.player.skills.get("survival", 0)
+        chance = 30 + (skill_level * 2)
+        
+        self.player.send_message("You begin searching the area for useful resources...")
+        
+        if random.randint(1, 100) <= chance:
+            possible_items = room_data.get("forage_items", [])
+            if not possible_items:
+                self.player.send_message("You find nothing of interest.")
+            else:
+                item_id = random.choice(possible_items)
+                item_template = self.world.game_items.get(item_id)
+                if item_template:
+                    import copy
+                    import uuid
+                    new_item = copy.deepcopy(item_template)
+                    new_item["uid"] = uuid.uuid4().hex
+                    
+                    if not self.player.worn_items.get("mainhand"):
+                        self.player.worn_items["mainhand"] = new_item
+                        self.player.send_message(f"You found {new_item['name']} and picked it up.")
+                    elif not self.player.worn_items.get("offhand"):
+                        self.player.worn_items["offhand"] = new_item
+                        self.player.send_message(f"You found {new_item['name']} and picked it up.")
+                    else:
+                        self.player.inventory.append(new_item)
+                        self.player.send_message(f"You found {new_item['name']} and put it in your pack.")
+                        
+                    self.player.grant_experience(10, source="survival")
         else:
-            self.player.send_message("You do not sense any plants of interest here.")
+            self.player.send_message("You search fruitlessly.")
+            
+        set_action_roundtime(self.player, 5.0)
 
-@VerbRegistry.register(["eat"]) 
+@VerbRegistry.register(["eat", "consume"])
 class Eat(BaseVerb):
-    """
-    Handles the 'eat' command for herbs and food.
-    """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
-            return
-
+        if check_action_roundtime(self.player, "other"): return
         if not self.args:
             self.player.send_message("Eat what?")
             return
-
+            
         target_name = " ".join(self.args).lower()
-        item_id, item_location = _find_item_in_hands(self.player, target_name)
         
-        if not item_id:
-            self.player.send_message(f"You are not holding a '{target_name}' to eat.")
-            return
-
-        item_data = self.world.game_items.get(item_id)
-        if not item_data:
-            self.player.send_message("That item seems to have vanished.")
+        # Check hands first
+        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+        from_inventory = False
+        
+        if not item_ref:
+            item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
+            from_inventory = True
+            
+        if not item_ref:
+            self.player.send_message(f"You aren't holding or carrying any '{target_name}'.")
             return
             
-        item_name = item_data.get("name", "the item")
-        use_verb = item_data.get("use_verb", "eat")
-
-        if use_verb != "eat":
-            self.player.send_message(f"You cannot eat {item_name}. Try '{use_verb.upper()}' instead.")
+        item_data = get_item_data(item_ref, self.world.game_items)
+        
+        if not item_data.get("is_edible"):
+            self.player.send_message("That doesn't look edible.")
             return
             
-        # Apply the effect
-        effect = item_data.get("effect_on_use", {})
-        if effect.get("heal_hp"):
-            hp_to_heal = int(effect.get("heal_hp", 0))
-            if hp_to_heal > 0:
-                self.player.hp = min(self.player.max_hp, self.player.hp + hp_to_heal)
-                self.player.send_message(f"You eat {item_name}. You feel a surge of vitality!")
-                self.player.send_message(f"(You heal for {hp_to_heal} HP. Current HP: {self.player.hp}/{self.player.max_hp})")
-            else:
-                self.player.send_message(f"You eat {item_name}, but nothing seems to happen.")
+        self.player.send_message(f"You eat the {item_data['name']}.")
+        
+        # Apply effects
+        if "nutrition" in item_data:
+            self.player.stamina = min(self.player.max_stamina, self.player.stamina + item_data["nutrition"])
+            self.player.send_message("You feel refreshed.")
+            
+        # Remove item
+        if from_inventory:
+            self.player.inventory.remove(item_ref)
         else:
-            self.player.send_message(f"You eat {item_name}, but nothing seems to happen.")
+            self.player.worn_items[hand_slot] = None
+            
+        set_action_roundtime(self.player, 2.0)
 
-        # Remove the item from the hand it was in
-        self.player.worn_items[item_location] = None
-        
-        _set_action_roundtime(self.player, 3.0, rt_type="hard") 
-
-@VerbRegistry.register(["drink"])
+@VerbRegistry.register(["drink", "quaff"])
 class Drink(BaseVerb):
-    """
-    Handles the 'drink' command for potions.
-    """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
-            return
-
+        if check_action_roundtime(self.player, "other"): return
         if not self.args:
             self.player.send_message("Drink what?")
             return
-
+            
         target_name = " ".join(self.args).lower()
-        item_id, item_location = _find_item_in_hands(self.player, target_name)
         
-        if not item_id:
-            self.player.send_message(f"You are not holding a '{target_name}' to drink.")
-            return
-
-        item_data = self.world.game_items.get(item_id)
-        if not item_data:
-            self.player.send_message("That item seems to have vanished.")
+        # Check hands first
+        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+        from_inventory = False
+        
+        if not item_ref:
+            item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
+            from_inventory = True
+            
+        if not item_ref:
+            self.player.send_message(f"You aren't holding or carrying any '{target_name}'.")
             return
             
-        item_name = item_data.get("name", "the item")
-        use_verb = item_data.get("use_verb", "drink")
-
-        if use_verb != "drink":
-            self.player.send_message(f"You cannot drink {item_name}. Try '{use_verb.upper()}' instead.")
-            return
-
-        effect = item_data.get("effect_on_use", {})
-        if effect.get("heal_hp"):
-            hp_to_heal = int(effect.get("heal_hp", 0))
-            if hp_to_heal > 0:
-                self.player.hp = min(self.player.max_hp, self.player.hp + hp_to_heal)
-                self.player.send_message(f"You drink {item_name}. You feel a surge of vitality!")
-                self.player.send_message(f"(You heal for {hp_to_heal} HP. Current HP: {self.player.hp}/{self.player.max_hp})")
-            else:
-                self.player.send_message(f"You drink {item_name}, but nothing seems to happen.")
-        else:
-            self.player.send_message(f"You drink {item_name}, but nothing seems to happen.")
-
-        self.player.worn_items[item_location] = None
+        item_data = get_item_data(item_ref, self.world.game_items)
         
-        _set_action_roundtime(self.player, 3.0, rt_type="hard")
+        if not item_data.get("is_drinkable"):
+            self.player.send_message("You can't drink that.")
+            return
+            
+        self.player.send_message(f"You drink from the {item_data['name']}.")
+        
+        # Apply effects
+        if "hydration" in item_data:
+            # Simple stamina restore for now
+            self.player.stamina = min(self.player.max_stamina, self.player.stamina + item_data["hydration"])
+            self.player.send_message("That hit the spot.")
+            
+        # Handle consumption (remove item or transform it)
+        remaining_sips = item_data.get("sips", 1) - 1
+        
+        # Handle Dynamic Item Updates
+        if isinstance(item_ref, dict):
+            if remaining_sips > 0:
+                item_ref["sips"] = remaining_sips
+                self.player.send_message(f"There are {remaining_sips} sips left.")
+            else:
+                if from_inventory:
+                    self.player.inventory.remove(item_ref)
+                else:
+                    self.player.worn_items[hand_slot] = None
+                self.player.send_message(f"You finish the {item_data['name']}.")
+        # Handle Static Item References
+        else:
+            if from_inventory:
+                self.player.inventory.remove(item_ref)
+            else:
+                self.player.worn_items[hand_slot] = None
+            self.player.send_message(f"You finish the {item_data['name']}.")
+            
+        set_action_roundtime(self.player, 2.0)

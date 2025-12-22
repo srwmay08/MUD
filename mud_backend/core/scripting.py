@@ -49,12 +49,13 @@ class ScriptAPI:
         """
         self.player.send_message(message)
 
-    def echo_room(self, message: str):
+    def echo_room(self, message: str, skip_player: bool = False):
         """
         Sends a message to everyone in the room.
-        Usage: echo_room("The ground shakes.")
+        Usage: echo_room("The ground shakes.", skip_player=True)
         """
-        self.world.broadcast_to_room(self.room.room_id, message, "message")
+        skip_sid = self.player.uid if skip_player else None
+        self.world.broadcast_to_room(self.room.room_id, message, "message", skip_sid=skip_sid)
 
     def heal(self, amount: int):
         """
@@ -112,7 +113,7 @@ class ScriptAPI:
 
     def give_item(self, item_id: str, count: int = 1):
         """
-        Gives an item to the player.
+        Gives an item to the player. Tries hands first, then inventory.
         Usage: give_item("fresh_water")
         """
         item_template = self.world.game_items.get(item_id)
@@ -124,9 +125,19 @@ class ScriptAPI:
         for _ in range(count):
             new_item = copy.deepcopy(item_template)
             new_item["uid"] = uuid.uuid4().hex
-            self.player.inventory.append(new_item)
             
-        self.player.send_message(f"You receive {item_template['name']}.")
+            # 1. Try Main Hand
+            if self.player.worn_items.get("mainhand") is None:
+                self.player.worn_items["mainhand"] = new_item
+                self.player.send_message(f"You take {item_template['name']} in your main hand.")
+            # 2. Try Off Hand
+            elif self.player.worn_items.get("offhand") is None:
+                self.player.worn_items["offhand"] = new_item
+                self.player.send_message(f"You take {item_template['name']} in your off hand.")
+            # 3. Fallback to Inventory
+            else:
+                self.player.inventory.append(new_item)
+                self.player.send_message(f"You receive {item_template['name']} (placed in pack).")
 
     # --- NEW METHODS ---
     def start_timer(self, seconds: int, callback_script: str):

@@ -68,12 +68,16 @@
         "base_value": 1,
         "max_value": 3
     },
-        "fresh_water": {
-        "name": "fresh water",
-        "description": "Some fresh water from the well.",
-        "item_type": "component",
-        "keywords": ["water", "fresh water"],
-        "base_value": 0,
-        "max_value": 0
+    "fresh_water": {
+        "name": "a flask of fresh water",
+        "description": "A simple leather flask filled with cool, clear water from the town well.",
+        "keywords": ["flask", "water", "fresh water"],
+        "item_type": "consumable",
+        "is_drinkable": true,
+        "hydration": 20,
+        "sips": 5,
+        "weight": 1,
+        "value": 0,
+        "verbs": ["drink", "drop", "look"]
     }
 }

@@ -74,6 +74,7 @@ class Player(GameEntity):
         self.posture = self.data.get("posture", "standing")
         self.status_effects = self.data.get("status_effects", [])
         self.next_action_time = self.data.get("next_action_time", 0.0)
+        self.roundtime = 0.0
         
         self.deaths_recent = self.data.get("deaths_recent", 0)
         self.death_sting_points = self.data.get("death_sting_points", 0)
