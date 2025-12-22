@@ -102,22 +102,41 @@ class Attack(BaseVerb):
                     self.world.treasure_manager.register_kill(monster_id)
                 # -------------------------------------
 
-                # --- UPDATE QUEST COUNTERS ---
+                # --- GROUP IDENTIFICATION ---
+                present_group_members = []
+                if self.player.group_id:
+                    group_data = self.world.get_group(self.player.group_id)
+                    if group_data:
+                        for member_name in group_data.get("members", []):
+                            p_info = self.world.get_player_info(member_name)
+                            if p_info:
+                                p_obj = p_info.get("player_obj")
+                                # Only include members in the same room
+                                if p_obj and p_obj.current_room_id == self.room.room_id:
+                                    present_group_members.append(p_obj)
+                
+                if not present_group_members:
+                    present_group_members = [self.player]
+
+                # --- UPDATE QUEST COUNTERS (SHARED) ---
                 monster_family = target_monster_data.get("family")
+                
+                for member in present_group_members:
+                    if monster_id:
+                        key = f"{monster_id}_kills"
+                        member.quest_counters[key] = member.quest_counters.get(key, 0) + 1
 
-                if monster_id:
-                    key = f"{monster_id}_kills"
-                    self.player.quest_counters[key] = self.player.quest_counters.get(key, 0) + 1
-
-                if monster_family:
-                    key = f"{monster_family}_kills"
-                    self.player.quest_counters[key] = self.player.quest_counters.get(key, 0) + 1
+                    if monster_family:
+                        key = f"{monster_family}_kills"
+                        member.quest_counters[key] = member.quest_counters.get(key, 0) + 1
                 # -----------------------------
 
-                # XP Logic
-                player_level = self.player.level
+                # --- XP Logic (SHARED) ---
+                # Use the highest level member to calculate base XP to prevent power-leveling exploits
+                max_level = max(p.level for p in present_group_members)
                 monster_level = target_monster_data.get("level", 1)
-                level_diff = player_level - monster_level
+                level_diff = max_level - monster_level
+                
                 nominal_xp = 0
                 if level_diff >= 10:
                     nominal_xp = 0
@@ -132,10 +151,25 @@ class Attack(BaseVerb):
                 nominal_xp = max(0, nominal_xp)
 
                 if nominal_xp > 0:
-                    resolve_data["messages"].append(f"You have gained {nominal_xp} experience from the kill.")
-                    self.player.grant_experience(nominal_xp, source="combat")
+                    member_count = len(present_group_members)
+                    # Group Bonus: 10% bonus per extra person
+                    bonus_multiplier = 1.0 + (0.1 * (member_count - 1)) if member_count > 1 else 1.0
+                    total_xp = nominal_xp * bonus_multiplier
+                    
+                    # Split XP evenly
+                    share_xp = int(total_xp / member_count)
 
-                # Faction Adjustments
+                    for member in present_group_members:
+                        member.grant_experience(share_xp, source="combat")
+                        if member == self.player:
+                            if member_count > 1:
+                                resolve_data["messages"].append(f"Group kill! You share experience and gain {share_xp} XP.")
+                            else:
+                                resolve_data["messages"].append(f"You have gained {share_xp} experience from the kill.")
+                        else:
+                            member.send_message(f"Your group killed a {target_monster_data['name']}! You share experience and gain {share_xp} XP.")
+
+                # Faction Adjustments (Applied to killer only for now, could be shared later)
                 monster_faction = target_monster_data.get("faction")
                 if monster_faction:
                     adjustments = faction_handler.get_faction_adjustments_on_kill(self.world, monster_faction)
