@@ -10,7 +10,7 @@ from mud_backend.core.events import EventBus
 from mud_backend.core.managers import ConnectionManager, RoomManager, EntityManager
 from mud_backend.core.mail_manager import MailManager
 from mud_backend.core.auction_manager import AuctionManager
-from mud_backend.core.loot_system import TreasureManager # <--- NEW
+from mud_backend.core.loot_system import TreasureManager
 
 class ShardedStore:
     """Thread-safe dictionary store with sharded locks."""
@@ -58,7 +58,7 @@ class World:
         self.entity_manager = EntityManager(self)
         self.mail_manager = MailManager(self) 
         self.auction_manager = AuctionManager(self)
-        self.treasure_manager = TreasureManager(self) # <--- NEW
+        self.treasure_manager = TreasureManager(self)
 
         self.player_directory_lock = threading.RLock()
         self.active_players: Dict[str, Dict[str, Any]] = {}
@@ -228,7 +228,22 @@ class World:
     def send_message_to_player(self, player_name_lower: str, message: str, msg_type: str = "message"):
         self.connection_manager.send_to_player(player_name_lower, message, msg_type)
     
-    def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None):
+    def broadcast_to_room(self, room_id: str, message: str, msg_type: str, skip_sid: Optional[str] = None, skip_player: Optional[Any] = None):
+        """
+        Broadcasts to a room.
+        Args:
+            room_id: The room to broadcast to.
+            message: The content.
+            msg_type: Message type (for frontend styling).
+            skip_sid: Directly provide the SID to skip.
+            skip_player: Provide the Player object to skip (convenience wrapper that looks up SID).
+        """
+        # Convenience: Allow passing player object instead of manual lookup
+        if skip_player and not skip_sid:
+            player_info = self.get_player_info(skip_player.name.lower())
+            if player_info:
+                skip_sid = player_info.get("sid")
+
         self.connection_manager.broadcast_to_room(room_id, message, msg_type, skip_sid)
 
     # --- Player Management ---
