@@ -4,11 +4,10 @@ import re
 from mud_backend.verbs.base_verb import BaseVerb
 from typing import Dict, Any, Tuple, Optional
 from mud_backend import config
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.quest_handler import get_active_quest_for_npc
-from mud_backend.core.registry import VerbRegistry # <-- Added
+from mud_backend.core.registry import VerbRegistry
 
-# ... (Keep helper functions: _find_item_in_inventory, _count_item_in_inventory, _find_item_in_hands, _find_npc_in_room) ...
 def _find_item_in_inventory(player, target_name: str) -> str | None:
     for item_id in player.inventory:
         item_data = player.world.game_items.get(item_id)
@@ -48,7 +47,7 @@ def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
 @VerbRegistry.register(["give"]) 
 class Give(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
         
         if len(self.args) < 2:
@@ -81,7 +80,7 @@ class Give(BaseVerb):
                     self.player.send_message("The beggar bows their head. 'Bless you, child of light.'")
                     
                     self.player.quest_counters["alms_given"] = self.player.quest_counters.get("alms_given", 0) + silver_amount
-                    _set_action_roundtime(self.player, 1.0)
+                    set_action_roundtime(self.player, 1.0)
                     return
                 else:
                     self.player.send_message("You don't have that much silver.")
@@ -183,7 +182,7 @@ class Give(BaseVerb):
                             self.player.send_message(active_quest.get("already_learned_message", "You have already completed this task."))
                     
                     self.player.completed_quests.append(quest_id)
-                    _set_action_roundtime(self.player, 1.0) 
+                    set_action_roundtime(self.player, 1.0) 
                     return 
                 else:
                     self.player.send_message(f"The {npc_name} does not seem interested in that.")
@@ -215,7 +214,7 @@ class Give(BaseVerb):
             self.player.send_message(f"You give {silver_amount} silver to {target_player.name}.")
             self.world.send_message_to_player(target_player.name.lower(), f"{self.player.name} gives you {silver_amount} silver.")
             
-            _set_action_roundtime(self.player, 1.0) 
+            set_action_roundtime(self.player, 1.0) 
             return 
 
         else:
@@ -260,14 +259,14 @@ class Give(BaseVerb):
             f"'<span class='keyword' data-command='decline'>DECLINE</span>'.\n"
             f"The offer will expire in 30 seconds."
         )
-        _set_action_roundtime(self.player, 1.0) 
+        set_action_roundtime(self.player, 1.0) 
 
 
 @VerbRegistry.register(["accept"]) 
 class Accept(BaseVerb):
     """Handles the 'accept' command for trades and exchanges."""
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         player_key = self.player.name.lower()
@@ -325,7 +324,7 @@ class Accept(BaseVerb):
                 self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} accepts your offer for {item_name}.")
 
             self.world.remove_pending_trade(player_key)
-            _set_action_roundtime(self.player, 1.0)
+            set_action_roundtime(self.player, 1.0)
 
         elif trade_type == "exchange":
             item_id = trade_offer['item_id']
@@ -380,13 +379,13 @@ class Accept(BaseVerb):
             )
             
             self.world.remove_pending_trade(player_key)
-            _set_action_roundtime(self.player, 1.0)
+            set_action_roundtime(self.player, 1.0)
 
 @VerbRegistry.register(["decline"]) 
 class Decline(BaseVerb):
     """Handles the 'decline' command for trades."""
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         player_key = self.player.name.lower()
@@ -399,13 +398,13 @@ class Decline(BaseVerb):
         self.player.send_message(f"You decline the offer from {trade_offer['from_player_name']}.")
         giver_player_name_lower = trade_offer['from_player_name'].lower()
         self.world.send_message_to_player(giver_player_name_lower, f"{self.player.name} declines your offer.")
-        _set_action_roundtime(self.player, 1.0)
+        set_action_roundtime(self.player, 1.0)
 
 @VerbRegistry.register(["cancel"]) 
 class Cancel(BaseVerb):
     """Handles the 'cancel' command to retract an offer."""
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
         
         giver_key = self.player.name.lower()
@@ -426,7 +425,7 @@ class Cancel(BaseVerb):
         else:
             self.player.send_message("You have no active offers to cancel.")
             
-        _set_action_roundtime(self.player, 1.0)
+        set_action_roundtime(self.player, 1.0)
 
 @VerbRegistry.register(["exchange"]) 
 class Exchange(BaseVerb):
@@ -435,7 +434,7 @@ class Exchange(BaseVerb):
     EXCHANGE {item} WITH {player} FOR {silvers} SILVER
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"):
+        if check_action_roundtime(self.player, action_type="other"):
             return
 
         args_str = " ".join(self.args).lower()
@@ -525,4 +524,4 @@ class Exchange(BaseVerb):
             f"'<span class='keyword' data-command='decline'>DECLINE</span>' to decline it. "
             f"The offer will expire in 30 seconds."
         )
-        _set_action_roundtime(self.player, 1.0)
+        set_action_roundtime(self.player, 1.0)

@@ -6,7 +6,6 @@ import random
 import time
 from typing import Tuple, Optional, Dict, Any, Union
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.foraging import _set_action_roundtime
 import uuid
 
 def _find_item_in_hands(player, game_items_data: Dict[str, Any], target_name: str) -> Tuple[Optional[Any], Optional[str]]:

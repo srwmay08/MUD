@@ -1,6 +1,6 @@
 # mud_backend/verbs/whisper.py
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime
 from mud_backend.core.registry import VerbRegistry
 
 @VerbRegistry.register(["whisper"])
@@ -11,7 +11,7 @@ class Whisper(BaseVerb):
     WHISPER GROUP <message>
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="speak"):
+        if check_action_roundtime(self.player, action_type="speak"):
             return
 
         if not self.args:

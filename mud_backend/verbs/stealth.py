@@ -3,8 +3,7 @@ import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime, calculate_skill_bonus, get_stat_bonus
 from mud_backend.core.skill_handler import attempt_skill_learning
 
 @VerbRegistry.register(["hide"])
@@ -16,7 +15,7 @@ class Hide(BaseVerb):
     """
     def execute(self):
         # 1. Check RT
-        if _check_action_roundtime(self.player, action_type="physical"):
+        if check_action_roundtime(self.player, action_type="physical"):
             return
 
         if self.player.is_hidden:
@@ -103,7 +102,7 @@ class Hide(BaseVerb):
             self.player.send_message("You slip into the shadows and are now hidden.")
             
             # Apply RT
-            _set_action_roundtime(self.player, float(rt))
+            set_action_roundtime(self.player, float(rt))
             
             # Broadcast to room (Third person)
             self.world.broadcast_to_room(
@@ -124,7 +123,7 @@ class Hide(BaseVerb):
             self.player.send_message("You attempt to blend with the surroundings, but don't feel very confident about your success.")
             
             # Apply RT
-            _set_action_roundtime(self.player, float(rt))
+            set_action_roundtime(self.player, float(rt))
 
             # Broadcast failure
             self.world.broadcast_to_room(

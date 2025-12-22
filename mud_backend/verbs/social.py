@@ -1,8 +1,8 @@
+# mud_backend/verbs/social.py
 import random
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
-from mud_backend.core.utils import get_stat_bonus
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime, get_stat_bonus
 
 @VerbRegistry.register(["bribe", "threaten", "plead", "flatter"])
 class SocialCombat(BaseVerb):
@@ -19,7 +19,7 @@ class SocialCombat(BaseVerb):
     }
 
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="speak"): return
+        if check_action_roundtime(self.player, action_type="speak"): return
         if not self.args:
             self.player.send_message(f"{self.command.capitalize()} whom?")
             return
@@ -83,7 +83,7 @@ class SocialCombat(BaseVerb):
                 self.player.send_message("They take offense to your threat!")
                 # Trigger combat logic here if desired
 
-        _set_action_roundtime(self.player, 3.0, rt_type="soft")
+        set_action_roundtime(self.player, 3.0, rt_type="soft")
 
 @VerbRegistry.register(["invite"])
 class Invite(BaseVerb):

@@ -3,7 +3,7 @@ import random
 import time
 import math
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.item_utils import get_item_data, find_item_in_inventory, find_item_in_hands
 from typing import Dict, Any
 from mud_backend.core import loot_system
@@ -24,7 +24,7 @@ METAL_PROPERTIES = {
 @VerbRegistry.register(["crush"]) 
 class Crush(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         
         has_hammer = False
         for slot in ["mainhand", "offhand"]:
@@ -65,13 +65,14 @@ class Crush(BaseVerb):
         self.player.worn_items[ore_slot] = metal_props["crushed_id"]
         
         loot_table_id = metal_props["crush_loot"]
-        dropped_items = loot_system.generate_loot_from_table(self.world, loot_table_id)
+        dropped_items = loot_system.generate_loot_from_table(loot_table_id, self.world.game_loot_tables, self.world.game_items)
         
         gem_found = False
         if dropped_items:
-             for item_data in dropped_items: 
-                 item_id = item_data.get("item_id")
-                 if item_id:
+             for item_id in dropped_items: 
+                 # Note: generate_loot_from_table returns list of item IDs
+                 item_data = self.world.game_items.get(item_id)
+                 if item_data:
                      self.player.inventory.append(item_id)
                      self.player.send_message(f"As the ore crumbles, {item_data['name']} falls out!")
                      gem_found = True
@@ -85,12 +86,12 @@ class Crush(BaseVerb):
             self.player.send_message(f"You have gained {nominal_xp} experience from crushing ore.")
             self.player.grant_experience(nominal_xp, source="smithing")
 
-        _set_action_roundtime(self.player, 5.0)
+        set_action_roundtime(self.player, 5.0)
 
 @VerbRegistry.register(["wash"]) 
 class Wash(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         
         ore_ref, ore_slot = find_item_in_hands(self.player, self.world.game_items, "ore")
         if not ore_ref:
@@ -121,13 +122,13 @@ class Wash(BaseVerb):
         self.player.send_message(f"You have gained {xp} experience from washing ore.")
         self.player.grant_experience(xp, source="smithing")
         
-        _set_action_roundtime(self.player, 8.0)
+        set_action_roundtime(self.player, 8.0)
 
 @VerbRegistry.register(["charge"]) 
 class Charge(BaseVerb):
     """CHARGE FURNACE WITH [ORE/COAL/FLUX/WEAPON]"""
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         if len(self.args) < 2:
             self.player.send_message("Usage: CHARGE FURNACE WITH [ORE|COAL|FLUX|WEAPON]")
             return
@@ -187,12 +188,12 @@ class Charge(BaseVerb):
 
         self.player.worn_items[slot] = None
         self.player.grant_experience(2, source="smithing")
-        _set_action_roundtime(self.player, 4.0)
+        set_action_roundtime(self.player, 4.0)
 
 @VerbRegistry.register(["bellow"]) 
 class Bellow(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         furnace = _find_furnace(self.room)
         if not furnace:
             self.player.send_message("There is no furnace here.")
@@ -204,12 +205,12 @@ class Bellow(BaseVerb):
             state["fuel"] -= 2
         else:
             self.player.send_message("The bellows wheeze, but there is no fuel to burn.")
-        _set_action_roundtime(self.player, 3.0)
+        set_action_roundtime(self.player, 3.0)
 
 @VerbRegistry.register(["vent"]) 
 class Vent(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         furnace = _find_furnace(self.room)
         if not furnace: return
         state = furnace["state"]
@@ -222,12 +223,12 @@ class Vent(BaseVerb):
             self.player.send_message("You close the vents to stifle the fire.")
         else:
             self.player.send_message(f"Vents are currently at {current}%. Usage: VENT OPEN or VENT CLOSE")
-        _set_action_roundtime(self.player, 2.0)
+        set_action_roundtime(self.player, 2.0)
 
 @VerbRegistry.register(["tap"]) 
 class Tap(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         furnace = _find_furnace(self.room)
         if not furnace: return
         state = furnace["state"]
@@ -239,12 +240,12 @@ class Tap(BaseVerb):
             self.player.grant_experience(5, source="smithing")
         else:
             self.player.send_message("You open the tap, but nothing comes out.")
-        _set_action_roundtime(self.player, 6.0)
+        set_action_roundtime(self.player, 6.0)
 
 @VerbRegistry.register(["extract"]) 
 class Extract(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         furnace = _find_furnace(self.room)
         if not furnace: return
         state = furnace["state"]
@@ -282,12 +283,12 @@ class Extract(BaseVerb):
         xp = int(10 * props["xp_mod"])
         self.player.send_message(f"You have gained {xp} experience from extracting the bloom.")
         self.player.grant_experience(xp, source="smithing")
-        _set_action_roundtime(self.player, 10.0)
+        set_action_roundtime(self.player, 10.0)
 
 @VerbRegistry.register(["shingle"]) 
 class Shingle(BaseVerb):
     def execute(self):
-        if _check_action_roundtime(self.player, "other"): return
+        if check_action_roundtime(self.player, "other"): return
         bloom = None
         for obj in self.room.objects:
             if "bloom" in obj.get("keywords", []):
@@ -340,4 +341,4 @@ class Shingle(BaseVerb):
         final_xp = int(base_xp * props["xp_mod"])
         self.player.send_message(f"You have gained {final_xp} experience from forging the ingot.")
         self.player.grant_experience(final_xp, source="smithing")
-        _set_action_roundtime(self.player, 5.0)
+        set_action_roundtime(self.player, 5.0)

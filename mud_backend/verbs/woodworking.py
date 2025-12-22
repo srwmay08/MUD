@@ -2,7 +2,7 @@
 import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.verbs.foraging import _check_action_roundtime, _set_action_roundtime
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.item_utils import get_item_data, find_item_in_hands
 from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.core.registry import VerbRegistry
@@ -20,7 +20,7 @@ class Carve(BaseVerb):
     CARVE <wood> INTO <item>
     """
     def execute(self):
-        if _check_action_roundtime(self.player, action_type="other"): return
+        if check_action_roundtime(self.player, action_type="other"): return
         
         if len(self.args) < 3 or " into " not in " ".join(self.args).lower():
             self.player.send_message("Usage: CARVE <wood item> INTO <result> (e.g., CARVE LOG INTO CLUB)")
@@ -92,4 +92,4 @@ class Carve(BaseVerb):
         self.player.grant_experience(xp, source="crafting")
         self.player.send_message(f"You gain {xp} experience.")
         
-        _set_action_roundtime(self.player, 10.0)
+        set_action_roundtime(self.player, 10.0)
