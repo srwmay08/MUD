@@ -173,16 +173,9 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
         player_obj = new_player_info.get("player_obj") if new_player_info else None
 
         if new_room_id and old_room_id and old_room_id != new_room_id:
-            world.socketio.server.leave_room(sid, old_room_id)
-
-            leave_msg = result_data.get("leave_message")
-            if not leave_msg:
-                leave_msg = "leaves."
-
-            world.broadcast_to_room(old_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> {leave_msg}', "message")
-
-            world.socketio.server.enter_room(sid, new_room_id)
-            world.broadcast_to_room(new_room_id, f'<span class="keyword" data-name="{player_name}">{player_name}</span> arrives.', "message", skip_sid=sid)
+            # MOVEMENT HANDLED BY Player.move_to_room IN game_objects.py
+            # WE ONLY TRIGGER GAME LOGIC HERE
+            
             socketio.start_background_task(_handle_npc_idle_dialogue, world, player_name, new_room_id)
 
             real_active_room = world.get_active_room_safe(new_room_id)
