@@ -1,0 +1,84 @@
+[
+    {
+        "description": {
+            "default": "This is the central hub of the Syndicate of Coin. Desks are piled high with ledgers, and guild agents bustle about. A man at the central desk, the Syndicate Clerk, looks up as you enter. To the east is the door to the secure vaults."
+        },
+        "exits": {
+            "east": "locker_room",
+            "out": "ts_east"
+        },
+        "interior_id": "townhall",
+        "name": "Syndicate Hall",
+        "objects": [
+            {
+                "all_quests_done_message": "The Town Clerk nods. 'Thank you again for your help.'",
+                "description": "A man buried in a mountain of paperwork. He looks stressed but efficient.",
+                "is_npc": true,
+                "keywords": [
+                    "clerk",
+                    "town clerk",
+                    "a town clerk",
+                    "syndicate clerk"
+                ],
+                "name": "a town clerk",
+                "quest_giver_ids": [
+                    "innkeeper_quest_1",
+                    "bank_quest_1"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            },
+            {
+                "description": "A reinforced iron door leading to the town's secure lockers.",
+                "keywords": [
+                    "door",
+                    "vault door",
+                    "vault"
+                ],
+                "name": "vault door",
+                "target_room": "locker_room",
+                "verbs": [
+                    "look",
+                    "ENTER"
+                ]
+            }
+        ],
+        "room_id": "town_hall",
+        "x": 1,
+        "y": 0,
+        "z": 1
+    },
+    {
+        "description": {
+            "default": "A cool, secure room lined with heavy iron lockers. The air smells of stone and cold iron. A Vault Clerk sits behind a caged desk, ready to retrieve your items."
+        },
+        "exits": {
+            "west": "town_hall"
+        },
+        "interior_id": "economy",
+        "name": "Town Hall Vaults",
+        "objects": [
+            {
+                "monster_id": "vault_clerk"
+            },
+            {
+                "description": "Rows of secure storage lockers.",
+                "keywords": [
+                    "lockers",
+                    "locker"
+                ],
+                "name": "iron lockers",
+                "verbs": [
+                    "look"
+                ]
+            }
+        ],
+        "room_id": "locker_room",
+        "x": 2,
+        "y": 0,
+        "z": 1
+    }
+]
