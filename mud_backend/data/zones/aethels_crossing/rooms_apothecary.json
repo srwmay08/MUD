@@ -1,0 +1,38 @@
+[
+    {
+        "description": {
+            "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
+        },
+        "exits": {
+            "out": "ts_southeast"
+        },
+        "interior_id": "apothecary",
+        "name": "The Apothecary",
+        "objects": [
+            {
+                "all_quests_done_message": "The Apothecary is busy at her workbench.",
+                "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile.",
+                "is_npc": true,
+                "keywords": [
+                    "apothecary",
+                    "woman",
+                    "shopkeep",
+                    "an apothecary"
+                ],
+                "name": "an apothecary",
+                "quest_giver_ids": [
+                    "furrier_quest_1"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            }
+        ],
+        "room_id": "apothecary_shop",
+        "x": 2,
+        "y": -1,
+        "z": 0
+    }
+]

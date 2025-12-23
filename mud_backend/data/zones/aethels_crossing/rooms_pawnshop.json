@@ -8,17 +8,17 @@
             "south": "room_1765209796949_629"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
             "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -28,6 +28,7 @@
         "name": "The Pawnshop",
         "objects": [
             {
+                "name": "a pawnbroker",
                 "description": "A shrewd-looking merchant evaluating items with a critical eye.",
                 "keywords": [
                     "pawnbroker",
@@ -35,37 +36,36 @@
                     "broker",
                     "merchant"
                 ],
-                "name": "a pawnbroker",
-                "shop_data": [],
                 "verbs": [
                     "look"
                 ]
             },
             {
+                "name": "Weapon Table",
                 "description": "A sturdy table covered in various weapons.",
                 "keywords": [
                     "table",
                     "weapon",
                     "weapons"
                 ],
-                "name": "Weapon Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
+                "name": "Armor Table",
                 "description": "A reinforced table displaying suits of armor and shields.",
                 "keywords": [
                     "table",
                     "armor",
                     "armors"
                 ],
-                "name": "Armor Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
+                "name": "Arcane Table",
                 "description": "A table glowing with faint magical aura, holding scrolls and strange artifacts.",
                 "keywords": [
                     "table",
@@ -73,44 +73,43 @@
                     "arcane",
                     "scrolls"
                 ],
-                "name": "Arcane Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
+                "name": "Goods Table",
                 "description": "A cluttered table filled with miscellaneous goods.",
                 "keywords": [
                     "table",
                     "misc",
                     "goods"
                 ],
-                "name": "Goods Table",
                 "verbs": [
                     "look"
                 ]
             },
             {
+                "name": "trash bin",
                 "description": "A large bin for disposing of worthless items.",
                 "keywords": [
                     "bin",
                     "trash"
                 ],
-                "name": "trash bin",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "is_item": true,
-                "item_id": "iron_short_sword"
+                "item_id": "iron_short_sword",
+                "is_item": true
             },
             {
-                "is_item": true,
-                "item_id": "iron_dagger"
+                "item_id": "iron_dagger",
+                "is_item": true
             }
         ],
-        "room_id": "room_1765223469151_21",
+        "room_id": "aethels_pawnshop",
         "x": -1,
         "y": -2,
         "z": 0

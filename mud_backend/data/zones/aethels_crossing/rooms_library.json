@@ -1,0 +1,36 @@
+[
+    {
+        "description": {
+            "default": "The smell of old paper and leather fills this quiet, dusty room. Tall shelves stretch up into the shadows, filled with countless books and scrolls. A Librarian sits at a desk, meticulously cataloging new arrivals."
+        },
+        "exits": {
+            "out": "ts_north"
+        },
+        "interior_id": "library",
+        "name": "Library & Archives",
+        "objects": [
+            {
+                "all_quests_done_message": "The Librarian is busy cataloging scrolls.",
+                "description": "A person of indeterminate age, peering at you over a pair of spectacles. They seem to value silence.",
+                "is_npc": true,
+                "keywords": [
+                    "librarian",
+                    "a librarian"
+                ],
+                "name": "a librarian",
+                "quest_giver_ids": [
+                    "elementalist_quest_errand_1"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            }
+        ],
+        "room_id": "library_archives",
+        "x": 0,
+        "y": 1,
+        "z": 1
+    }
+]

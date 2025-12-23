@@ -1,5 +1,6 @@
 [
     {
+        "ambient_events": [],
         "description": {
             "default": "The air of the Golden Market is thick with the competing smells of sea salt, exotic spices, and the nearby sewage channels of the delta. Merchants of every race shout their wares, their stalls crammed together under faded, salt-stained awnings. The murmur of a hundred conversations, haggling, and hushed, dangerous-sounding deals, is constant. In the center, a verdigris-stained bronze statue of a forgotten merchant-prince serves as a perch for gulls and a common meeting spot. Paths, slick with grime and commerce, branch out in all directions."
         },
@@ -13,64 +14,63 @@
             "southwest": "ts_southwest",
             "west": "ts_west"
         },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
         "is_outdoor": true,
+        "is_table": false,
         "name": "The Golden Market",
         "objects": [
             {
-                "item_id": "signet_of_communion",
-                "is_item": true
+                "is_item": true,
+                "item_id": "signet_of_communion"
             },
             {
-                "name": "statue of a merchant-prince",
                 "description": "A verdigris-stained bronze statue of a forgotten merchant-prince, now serving mostly as a perch for gulls. Its base is a common meeting spot for deals both public and private.",
                 "keywords": [
                     "statue",
                     "merchant-prince",
                     "bronze statue"
                 ],
+                "name": "statue of a merchant-prince",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "monster_id": "grizzled_warrior",
-                "is_monster": true
+                "is_monster": true,
+                "monster_id": "grizzled_warrior"
             },
             {
-                "name": "Town Well",
                 "description": "",
                 "keywords": [
                     "town well",
                     "well"
                 ],
+                "name": "Town Well",
+                "target_room": "room_1766106929120_953",
                 "verbs": [
                     "look",
                     "Enter"
-                ],
-                "target_room": "room_1766106929120_953"
+                ]
             }
         ],
         "room_id": "town_square",
         "x": 0,
         "y": 0,
-        "z": 0,
-        "is_table": false,
-        "illumination": 50,
-        "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "hidden_objects": []
+        "z": 0
     },
     {
         "description": {
@@ -343,6 +343,7 @@
         "z": 0
     },
     {
+        "ambient_events": [],
         "description": {
             "default": "You are on the southern end of Ambassador's Row. A small shop with a sign of a mortar and pestle is tucked away here, emanating strange, herbal scents. A dark alley to the east smells strongly of sewage."
         },
@@ -351,45 +352,44 @@
             "northwest": "town_square",
             "west": "ts_south"
         },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
         "is_outdoor": true,
+        "is_table": false,
         "name": "Ambassador's Row (South)",
         "objects": [
             {
-                "name": "shop door",
                 "description": "A small shop door with a sign of a mortar and pestle. This is the Apothecary. You can **ENTER**.",
                 "keywords": [
                     "door",
                     "shop door",
                     "apothecary"
                 ],
+                "name": "shop door",
+                "target_room": "apothecary_shop",
                 "verbs": [
                     "look",
                     "ENTER"
-                ],
-                "target_room": "apothecary_shop"
+                ]
             }
         ],
         "room_id": "ts_southeast",
         "x": 1,
         "y": -1,
-        "z": 0,
-        "is_table": false,
-        "illumination": 50,
-        "flags": {
-            "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
-            "is_pvp": false,
-            "magic_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
-        },
-        "ambient_events": [],
-        "hidden_objects": []
+        "z": 0
     },
     {
         "description": {
@@ -698,29 +698,29 @@
             "west": "room_1765210062586_957"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
         "is_table": false,
         "name": "New Room",
         "objects": [],
         "room_id": "room_1765210061943_198",
         "x": -5,
         "y": -2,
-        "z": 0,
-        "is_outdoor": false
+        "z": 0
     },
     {
         "ambient_events": [],
@@ -1020,33 +1020,33 @@
         },
         "exits": {
             "east": "room_1765210085907_573",
-            "west": "room_1765210085539_116",
-            "north": "room_1765245266833_245"
+            "north": "room_1765245266833_245",
+            "west": "room_1765210085539_116"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
         "is_table": false,
         "name": "New Room",
         "objects": [],
         "room_id": "room_1765210085735_870",
         "x": -8,
         "y": 3,
-        "z": 0,
-        "is_outdoor": false
+        "z": 0
     },
     {
         "ambient_events": [],

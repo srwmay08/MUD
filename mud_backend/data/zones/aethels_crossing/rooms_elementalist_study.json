@@ -1,0 +1,39 @@
+[
+    {
+        "description": {
+            "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
+        },
+        "exits": {
+            "out": "ts_northeast"
+        },
+        "interior_id": "study",
+        "name": "Elementalist's Study",
+        "objects": [
+            {
+                "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'",
+                "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research.",
+                "is_npc": true,
+                "keywords": [
+                    "elementalist",
+                    "trainer",
+                    "an elementalist"
+                ],
+                "name": "an elementalist",
+                "quest_giver_ids": [
+                    "shock_quest_1",
+                    "elementalist_quest_2",
+                    "captain_quest_1"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            }
+        ],
+        "room_id": "elementalist_study",
+        "x": 1,
+        "y": 1,
+        "z": 1
+    }
+]

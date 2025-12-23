@@ -44,31 +44,96 @@ def load_zone():
 
 @app.route('/api/save_batch', methods=['POST'])
 def save_batch():
-    """Saves multiple zone files at once."""
+    """
+    Saves the provided files AND searches all other .json files on disk.
+    If a room_id in the saved data matches a room_id in an unloaded file,
+    the unloaded file is updated to match the new data.
+    """
     payload = request.json
-    updates = payload.get('files', {}) # Dict of filename: room_list
+    incoming_files = payload.get('files', {}) 
     
     results = []
     
-    for filename, rooms in updates.items():
-        if not filename.endswith('.json'): 
-            filename += '.json'
-            
-        safe_path = os.path.normpath(os.path.join(DATA_DIR, filename))
-        if not safe_path.startswith(DATA_DIR): 
-            results.append(f"Skipped {filename} (Invalid path)")
-            continue
-            
-        # Ensure directory exists (for new interiors)
-        os.makedirs(os.path.dirname(safe_path), exist_ok=True)
+    # 1. Collect all updated room definitions into a map { room_id: room_object }
+    #    These are the "master" versions coming from the UI.
+    updated_rooms_map = {}
+    for filename, rooms in incoming_files.items():
+        if isinstance(rooms, list):
+            for room in rooms:
+                if isinstance(room, dict) and 'room_id' in room:
+                    updated_rooms_map[room['room_id']] = room
+
+    # 2. Map normalized paths to incoming content for easy lookup
+    #    This helps us distinguish between "files the user explicitly hit save on"
+    #    and "files on disk we need to check for duplicates".
+    incoming_abs_paths = {}
+    for rel_path, content in incoming_files.items():
+        if not rel_path.endswith('.json'): rel_path += '.json'
+        # Normalize path to handle Windows/Linux slashes correctly
+        abs_path = os.path.normpath(os.path.join(DATA_DIR, rel_path))
+        incoming_abs_paths[abs_path] = content
+
+    # 3. Iterate over EVERY .json file in the data directory (Recursive)
+    all_json_files = glob.glob(os.path.join(DATA_DIR, '**', '*.json'), recursive=True)
+    
+    for filepath in all_json_files:
+        filepath = os.path.normpath(filepath)
         
-        try:
-            # DIRECT OVERWRITE
-            with open(safe_path, 'w', encoding='utf-8') as f:
-                json.dump(rooms, f, indent=4)
-            results.append(f"Saved {filename}")
-        except Exception as e:
-            results.append(f"Error saving {filename}: {str(e)}")
+        # Is this file one of the ones being saved explicitly?
+        if filepath in incoming_abs_paths:
+            # Use the NEW content directly from the request
+            file_content = incoming_abs_paths[filepath]
+            is_explicit_save = True
+        else:
+            # It's an unloaded/other file. Load it from disk to check for ID matches.
+            is_explicit_save = False
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    file_content = json.load(f)
+            except Exception as e:
+                # If we can't read a file (e.g. broken json), skip it
+                print(f"[Warn] Skipping unreadable file {filepath}: {e}")
+                continue
+
+        # We only process files that are lists (Standard Zone Files)
+        # This prevents us from messing up dict-based files like items.json if they happen to look similar
+        if not isinstance(file_content, list):
+            continue
+
+        changes_made = False
+        
+        # 4. Scan rooms in this file
+        for i, room in enumerate(file_content):
+            if not isinstance(room, dict): continue
+            
+            rid = room.get('room_id')
+            
+            # If this room exists in our update map (the data coming from UI)...
+            if rid and rid in updated_rooms_map:
+                new_data = updated_rooms_map[rid]
+                
+                # Check if the file content is actually different
+                if room != new_data:
+                    # OVERWRITE the room in this file with the new data
+                    file_content[i] = new_data
+                    changes_made = True
+        
+        # 5. Write to disk if it was an explicit save OR if we auto-updated a duplicate
+        if is_explicit_save or changes_made:
+            rel_name = os.path.relpath(filepath, DATA_DIR).replace('\\', '/')
+            try:
+                # Ensure directory exists (useful for new files)
+                os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(file_content, f, indent=4)
+                
+                if is_explicit_save:
+                    results.append(f"Saved {rel_name}")
+                else:
+                    results.append(f"Synced duplicate in {rel_name}")
+            except Exception as e:
+                results.append(f"Error saving {rel_name}: {str(e)}")
 
     return jsonify({"results": results})
 

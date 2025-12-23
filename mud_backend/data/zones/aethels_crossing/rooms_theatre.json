@@ -1,0 +1,37 @@
+[
+    {
+        "description": {
+            "default": "You are in a small, open-air theatre. A raised wooden stage stands at one end, surrounded by simple wooden benches. A flamboyantly dressed man, the Theatre Master, is directing a pair of unenthusiastic actors."
+        },
+        "exits": {
+            "out": "ts_west"
+        },
+        "interior_id": "theatre",
+        "name": "The Open-Air Theatre",
+        "objects": [
+            {
+                "all_quests_done_message": "The Theatre Master is busy rehearsing.",
+                "description": "A man in a velvet coat and a feathered cap, waving his arms about dramatically.",
+                "is_npc": true,
+                "keywords": [
+                    "master",
+                    "theatre master",
+                    "a theatre master"
+                ],
+                "name": "a theatre master",
+                "quest_giver_ids": [
+                    "librarian_quest_1"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            }
+        ],
+        "room_id": "theatre",
+        "x": -1,
+        "y": 0,
+        "z": 1
+    }
+]
