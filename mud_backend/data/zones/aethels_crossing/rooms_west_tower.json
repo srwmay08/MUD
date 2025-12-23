@@ -5,7 +5,7 @@
             "default": ""
         },
         "exits": {
-            "out": "room_1764878622020_681",
+            "out": "guildway_gate",
             "south": "room_1765223528062_854",
             "up": "room_1765209676535_272"
         },

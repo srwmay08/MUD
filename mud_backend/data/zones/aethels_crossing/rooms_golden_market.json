@@ -469,7 +469,7 @@
         },
         "exits": {
             "north": "ts_south",
-            "south": "room_1764878622020_681"
+            "south": "guildway_gate"
         },
         "interior_id": "rooms_aethels_crossing",
         "is_outdoor": false,
@@ -550,7 +550,7 @@
                 ]
             }
         ],
-        "room_id": "room_1764878622020_681",
+        "room_id": "guildway_gate",
         "x": 0,
         "y": -3,
         "z": 0
@@ -561,7 +561,7 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1764878622020_681",
+            "east": "guildway_gate",
             "north": "room_1765223469151_21",
             "west": "room_1765210044866_446"
         },
@@ -1525,7 +1525,7 @@
         },
         "exits": {
             "east": "room_1765210101552_929",
-            "west": "room_1764878622020_681"
+            "west": "guildway_gate"
         },
         "flags": {
             "hiding_allowed": true,

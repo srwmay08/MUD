@@ -34,7 +34,7 @@
                     "gate"
                 ],
                 "name": "Guildway Gate",
-                "target_room": "room_1764878622020_681",
+                "target_room": "guildway_gate",
                 "verbs": [
                     "look",
                     "ENTER"
