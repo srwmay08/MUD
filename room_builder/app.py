@@ -18,7 +18,6 @@ def index():
 def list_zones():
     """Lists all zone files recursively."""
     json_files = []
-    # Note: files MUST start with 'rooms_' to be detected
     search_path = os.path.join(DATA_DIR, '**', 'rooms_*.json')
     for filepath in glob.glob(search_path, recursive=True):
         rel_path = os.path.relpath(filepath, DATA_DIR)
@@ -46,24 +45,20 @@ def load_zone():
 def save_batch():
     """Saves multiple zone files at once."""
     payload = request.json
-    updates = payload.get('files', {}) # Dict of filename: room_list
-    
+    updates = payload.get('files', {}) 
     results = []
     
     for filename, rooms in updates.items():
-        if not filename.endswith('.json'): 
-            filename += '.json'
-            
+        if not filename.endswith('.json'): filename += '.json'
         safe_path = os.path.normpath(os.path.join(DATA_DIR, filename))
+        
         if not safe_path.startswith(DATA_DIR): 
             results.append(f"Skipped {filename} (Invalid path)")
             continue
             
-        # Ensure directory exists (for new interiors)
         os.makedirs(os.path.dirname(safe_path), exist_ok=True)
         
         try:
-            # DIRECT OVERWRITE
             with open(safe_path, 'w', encoding='utf-8') as f:
                 json.dump(rooms, f, indent=4)
             results.append(f"Saved {filename}")
@@ -86,43 +81,38 @@ def rename_room():
         return jsonify({"error": "Missing parameters"}), 400
 
     results = []
-    
-    # Scan ALL files recursively
     all_json_files = glob.glob(os.path.join(DATA_DIR, '**', '*.json'), recursive=True)
     
     for filepath in all_json_files:
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = json.load(f)
-        except:
-            continue
+        except: continue
 
         if not isinstance(content, list): continue
         
         changes = False
-        
         for room in content:
             if not isinstance(room, dict): continue
             
-            # 1. Update Definition (if this is the room being renamed)
+            # 1. Update Definition
             if room.get('room_id') == old_id:
                 room['room_id'] = new_id
                 changes = True
             
-            # 2. Update Exits (searching for the old ID in values)
+            # 2. Update Exits
             if 'exits' in room:
                 for direction, target in room['exits'].items():
                     if target == old_id:
                         room['exits'][direction] = new_id
                         changes = True
                         
-            # 3. Update Object Targets (Doors/Portals)
+            # 3. Update Object Targets
             if 'objects' in room:
                 for obj in room['objects']:
                     if obj.get('target_room') == old_id:
                         obj['target_room'] = new_id
                         changes = True
-                    # Check interactions (e.g. { "enter": { "type": "move", "value": "old_id" } })
                     if 'interactions' in obj:
                         for verb, action in obj['interactions'].items():
                             if action.get('type') == 'move' and action.get('value') == old_id:
@@ -142,7 +132,6 @@ def rename_room():
 
 @app.route('/api/assets', methods=['GET'])
 def get_assets():
-    """Aggregates assets for dropdowns."""
     assets = { "monsters": [], "items": [], "nodes": [], "loot_tables": [] }
     
     def scan_assets(pattern, type_key, id_key="id", name_key="name"):
@@ -161,9 +150,9 @@ def get_assets():
 
     scan_assets('**/monsters*.json', 'monsters', 'monster_id')
     scan_assets('**/npcs*.json', 'monsters', 'monster_id')
-    scan_assets('**/items*.json', 'items', 'id', 'name') # Dict based
-    scan_assets('**/nodes.json', 'nodes', 'id', 'name')  # Dict based
-    scan_assets('**/loot*.json', 'loot_tables', 'id', 'name') # Dict based
+    scan_assets('**/items*.json', 'items', 'id', 'name')
+    scan_assets('**/nodes.json', 'nodes', 'id', 'name')
+    scan_assets('**/loot*.json', 'loot_tables', 'id', 'name')
 
     for k in assets: assets[k].sort(key=lambda x: x['name'])
     return jsonify(assets)
