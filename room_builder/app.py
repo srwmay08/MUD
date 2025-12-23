@@ -18,6 +18,7 @@ def index():
 def list_zones():
     """Lists all zone files recursively."""
     json_files = []
+    # Note: files MUST start with 'rooms_' to be detected
     search_path = os.path.join(DATA_DIR, '**', 'rooms_*.json')
     for filepath in glob.glob(search_path, recursive=True):
         rel_path = os.path.relpath(filepath, DATA_DIR)
@@ -43,78 +44,31 @@ def load_zone():
 
 @app.route('/api/save_batch', methods=['POST'])
 def save_batch():
-    """
-    Saves the provided files AND searches all other .json files on disk.
-    If a room_id in the saved data matches a room_id in an unloaded file,
-    the unloaded file is updated to match the new data.
-    """
+    """Saves multiple zone files at once."""
     payload = request.json
-    incoming_files = payload.get('files', {}) 
+    updates = payload.get('files', {}) # Dict of filename: room_list
     
     results = []
     
-    # 1. Collect all updated room definitions into a map { room_id: room_object }
-    updated_rooms_map = {}
-    for filename, rooms in incoming_files.items():
-        if isinstance(rooms, list):
-            for room in rooms:
-                if isinstance(room, dict) and 'room_id' in room:
-                    updated_rooms_map[room['room_id']] = room
-
-    # 2. Map normalized paths to incoming content
-    incoming_abs_paths = {}
-    for rel_path, content in incoming_files.items():
-        if not rel_path.endswith('.json'): rel_path += '.json'
-        abs_path = os.path.normpath(os.path.join(DATA_DIR, rel_path))
-        incoming_abs_paths[abs_path] = content
-
-    # 3. Iterate over EVERY .json file
-    all_json_files = glob.glob(os.path.join(DATA_DIR, '**', '*.json'), recursive=True)
-    
-    for filepath in all_json_files:
-        filepath = os.path.normpath(filepath)
-        
-        if filepath in incoming_abs_paths:
-            file_content = incoming_abs_paths[filepath]
-            is_explicit_save = True
-        else:
-            is_explicit_save = False
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    file_content = json.load(f)
-            except:
-                continue
-
-        if not isinstance(file_content, list): continue
-
-        changes_made = False
-        
-        # 4. Scan rooms in this file
-        for i, room in enumerate(file_content):
-            if not isinstance(room, dict): continue
+    for filename, rooms in updates.items():
+        if not filename.endswith('.json'): 
+            filename += '.json'
             
-            rid = room.get('room_id')
+        safe_path = os.path.normpath(os.path.join(DATA_DIR, filename))
+        if not safe_path.startswith(DATA_DIR): 
+            results.append(f"Skipped {filename} (Invalid path)")
+            continue
             
-            # If this room exists in our update map...
-            if rid and rid in updated_rooms_map:
-                new_data = updated_rooms_map[rid]
-                if room != new_data:
-                    file_content[i] = new_data
-                    changes_made = True
+        # Ensure directory exists (for new interiors)
+        os.makedirs(os.path.dirname(safe_path), exist_ok=True)
         
-        # 5. Write to disk
-        if is_explicit_save or changes_made:
-            rel_name = os.path.relpath(filepath, DATA_DIR).replace('\\', '/')
-            try:
-                os.makedirs(os.path.dirname(filepath), exist_ok=True)
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(file_content, f, indent=4)
-                if is_explicit_save:
-                    results.append(f"Saved {rel_name}")
-                else:
-                    results.append(f"Synced duplicate in {rel_name}")
-            except Exception as e:
-                results.append(f"Error saving {rel_name}: {str(e)}")
+        try:
+            # DIRECT OVERWRITE
+            with open(safe_path, 'w', encoding='utf-8') as f:
+                json.dump(rooms, f, indent=4)
+            results.append(f"Saved {filename}")
+        except Exception as e:
+            results.append(f"Error saving {filename}: {str(e)}")
 
     return jsonify({"results": results})
 
@@ -133,7 +87,7 @@ def rename_room():
 
     results = []
     
-    # Scan ALL files
+    # Scan ALL files recursively
     all_json_files = glob.glob(os.path.join(DATA_DIR, '**', '*.json'), recursive=True)
     
     for filepath in all_json_files:
@@ -150,16 +104,16 @@ def rename_room():
         for room in content:
             if not isinstance(room, dict): continue
             
-            # 1. Update Definition
+            # 1. Update Definition (if this is the room being renamed)
             if room.get('room_id') == old_id:
                 room['room_id'] = new_id
                 changes = True
             
-            # 2. Update Exits
+            # 2. Update Exits (searching for the old ID in values)
             if 'exits' in room:
-                for dir, target in room['exits'].items():
+                for direction, target in room['exits'].items():
                     if target == old_id:
-                        room['exits'][dir] = new_id
+                        room['exits'][direction] = new_id
                         changes = True
                         
             # 3. Update Object Targets (Doors/Portals)
@@ -168,7 +122,7 @@ def rename_room():
                     if obj.get('target_room') == old_id:
                         obj['target_room'] = new_id
                         changes = True
-                    # Check interactions
+                    # Check interactions (e.g. { "enter": { "type": "move", "value": "old_id" } })
                     if 'interactions' in obj:
                         for verb, action in obj['interactions'].items():
                             if action.get('type') == 'move' and action.get('value') == old_id:
@@ -188,6 +142,7 @@ def rename_room():
 
 @app.route('/api/assets', methods=['GET'])
 def get_assets():
+    """Aggregates assets for dropdowns."""
     assets = { "monsters": [], "items": [], "nodes": [], "loot_tables": [] }
     
     def scan_assets(pattern, type_key, id_key="id", name_key="name"):
@@ -206,9 +161,9 @@ def get_assets():
 
     scan_assets('**/monsters*.json', 'monsters', 'monster_id')
     scan_assets('**/npcs*.json', 'monsters', 'monster_id')
-    scan_assets('**/items*.json', 'items', 'id', 'name') 
-    scan_assets('**/nodes.json', 'nodes', 'id', 'name')  
-    scan_assets('**/loot*.json', 'loot_tables', 'id', 'name') 
+    scan_assets('**/items*.json', 'items', 'id', 'name') # Dict based
+    scan_assets('**/nodes.json', 'nodes', 'id', 'name')  # Dict based
+    scan_assets('**/loot*.json', 'loot_tables', 'id', 'name') # Dict based
 
     for k in assets: assets[k].sort(key=lambda x: x['name'])
     return jsonify(assets)

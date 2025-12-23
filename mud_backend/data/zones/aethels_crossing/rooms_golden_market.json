@@ -15,17 +15,17 @@
             "west": "ts_west"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -34,37 +34,37 @@
         "name": "The Golden Market",
         "objects": [
             {
-                "item_id": "signet_of_communion",
-                "is_item": true
+                "is_item": true,
+                "item_id": "signet_of_communion"
             },
             {
-                "name": "statue of a merchant-prince",
                 "description": "A verdigris-stained bronze statue of a forgotten merchant-prince, now serving mostly as a perch for gulls. Its base is a common meeting spot for deals both public and private.",
                 "keywords": [
                     "statue",
                     "merchant-prince",
                     "bronze statue"
                 ],
+                "name": "statue of a merchant-prince",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "monster_id": "grizzled_warrior",
-                "is_monster": true
+                "is_monster": true,
+                "monster_id": "grizzled_warrior"
             },
             {
-                "name": "Town Well",
                 "description": "",
                 "keywords": [
                     "town well",
                     "well"
                 ],
+                "name": "Town Well",
+                "target_room": "town_well",
                 "verbs": [
                     "look",
                     "ENTER"
-                ],
-                "target_room": "town_well"
+                ]
             }
         ],
         "room_id": "town_square",

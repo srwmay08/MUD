@@ -60,20 +60,20 @@
         },
         "exits": {
             "northwest": "room_1766107073364_416",
-            "southwest": "room_1766106929120_953"
+            "southwest": "town_well"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": true,
-            "is_pvp": false,
-            "is_sanctuary": true,
             "is_super_node": false,
+            "is_sanctuary": true,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -83,26 +83,39 @@
         "name": "Town Well - East",
         "objects": [
             {
+                "name": "Town Well",
                 "description": "The circular stone wall is waist-high and worn smooth on the rim from daily use. The <span class=\"keyword\" data-name=\"wooden windlass\" data-verbs=\"look,turn,crank\">windlass</span> mechanism is mounted here, with a sturdy hemp rope coiled tightly around the drum before plunging down the center of the shaft.",
+                "keywords": [
+                    "town well",
+                    "well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
                 "interactions": {
                     "Climb": {
                         "type": "move",
                         "value": "well_bottom"
                     }
-                },
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "name": "Town Well",
-                "verbs": [
-                    "look",
-                    "Climb"
-                ]
+                }
             },
             {
-                "description": "The windlass is old but sturdy, wrapped in rough hemp rope. A heavy iron bucket hangs from the end, ready to be lowered into the dark water below.",
                 "hidden": true,
+                "perception_dc": 1,
+                "name": "wooden windlass",
+                "description": "The windlass is old but sturdy, wrapped in rough hemp rope. A heavy iron bucket hangs from the end, ready to be lowered into the dark water below.",
+                "keywords": [
+                    "windlass",
+                    "handle",
+                    "crank",
+                    "mechanism"
+                ],
+                "verbs": [
+                    "look",
+                    "crank",
+                    "turn"
+                ],
                 "interactions": {
                     "crank": {
                         "type": "script",
@@ -112,30 +125,17 @@
                         "type": "script",
                         "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.', skip_player=True); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
                     }
-                },
-                "keywords": [
-                    "windlass",
-                    "handle",
-                    "crank",
-                    "mechanism"
-                ],
-                "name": "wooden windlass",
-                "perception_dc": 1,
-                "verbs": [
-                    "look",
-                    "turn",
-                    "crank"
-                ]
+                }
             },
             {
-                "description": "The heavy rope is coiled around the windlass drum before plunging down the center of the shaft. The fibers are thick and taut; it would make for a stable, albeit damp, climbing line for anyone brave enough to descend.",
                 "hidden": true,
+                "perception_dc": 1,
+                "name": "a rope",
+                "description": "The heavy rope is coiled around the windlass drum before plunging down the center of the shaft. The fibers are thick and taut; it would make for a stable, albeit damp, climbing line for anyone brave enough to descend.",
                 "keywords": [
                     "rope",
                     "hemp rope"
                 ],
-                "name": "a rope",
-                "perception_dc": 1,
                 "verbs": [
                     "look"
                 ]
@@ -293,20 +293,20 @@
         },
         "exits": {
             "northeast": "room_1766107073364_416",
-            "southeast": "room_1766106929120_953"
+            "southeast": "town_well"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": true,
-            "is_pvp": false,
-            "is_sanctuary": true,
             "is_super_node": false,
+            "is_sanctuary": true,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -316,25 +316,36 @@
         "name": "Town Well - West",
         "objects": [
             {
+                "name": "Town Well",
                 "description": "",
+                "keywords": [
+                    "town well",
+                    "well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
                 "interactions": {
                     "Climb": {
                         "type": "move",
                         "value": "well_bottom"
                     }
-                },
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "name": "Town Well",
-                "verbs": [
-                    "look",
-                    "Climb"
-                ]
+                }
             },
             {
+                "name": "a bench",
                 "description": "A nice stone bench.",
+                "keywords": [
+                    "bench"
+                ],
+                "verbs": [
+                    "look",
+                    "look at",
+                    "look behind",
+                    "look on",
+                    "look under"
+                ],
                 "interactions": {
                     "look at": {
                         "type": "text",
@@ -352,22 +363,11 @@
                         "type": "text",
                         "value": "The grass is growing up the legs of the bench, the gardners seem to have missed this bench when tending to the area."
                     }
-                },
-                "keywords": [
-                    "bench"
-                ],
-                "name": "a bench",
-                "verbs": [
-                    "look",
-                    "look on",
-                    "look at",
-                    "look under",
-                    "look behind"
-                ]
+                }
             },
             {
-                "is_item": true,
-                "item_id": "iron_dagger"
+                "item_id": "iron_dagger",
+                "is_item": true
             }
         ],
         "room_id": "room_1766107074505_244",
