@@ -205,6 +205,7 @@
                                 <input type="text" id="room_id" class="form-input text-amber-500 font-bold" oninput="updateRoomData()">
                                 <button onclick="globalRename()" class="btn btn-neutral text-xs px-2" title="Rename ID Everywhere (Files, Exits, etc.)">Rename</button>
                             </div>
+                            <div id="original-id-display" class="text-[9px] text-gray-500 mt-1 font-mono hidden"></div>
                         </div>
                         <div>
                             <label class="form-label">Name</label>
@@ -508,20 +509,31 @@
         } catch(e) { console.error("Asset load failed", e); }
     }
 
-    // --- RENAME LOGIC ADDED HERE ---
+    // --- RENAME LOGIC ---
     window.globalRename = async function() {
         if (!activeRoom) return;
         const r = getActiveRoomObj();
-        const oldId = r.room_id;
         
-        const newId = prompt(`Rename ${oldId} globally to:`, oldId);
-        if (!newId || newId === oldId) return;
+        // Use stored original ID to know what to search for on disk
+        const oldId = activeRoom.originalId || r.room_id;
         
+        // Get the NEW ID from the input box (which triggered updateRoomData)
+        const newId = document.getElementById('room_id').value.trim();
+        
+        if (!newId || newId === oldId) {
+            alert("Please type a new ID in the 'Room ID' box first.");
+            return;
+        }
+        
+        if (!confirm(`Rename room globally?\n\nFROM: ${oldId}\nTO:   ${newId}\n\nThis will update all files.`)) return;
+
         // Optimistic update in UI
         r.room_id = newId;
-        document.getElementById('room_id').value = newId;
+        // Update local tracking so we don't accidentally rename again with the old ID
+        activeRoom.originalId = newId; 
+        document.getElementById('original-id-display').innerText = `Saved ID: ${newId}`;
         
-        // Update links in loaded zones
+        // Also update any loaded rooms that link to the OLD ID
         Object.values(projectData).forEach(zone => {
             zone.rooms.forEach(otherRoom => {
                 // Update exits
@@ -542,7 +554,7 @@
             });
         });
 
-        // Send to backend
+        // Send to backend for disk search/replace
         try {
             const res = await fetch('/api/rename_room', {
                 method: 'POST',
@@ -605,11 +617,17 @@
         activeRoom = { file: filename, index: index };
         const room = projectData[filename].rooms[index];
         
+        // Track the original ID when loading
+        activeRoom.originalId = room.room_id;
+
         document.getElementById('no-selection').classList.add('hidden');
         document.getElementById('room-editor').classList.remove('hidden');
         
         // Basic Fields
         document.getElementById('room_id').value = room.room_id;
+        document.getElementById('original-id-display').innerText = `Saved ID: ${room.room_id}`;
+        document.getElementById('original-id-display').classList.remove('hidden');
+
         document.getElementById('name').value = room.name;
         document.getElementById('x').value = room.x;
         document.getElementById('y').value = room.y;
