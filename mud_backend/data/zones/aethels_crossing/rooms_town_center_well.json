@@ -63,17 +63,17 @@
             "southwest": "room_1766106929120_953"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": true,
-            "is_super_node": false,
-            "is_sanctuary": true,
             "is_pvp": false,
+            "is_sanctuary": true,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -83,59 +83,59 @@
         "name": "Town Well - East",
         "objects": [
             {
-                "name": "Town Well",
                 "description": "The circular stone wall is waist-high and worn smooth on the rim from daily use. The <span class=\"keyword\" data-name=\"wooden windlass\" data-verbs=\"look,turn,crank\">windlass</span> mechanism is mounted here, with a sturdy hemp rope coiled tightly around the drum before plunging down the center of the shaft.",
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "verbs": [
-                    "look",
-                    "Climb"
-                ],
                 "interactions": {
                     "Climb": {
                         "type": "move",
                         "value": "well_bottom"
                     }
-                }
+                },
+                "keywords": [
+                    "town well",
+                    "well"
+                ],
+                "name": "Town Well",
+                "verbs": [
+                    "look",
+                    "Climb"
+                ]
             },
             {
-                "hidden": true,
-                "perception_dc": 1,
-                "name": "wooden windlass",
                 "description": "The windlass is old but sturdy, wrapped in rough hemp rope. A heavy iron bucket hangs from the end, ready to be lowered into the dark water below.",
+                "hidden": true,
+                "interactions": {
+                    "crank": {
+                        "type": "script",
+                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.', skip_player=True); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
+                    },
+                    "turn": {
+                        "type": "script",
+                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.', skip_player=True); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
+                    }
+                },
                 "keywords": [
                     "windlass",
                     "handle",
                     "crank",
                     "mechanism"
                 ],
+                "name": "wooden windlass",
+                "perception_dc": 1,
                 "verbs": [
                     "look",
                     "turn",
                     "crank"
-                ],
-                "interactions": {
-                    "turn": {
-                        "type": "script",
-                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.', skip_player=True); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
-                    },
-                    "crank": {
-                        "type": "script",
-                        "value": "echo('You grasp the rough handle and begin to turn the heavy windlass. The rope creaks as the bucket descends...'); echo_room(f'{player.name} turns the windlass of the well, the chain creaking loudly.', skip_player=True); give_item('fresh_water'); echo('You carefully retrieve a flask of fresh water from the bucket.');"
-                    }
-                }
+                ]
             },
             {
-                "hidden": true,
-                "perception_dc": 1,
-                "name": "a rope",
                 "description": "The heavy rope is coiled around the windlass drum before plunging down the center of the shaft. The fibers are thick and taut; it would make for a stable, albeit damp, climbing line for anyone brave enough to descend.",
+                "hidden": true,
                 "keywords": [
                     "rope",
                     "hemp rope"
                 ],
+                "name": "a rope",
+                "perception_dc": 1,
                 "verbs": [
                     "look"
                 ]
@@ -156,17 +156,17 @@
             "southwest": "room_1766107074505_244"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": true,
-            "is_super_node": false,
-            "is_sanctuary": true,
             "is_pvp": false,
+            "is_sanctuary": true,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [
             {
@@ -200,38 +200,28 @@
         "name": "Town Well - North",
         "objects": [
             {
-                "hidden": true,
-                "perception_dc": 1,
-                "name": "Town Well",
                 "description": "",
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "verbs": [
-                    "look",
-                    "look at"
-                ],
+                "hidden": true,
                 "interactions": {
                     "look at": {
                         "type": "text",
                         "value": "The well is a fortress of water storage. On this side, the grey stones are slick with green moss and stained black by coal dust. Heavy timber beams hold up the shingled roof, shielding the shaft where a thick <span class=\"keyword\" data-name=\"a rope\" data-verbs=\"look,climb,look at\">rope</span> hangs down into the darkness."
                     }
-                }
-            },
-            {
-                "hidden": true,
-                "perception_dc": 1,
-                "name": "a rope",
-                "description": "",
+                },
                 "keywords": [
-                    "rope"
+                    "town well",
+                    "well"
                 ],
+                "name": "Town Well",
+                "perception_dc": 1,
                 "verbs": [
                     "look",
-                    "climb",
                     "look at"
-                ],
+                ]
+            },
+            {
+                "description": "",
+                "hidden": true,
                 "interactions": {
                     "climb": {
                         "type": "move",
@@ -241,44 +231,54 @@
                         "type": "text",
                         "value": "A thick, braided hemp rope hangs from the central windlass beam, disappearing into the pitch-black depth of the well. It looks thick and incredibly sturdy\u2014easily strong enough to hold the weight of a fully armored adventurer if one were to climb down."
                     }
-                }
+                },
+                "keywords": [
+                    "rope"
+                ],
+                "name": "a rope",
+                "perception_dc": 1,
+                "verbs": [
+                    "look",
+                    "climb",
+                    "look at"
+                ]
             },
             {
-                "hidden": true,
-                "perception_dc": 1,
-                "name": "an iron-bound oak bench",
                 "description": "A utilitarian bench reinforced with iron bands. The wood is dark, absorbing the moisture from the well\u2019s shadow.",
+                "hidden": true,
+                "interactions": {
+                    "look at": {
+                        "type": "text",
+                        "value": "A utilitarian bench reinforced with iron bands. The wood is dark, absorbing the moisture from the well\u2019s shadow."
+                    },
+                    "look behind": {
+                        "type": "text",
+                        "value": "The gap is choked with damp debris: a pile of grey ash and a twisted scrap of rusted metal."
+                    },
+                    "look on": {
+                        "type": "text",
+                        "value": "A mixture of fine coal dust and dried flakes of moss covers the seat. It looks dirty and uninviting."
+                    },
+                    "look under": {
+                        "type": "text",
+                        "value": "Wedged against the back leg in the deep shadow is a flattened piece of copper wire pressed into the dirt."
+                    }
+                },
                 "keywords": [
                     "bench",
                     "oak bench",
                     "iron-bound oak bench",
                     "iron-bound bench"
                 ],
+                "name": "an iron-bound oak bench",
+                "perception_dc": 1,
                 "verbs": [
                     "look",
                     "look at",
                     "look on",
                     "look behind",
                     "look under"
-                ],
-                "interactions": {
-                    "look at": {
-                        "type": "text",
-                        "value": "A utilitarian bench reinforced with iron bands. The wood is dark, absorbing the moisture from the well\u2019s shadow."
-                    },
-                    "look on": {
-                        "type": "text",
-                        "value": "A mixture of fine coal dust and dried flakes of moss covers the seat. It looks dirty and uninviting."
-                    },
-                    "look behind": {
-                        "type": "text",
-                        "value": "The gap is choked with damp debris: a pile of grey ash and a twisted scrap of rusted metal."
-                    },
-                    "look under": {
-                        "type": "text",
-                        "value": "Wedged against the back leg in the deep shadow is a flattened piece of copper wire pressed into the dirt."
-                    }
-                }
+                ]
             }
         ],
         "room_id": "room_1766107073364_416",

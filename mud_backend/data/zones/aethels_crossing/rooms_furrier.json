@@ -1,0 +1,56 @@
+[
+    {
+        "description": {
+            "default": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter."
+        },
+        "exits": {
+            "out": "ts_southwest"
+        },
+        "interior_id": "furrier",
+        "name": "The Furrier's Shop",
+        "objects": [
+            {
+                "all_quests_done_message": "The Furrier is busy skinning a pelt.",
+                "description": "A grizzled man skinning a small animal. He looks like he's seen better days.",
+                "is_npc": true,
+                "keywords": [
+                    "furrier",
+                    "man",
+                    "shopkeep",
+                    "grizzled furrier"
+                ],
+                "name": "a grizzled furrier",
+                "quest_giver_ids": [
+                    "blacksmith_quest_1"
+                ],
+                "shop_data": {
+                    "inventory": [],
+                    "type": "furrier",
+                    "will_buy": [
+                        "pelt_ruined",
+                        "monster_claw",
+                        "viridian_leaf",
+                        "althion_stem",
+                        "orc_ear",
+                        "orc_tusk",
+                        "copper_ore",
+                        "ash_wood",
+                        "river_fish"
+                    ]
+                },
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "list",
+                    "buy",
+                    "sell",
+                    "appraise"
+                ]
+            }
+        ],
+        "room_id": "furrier_shop",
+        "x": -2,
+        "y": -1,
+        "z": 0
+    }
+]

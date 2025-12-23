@@ -1,0 +1,37 @@
+[
+    {
+        "description": {
+            "default": "The barracks is a functional, spartan room filled with weapon racks and training dummies. Recruits are being shouted at in a yard visible through a western window. The Guard Captain stands at a table, reviewing a map."
+        },
+        "exits": {
+            "out": "ts_northeast"
+        },
+        "interior_id": "barracks",
+        "name": "City Barracks",
+        "objects": [
+            {
+                "all_quests_done_message": "The Guard Captain is busy shouting at recruits.",
+                "description": "A tall, no-nonsense woman in polished chainmail. She looks up from her map with a stern expression.",
+                "is_npc": true,
+                "keywords": [
+                    "captain",
+                    "guard captain",
+                    "a guard captain"
+                ],
+                "name": "a guard captain",
+                "quest_giver_ids": [
+                    "priest_quest_errand_1"
+                ],
+                "verbs": [
+                    "look",
+                    "talk to",
+                    "give"
+                ]
+            }
+        ],
+        "room_id": "barracks",
+        "x": 2,
+        "y": 1,
+        "z": 0
+    }
+]

@@ -1,0 +1,118 @@
+[
+    {
+        "ambient_events": [],
+        "description": {
+            "default": "You are in a cluttered pawnshop. The air smells of dust and old metal. Display tables are arranged around the room, laden with goods. To the south is the exit back to the street. A trash bin sits in the corner for unwanted items."
+        },
+        "exits": {
+            "south": "room_1765209796949_629"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "hidden_objects": [],
+        "illumination": 50,
+        "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "The Pawnshop",
+        "objects": [
+            {
+                "description": "A shrewd-looking merchant evaluating items with a critical eye.",
+                "keywords": [
+                    "pawnbroker",
+                    "shopkeep",
+                    "broker",
+                    "merchant"
+                ],
+                "name": "a pawnbroker",
+                "shop_data": [],
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A sturdy table covered in various weapons.",
+                "keywords": [
+                    "table",
+                    "weapon",
+                    "weapons"
+                ],
+                "name": "Weapon Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A reinforced table displaying suits of armor and shields.",
+                "keywords": [
+                    "table",
+                    "armor",
+                    "armors"
+                ],
+                "name": "Armor Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A table glowing with faint magical aura, holding scrolls and strange artifacts.",
+                "keywords": [
+                    "table",
+                    "magic",
+                    "arcane",
+                    "scrolls"
+                ],
+                "name": "Arcane Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A cluttered table filled with miscellaneous goods.",
+                "keywords": [
+                    "table",
+                    "misc",
+                    "goods"
+                ],
+                "name": "Goods Table",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "description": "A large bin for disposing of worthless items.",
+                "keywords": [
+                    "bin",
+                    "trash"
+                ],
+                "name": "trash bin",
+                "verbs": [
+                    "look"
+                ]
+            },
+            {
+                "is_item": true,
+                "item_id": "iron_short_sword"
+            },
+            {
+                "is_item": true,
+                "item_id": "iron_dagger"
+            }
+        ],
+        "room_id": "room_1765223469151_21",
+        "x": -1,
+        "y": -2,
+        "z": 0
+    }
+]

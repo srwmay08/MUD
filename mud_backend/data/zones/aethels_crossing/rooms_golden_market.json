@@ -426,213 +426,6 @@
         "z": 0
     },
     {
-        "description": {
-            "default": "You are in a simple, spartan room at The Broken Sextant. A plain bed, a small table, and a wooden chair are the only furnishings. A single door leads OUT."
-        },
-        "exits": {
-            "out": "inn_front_desk"
-        },
-        "hidden_objects": [
-            {
-                "description": "A folded piece of parchment rests on the table.",
-                "is_item": true,
-                "item_id": "inn_note",
-                "keywords": [
-                    "note",
-                    "parchment",
-                    "a note"
-                ],
-                "name": "a note",
-                "perception_dc": 1,
-                "verbs": [
-                    "GET",
-                    "LOOK",
-                    "TAKE"
-                ]
-            }
-        ],
-        "interior_id": "inn",
-        "name": "A Room at the Sextant",
-        "objects": [
-            {
-                "description": "A simple straw mattress...",
-                "keywords": [
-                    "bed",
-                    "mattress"
-                ],
-                "name": "bed",
-                "perception_dc": 0,
-                "verbs": [
-                    "look",
-                    "investigate"
-                ]
-            },
-            {
-                "description": "Looking out the window, you can see the bustling, grimy south market.",
-                "keywords": [
-                    "window"
-                ],
-                "name": "window",
-                "perception_dc": 0
-            },
-            {
-                "description": "A small, plain wooden table.",
-                "keywords": [
-                    "table"
-                ],
-                "name": "table",
-                "perception_dc": 0,
-                "verbs": [
-                    "look",
-                    "investigate"
-                ]
-            }
-        ],
-        "room_id": "inn_room",
-        "x": 0,
-        "y": -2,
-        "z": 1
-    },
-    {
-        "description": {
-            "default": "The small shop smells strongly of curing chemicals and animal musk. Pelts and claws of dubious origin are piled on a workbench. A grizzled furrier looks up as you enter."
-        },
-        "exits": {
-            "out": "ts_southwest"
-        },
-        "interior_id": "furrier",
-        "name": "The Furrier's Shop",
-        "objects": [
-            {
-                "all_quests_done_message": "The Furrier is busy skinning a pelt.",
-                "description": "A grizzled man skinning a small animal. He looks like he's seen better days.",
-                "is_npc": true,
-                "keywords": [
-                    "furrier",
-                    "man",
-                    "shopkeep",
-                    "grizzled furrier"
-                ],
-                "name": "a grizzled furrier",
-                "quest_giver_ids": [
-                    "blacksmith_quest_1"
-                ],
-                "shop_data": {
-                    "inventory": [],
-                    "type": "furrier",
-                    "will_buy": [
-                        "pelt_ruined",
-                        "monster_claw",
-                        "viridian_leaf",
-                        "althion_stem",
-                        "orc_ear",
-                        "orc_tusk",
-                        "copper_ore",
-                        "ash_wood",
-                        "river_fish"
-                    ]
-                },
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "list",
-                    "buy",
-                    "sell",
-                    "appraise"
-                ]
-            }
-        ],
-        "room_id": "furrier_shop",
-        "x": -2,
-        "y": -1,
-        "z": 0
-    },
-    {
-        "description": {
-            "default": "You are in a grand lobby with a high, vaulted ceiling and a polished marble floor. A long counter of dark, polished wood dominates one wall, protected by armed guards. A banker waits patiently."
-        },
-        "exits": {
-            "out": "ts_west"
-        },
-        "interior_id": "bank",
-        "name": "The Bank of Aethel",
-        "objects": [
-            {
-                "all_quests_done_message": "The banker gives you a crisp, professional nod.",
-                "description": "A sharply-dressed banker stands behind the counter, ready to assist you.",
-                "is_npc": true,
-                "keywords": [
-                    "teller",
-                    "banker",
-                    "a banker"
-                ],
-                "name": "a banker",
-                "quest_giver_ids": [
-                    "theatre_quest_1"
-                ],
-                "verbs": [
-                    "deposit",
-                    "withdraw",
-                    "balance",
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            },
-            {
-                "description": "A long, polished counter of dark wood.",
-                "keywords": [
-                    "counter"
-                ],
-                "name": "counter",
-                "verbs": [
-                    "look"
-                ]
-            }
-        ],
-        "room_id": "bank_lobby",
-        "x": -2,
-        "y": 0,
-        "z": 0
-    },
-    {
-        "description": {
-            "default": "This small study is filled with crackling energy. Books line the walls and strange contraptions hiss and spark on a workbench. A stern-looking elementalist watches you enter."
-        },
-        "exits": {
-            "out": "ts_northeast"
-        },
-        "interior_id": "study",
-        "name": "Elementalist's Study",
-        "objects": [
-            {
-                "all_quests_done_message": "The elementalist scoffs. 'I have no more time for apprentices. Be gone.'",
-                "description": "A stern-looking elementalist with crackling energy around their fingertips. They seem focused on their research.",
-                "is_npc": true,
-                "keywords": [
-                    "elementalist",
-                    "trainer",
-                    "an elementalist"
-                ],
-                "name": "an elementalist",
-                "quest_giver_ids": [
-                    "shock_quest_1",
-                    "elementalist_quest_2",
-                    "captain_quest_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            }
-        ],
-        "room_id": "elementalist_study",
-        "x": 1,
-        "y": 1,
-        "z": 1
-    },
-    {
         "ambient_events": [],
         "description": {
             "default": "The smell of salt and fish is strong here. A sturdy stone gatehouse marks the southern exit back to the market. The docks spread out to the north, bustling with sailors and dockhands. A town guardsman stands watch here. A path leads east into a quiet clearing."
@@ -669,228 +462,6 @@
         "x": 0,
         "y": 2,
         "z": 0
-    },
-    {
-        "description": {
-            "default": "This is the central hub of the Syndicate of Coin. Desks are piled high with ledgers, and guild agents bustle about. A man at the central desk, the Syndicate Clerk, looks up as you enter. To the east is the door to the secure vaults."
-        },
-        "exits": {
-            "east": "locker_room",
-            "out": "ts_east"
-        },
-        "interior_id": "townhall",
-        "name": "Syndicate Hall",
-        "objects": [
-            {
-                "all_quests_done_message": "The Town Clerk nods. 'Thank you again for your help.'",
-                "description": "A man buried in a mountain of paperwork. He looks stressed but efficient.",
-                "is_npc": true,
-                "keywords": [
-                    "clerk",
-                    "town clerk",
-                    "a town clerk",
-                    "syndicate clerk"
-                ],
-                "name": "a town clerk",
-                "quest_giver_ids": [
-                    "innkeeper_quest_1",
-                    "bank_quest_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            },
-            {
-                "description": "A reinforced iron door leading to the town's secure lockers.",
-                "keywords": [
-                    "door",
-                    "vault door",
-                    "vault"
-                ],
-                "name": "vault door",
-                "target_room": "locker_room",
-                "verbs": [
-                    "look",
-                    "ENTER"
-                ]
-            }
-        ],
-        "room_id": "town_hall",
-        "x": 1,
-        "y": 0,
-        "z": 1
-    },
-    {
-        "description": {
-            "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
-        },
-        "exits": {
-            "out": "ts_southeast"
-        },
-        "interior_id": "apothecary",
-        "name": "The Apothecary",
-        "objects": [
-            {
-                "all_quests_done_message": "The Apothecary is busy at her workbench.",
-                "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile.",
-                "is_npc": true,
-                "keywords": [
-                    "apothecary",
-                    "woman",
-                    "shopkeep",
-                    "an apothecary"
-                ],
-                "name": "an apothecary",
-                "quest_giver_ids": [
-                    "furrier_quest_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            }
-        ],
-        "room_id": "apothecary_shop",
-        "x": 2,
-        "y": -1,
-        "z": 0
-    },
-    {
-        "description": {
-            "default": "The barracks is a functional, spartan room filled with weapon racks and training dummies. Recruits are being shouted at in a yard visible through a western window. The Guard Captain stands at a table, reviewing a map."
-        },
-        "exits": {
-            "out": "ts_northeast"
-        },
-        "interior_id": "barracks",
-        "name": "City Barracks",
-        "objects": [
-            {
-                "all_quests_done_message": "The Guard Captain is busy shouting at recruits.",
-                "description": "A tall, no-nonsense woman in polished chainmail. She looks up from her map with a stern expression.",
-                "is_npc": true,
-                "keywords": [
-                    "captain",
-                    "guard captain",
-                    "a guard captain"
-                ],
-                "name": "a guard captain",
-                "quest_giver_ids": [
-                    "priest_quest_errand_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            }
-        ],
-        "room_id": "barracks",
-        "x": 2,
-        "y": 1,
-        "z": 0
-    },
-    {
-        "description": {
-            "default": "The smell of old paper and leather fills this quiet, dusty room. Tall shelves stretch up into the shadows, filled with countless books and scrolls. A Librarian sits at a desk, meticulously cataloging new arrivals."
-        },
-        "exits": {
-            "out": "ts_north"
-        },
-        "interior_id": "library",
-        "name": "Library & Archives",
-        "objects": [
-            {
-                "all_quests_done_message": "The Librarian is busy cataloging scrolls.",
-                "description": "A person of indeterminate age, peering at you over a pair of spectacles. They seem to value silence.",
-                "is_npc": true,
-                "keywords": [
-                    "librarian",
-                    "a librarian"
-                ],
-                "name": "a librarian",
-                "quest_giver_ids": [
-                    "elementalist_quest_errand_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            }
-        ],
-        "room_id": "library_archives",
-        "x": 0,
-        "y": 1,
-        "z": 1
-    },
-    {
-        "description": {
-            "default": "You are in a small, open-air theatre. A raised wooden stage stands at one end, surrounded by simple wooden benches. A flamboyantly dressed man, the Theatre Master, is directing a pair of unenthusiastic actors."
-        },
-        "exits": {
-            "out": "ts_west"
-        },
-        "interior_id": "theatre",
-        "name": "The Open-Air Theatre",
-        "objects": [
-            {
-                "all_quests_done_message": "The Theatre Master is busy rehearsing.",
-                "description": "A man in a velvet coat and a feathered cap, waving his arms about dramatically.",
-                "is_npc": true,
-                "keywords": [
-                    "master",
-                    "theatre master",
-                    "a theatre master"
-                ],
-                "name": "a theatre master",
-                "quest_giver_ids": [
-                    "librarian_quest_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            }
-        ],
-        "room_id": "theatre",
-        "x": -1,
-        "y": 0,
-        "z": 1
-    },
-    {
-        "description": {
-            "default": "A cool, secure room lined with heavy iron lockers. The air smells of stone and cold iron. A Vault Clerk sits behind a caged desk, ready to retrieve your items."
-        },
-        "exits": {
-            "west": "town_hall"
-        },
-        "interior_id": "economy",
-        "name": "Town Hall Vaults",
-        "objects": [
-            {
-                "monster_id": "vault_clerk"
-            },
-            {
-                "description": "Rows of secure storage lockers.",
-                "keywords": [
-                    "lockers",
-                    "locker"
-                ],
-                "name": "iron lockers",
-                "verbs": [
-                    "look"
-                ]
-            }
-        ],
-        "room_id": "locker_room",
-        "x": 2,
-        "y": 0,
-        "z": 1
     },
     {
         "description": {
@@ -1530,35 +1101,6 @@
         "is_table": false,
         "name": "New Room",
         "objects": [],
-        "room_id": "room_1765210086096_29",
-        "x": -6,
-        "y": 3,
-        "z": 0
-    },
-    {
-        "ambient_events": [],
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "east": "room_1765210086440_358",
-            "west": "room_1765210086096_29"
-        },
-        "flags": {
-            "hiding_allowed": true,
-            "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true
-        },
-        "hidden_objects": [],
-        "illumination": 50,
-        "interior_id": "rooms_aethels_crossing",
-        "is_table": false,
-        "name": "New Room",
-        "objects": [],
         "room_id": "room_1765210086267_11",
         "x": -5,
         "y": 3,
@@ -1600,7 +1142,7 @@
         },
         "exits": {
             "east": "room_1765210086785_685",
-            "west": "room_1765210086440_358"
+            "west": "room_1765210086600_406"
         },
         "flags": {
             "hiding_allowed": true,
@@ -1629,35 +1171,6 @@
         },
         "exits": {
             "east": "room_1765210086981_192",
-            "west": "room_1765210086600_406"
-        },
-        "flags": {
-            "hiding_allowed": true,
-            "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true
-        },
-        "hidden_objects": [],
-        "illumination": 50,
-        "interior_id": "rooms_aethels_crossing",
-        "is_table": false,
-        "name": "New Room",
-        "objects": [],
-        "room_id": "room_1765210086785_685",
-        "x": -2,
-        "y": 3,
-        "z": 0
-    },
-    {
-        "ambient_events": [],
-        "description": {
-            "default": ""
-        },
-        "exits": {
-            "east": "room_1765210087153_354",
             "west": "room_1765210086785_685"
         },
         "flags": {
@@ -1686,8 +1199,7 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1765210087355_77",
-            "south": "north_gate",
+            "east": "room_1765210087153_354",
             "west": "room_1765210086981_192"
         },
         "flags": {
@@ -1716,8 +1228,9 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1765210087535_981",
-            "west": "room_1765210087153_354"
+            "east": "room_1765210087355_77",
+            "south": "north_gate",
+            "west": "room_1765210086981_192"
         },
         "flags": {
             "hiding_allowed": true,
@@ -1745,7 +1258,7 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1765210088021_863",
+            "east": "room_1765210087535_981",
             "west": "room_1765210087355_77"
         },
         "flags": {
@@ -1774,7 +1287,7 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1765210088937_945",
+            "east": "room_1765210088021_863",
             "west": "room_1765210087535_981"
         },
         "flags": {
@@ -1803,7 +1316,7 @@
             "default": ""
         },
         "exits": {
-            "south": "room_1765210097409_469",
+            "east": "room_1765210088937_945",
             "west": "room_1765210088021_863"
         },
         "flags": {
@@ -1832,8 +1345,8 @@
             "default": ""
         },
         "exits": {
-            "north": "room_1765210088937_945",
-            "south": "room_1765210097824_549"
+            "south": "room_1765210097409_469",
+            "west": "room_1765210088937_945"
         },
         "flags": {
             "hiding_allowed": true,
@@ -1862,7 +1375,7 @@
         },
         "exits": {
             "north": "room_1765210097409_469",
-            "south": "room_1765210098294_766"
+            "south": "room_1765210097824_549"
         },
         "flags": {
             "hiding_allowed": true,
@@ -1891,7 +1404,7 @@
         },
         "exits": {
             "north": "room_1765210097824_549",
-            "south": "room_1765210099061_116"
+            "south": "room_1765210098294_766"
         },
         "flags": {
             "hiding_allowed": true,
@@ -2027,122 +1540,6 @@
         "room_id": "room_1765210102679_676",
         "x": 1,
         "y": -3,
-        "z": 0
-    },
-    {
-        "ambient_events": [],
-        "description": {
-            "default": "You are in a cluttered pawnshop. The air smells of dust and old metal. Display tables are arranged around the room, laden with goods. To the south is the exit back to the street. A trash bin sits in the corner for unwanted items."
-        },
-        "exits": {
-            "south": "room_1765209796949_629"
-        },
-        "flags": {
-            "hiding_allowed": true,
-            "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
-            "is_super_node": false,
-            "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
-            "stealing_allowed": true,
-            "teleport_in_allowed": true,
-            "teleport_out_allowed": true
-        },
-        "hidden_objects": [],
-        "illumination": 50,
-        "interior_id": "rooms_aethels_crossing",
-        "is_outdoor": false,
-        "is_table": false,
-        "name": "The Pawnshop",
-        "objects": [
-            {
-                "description": "A shrewd-looking merchant evaluating items with a critical eye.",
-                "keywords": [
-                    "pawnbroker",
-                    "shopkeep",
-                    "broker",
-                    "merchant"
-                ],
-                "name": "a pawnbroker",
-                "shop_data": [],
-                "verbs": [
-                    "look"
-                ]
-            },
-            {
-                "description": "A sturdy table covered in various weapons.",
-                "keywords": [
-                    "table",
-                    "weapon",
-                    "weapons"
-                ],
-                "name": "Weapon Table",
-                "verbs": [
-                    "look"
-                ]
-            },
-            {
-                "description": "A reinforced table displaying suits of armor and shields.",
-                "keywords": [
-                    "table",
-                    "armor",
-                    "armors"
-                ],
-                "name": "Armor Table",
-                "verbs": [
-                    "look"
-                ]
-            },
-            {
-                "description": "A table glowing with faint magical aura, holding scrolls and strange artifacts.",
-                "keywords": [
-                    "table",
-                    "magic",
-                    "arcane",
-                    "scrolls"
-                ],
-                "name": "Arcane Table",
-                "verbs": [
-                    "look"
-                ]
-            },
-            {
-                "description": "A cluttered table filled with miscellaneous goods.",
-                "keywords": [
-                    "table",
-                    "misc",
-                    "goods"
-                ],
-                "name": "Goods Table",
-                "verbs": [
-                    "look"
-                ]
-            },
-            {
-                "description": "A large bin for disposing of worthless items.",
-                "keywords": [
-                    "bin",
-                    "trash"
-                ],
-                "name": "trash bin",
-                "verbs": [
-                    "look"
-                ]
-            },
-            {
-                "is_item": true,
-                "item_id": "iron_short_sword"
-            },
-            {
-                "is_item": true,
-                "item_id": "iron_dagger"
-            }
-        ],
-        "room_id": "room_1765223469151_21",
-        "x": -1,
-        "y": -2,
         "z": 0
     },
     {
