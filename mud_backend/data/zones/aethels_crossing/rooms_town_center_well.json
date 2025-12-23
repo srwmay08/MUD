@@ -10,17 +10,17 @@
             "south": "town_square"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": true,
-            "is_pvp": false,
-            "is_sanctuary": true,
             "is_super_node": false,
+            "is_sanctuary": true,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -30,25 +30,25 @@
         "name": "Town Well - South",
         "objects": [
             {
+                "name": "Town Well",
                 "description": "",
+                "keywords": [
+                    "town well",
+                    "well"
+                ],
+                "verbs": [
+                    "look",
+                    "Climb"
+                ],
                 "interactions": {
                     "Climb": {
                         "type": "move",
                         "value": "well_bottom"
                     }
-                },
-                "keywords": [
-                    "town well",
-                    "well"
-                ],
-                "name": "Town Well",
-                "verbs": [
-                    "look",
-                    "Climb"
-                ]
+                }
             }
         ],
-        "room_id": "room_1766106929120_953",
+        "room_id": "town_well",
         "x": -5,
         "y": -1,
         "z": 0
