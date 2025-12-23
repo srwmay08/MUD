@@ -58,21 +58,21 @@
         },
         "exits": {
             "north": "inn_front_desk",
-            "west": "inn_gambling_room",
-            "south": "room_1765137138586_802"
+            "south": "room_1765137138586_802",
+            "west": "inn_gambling_room"
         },
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -82,7 +82,6 @@
         "name": "Common Room",
         "objects": [
             {
-                "name": "The Brass Astrolabe",
                 "description": "A heavy, circular booth tucked near the hearth. In the center of the table, bolted down to prevent theft, is a large brass astrolabe. Its plates are stained with ale, but the intricate star map remains visible, perfect for plotting a course\u2014or a revolution.",
                 "keywords": [
                     "table",
@@ -90,24 +89,24 @@
                     "astrolabe",
                     "brass astrolabe"
                 ],
+                "name": "The Brass Astrolabe",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Rusty Compass",
                 "description": "A rickety table in a drafty corner. Embedded in the wood is a compass that has seen better days; the glass is fogged, and the needle spins lazily in circles, refusing to ever point North. The wood around it is carved with the initials of lost sailors.",
                 "keywords": [
                     "table",
                     "compass",
                     "rusty compass"
                 ],
+                "name": "The Rusty Compass",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Cracked Spyglass",
                 "description": "A high-backed booth offering significant privacy. Mounted on a swivel stand in the center is a long telescope with a spiderweb fracture across the primary lens. Looking through it distorts the taproom into a jagged, kaleidoscope nightmare.",
                 "keywords": [
                     "table",
@@ -116,24 +115,24 @@
                     "cracked spyglass",
                     "telescope"
                 ],
+                "name": "The Cracked Spyglass",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Ticking Chronometer",
                 "description": "This table is undeniably loud. A boxy marine chronometer sits in a glass case in the center, ticking with an aggressive, rhythmic thud that cuts through the tavern noise. It's the perfect table for meetings where time is of the essence.",
                 "keywords": [
                     "table",
                     "chronometer",
                     "ticking chronometer"
                 ],
+                "name": "The Ticking Chronometer",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Weathered Barometer",
                 "description": "A rounded booth smelling of old pipe tobacco. A large banjo-shaped barometer hangs on the pillar next to the table. The needle is stuck permanently on 'Stormy,' which seems fitting given the rowdy clientele usually seated here.",
                 "keywords": [
                     "table",
@@ -141,12 +140,12 @@
                     "barometer",
                     "weathered barometer"
                 ],
+                "name": "The Weathered Barometer",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Iron Loadstone",
                 "description": "A solid oak table that feels strangely heavy. A dark, jagged chunk of magnetic ore sits on a pedestal in the center. Iron tankards slide slightly across the table toward the stone if not held firmly, making for messy spills.",
                 "keywords": [
                     "table",
@@ -154,12 +153,12 @@
                     "iron loadstone",
                     "ore"
                 ],
+                "name": "The Iron Loadstone",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Captain's Quadrant",
                 "description": "The most commanding table in the room, raised slightly on a dais. A decorative quadrant is inlaid into the tabletop in brass and dark wood. Sitting here gives you a clear view of the entrance, just as a captain watches the horizon.",
                 "keywords": [
                     "table",
@@ -167,24 +166,24 @@
                     "captains quadrant",
                     "dais"
                 ],
+                "name": "The Captain's Quadrant",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Heavy Hourglass",
                 "description": "A small, intimate table for two. In the center stands an hourglass nearly two feet tall, filled with black volcanic sand. The sand never seems to run out, trickling endlessly into the bottom bulb no matter how long you watch.",
                 "keywords": [
                     "table",
                     "hourglass",
                     "heavy hourglass"
                 ],
+                "name": "The Heavy Hourglass",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Golden Telescope",
                 "description": "A gaudy booth with velvet cushions that have seen better days. The centerpiece is a telescope plated in flaking gold leaf. It points accusingly at the bar, though the lens cap is rusted shut.",
                 "keywords": [
                     "table",
@@ -192,12 +191,12 @@
                     "telescope",
                     "golden telescope"
                 ],
+                "name": "The Golden Telescope",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "name": "The Copper Binnacle",
                 "description": "This booth is warm and illuminated by the soft glow of a ship's binnacle housing standing at the table's head. The compass inside floats in oil, lit by a small, enclosed flame that casts dancing shadows on the faces of those seated there.",
                 "keywords": [
                     "table",
@@ -205,6 +204,7 @@
                     "binnacle",
                     "copper binnacle"
                 ],
+                "name": "The Copper Binnacle",
                 "verbs": [
                     "look"
                 ]
@@ -439,34 +439,34 @@
         "z": 0
     },
     {
-        "room_id": "inn_kitchen",
-        "name": "Kitchens",
-        "x": 0,
-        "y": -4,
-        "z": 0,
-        "interior_id": "rooms_broken_sextant",
+        "ambient_events": [],
         "description": {
             "default": ""
         },
         "exits": {},
-        "objects": [],
-        "hidden_objects": [],
         "flags": {
+            "hiding_allowed": true,
             "is_node": false,
-            "is_super_node": false,
-            "is_sanctuary": false,
             "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true,
-            "hiding_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true
+            "teleport_out_allowed": true
         },
-        "ambient_events": [],
+        "hidden_objects": [],
         "illumination": 50,
+        "interior_id": "rooms_broken_sextant",
+        "is_outdoor": false,
         "is_table": false,
-        "is_outdoor": false
+        "name": "Kitchens",
+        "objects": [],
+        "room_id": "inn_kitchen",
+        "x": 0,
+        "y": -4,
+        "z": 0
     }
 ]

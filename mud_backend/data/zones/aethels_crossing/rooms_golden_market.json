@@ -15,17 +15,17 @@
             "west": "ts_west"
         },
         "flags": {
-            "hiding_allowed": true,
             "is_node": false,
-            "is_pvp": false,
-            "is_sanctuary": false,
             "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
             "magic_allowed": true,
-            "sneak_in_allowed": true,
-            "sneak_out_allowed": true,
             "stealing_allowed": true,
             "teleport_in_allowed": true,
-            "teleport_out_allowed": true
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
         },
         "hidden_objects": [],
         "illumination": 50,
@@ -34,37 +34,37 @@
         "name": "The Golden Market",
         "objects": [
             {
-                "is_item": true,
-                "item_id": "signet_of_communion"
+                "item_id": "signet_of_communion",
+                "is_item": true
             },
             {
+                "name": "statue of a merchant-prince",
                 "description": "A verdigris-stained bronze statue of a forgotten merchant-prince, now serving mostly as a perch for gulls. Its base is a common meeting spot for deals both public and private.",
                 "keywords": [
                     "statue",
                     "merchant-prince",
                     "bronze statue"
                 ],
-                "name": "statue of a merchant-prince",
                 "verbs": [
                     "look"
                 ]
             },
             {
-                "is_monster": true,
-                "monster_id": "grizzled_warrior"
+                "monster_id": "grizzled_warrior",
+                "is_monster": true
             },
             {
+                "name": "Town Well",
                 "description": "",
                 "keywords": [
                     "town well",
                     "well"
                 ],
-                "name": "Town Well",
-                "target_room": "room_1766106929120_953",
                 "verbs": [
                     "look",
-                    "Enter"
-                ]
+                    "ENTER"
+                ],
+                "target_room": "town_well"
             }
         ],
         "room_id": "town_square",
@@ -1054,7 +1054,7 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1765210086096_29",
+            "east": "room_1766459924603_337",
             "west": "room_1765210085735_870"
         },
         "flags": {
@@ -1083,11 +1083,15 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1765210086267_11",
-            "west": "room_1765210085907_573"
+            "east": "room_1765210086440_358",
+            "west": "room_1766459924603_337"
         },
         "flags": {
             "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
             "magic_allowed": true,
             "sneak_in_allowed": true,
             "sneak_out_allowed": true,
@@ -1098,6 +1102,7 @@
         "hidden_objects": [],
         "illumination": 50,
         "interior_id": "rooms_aethels_crossing",
+        "is_outdoor": false,
         "is_table": false,
         "name": "New Room",
         "objects": [],
@@ -1141,7 +1146,7 @@
             "default": ""
         },
         "exits": {
-            "east": "room_1765210086785_685",
+            "east": "room_1766459986443_261",
             "west": "room_1765210086600_406"
         },
         "flags": {
@@ -1171,7 +1176,7 @@
         },
         "exits": {
             "east": "room_1765210086981_192",
-            "west": "room_1765210086785_685"
+            "west": "room_1766459986443_261"
         },
         "flags": {
             "hiding_allowed": true,
@@ -1597,6 +1602,67 @@
         "room_id": "room_1765223523538_707",
         "x": -4,
         "y": -1,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210086267_11",
+            "west": "room_1765210085907_573"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "illumination": 50,
+        "interior_id": "rooms_golden_market",
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "room_1766459924603_337",
+        "x": -6,
+        "y": 3,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "east": "room_1765210086981_192",
+            "west": "room_1765210086600_406"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "illumination": 50,
+        "interior_id": "rooms_golden_market",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "New Room",
+        "objects": [],
+        "room_id": "changed_room_id",
+        "x": -2,
+        "y": 3,
         "z": 0
     }
 ]

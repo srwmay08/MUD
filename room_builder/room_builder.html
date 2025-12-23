@@ -201,7 +201,10 @@
                     <div class="grid grid-cols-1 gap-2 mb-2">
                         <div>
                             <label class="form-label">Room ID</label>
-                            <input type="text" id="room_id" class="form-input text-amber-500 font-bold" oninput="updateRoomData()">
+                            <div class="flex gap-1">
+                                <input type="text" id="room_id" class="form-input text-amber-500 font-bold" oninput="updateRoomData()">
+                                <button onclick="globalRename()" class="btn btn-neutral text-xs px-2" title="Rename ID Everywhere (Files, Exits, etc.)">Rename</button>
+                            </div>
                         </div>
                         <div>
                             <label class="form-label">Name</label>
@@ -505,6 +508,57 @@
         } catch(e) { console.error("Asset load failed", e); }
     }
 
+    // --- RENAME LOGIC ADDED HERE ---
+    window.globalRename = async function() {
+        if (!activeRoom) return;
+        const r = getActiveRoomObj();
+        const oldId = r.room_id;
+        
+        const newId = prompt(`Rename ${oldId} globally to:`, oldId);
+        if (!newId || newId === oldId) return;
+        
+        // Optimistic update in UI
+        r.room_id = newId;
+        document.getElementById('room_id').value = newId;
+        
+        // Update links in loaded zones
+        Object.values(projectData).forEach(zone => {
+            zone.rooms.forEach(otherRoom => {
+                // Update exits
+                if (otherRoom.exits) {
+                    for (const [dir, target] of Object.entries(otherRoom.exits)) {
+                        if (target === oldId) otherRoom.exits[dir] = newId;
+                    }
+                }
+                // Update object targets (interactions)
+                (otherRoom.objects || []).forEach(obj => {
+                    if (obj.target_room === oldId) obj.target_room = newId;
+                    if (obj.interactions) {
+                        Object.values(obj.interactions).forEach(i => {
+                            if (i.type === 'move' && i.value === oldId) i.value = newId;
+                        });
+                    }
+                });
+            });
+        });
+
+        // Send to backend
+        try {
+            const res = await fetch('/api/rename_room', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ old_id: oldId, new_id: newId })
+            });
+            const data = await res.json();
+            showToast(`Renamed in ${data.count} files!`);
+        } catch(e) {
+            alert("Error renaming globally: " + e);
+        }
+        
+        renderMap();
+        updateRoomData();
+    }
+
     // --- CORE LOGIC ---
     window.createZone = function(filename) {
         if (!filename.endsWith('.json')) filename += '.json';
@@ -613,7 +667,6 @@
         obList.innerHTML = '';
         
         // Merge objects and legacy hidden_objects for display
-        // If an object is in 'objects' list but has hidden=true, we pass true to createObjectCard
         (room.objects || []).forEach(obj => obList.appendChild(createObjectCard(obj, obj.hidden === true)));
         // Support for legacy files where they are split
         (room.hidden_objects || []).forEach(obj => obList.appendChild(createObjectCard(obj, true)));
