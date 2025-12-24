@@ -12,6 +12,115 @@ from mud_backend.core.economy import (
     get_shop_data, sync_shop_data_to_storage, get_item_buy_price, 
     get_item_sell_price, get_display_table_name, get_item_type
 )
+from mud_backend.core.shop_system import get_shop_flavor
+
+def deliver_purchase(verb, item, shop_data):
+    """
+    Delivers a purchased item to the player.
+    Prioritizes:
+    1. Right Hand (Mainhand)
+    2. Left Hand (Offhand)
+    3. Bagged and placed on a Counter (if available) - Uses shop_stock.json flavor
+    4. Bagged and placed on the Floor
+    """
+    player = verb.player
+    room = verb.room
+    keeper_name = shop_data.get("keeper_name", "The shopkeeper")
+    
+    # Get Item Name
+    if isinstance(item, dict):
+        item_name = item.get("name", "item")
+    else:
+        item_data = verb.world.game_items.get(item, {})
+        item_name = item_data.get("name", "item")
+
+    # 1. Check Hands
+    if player.worn_items.get("mainhand") is None:
+        player.worn_items["mainhand"] = item
+        player.send_message(f"{keeper_name} takes your silver and hands you {item_name}.")
+        verb.world.broadcast_to_room(room, f"{keeper_name} hands {item_name} to {player.name}.", exclude=[player.name])
+        return
+
+    if player.worn_items.get("offhand") is None:
+        player.worn_items["offhand"] = item
+        player.send_message(f"{keeper_name} takes your silver and hands you {item_name}.")
+        verb.world.broadcast_to_room(room, f"{keeper_name} hands {item_name} to {player.name}.", exclude=[player.name])
+        return
+
+    # 2. Hands Full - Bag Logic
+    # Retrieve flavor text based on the shopkeeper's name
+    flavor = get_shop_flavor(keeper_name)
+    
+    # Format strings
+    bag_name = flavor.get("bag_name", "{player}'s bag").format(player=player.name)
+    bag_desc = flavor.get("bag_desc", "A bag for {player}.").format(player=player.name)
+    emote_tmpl = flavor.get("bagging_emote", "{npc} puts {item} in a bag.")
+    
+    # Create the bag
+    bag_uid = uuid.uuid4().hex
+    bag = {
+        "uid": bag_uid,
+        "name": bag_name,
+        "description": bag_desc,
+        "keywords": ["bag", "shopping bag", "sack", "box", "package"],
+        "item_type": "container",
+        "is_container": True,
+        "container_storage": {
+            "in": [item]
+        },
+        "capacity": 50,
+        "weight": 0.5,
+        "max_weight": 50
+    }
+    
+    # 3. Find Counter
+    # Use the config's preferred counter key (e.g., "anvil", "display case")
+    preferred_counter = flavor.get("counter_key", "counter")
+    counter = None
+    
+    # Try specific match
+    for obj in room.objects:
+        nm = obj.get("name", "").lower()
+        kw = obj.get("keywords", [])
+        if preferred_counter in nm or preferred_counter in kw:
+            counter = obj
+            break
+            
+    # Fallback generic match
+    if not counter:
+        for obj in room.objects:
+            kw = obj.get("keywords", [])
+            nm = obj.get("name", "").lower()
+            if "counter" in kw or "bar" in kw or "table" in kw or "desk" in kw:
+                counter = obj
+                break
+            
+    if counter:
+        if "container_storage" not in counter:
+            counter["container_storage"] = {}
+        if "on" not in counter["container_storage"]:
+            counter["container_storage"]["on"] = []
+            
+        counter["container_storage"]["on"].append(bag)
+        
+        # Resolve emote variables
+        target_name = counter.get("name", "counter")
+        emote_msg = emote_tmpl.format(
+            npc=keeper_name,
+            player=player.name,
+            item=item_name,
+            bag=bag_name,
+            counter=target_name
+        )
+        
+        verb.world.broadcast_to_room(room, emote_msg)
+        player.send_message(emote_msg) # Player sees the same emote
+    else:
+        # Fallback: Floor
+        room.objects.append(bag)
+        player.send_message(f"{keeper_name} sees your hands are full, bags the item, and sets it on the floor.")
+    
+    verb.world.save_room(room)
 
 @VerbRegistry.register(["list"])
 class List(BaseVerb):
@@ -186,6 +295,10 @@ You can APPRAISE, INSPECT or DESCRIBE any item by number.
         self.player.send_message(f"(Type 'ORDER 1 OF {target_index}' to buy)")
 
     def _perform_purchase(self, item_ref, quantity, game_items, shop_data, inventory_idx):
+        if quantity > 1:
+            self.player.send_message("You can only order 1 of that item at a time from this shop.")
+            return
+
         price_per_unit = get_item_buy_price(item_ref, game_items, shop_data)
         total_cost = price_per_unit * quantity
         
@@ -198,31 +311,14 @@ You can APPRAISE, INSPECT or DESCRIBE any item by number.
         # Deduct Money
         self.player.wealth["silvers"] = player_silver - total_cost
 
-        # Create Items
-        item_name = ""
+        # Create Items & Deliver via new Helper
         for _ in range(quantity):
             if isinstance(item_ref, dict):
                 new_item = copy.deepcopy(item_ref)
                 new_item["uid"] = uuid.uuid4().hex
-                self.player.inventory.append(new_item)
-                item_name = new_item.get("name")
+                deliver_purchase(self, new_item, shop_data)
             else:
-                self.player.inventory.append(item_ref)
-                item_name = game_items.get(item_ref, {}).get("name", "the item")
-
-        if quantity > 1:
-            self.player.send_message("You can only order 1 of that item at a time from this shop.")
-            # Refund
-            self.player.wealth["silvers"] += total_cost
-            return
-        
-        # Catalog items are usually infinite, we don't pop unless it's a specific limited inventory setup.
-        # However, to maintain compatibility with existing 'pawn' logic, we assume order list is permanent 
-        # unless specifically marked, OR if it's the exact same data structure as pawnshop.
-        # Since 'ORDER' implies a catalog, we generally DO NOT remove items.
-        # But if the user wants it to behave like a limited stock, we would pop.
-        # For now, I will keep it infinite for the catalog (don't pop).
-        # shop_data["inventory"].pop(inventory_idx) <--- Commented out for infinite catalog
+                deliver_purchase(self, item_ref, shop_data)
 
         # Update Stats
         if isinstance(item_ref, dict):
@@ -236,8 +332,6 @@ You can APPRAISE, INSPECT or DESCRIBE any item by number.
         
         sync_shop_data_to_storage(self.room, shop_data)
         self.world.save_room(self.room)
-
-        self.player.send_message(f"You buy {item_name} for {total_cost} silver.")
 
 
 @VerbRegistry.register(["buy"])
@@ -273,8 +367,7 @@ class Buy(BaseVerb):
         item_to_buy = None
         item_index = -1
         is_dynamic_item = False
-        source_container_stub = None # The persistent stub
-        source_container_view = None # The hydrated view
+        source_container_view = None
 
         # 1. Search Catalog (Inventory)
         for idx, item_ref in enumerate(shop_data.get("inventory", [])):
@@ -326,29 +419,24 @@ class Buy(BaseVerb):
 
         self.player.wealth["silvers"] = player_silver - price
 
-        # Give Item to Player
+        # Give Item to Player via helper
         if isinstance(item_to_buy, dict):
             if is_dynamic_item:
-                new_item = item_to_buy # Take the specific instance
+                new_item = item_to_buy 
             else:
                 new_item = copy.deepcopy(item_to_buy)
                 new_item["uid"] = uuid.uuid4().hex
             
-            self.player.inventory.append(new_item)
-            name = new_item.get("name")
+            deliver_purchase(self, new_item, shop_data)
         else:
-            self.player.inventory.append(item_to_buy)
-            name = game_items.get(item_to_buy, {}).get("name", "the item")
+            deliver_purchase(self, item_to_buy, shop_data)
 
         # Remove from Source
         if is_dynamic_item and source_container_view:
-            # 1. Remove from Hydrated View
             source_container_view["container_storage"]["in"].pop(item_index)
             
-            # 2. Remove from Persistent Data (CRITICAL FIX)
             if "objects" in self.room.data:
                 for stub in self.room.data["objects"]:
-                    # Match by UID or Restock ID
                     matched = False
                     if stub.get("uid") and stub["uid"] == source_container_view.get("uid"):
                         matched = True
@@ -357,19 +445,13 @@ class Buy(BaseVerb):
                         
                     if matched:
                         if "container_storage" in stub and "in" in stub["container_storage"]:
-                            # Assume index matches if hydration is deterministic
                             if item_index < len(stub["container_storage"]["in"]):
                                 stub["container_storage"]["in"].pop(item_index)
                         break
             
             self.world.save_room(self.room)
         else:
-            # Catalog buy - typically infinite, so we don't pop unless it's a pawn shop.
-            # Assuming infinite for standard catalog items found by search.
-            # If you want limited catalog, uncomment below:
-            # shop_data["inventory"].pop(item_index)
-            
-            # Update Sold Counts
+            # Catalog buy - usually infinite
             if isinstance(item_to_buy, dict):
                 item_data = item_to_buy
             else:
@@ -381,8 +463,6 @@ class Buy(BaseVerb):
             
             sync_shop_data_to_storage(self.room, shop_data)
             self.world.save_room(self.room)
-
-        self.player.send_message(f"You buy {name} for {price} silver.")
 
     def _buy_from_catalog_by_index(self, idx, inventory, game_items, shop_data):
         item_to_buy = inventory[idx]
@@ -398,13 +478,9 @@ class Buy(BaseVerb):
         if isinstance(item_to_buy, dict):
             new_item = copy.deepcopy(item_to_buy)
             new_item["uid"] = uuid.uuid4().hex
-            self.player.inventory.append(new_item)
-            name = new_item.get("name")
+            deliver_purchase(self, new_item, shop_data)
         else:
-            self.player.inventory.append(item_to_buy)
-            name = game_items.get(item_to_buy, {}).get("name", "the item")
+            deliver_purchase(self, item_to_buy, shop_data)
             
-        # Stats update
         sync_shop_data_to_storage(self.room, shop_data)
         self.world.save_room(self.room)
-        self.player.send_message(f"You buy {name} for {price} silver.")

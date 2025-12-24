@@ -3,6 +3,11 @@
 Central configuration file for the MUD.
 All game tuning, constants, and hard-coded values should be stored here.
 """
+import os
+
+# --- Paths ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_PATH = os.path.join(BASE_DIR, "data", "assets")
 
 # --- System & Debug ---
 DEBUG_MODE = True
@@ -152,8 +157,8 @@ FACTION_RELATIONSHIPS = {
 DIRECTION_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "ne": "northeast", "nw": "northwest", "se": "southeast", "sw": "southwest",
-    "u": "up", "up": "up",         # <--- ADDED
-    "d": "down", "down": "down",   # <--- ADDED
+    "u": "up", "up": "up",         
+    "d": "down", "down": "down",   
     "north": "north", "south": "south", "east": "east", "west": "west",
     "northeast": "northeast", "northwest": "northwest", "southeast": "southeast", "southwest": "southwest",
 }

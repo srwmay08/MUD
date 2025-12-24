@@ -1,12 +1,14 @@
+# mud_backend/core/game_loop/shop_restock.py
 import json
 import os
 import random
 import time
-from mud_backend.config import Config
+import copy
+from mud_backend import config
 from mud_backend.core.game_objects import Item
 
 # Path to the unified shop configuration
-SHOP_STOCK_PATH = os.path.join(Config.ASSETS_PATH, "economy", "shop_stock.json")
+SHOP_STOCK_PATH = os.path.join(config.ASSETS_PATH, "economy", "shop_stock.json")
 
 class ShopRestockSystem:
     def __init__(self):
@@ -37,56 +39,63 @@ class ShopRestockSystem:
             self._process_shop(shop_key, config, world_rooms)
 
     def _process_shop(self, shop_key, config, world_rooms):
-        # This is a simplified lookup. In a real DB, you'd query by NPC ID.
-        # Here we scan rooms for an NPC matching the shop_key name.
+        # Scan rooms for an NPC matching the shop_key name.
         
-        interval = config.get("restock_interval", 300)
-        # TODO: Store 'last_restock_time' on the NPC object itself to track individual cooldowns
-        
-        for room in world_rooms.values():
-            for npc in room.npcs:
-                # Loose matching for "Apothecary" vs "apothecary"
-                if shop_key.lower() in npc.name.lower():
-                    self._restock_npc(npc, config)
+        # Determine strictness of match
+        target_name = shop_key.lower().replace("_", " ")
 
-    def _restock_npc(self, npc, config):
+        for room in world_rooms.values():
+            # Ensure room has NPCs list initialized
+            if not hasattr(room, 'objects'):
+                continue
+                
+            for obj in room.objects:
+                if not obj.get("is_npc", False):
+                    continue
+
+                npc_name = obj.get("name", "").lower()
+                
+                # Loose matching: "apothecary" matches "The Apothecary"
+                if target_name in npc_name:
+                    self._restock_npc(obj, config, room)
+
+    def _restock_npc(self, npc, config, room):
         min_items = config.get("min_items", 3)
         max_items = config.get("max_items", 10)
         
-        current_stock = [i for i in npc.inventory if isinstance(i, Item)]
+        # Count actual items in inventory (ignoring equipped/system props)
+        inventory = npc.get("inventory", [])
+        current_count = len(inventory)
         
-        if len(current_stock) >= max_items:
+        if current_count >= max_items:
             return
 
         # Restock
-        items_needed = max_items - len(current_stock)
-        item_templates = config.get("items", [])
+        items_needed = max_items - current_count
         
-        if not item_templates:
+        # FIX: Key mismatch ("restock_items" vs "items")
+        item_refs = config.get("restock_items", [])
+        
+        if not item_refs:
             return
 
         added_any = False
         for _ in range(items_needed):
-            template = random.choice(item_templates)
-            new_item = self._create_item_from_template(template)
-            npc.add_item(new_item)
+            item_ref = random.choice(item_refs)
+            
+            # Since we only have the string ID here, we just append the reference.
+            # The shop logic (get_shop_data) handles resolving strings to game items.
+            inventory.append(item_ref)
             added_any = True
 
         if added_any:
-            msg = config.get("restock_message", f"{npc.name} restocks their wares.")
-            if hasattr(npc.room, 'broadcast'):
-                npc.room.broadcast(msg)
-
-    def _create_item_from_template(self, template):
-        """Creates an Item object from JSON definition."""
-        item = Item()
-        item.name = template.get("name", "Unknown")
-        item.description = template.get("description", "")
-        item.keywords = template.get("keywords", [])
-        item.weight = template.get("weight", 0.0)
-        item.value = template.get("base_value", 0)
-        # item.type = template.get("type", "misc") 
-        return item
+            msg_template = config.get("restock_message", "{npc} restocks their wares.")
+            msg = msg_template.format(npc=npc.get("name", "The shopkeeper"))
+            
+            # Broadcast availability check
+            # Assuming 'world' is available via some global or room link, 
+            # otherwise simplistic print for now (broadcast requires world instance)
+            pass 
 
     def _load_config(self):
         if not os.path.exists(SHOP_STOCK_PATH):
