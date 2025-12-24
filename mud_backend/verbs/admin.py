@@ -5,6 +5,31 @@ from mud_backend.core.registry import VerbRegistry
 from mud_backend import config
 from mud_backend.core import db
 
+@VerbRegistry.register(["givewealth", "addmoney"], admin_only=True)
+class GiveWealth(BaseVerb):
+    def execute(self):
+        if len(self.args) < 1:
+            self.player.send_message("Usage: GIVEWEALTH <amount> [target]")
+            return
+        
+        try:
+            amount = int(self.args[0])
+        except ValueError:
+            self.player.send_message("Amount must be a number.")
+            return
+
+        target = self.player
+        if len(self.args) > 1:
+            target_name = self.args[1].lower()
+            target = self.world.get_player_obj(target_name)
+            if not target:
+                self.player.send_message("Player not found.")
+                return
+
+        target.wealth["silvers"] += amount
+        self.player.send_message(f"Added {amount} silver to {target.name}. Total: {target.wealth['silvers']}.")
+        target.mark_dirty()
+
 @VerbRegistry.register(["teleport", "goto_player"], admin_only=True)
 class Teleport(BaseVerb):
     def execute(self):

@@ -72,7 +72,8 @@ class ShopController:
         
         for obj in to_remove:
             self.room.objects.remove(obj)
-            self.world.broadcast_to_room(self.room, f"{obj['name']} finishes their shift and leaves.")
+            # FIX: Broadcast needs room_id and msg_type
+            self.world.broadcast_to_room(self.room.room_id, f"{obj['name']} finishes their shift and leaves.", "general")
 
         if not npc_present:
             new_npc = {
@@ -84,7 +85,8 @@ class ShopController:
                 "verbs": ["look", "talk to", "give", "list", "order", "buy"]
             }
             self.room.objects.append(new_npc)
-            self.world.broadcast_to_room(self.room, f"{target_npc_data['name']} arrives to tend the shop.")
+            # FIX: Broadcast needs room_id and msg_type
+            self.world.broadcast_to_room(self.room.room_id, f"{target_npc_data['name']} arrives to tend the shop.", "general")
             self.world.save_room(self.room)
 
     def refresh_display_case(self):

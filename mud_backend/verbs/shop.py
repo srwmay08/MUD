@@ -69,7 +69,8 @@ def deliver_purchase(verb, item, keeper_name):
         emote = f"{keeper_name} places {item_name} into a bag and sets it on the floor (No counter found)."
 
     player.send_message(emote)
-    verb.world.broadcast_to_room(room, emote, exclude=[player])
+    # FIX: Broadcast needs room_id and msg_type. Passing room object ID and explicit string.
+    verb.world.broadcast_to_room(room.room_id, emote, "general", exclude=[player.name])
     verb.world.save_room(room)
 
 @VerbRegistry.register(["list"])
