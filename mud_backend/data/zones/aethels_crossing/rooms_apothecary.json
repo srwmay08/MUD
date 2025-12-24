@@ -1,77 +1,33 @@
 [
     {
         "description": {
-            "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves. A woman with stained fingers, the Apothecary, is grinding something with a mortar and pestle."
+            "default": "The air is thick with the smell of drying herbs, chemicals, and incense. Vials of brightly colored liquids line the shelves."
         },
         "exits": {
             "out": "ts_southeast"
         },
         "interior_id": "apothecary",
         "name": "The Apothecary",
+        "shop_config_id": "shop_aethels_crossing_apothecary",
         "objects": [
-            {
-                "all_quests_done_message": "The Apothecary is busy at her workbench.",
-                "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile.",
-                "is_npc": true,
-                "keywords": [
-                    "apothecary",
-                    "woman",
-                    "shopkeep",
-                    "an apothecary"
-                ],
-                "name": "an apothecary",
-                "shop_data": {
-                    "name": "The Apothecary",
-                    "keeper_name": "The Apothecary",
-                    "markup": 1.2,
-                    "markdown": 0.5,
-                    "inventory": [
-                        {
-                            "name": "clean linen bandage",
-                            "keywords": ["bandage", "linen", "clean"],
-                            "type": "medical",
-                            "weight": 0.1,
-                            "base_value": 10,
-                            "description": "A roll of clean white linen, suitable for binding wounds."
-                        },
-                        {
-                            "name": "dried yarrow",
-                            "keywords": ["yarrow", "dried", "herb"],
-                            "type": "herb",
-                            "weight": 0.1,
-                            "base_value": 15,
-                            "description": "A bundle of pungent dried yarrow."
-                        },
-                        {
-                            "name": "empty glass vial",
-                            "keywords": ["vial", "glass", "empty"],
-                            "type": "container",
-                            "weight": 0.2,
-                            "base_value": 5,
-                            "description": "A clear glass vial with a cork stopper."
-                        }
-                    ]
-                },
-                "quest_giver_ids": [
-                    "furrier_quest_1"
-                ],
-                "verbs": [
-                    "look",
-                    "talk to",
-                    "give"
-                ]
-            },
             {
                 "name": "glass display case",
                 "description": "A polished glass case displaying a rotating selection of the apothecary's finest brews.",
                 "keywords": ["case", "display", "glass"],
                 "is_container": true,
-                "is_dynamic_display": true,
                 "locked": true,
-                "lock_difficulty": 1000,
-                "restock_id": "apothecary_potions",
                 "container_storage": {
                     "in": []
+                },
+                "verbs": ["look"]
+            },
+            {
+                "name": "wooden counter",
+                "description": "A sturdy wooden counter worn smooth by years of commerce.",
+                "keywords": ["counter", "table", "wooden"],
+                "is_container": true,
+                "container_storage": {
+                    "on": []
                 },
                 "verbs": ["look"]
             }

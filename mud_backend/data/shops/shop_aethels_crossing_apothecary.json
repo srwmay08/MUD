@@ -1,0 +1,63 @@
+{
+    "shop_id": "aethel_apothecary",
+    "balance": 2500,
+    "last_restock_time": 0,
+    "restock_interval": 3600,
+    "schedule": {
+        "day_start": 6,
+        "night_start": 20,
+        "day_npc": {
+            "name": "The Apothecary",
+            "keywords": ["apothecary", "woman", "shopkeep", "merchant"],
+            "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile."
+        },
+        "night_npc": {
+            "name": "The Apprentice",
+            "keywords": ["apprentice", "man", "shopkeep", "clerk"],
+            "description": "A young man looking tired but attentive, managing the shop during the night shift."
+        }
+    },
+    "inventory": [
+        {
+            "id": "clean_linen_bandage",
+            "name": "clean linen bandage",
+            "keywords": ["bandage", "linen", "clean"],
+            "type": "medical",
+            "weight": 0.1,
+            "base_value": 10,
+            "qty": 50,
+            "description": "A roll of clean white linen, suitable for binding wounds."
+        },
+        {
+            "id": "dried_yarrow",
+            "name": "dried yarrow",
+            "keywords": ["yarrow", "dried", "herb"],
+            "type": "herb",
+            "weight": 0.1,
+            "base_value": 15,
+            "qty": 20,
+            "description": "A bundle of pungent dried yarrow."
+        },
+        {
+            "id": "empty_glass_vial",
+            "name": "empty glass vial",
+            "keywords": ["vial", "glass", "empty"],
+            "type": "container",
+            "weight": 0.2,
+            "base_value": 5,
+            "qty": 100,
+            "description": "A clear glass vial with a cork stopper."
+        },
+        {
+            "id": "blue_tonic",
+            "name": "flask of blue tonic",
+            "keywords": ["flask", "tonic", "blue"],
+            "type": "potion",
+            "weight": 0.5,
+            "base_value": 50,
+            "qty": 10,
+            "description": "A flask containing a glowing blue liquid."
+        }
+    ],
+    "display_case_items": []
+}
