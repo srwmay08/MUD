@@ -1,0 +1,35 @@
+{
+    "apothecary": {
+        "bag_name": "{player}'s order bag",
+        "bag_desc": "A crisp brown paper bag with '{player}' written on the side in neat calligraphy.",
+        "bagging_emote": "{npc} bustles behind the counter, rustling open a paper bag. They carefully slide the {item} inside, fold the top down with a sharp crease, and set {bag} on the counter.",
+        "counter_key": "counter",
+        "restock_items": [
+            "clean linen bandage",
+            "dried yarrow",
+            "empty glass vial"
+        ]
+    },
+    "blacksmith": {
+        "bag_name": "heavy burlap sack",
+        "bag_desc": "A rough burlap sack labeled '{player}' with a piece of charcoal. It smells of soot.",
+        "bagging_emote": "{npc} grunts, grabbing a heavy burlap sack from a hook. They drop the {item} inside with a heavy clunk, tie it shut with rough twine, and drop {bag} onto the counter.",
+        "counter_key": "anvil",
+        "restock_items": [
+            "iron nails",
+            "horseshoe",
+            "iron dagger"
+        ]
+    },
+    "baker": {
+        "bag_name": "flour-dusted box",
+        "bag_desc": "A simple cardboard pastry box tied with string. It is addressed to '{player}'.",
+        "bagging_emote": "{npc} hums a tune, unfolding a small cardboard box. They place the {item} gently inside, dusting off excess flour, and tie the box shut before sliding {bag} across the counter.",
+        "counter_key": "display case",
+        "restock_items": [
+            "loaf of bread",
+            "sweetroll",
+            "apple tart"
+        ]
+    }
+}
