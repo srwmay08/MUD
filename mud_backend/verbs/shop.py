@@ -218,14 +218,14 @@ You can APPRAISE, INSPECT or DESCRIBE any item by number.
 
         # Handle Shop Inventory (Limited Stock Logic)
         if quantity > 1:
-            # If ordering multiple, we usually can't pop a unique item from a pawn list.
-            # Assuming ORDER implies generic stock unless it's a specific unique item system.
-            # For this implementation, we will restrict multiples if it is a unique item removal system.
             self.player.send_message("You can only order 1 of that item at a time from this shop.")
             # Refund
             self.player.wealth["silvers"] += total_cost
             return
         
+        # Only remove from stock if it's a unique pawn item. 
+        # Standard catalogs are infinite unless defined otherwise.
+        # Assuming simple pawn shop behavior for now based on previous code.
         shop_data["inventory"].pop(inventory_idx)
 
         # Update Stats
@@ -290,12 +290,16 @@ class Buy(BaseVerb):
             self.player.send_message(f"You buy {name} for {price} silver.")
             return
 
-        # Standard Name-based Buy (Legacy)
+        # --- Standard Name-based Buy ---
         target_name = " ".join(self.args).lower()
         game_items = self.world.game_items
+        
         item_to_buy = None
         item_index = -1
+        is_dynamic_item = False
+        source_container = None
 
+        # 1. Search Catalog (Inventory)
         for idx, item_ref in enumerate(shop_data.get("inventory", [])):
             if isinstance(item_ref, dict):
                 item_data = item_ref
@@ -308,11 +312,34 @@ class Buy(BaseVerb):
                     item_to_buy = item_ref
                     item_index = idx
                     break
+        
+        # 2. Search Dynamic Displays (Limited Stock)
+        if not item_to_buy:
+            for obj in self.room.objects:
+                if obj.get("is_dynamic_display"):
+                    storage = obj.get("container_storage", {}).get("in", [])
+                    for i, item_ref in enumerate(storage):
+                        if isinstance(item_ref, dict):
+                            item_data = item_ref
+                        else:
+                            item_data = game_items.get(item_ref, {})
+                        
+                        if item_data:
+                            if (target_name == item_data.get("name", "").lower() or
+                                    target_name in item_data.get("keywords", [])):
+                                item_to_buy = item_ref
+                                item_index = i
+                                is_dynamic_item = True
+                                source_container = obj
+                                break
+                    if item_to_buy:
+                        break
 
         if not item_to_buy:
             self.player.send_message("That item is not for sale here.")
             return
 
+        # 3. Calculate Price & Transact
         price = get_item_buy_price(item_to_buy, game_items, shop_data)
         player_silver = self.player.wealth.get("silvers", 0)
 
@@ -322,31 +349,43 @@ class Buy(BaseVerb):
 
         self.player.wealth["silvers"] = player_silver - price
 
+        # Give Item to Player
         if isinstance(item_to_buy, dict):
-            new_item = copy.deepcopy(item_to_buy)
-            new_item["uid"] = uuid.uuid4().hex
+            # If dynamic, it likely already has a unique ID, but if it's from catalog, it needs one.
+            # If from dynamic container, we MOVE the item, we don't copy it (it's limited).
+            if is_dynamic_item:
+                new_item = item_to_buy
+            else:
+                new_item = copy.deepcopy(item_to_buy)
+                new_item["uid"] = uuid.uuid4().hex
+            
             self.player.inventory.append(new_item)
             name = new_item.get("name")
         else:
             self.player.inventory.append(item_to_buy)
             name = game_items.get(item_to_buy, {}).get("name", "the item")
 
-        shop_data["inventory"].pop(item_index)
-
-        # Reduce sold count
-        if isinstance(item_to_buy, dict):
-            item_data = item_to_buy
+        # Remove from Source
+        if is_dynamic_item and source_container:
+            source_container["container_storage"]["in"].pop(item_index)
+            # Save room to persist removal from container
+            self.world.save_room(self.room)
         else:
-            item_data = game_items.get(item_to_buy, {})
+            # Remove from Catalog
+            shop_data["inventory"].pop(item_index)
             
-        itype = get_item_type(item_data)
-
-        if "sold_counts" in shop_data:
-            if itype in shop_data["sold_counts"] and shop_data["sold_counts"][itype] > 0:
-                shop_data["sold_counts"][itype] -= 1
-        
-        sync_shop_data_to_storage(self.room, shop_data)
-        self.world.save_room(self.room)
+            # Update Sold Counts (Only for catalog sales usually, but tracking all is fine)
+            if isinstance(item_to_buy, dict):
+                item_data = item_to_buy
+            else:
+                item_data = game_items.get(item_to_buy, {})
+            itype = get_item_type(item_data)
+            if "sold_counts" in shop_data:
+                if itype in shop_data["sold_counts"] and shop_data["sold_counts"][itype] > 0:
+                    shop_data["sold_counts"][itype] -= 1
+            
+            sync_shop_data_to_storage(self.room, shop_data)
+            self.world.save_room(self.room)
 
         self.player.send_message(f"You buy {name} for {price} silver.")
 

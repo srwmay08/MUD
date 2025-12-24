@@ -20,6 +20,38 @@
                     "an apothecary"
                 ],
                 "name": "an apothecary",
+                "shop_data": {
+                    "name": "The Apothecary",
+                    "keeper_name": "The Apothecary",
+                    "markup": 1.2,
+                    "markdown": 0.5,
+                    "inventory": [
+                        {
+                            "name": "clean linen bandage",
+                            "keywords": ["bandage", "linen", "clean"],
+                            "type": "medical",
+                            "weight": 0.1,
+                            "base_value": 10,
+                            "description": "A roll of clean white linen, suitable for binding wounds."
+                        },
+                        {
+                            "name": "dried yarrow",
+                            "keywords": ["yarrow", "dried", "herb"],
+                            "type": "herb",
+                            "weight": 0.1,
+                            "base_value": 15,
+                            "description": "A bundle of pungent dried yarrow."
+                        },
+                        {
+                            "name": "empty glass vial",
+                            "keywords": ["vial", "glass", "empty"],
+                            "type": "container",
+                            "weight": 0.2,
+                            "base_value": 5,
+                            "description": "A clear glass vial with a cork stopper."
+                        }
+                    ]
+                },
                 "quest_giver_ids": [
                     "furrier_quest_1"
                 ],
@@ -35,6 +67,8 @@
                 "keywords": ["case", "display", "glass"],
                 "is_container": true,
                 "is_dynamic_display": true,
+                "locked": true,
+                "lock_difficulty": 1000,
                 "restock_id": "apothecary_potions",
                 "container_storage": {
                     "in": []
