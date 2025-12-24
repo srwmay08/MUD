@@ -28,6 +28,18 @@
                     "talk to",
                     "give"
                 ]
+            },
+            {
+                "name": "glass display case",
+                "description": "A polished glass case displaying a rotating selection of the apothecary's finest brews.",
+                "keywords": ["case", "display", "glass"],
+                "is_container": true,
+                "is_dynamic_display": true,
+                "restock_id": "apothecary_potions",
+                "container_storage": {
+                    "in": []
+                },
+                "verbs": ["look"]
             }
         ],
         "room_id": "apothecary_shop",

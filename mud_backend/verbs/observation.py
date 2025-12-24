@@ -7,8 +7,8 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core.registry import VerbRegistry
-# UPDATED: Import from core.economy
-from mud_backend.core.economy import get_shop_data, get_item_buy_price, get_item_type
+# UPDATED: Import generic economy functions
+from mud_backend.core.economy import get_shop_data, get_item_buy_price, get_item_type, check_dynamic_restock
 import re
 
 def _clean_name(name: str) -> str:
@@ -92,7 +92,6 @@ def _list_container_storage(player, obj, prep):
     return True
 
 def _list_items_on_table(player, room, table_obj):
-    # UPDATED: Use core economy function
     shop_data = get_shop_data(room)
     has_shop_items = False
 
@@ -120,7 +119,6 @@ def _list_items_on_table(player, room, table_obj):
             if not item_data:
                 continue
 
-            # UPDATED: Use core economy function
             itype = get_item_type(item_data)
             match = False
             if category == "weapon" and itype == "weapon":
@@ -135,7 +133,6 @@ def _list_items_on_table(player, room, table_obj):
             if match:
                 name = item_data.get('name', 'Item')
                 if name not in displayed_names:
-                    # UPDATED: Use core economy function
                     price = get_item_buy_price(item_ref, game_items, shop_data)
                     items_on_table.append((name, price))
                     displayed_names.add(name)
@@ -160,6 +157,9 @@ def _list_items_on_table(player, room, table_obj):
                 player.send_message(f"The {table_obj.get('name', 'Table')} is currently empty.")
 
 def _show_room_filtered(player, room, world):
+    # UPDATED: Trigger generic ambient restock check
+    check_dynamic_restock(room, world)
+
     player.send_message(f"<span class='room-title'>[ {room.name} ]</span>")
 
     desc = room.description
@@ -244,11 +244,14 @@ class Examine(BaseVerb):
                 self.player.send_message(f"You do not see a **{target_name}** here.")
                 return
 
+        # Trigger restock if examining a dynamic display
+        if found_object.get("is_dynamic_display"):
+            check_dynamic_restock(self.room, self.world)
+
         self.player.send_message(f"You examine the **{found_object.get('name', 'object')}**.")
         self.player.send_message(found_object.get('description', 'It is a nondescript object.'))
 
         # Check table contents
-        # UPDATED: Use core economy function
         if "table" in found_object.get("keywords", []) and get_shop_data(self.room):
             _list_items_on_table(self.player, self.room, found_object)
         elif "table" in found_object.get("keywords", []) or found_object.get("is_table_proxy"):
@@ -332,6 +335,10 @@ class Look(BaseVerb):
         if not found_obj:
             self.player.send_message(f"You do not see a '{target_name}' here.")
             return
+        
+        # Trigger restock if looking at/in a dynamic display
+        if found_obj.get("is_dynamic_display"):
+            check_dynamic_restock(self.room, self.world)
 
         # 3. Handle Prepositions
         if found_prep:
@@ -498,7 +505,6 @@ class Inspect(BaseVerb):
         item_data, loc = _find_item_on_player(self.player, target_name)
 
         if not item_data:
-            # UPDATED: Use core economy function
             shop_data = get_shop_data(self.room)
             if shop_data:
                 for item_ref in shop_data.get("inventory", []):
@@ -506,6 +512,16 @@ class Inspect(BaseVerb):
                     if t_data and (target_name == t_data.get("name", "").lower() or target_name in t_data.get("keywords", [])):
                         item_data = t_data
                         break
+        
+        # Check by Order Catalog Number if applicable
+        if not item_data and target_name.isdigit():
+            idx = int(target_name) - 1
+            shop_data = get_shop_data(self.room)
+            if shop_data:
+                inventory = shop_data.get("inventory", [])
+                if 0 <= idx < len(inventory):
+                    item_ref = inventory[idx]
+                    item_data = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref, {})
 
         if not item_data:
             self.player.send_message(f"You don't see a '{target_name}' to inspect.")
@@ -525,9 +541,7 @@ class Inspect(BaseVerb):
         if "armor_class" in item_data:
             self.player.send_message(f"Armor Class: {item_data['armor_class']}")
 
-        # UPDATED: Use core economy function
         shop_data = get_shop_data(self.room)
         if shop_data:
-            # UPDATED: Use core economy function
             price = get_item_buy_price(item_data, self.world.game_items, shop_data)
             self.player.send_message(f"Estimated Shop Price: {price} silver")

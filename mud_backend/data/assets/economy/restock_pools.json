@@ -1,0 +1,16 @@
+{
+    "apothecary_potions": {
+        "interval": 300,
+        "min_items": 3,
+        "max_items": 5,
+        "message": "The Apothecary bustles over to the glass display case, removing old stock and arranging fresh potions with a critical eye.",
+        "items": [
+            {"name": "vial of red potion", "type": "potion", "keywords": ["vial", "red", "potion"], "weight": 0.5, "base_value": 50, "description": "A bubbling red liquid."},
+            {"name": "flask of blue tonic", "type": "potion", "keywords": ["flask", "blue", "tonic"], "weight": 0.5, "base_value": 75, "description": "A glowing blue tonic."},
+            {"name": "jar of green salve", "type": "potion", "keywords": ["jar", "green", "salve"], "weight": 0.2, "base_value": 40, "description": "A thick green salve."},
+            {"name": "bottle of cloudy oil", "type": "potion", "keywords": ["bottle", "cloudy", "oil"], "weight": 0.8, "base_value": 60, "description": "A swirling cloudy oil."},
+            {"name": "phial of golden elixir", "type": "potion", "keywords": ["phial", "golden", "elixir"], "weight": 0.1, "base_value": 150, "description": "A shimmering golden liquid."},
+            {"name": "tube of purple paste", "type": "potion", "keywords": ["tube", "purple", "paste"], "weight": 0.2, "base_value": 90, "description": "A viscous purple paste."}
+        ]
+    }
+}
