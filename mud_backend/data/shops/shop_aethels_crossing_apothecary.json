@@ -1,6 +1,6 @@
 {
     "shop_id": "aethel_apothecary",
-    "balance": 2500,
+    "balance": 2510,
     "last_restock_time": 1766605149.3731093,
     "restock_interval": 3600,
     "schedule": {
@@ -39,7 +39,7 @@
             "type": "medical",
             "weight": 0.1,
             "base_value": 10,
-            "qty": 50,
+            "qty": 49,
             "description": "A roll of clean white linen, suitable for binding wounds."
         },
         {

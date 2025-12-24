@@ -69,7 +69,13 @@ def deliver_purchase(verb, item, keeper_name):
         emote = f"{keeper_name} places {item_name} into a bag and sets it on the floor (No counter found)."
 
     player.send_message(emote)
-    verb.world.broadcast_to_room(room.room_id, emote, "general", exclude=[player.name])
+    
+    # FIX: Manual broadcast to avoid 'exclude' keyword error
+    for sid, p_info in verb.world.get_all_players_info():
+        if p_info["current_room_id"] == room.room_id:
+            if p_info["player_name"].lower() != player.name.lower():
+                verb.world.send_message_to_player(p_info["player_name"], emote, "general")
+
     verb.world.save_room(room)
 
 @VerbRegistry.register(["list"])
@@ -133,7 +139,6 @@ class Order(BaseVerb):
     Handles ordering purely from a Catalog (Controller or Legacy List).
     """
     def execute(self):
-        # FIX: Correct argument order (world, player, room, args)
         if not self.args:
             List(self.world, self.player, self.room, self.args).execute()
             return
@@ -173,7 +178,6 @@ class Order(BaseVerb):
             return
 
         # --- STRATEGY 2: Legacy (Pawnshop) ---
-        # For legacy shops, Order is strictly a catalog view for now.
         List(self.world, self.player, self.room, self.args).execute()
 
 @VerbRegistry.register(["buy"])
@@ -194,7 +198,6 @@ class Buy(BaseVerb):
         if controller:
             # 1. Check if user typed a Number (Alias to Order)
             if self.args[0].isdigit() and len(self.args) == 1:
-                # FIX: Correct argument order
                 Order(self.world, self.player, self.room, self.args).execute()
                 return
 
