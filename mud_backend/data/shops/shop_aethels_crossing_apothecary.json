@@ -1,19 +1,29 @@
 {
     "shop_id": "aethel_apothecary",
     "balance": 2500,
-    "last_restock_time": 0,
+    "last_restock_time": 1766605149.3731093,
     "restock_interval": 3600,
     "schedule": {
         "day_start": 6,
         "night_start": 20,
         "day_npc": {
             "name": "The Apothecary",
-            "keywords": ["apothecary", "woman", "shopkeep", "merchant"],
+            "keywords": [
+                "apothecary",
+                "woman",
+                "shopkeep",
+                "merchant"
+            ],
             "description": "A woman with intelligent eyes and hands stained with various herbs. She offers you a brief smile."
         },
         "night_npc": {
             "name": "The Apprentice",
-            "keywords": ["apprentice", "man", "shopkeep", "clerk"],
+            "keywords": [
+                "apprentice",
+                "man",
+                "shopkeep",
+                "clerk"
+            ],
             "description": "A young man looking tired but attentive, managing the shop during the night shift."
         }
     },
@@ -21,7 +31,11 @@
         {
             "id": "clean_linen_bandage",
             "name": "clean linen bandage",
-            "keywords": ["bandage", "linen", "clean"],
+            "keywords": [
+                "bandage",
+                "linen",
+                "clean"
+            ],
             "type": "medical",
             "weight": 0.1,
             "base_value": 10,
@@ -31,7 +45,11 @@
         {
             "id": "dried_yarrow",
             "name": "dried yarrow",
-            "keywords": ["yarrow", "dried", "herb"],
+            "keywords": [
+                "yarrow",
+                "dried",
+                "herb"
+            ],
             "type": "herb",
             "weight": 0.1,
             "base_value": 15,
@@ -41,7 +59,11 @@
         {
             "id": "empty_glass_vial",
             "name": "empty glass vial",
-            "keywords": ["vial", "glass", "empty"],
+            "keywords": [
+                "vial",
+                "glass",
+                "empty"
+            ],
             "type": "container",
             "weight": 0.2,
             "base_value": 5,
@@ -51,7 +73,11 @@
         {
             "id": "blue_tonic",
             "name": "flask of blue tonic",
-            "keywords": ["flask", "tonic", "blue"],
+            "keywords": [
+                "flask",
+                "tonic",
+                "blue"
+            ],
             "type": "potion",
             "weight": 0.5,
             "base_value": 50,
@@ -59,5 +85,9 @@
             "description": "A flask containing a glowing blue liquid."
         }
     ],
-    "display_case_items": []
+    "display_case_items": [
+        "dried_yarrow",
+        "clean_linen_bandage",
+        "blue_tonic"
+    ]
 }
