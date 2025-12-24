@@ -21,12 +21,14 @@ class GiveWealth(BaseVerb):
         target = self.player
         if len(self.args) > 1:
             target_name = self.args[1].lower()
-            target = self.world.get_player_obj(target_name)
-            if not target:
+            found = self.world.get_player_obj(target_name)
+            if found: 
+                target = found
+            else:
                 self.player.send_message("Player not found.")
                 return
 
-        target.wealth["silvers"] += amount
+        target.wealth["silvers"] = target.wealth.get("silvers", 0) + amount
         self.player.send_message(f"Added {amount} silver to {target.name}. Total: {target.wealth['silvers']}.")
         target.mark_dirty()
 
