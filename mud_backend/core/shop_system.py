@@ -1,10 +1,10 @@
 # mud_backend/core/shop_system.py
 import json
 import os
-from mud_backend.config import Config
+from mud_backend import config
 
 # Correct path to the unified shop configuration
-SHOP_STOCK_PATH = os.path.join(Config.ASSETS_PATH, "economy", "shop_stock.json")
+SHOP_STOCK_PATH = os.path.join(config.ASSETS_PATH, "economy", "shop_stock.json")
 
 def _load_shop_config():
     """
