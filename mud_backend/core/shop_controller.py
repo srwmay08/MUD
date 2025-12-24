@@ -6,6 +6,7 @@ import time
 import copy
 import uuid
 from mud_backend import config
+from mud_backend.core.economy import get_item_buy_price
 
 class ShopController:
     def __init__(self, shop_filename, room, world):
@@ -22,7 +23,9 @@ class ShopController:
         # 3. Run Logic
         self._simulate_economy()  # Drain/Regen inventory based on time
         self.check_schedule()     # Update NPC
-        self.refresh_display_case() # Update physical display case
+        
+        # Note: We do NOT auto-call refresh_display_case here anymore.
+        # It is called explicitly during room hydration to ensure correct order.
 
     def _load_template(self):
         """Loads the static JSON definition."""
@@ -118,10 +121,6 @@ class ShopController:
         target_npc_data = schedule.get("day_npc") if day_start <= current_hour < night_start else schedule.get("night_npc")
         if not target_npc_data: return
 
-        # Sync NPC logic (removed for brevity, essentially same as before but checks room.data['objects'])
-        # We need to ensure the NPC is in room.data["objects"] for persistence
-        
-        # (Simplified NPC swap logic here for robustness)
         # Check if we need to swap
         needs_swap = True
         
@@ -156,6 +155,7 @@ class ShopController:
         """
         Populates the display case by modifying the ROOM DATA directly.
         This ensures changes persist through re-hydration.
+        Returns True if changes were made.
         """
         # 1. Find the case stub in persistent data
         case_stub = None
@@ -165,7 +165,7 @@ class ShopController:
                     case_stub = obj
                     break
         
-        if not case_stub: return
+        if not case_stub: return False
 
         # 2. Check logic
         if "container_storage" not in case_stub: case_stub["container_storage"] = {}
@@ -188,9 +188,29 @@ class ShopController:
                 
                 case_stub["container_storage"]["in"] = new_items
                 self.world.save_room(self.room)
+                return True
+        return False
 
     def get_inventory(self):
         return self.state.get("inventory", [])
+        
+    def get_formatted_inventory(self):
+        """Returns a list of strings representing the menu."""
+        inventory = self.get_inventory()
+        if not inventory:
+            return ["The shelves are bare."]
+        
+        keeper = self.get_keeper_name()
+        lines = [f"--- {keeper}'s Stock ---"]
+        
+        for i, item in enumerate(inventory):
+            name = item["name"]
+            price = item["base_value"]
+            qty = item["qty"]
+            lines.append(f"{i+1}. {name:<30} {price}s  (Qty: {qty})")
+        
+        lines.append("\nType 'ORDER <#>' to buy.")
+        return lines
 
     def find_item_index_by_keyword(self, keyword):
         keyword = keyword.lower()
@@ -229,6 +249,75 @@ class ShopController:
             items_to_give.append(new_item)
             
         return items_to_give, f"You buy {quantity} x {item_ref['name']} for {cost} silver."
+
+    def deliver_item_to_player(self, player, item_data):
+        """
+        Handles the logic of giving an item to a player (Hands -> Bag -> Floor).
+        """
+        keeper_name = self.get_keeper_name()
+        item_name = item_data.get("name", "item")
+        
+        # 1. Try Hands
+        if player.worn_items.get("mainhand") is None:
+            player.worn_items["mainhand"] = item_data["uid"]
+            self.world.game_items[item_data["uid"]] = item_data
+            player.send_message(f"{keeper_name} hands you {item_name}.")
+            return
+
+        if player.worn_items.get("offhand") is None:
+            player.worn_items["offhand"] = item_data["uid"]
+            self.world.game_items[item_data["uid"]] = item_data
+            player.send_message(f"{keeper_name} hands you {item_name}.")
+            return
+
+        # 2. Prepare Bag (Flavor)
+        bag_name = f"{player.name}'s shopping bag"
+        bag_uid = uuid.uuid4().hex
+        
+        self.world.game_items[item_data["uid"]] = item_data
+        
+        bag = {
+            "uid": bag_uid,
+            "name": bag_name,
+            "description": f"A shopping bag belonging to {player.name}.",
+            "keywords": ["bag", "sack"],
+            "item_type": "container",
+            "is_container": True,
+            "container_storage": {
+                "in": [item_data]
+            },
+            "capacity": 50,
+            "weight": 0.5
+        }
+        
+        # 3. Find Counter or Floor
+        target_name = "the floor"
+        counter_stub = None
+        
+        if "objects" in self.room.data:
+            for obj in self.room.data["objects"]:
+                nm = obj.get("name", "").lower()
+                kw = obj.get("keywords", [])
+                if "counter" in nm or "counter" in kw:
+                    counter_stub = obj
+                    target_name = obj.get("name")
+                    break
+        
+        if counter_stub:
+            if "container_storage" not in counter_stub: counter_stub["container_storage"] = {}
+            if "on" not in counter_stub["container_storage"]: counter_stub["container_storage"]["on"] = []
+            counter_stub["container_storage"]["on"].append(bag)
+            emote = f"{keeper_name} places {item_name} into a bag and sets it on the {target_name}."
+        else:
+            if "objects" not in self.room.data: self.room.data["objects"] = []
+            self.room.data["objects"].append(bag)
+            emote = f"{keeper_name} places {item_name} into a bag and sets it on the floor."
+
+        self.world.save_room(self.room)
+        player.send_message(emote)
+        
+        # Broadcast to room (excluding player)
+        self.world.broadcast_to_room(self.room.room_id, emote, "general", skip_sid=player.sid)
 
     def get_keeper_name(self):
         # Check persistent objects

@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional, List, Set, TYPE_CHECKING
 from mud_backend.core.game_objects import Player, Room
 from mud_backend.core.game_loop import environment
 from mud_backend.core.quest_handler import get_active_quest_for_npc
+from mud_backend.core.shop_system import get_or_create_shop_controller
 
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
@@ -77,6 +78,15 @@ def hydrate_room_objects(room: Room, world: 'World'):
     Merges object stubs from the room's DB data with live asset templates.
     Ensures persistent UIDs are assigned to stubs in room.data.
     """
+    # --- SHOP SYSTEM INTEGRATION ---
+    # If this room has a shop configuration, ensure the controller is initialized.
+    # This call allows the controller to refresh physical displays (e.g. display cases)
+    # in the room.data BEFORE we load the objects for the player.
+    if room.data.get("shop_config_id"):
+        controller = get_or_create_shop_controller(room, world)
+        if controller:
+            controller.refresh_display_case()
+
     merged_objects = []
     
     # Merging logic: Combine standard objects and legacy hidden_objects
