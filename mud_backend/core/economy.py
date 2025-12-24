@@ -20,7 +20,6 @@ def load_restock_pools() -> Dict[str, Any]:
     json_path = os.path.normpath(json_path)
     
     if not os.path.exists(json_path):
-        print(f"Warning: Restock pools file not found at {json_path}")
         return {}
         
     try:
@@ -51,18 +50,41 @@ def get_shop_data(room) -> Optional[Dict[str, Any]]:
 def sync_shop_data_to_storage(room, shop_data: Dict[str, Any]):
     """
     Saves the modified shop_data back to the room/NPC object.
+    Updates both the hydrated view (room.objects) and the persistent source (room.data).
     """
-    found = False
+    # 1. Update View
+    found_in_view = False
     for obj in room.objects:
         if obj.get("is_npc") and "shop_data" in obj:
-            # We assume the shop_data passed in IS the reference from the object,
-            # but this ensures we mark the room dirty if needed.
-            # Since objects are typically dicts in a list, modifying shop_data in place works.
-            # We just need to ensure the room saves.
-            found = True
+            obj["shop_data"] = shop_data
+            found_in_view = True
             break
-    
-    if not found and "shop_data" in room.data:
+            
+    # 2. Update Persistence (room.data)
+    # Since hydration deep-copies objects, we must explicitly write back to room.data
+    found_in_data = False
+    if "objects" in room.data:
+        for stub in room.data["objects"]:
+            # Heuristic match: if view object has a UID, match it. 
+            # Otherwise match by name/npc flag.
+            matched = False
+            if "uid" in stub and found_in_view:
+                # Iterate view to find matching UID
+                for v_obj in room.objects:
+                    if v_obj.get("is_npc") and v_obj.get("uid") == stub.get("uid"):
+                        matched = True
+                        break
+            
+            # Fallback simple match if UID not ready
+            if not matched and stub.get("is_npc") and stub.get("name") == shop_data.get("name"):
+                matched = True
+            
+            if matched:
+                stub["shop_data"] = shop_data
+                found_in_data = True
+                break
+
+    if not found_in_data and "shop_data" in room.data:
         room.data["shop_data"] = shop_data
 
 def get_item_buy_price(item_ref: Any, game_items: Dict[str, Any], shop_data: Dict[str, Any]) -> int:
@@ -98,8 +120,6 @@ def get_display_table_name(room, item_data: Dict[str, Any]) -> str:
     # Find tables in room
     tables = [obj for obj in room.objects if "table" in obj.get("keywords", []) or obj.get("is_table_proxy")]
     
-    target_table = "counter"
-    
     for table in tables:
         t_keys = table.get("keywords", [])
         if itype == "weapon" and ("weapon" in t_keys or "weapons" in t_keys):
@@ -109,7 +129,6 @@ def get_display_table_name(room, item_data: Dict[str, Any]) -> str:
         if itype == "magic" and ("magic" in t_keys or "scrolls" in t_keys):
             return table.get("name")
             
-    # Default to first table if found, else generic
     if tables:
         return tables[0].get("name")
         
@@ -127,14 +146,16 @@ def get_item_type(item_data: Dict[str, Any]) -> str:
 def check_dynamic_restock(room, world):
     """
     Generic system to restock display cases based on 'restock_id'.
-    Called by observation verbs (look/examine).
+    Updates both the hydrated view object AND the persistent room.data stub.
     """
-    # Reload pools periodically? For now, static load is safer for performance.
-    # To enable hot-reloading, call load_restock_pools() here or verify timestamp.
-    # sticking to module-level load for efficiency as per standard request.
-    
     updated = False
+    current_time = time.time()
     
+    global SHOP_RESTOCK_POOLS
+    if not SHOP_RESTOCK_POOLS:
+        SHOP_RESTOCK_POOLS = load_restock_pools()
+
+    # Iterate over hydrated objects to find targets
     for obj in room.objects:
         if not obj.get("is_dynamic_display"):
             continue
@@ -143,14 +164,47 @@ def check_dynamic_restock(room, world):
         if not pool_id or pool_id not in SHOP_RESTOCK_POOLS:
             continue
             
+        # CRITICAL: Find the persistent stub in room.data["objects"]
+        # We need to read the TIME from the stub, and write ITEMS back to the stub.
+        persistent_stub = None
+        if "objects" in room.data:
+            for stub in room.data["objects"]:
+                # Match by UID
+                if stub.get("uid") and stub["uid"] == obj.get("uid"):
+                    persistent_stub = stub
+                    break
+                # Fallback Match by ID
+                if stub.get("restock_id") == pool_id:
+                    persistent_stub = stub
+                    break
+        
+        if not persistent_stub:
+            continue
+
         pool_config = SHOP_RESTOCK_POOLS[pool_id]
-        last_update = obj.get("last_restock_time", 0)
+        
+        last_update = persistent_stub.get("last_restock_time", 0)
         interval = pool_config.get("interval", 300)
         
-        if time.time() - last_update < interval:
+        # Check current inventory state
+        # If last_update is 0 and inventory is empty, treat as "Needs Init"
+        # If last_update is 0 and inventory exists (manual edit?), treat as "Stocked" but track time now.
+        storage = persistent_stub.get("container_storage", {}).get("in", [])
+        
+        if last_update == 0 and not storage:
+            # Need initial stock
+            pass
+        elif last_update == 0 and storage:
+            # Has items but no timestamp. Set timestamp to avoid instant re-roll.
+            persistent_stub["last_restock_time"] = current_time
+            obj["last_restock_time"] = current_time
+            updated = True
+            continue
+        elif current_time - last_update < interval:
+            # Not time yet
             continue
             
-        # Perform Restock
+        # --- Perform Restock ---
         min_i = pool_config.get("min_items", 1)
         max_i = pool_config.get("max_items", 5)
         count = random.randint(min_i, max_i)
@@ -168,8 +222,15 @@ def check_dynamic_restock(room, world):
             new_item["uid"] = uuid.uuid4().hex
             new_stock.append(new_item)
             
-        obj["container_storage"] = {"in": new_stock}
-        obj["last_restock_time"] = time.time()
+        # Update Persistent Stub
+        if "container_storage" not in persistent_stub:
+            persistent_stub["container_storage"] = {}
+        persistent_stub["container_storage"]["in"] = new_stock
+        persistent_stub["last_restock_time"] = current_time
+        
+        # Update Hydrated View (so player sees it immediately)
+        obj["container_storage"] = persistent_stub["container_storage"]
+        obj["last_restock_time"] = current_time
         
         # Ambient Message
         msg = pool_config.get("message")

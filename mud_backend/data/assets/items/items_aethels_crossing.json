@@ -79,5 +79,77 @@
         "weight": 1,
         "value": 0,
         "verbs": ["drink", "drop", "look"]
+    },
+    "clean_linen_bandage": {
+        "name": "clean linen bandage",
+        "keywords": ["bandage", "linen", "clean"],
+        "item_type": "medical",
+        "weight": 0.1,
+        "base_value": 10,
+        "description": "A roll of clean white linen, suitable for binding wounds."
+    },
+    "dried_yarrow": {
+        "name": "dried yarrow",
+        "keywords": ["yarrow", "dried", "herb"],
+        "item_type": "herb",
+        "weight": 0.1,
+        "base_value": 15,
+        "description": "A bundle of pungent dried yarrow."
+    },
+    "empty_glass_vial": {
+        "name": "empty glass vial",
+        "keywords": ["vial", "glass", "empty"],
+        "item_type": "container",
+        "weight": 0.2,
+        "base_value": 5,
+        "description": "A clear glass vial with a cork stopper."
+    },
+    "vial_red_potion": {
+        "name": "vial of red potion",
+        "item_type": "potion",
+        "keywords": ["vial", "red", "potion"],
+        "weight": 0.5,
+        "base_value": 50,
+        "description": "A bubbling red liquid."
+    },
+    "flask_blue_tonic": {
+        "name": "flask of blue tonic",
+        "item_type": "potion",
+        "keywords": ["flask", "blue", "tonic"],
+        "weight": 0.5,
+        "base_value": 75,
+        "description": "A glowing blue tonic."
+    },
+    "jar_green_salve": {
+        "name": "jar of green salve",
+        "item_type": "potion",
+        "keywords": ["jar", "green", "salve"],
+        "weight": 0.2,
+        "base_value": 40,
+        "description": "A thick green salve."
+    },
+    "bottle_cloudy_oil": {
+        "name": "bottle of cloudy oil",
+        "item_type": "potion",
+        "keywords": ["bottle", "cloudy", "oil"],
+        "weight": 0.8,
+        "base_value": 60,
+        "description": "A swirling cloudy oil."
+    },
+    "phial_golden_elixir": {
+        "name": "phial of golden elixir",
+        "item_type": "potion",
+        "keywords": ["phial", "golden", "elixir"],
+        "weight": 0.1,
+        "base_value": 150,
+        "description": "A shimmering golden liquid."
+    },
+    "tube_purple_paste": {
+        "name": "tube of purple paste",
+        "item_type": "potion",
+        "keywords": ["tube", "purple", "paste"],
+        "weight": 0.2,
+        "base_value": 90,
+        "description": "A viscous purple paste."
     }
 }
