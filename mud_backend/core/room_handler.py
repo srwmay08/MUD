@@ -78,14 +78,11 @@ def hydrate_room_objects(room: Room, world: 'World'):
     Merges object stubs from the room's DB data with live asset templates.
     Ensures persistent UIDs are assigned to stubs in room.data.
     """
-    # --- SHOP SYSTEM INTEGRATION ---
-    # If this room has a shop configuration, ensure the controller is initialized.
-    # This call allows the controller to refresh physical displays (e.g. display cases)
-    # in the room.data BEFORE we load the objects for the player.
+    # Initialize Shop & Display Case if needed
     if room.data.get("shop_config_id"):
         controller = get_or_create_shop_controller(room, world)
         if controller:
-            controller.refresh_display_case()
+            controller.refresh_display_case() 
 
     merged_objects = []
     
@@ -212,10 +209,12 @@ def show_room_to_player(player: Player, room: Room):
             obj_dc = obj.get("perception_dc", 0)
             if player_perception >= obj_dc:
                 obj_name = obj.get('name', 'Unknown Object')
+                obj_uid = obj.get('uid', '')
                 verbs = obj.get('verbs', ['look', 'examine', 'investigate'])
                 verb_str = ','.join(verbs).lower()
+                # UPDATED: Added data-id attribute
                 html_objects.append(
-                    f'<span class="keyword" data-name="{obj_name}" data-verbs="{verb_str}">{obj_name}</span>'
+                    f'<span class="keyword" data-name="{obj_name}" data-id="{obj_uid}" data-verbs="{verb_str}">{obj_name}</span>'
                 )
         if html_objects:
             player.send_message(f"\nObvious objects here: {', '.join(html_objects)}.")

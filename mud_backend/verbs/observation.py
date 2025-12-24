@@ -7,7 +7,6 @@ from mud_backend.core.skill_handler import attempt_skill_learning
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
 from mud_backend.core.utils import calculate_skill_bonus, get_stat_bonus
 from mud_backend.core.registry import VerbRegistry
-# UPDATED: Import generic economy functions
 from mud_backend.core.economy import get_shop_data, get_item_buy_price, get_item_type, check_dynamic_restock
 import re
 
@@ -82,9 +81,11 @@ def _list_container_storage(player, obj, prep):
         item_data = _get_item_data_safe(item_ref, player.world)
         if item_data:
             name = item_data.get('name', 'something')
+            uid = item_data.get('uid', '')
             verbs = item_data.get('verbs', ['look', 'examine', 'get'])
             verb_str = ','.join(verbs).lower()
-            item_list.append(f"<span class='keyword' data-name='{name}' data-verbs='{verb_str}'>{name}</span>")
+            # UPDATED: Added data-id
+            item_list.append(f"<span class='keyword' data-name='{name}' data-id='{uid}' data-verbs='{verb_str}'>{name}</span>")
     
     if item_list:
         player.send_message(f"You also see {', '.join(item_list)}.")
@@ -184,10 +185,12 @@ def _show_room_filtered(player, room, world):
             continue
 
         obj_name = obj.get("name", "something")
+        obj_uid = obj.get("uid", "")
         verbs = obj.get('verbs', ['look', 'examine', 'get'])
         verb_str = ','.join(verbs).lower()
         
-        obj_html = f"<span class='keyword' data-name='{obj_name}' data-verbs='{verb_str}'>{obj_name}</span>"
+        # UPDATED: Added data-id
+        obj_html = f"<span class='keyword' data-name='{obj_name}' data-id='{obj_uid}' data-verbs='{verb_str}'>{obj_name}</span>"
         visible_objects.append(obj_html)
 
     if visible_objects:
@@ -226,15 +229,52 @@ class Examine(BaseVerb):
         target_name = " ".join(self.args).lower()
         if target_name.startswith("at "):
             target_name = target_name[3:]
-
-        target_name = _clean_name(target_name)
-
+        
+        # UPDATED: Explicit ID matching
         found_object = None
-        for obj in self.room.objects:
-            if (target_name == obj.get("name", "").lower() or
-                    target_name in obj.get("keywords", [])):
-                found_object = obj
-                break
+        if target_name.startswith("#"):
+            t_uid = target_name[1:]
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == t_uid:
+                    found_object = obj
+                    break
+            # Also check nested containers if not found on floor
+            if not found_object:
+                for obj in self.room.objects:
+                    if "container_storage" in obj:
+                        for prep in obj["container_storage"]:
+                            for item_ref in obj["container_storage"][prep]:
+                                item_uid = item_ref.get("uid") if isinstance(item_ref, dict) else None
+                                if str(item_uid) == t_uid:
+                                    found_object = item_ref
+                                    break
+                            if found_object: break
+                    if found_object: break
+            
+            # Also check inventory/worn
+            if not found_object:
+                # Check worn
+                for slot, item_ref in self.player.worn_items.items():
+                    if not item_ref: continue
+                    item_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
+                    if str(item_uid) == t_uid:
+                        found_object = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref)
+                        break
+                # Check inventory
+                if not found_object:
+                    for item_ref in self.player.inventory:
+                         item_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
+                         if str(item_uid) == t_uid:
+                             found_object = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref)
+                             break
+        
+        if not found_object:
+            target_name = _clean_name(target_name)
+            for obj in self.room.objects:
+                if (target_name == obj.get("name", "").lower() or
+                        target_name in obj.get("keywords", [])):
+                    found_object = obj
+                    break
 
         if not found_object:
             item_data, loc = _find_item_on_player(self.player, target_name)
@@ -299,17 +339,23 @@ class Look(BaseVerb):
             elif f" {prep} " in full_command:
                 pass
 
-        target_name = _clean_name(target_name)
-
-        # 2. Find Target
+        # 2. Find Target (With explicit #ID support)
         found_obj = None
         source_loc = "room"
-
-        for obj in self.room.objects:
-            if (target_name == obj.get("name", "").lower() or
-                target_name in obj.get("keywords", [])):
-                found_obj = obj
-                break
+        
+        if target_name.startswith("#"):
+            t_uid = target_name[1:]
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == t_uid:
+                    found_obj = obj
+                    break
+        else:
+            target_name = _clean_name(target_name)
+            for obj in self.room.objects:
+                if (target_name == obj.get("name", "").lower() or
+                    target_name in obj.get("keywords", [])):
+                    found_obj = obj
+                    break
 
         if not found_obj:
             item_data, loc = _find_item_on_player(self.player, target_name)

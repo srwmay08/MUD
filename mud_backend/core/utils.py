@@ -65,5 +65,16 @@ def check_action_roundtime(player, action_type="other") -> bool:
     return False
 
 def set_action_roundtime(player, seconds, rt_type="soft"):
-    """Sets player roundtime."""
+    """
+    Sets player roundtime.
+    rt_type: 'soft' (blue, non-blocking for some actions) or 'hard' (red, blocking).
+    """
     player.roundtime = time.time() + seconds
+    
+    # Store metadata for the frontend
+    player._rt_type = rt_type
+    player._rt_duration = seconds
+    
+    # Trigger an update on the next tick
+    if hasattr(player, "mark_dirty"):
+        player.mark_dirty()

@@ -178,6 +178,105 @@ class Get(BaseVerb):
                 )
             return
 
+        # --- EXPLICIT UID HANDLING ---
+        # If user provides #<uid>, search recursively in room->containers->inventory
+        if args_str.startswith('#'):
+            target_uid = args_str[1:]
+            found_ref = None
+            found_container = None
+            found_prep_type = None
+            found_index = -1
+            
+            # 1. Check Room Floor
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == target_uid:
+                    found_ref = obj
+                    break
+            
+            # 2. Check Visible Containers in Room
+            if not found_ref:
+                for obj in self.room.objects:
+                    if "container_storage" in obj:
+                        for prep in obj["container_storage"]:
+                            # Iterate items
+                            items = obj["container_storage"][prep]
+                            for i, item_ref in enumerate(items):
+                                i_uid = item_ref.get("uid") if isinstance(item_ref, dict) else None
+                                if str(i_uid) == target_uid:
+                                    found_ref = item_ref
+                                    found_container = obj
+                                    found_prep_type = prep
+                                    found_index = i
+                                    break
+                            if found_ref: break
+                    if found_ref: break
+
+            # 3. Check Inventory (Unstow)
+            if not found_ref:
+                for item_ref in self.player.inventory:
+                     i_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
+                     if str(i_uid) == target_uid:
+                         found_ref = item_ref
+                         break
+
+            # Execute Pickup based on where found
+            if found_ref:
+                # Hand Check
+                target_hand_slot = None
+                if self.player.worn_items.get("mainhand") is None: target_hand_slot = "mainhand"
+                elif self.player.worn_items.get("offhand") is None: target_hand_slot = "offhand"
+                
+                if not target_hand_slot:
+                    self.player.send_message("Your hands are full.")
+                    return
+
+                item_data = get_item_data(found_ref, self.world.game_items)
+                item_name = item_data.get('name', 'item')
+
+                # CASE A: Found in Container
+                if found_container:
+                     found_container["container_storage"][found_prep_type].pop(found_index)
+                     # Sync Persistence
+                     if "uid" in found_container:
+                         for p_obj in self.room.data.get("objects", []):
+                             if p_obj.get("uid") == found_container["uid"]:
+                                 if "container_storage" in p_obj and found_prep_type in p_obj["container_storage"]:
+                                     try: p_obj["container_storage"][found_prep_type].pop(found_index)
+                                     except: pass
+                                 break
+                     
+                     self.player.worn_items[target_hand_slot] = found_ref
+                     c_name = found_container['name']
+                     self.player.send_message(f"You get {item_name} from {found_prep_type} the {c_name}.")
+                     self.world.save_room(self.room)
+                     set_action_roundtime(self.player, 1.0)
+                     return
+
+                # CASE B: Found on Floor
+                elif found_ref in self.room.objects:
+                    self.room.objects.remove(found_ref)
+                    # Sync Persistence
+                    for i, p_obj in enumerate(self.room.data.get("objects", [])):
+                        if str(p_obj.get("uid")) == target_uid:
+                            self.room.data["objects"].pop(i)
+                            break
+                    
+                    self.player.worn_items[target_hand_slot] = found_ref
+                    self.player.send_message(f"You get {item_name} and hold it.")
+                    self.world.save_room(self.room)
+                    return
+
+                # CASE C: Inventory
+                elif found_ref in self.player.inventory:
+                    self.player.inventory.remove(found_ref)
+                    self.player.worn_items[target_hand_slot] = found_ref
+                    self.player.send_message(f"You get {item_name} from your pack and hold it.")
+                    set_action_roundtime(self.player, 1.0)
+                    return
+            
+            self.player.send_message("You don't see that specific item here.")
+            return
+
         # --- PARSE ARGS (Item vs Container) ---
         target_item_name = args_str
         target_container_name = None

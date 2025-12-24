@@ -781,6 +781,19 @@ class Player(GameEntity):
             real_rt_type = combat_state.get("rt_type", "hard")
             real_duration = combat_state.get("duration", max(0, real_next_action - time.time()))
 
+        # --- FIX: Check generic action roundtime ---
+        # Used for non-combat actions like eating/drinking/tending
+        generic_rt_end = getattr(self, "roundtime", 0.0)
+        if generic_rt_end > time.time():
+            # If generic RT extends further than combat RT, use it
+            if generic_rt_end > real_next_action:
+                real_next_action = generic_rt_end
+                # Default to soft if not specified, but utils now sets it
+                real_rt_type = getattr(self, "_rt_type", "soft")
+                # Use stored duration if available to prevent bar shrinking, otherwise approx
+                real_duration = getattr(self, "_rt_duration", real_next_action - time.time())
+        # -------------------------------------------
+
         return {
             "health": self.hp, "max_health": self.max_hp,
             "mana": self.mana, "max_mana": self.max_mana,
