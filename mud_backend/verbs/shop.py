@@ -9,6 +9,7 @@ from mud_backend.core.economy import get_item_buy_price, sync_shop_data_to_stora
 def deliver_purchase(verb, item, keeper_name):
     """
     Delivers items to player, prioritizing Hands -> Bag on Counter -> Bag on Floor.
+    UPDATES room.data directly to ensure persistence through re-hydration.
     """
     player = verb.player
     room = verb.room
@@ -48,86 +49,81 @@ def deliver_purchase(verb, item, keeper_name):
         "weight": 0.5
     }
     
-    # 3. Find Counter
-    counter = None
-    for obj in room.objects:
-        if "counter" in obj.get("keywords", []) or "counter" in obj.get("name", "").lower():
-            counter = obj
-            break
+    # 3. Find Counter (IN PERSISTENT DATA)
+    # We must find the stub in room.data to update persistence
+    counter_stub = None
+    target_name = "the floor"
+    
+    if "objects" in room.data:
+        for obj in room.data["objects"]:
+            nm = obj.get("name", "").lower()
+            kw = obj.get("keywords", [])
+            # Check for counter-like objects
+            if "counter" in nm or "counter" in kw:
+                counter_stub = obj
+                target_name = obj.get("name")
+                break
+    
+    if counter_stub:
+        if "container_storage" not in counter_stub:
+            counter_stub["container_storage"] = {}
+        if "on" not in counter_stub["container_storage"]:
+            counter_stub["container_storage"]["on"] = []
             
-    if counter:
-        if "container_storage" not in counter:
-            counter["container_storage"] = {}
-        if "on" not in counter["container_storage"]:
-            counter["container_storage"]["on"] = []
-            
-        counter["container_storage"]["on"].append(bag)
-        location_name = counter.get("name")
-        emote = f"{keeper_name} places {item_name} into a bag and sets it on the {location_name}."
+        counter_stub["container_storage"]["on"].append(bag)
+        emote = f"{keeper_name} places {item_name} into a bag and sets it on the {target_name}."
     else:
-        room.objects.append(bag)
-        emote = f"{keeper_name} places {item_name} into a bag and sets it on the floor (No counter found)."
+        # Fallback to floor in persistent data
+        if "objects" not in room.data: room.data["objects"] = []
+        room.data["objects"].append(bag)
+        emote = f"{keeper_name} places {item_name} into a bag and sets it on the floor."
+
+    # Save changes to DB immediately
+    verb.world.save_room(room)
 
     player.send_message(emote)
     
-    # FIX: Manual broadcast to avoid 'exclude' keyword error
+    # Manual Broadcast (Exclude player)
     for sid, p_info in verb.world.get_all_players_info():
         if p_info["current_room_id"] == room.room_id:
             if p_info["player_name"].lower() != player.name.lower():
                 verb.world.send_message_to_player(p_info["player_name"], emote, "general")
 
-    verb.world.save_room(room)
 
 @VerbRegistry.register(["list"])
 class List(BaseVerb):
     def execute(self):
-        # --- STRATEGY 1: Controller (Apothecary) ---
         controller = get_or_create_shop_controller(self.room, self.world)
+        
+        # Strategy 1: Controller
         if controller:
             inventory = controller.get_inventory()
             if not inventory:
                 self.player.send_message("The shelves are bare.")
                 return
-
             self.player.send_message(f"--- {controller.get_keeper_name()}'s Stock ---")
             for i, item in enumerate(inventory):
                 name = item["name"]
                 price = item["base_value"]
                 qty = item["qty"]
                 self.player.send_message(f"{i+1}. {name:<30} {price}s  (Qty: {qty})")
-            
             self.player.send_message("\nType 'ORDER <#>' to buy.")
             return
 
-        # --- STRATEGY 2: Legacy (Pawnshop/Tables) ---
+        # Strategy 2: Legacy
         shop_data = get_shop_data(self.room)
         if not shop_data:
             self.player.send_message("You can't seem to shop here.")
             return
-
-        inventory = shop_data.get("inventory", [])
-        if not inventory:
-            self.player.send_message("The shop has nothing for sale right now.")
-            return
-
-        self.player.send_message("--- Items for Sale ---")
-        self.player.send_message("Use 'LOOK ON <CATEGORY> TABLE' to browse, or 'ORDER' to see a catalog.")
         
-        seen_items = set()
+        inventory = shop_data.get("inventory", [])
+        self.player.send_message("--- Items for Sale ---")
         game_items = self.world.game_items
         count = 0
         for item_ref in inventory:
-            if count > 15:
-                self.player.send_message("... and more.")
-                break
-            
-            if isinstance(item_ref, dict):
-                name = item_ref.get("name")
-            else:
-                name = game_items.get(item_ref, {}).get("name", "An item")
-            
-            if name in seen_items: continue
-            seen_items.add(name)
+            if count > 15: break
+            if isinstance(item_ref, dict): name = item_ref.get("name")
+            else: name = game_items.get(item_ref, {}).get("name", "An item")
             
             price = get_item_buy_price(item_ref, game_items, shop_data)
             self.player.send_message(f"- {name:<30} {price} silver")
@@ -135,22 +131,17 @@ class List(BaseVerb):
 
 @VerbRegistry.register(["order"])
 class Order(BaseVerb):
-    """
-    Handles ordering purely from a Catalog (Controller or Legacy List).
-    """
     def execute(self):
         if not self.args:
+            # FIX: Argument order (world, player, room, args)
             List(self.world, self.player, self.room, self.args).execute()
             return
 
         controller = get_or_create_shop_controller(self.room, self.world)
-        
-        # --- STRATEGY 1: Controller ---
         if controller:
             target = self.args[0]
             qty = 1
             item_idx = -1
-
             if "of" in self.args:
                 try:
                     of_index = self.args.index("of")
@@ -159,49 +150,40 @@ class Order(BaseVerb):
                 except:
                     self.player.send_message("Usage: ORDER <qty> OF <#>")
                     return
-
             if target.isdigit():
                 item_idx = int(target) - 1
             else:
-                self.player.send_message("Please order by item number (use LIST to see numbers).")
+                self.player.send_message("Please order by item number.")
                 return
 
             items, msg = controller.buy_item(item_idx, qty, self.player)
-            
             if not items:
                 self.player.send_message(msg)
                 return
-                
             self.player.send_message(msg)
             for item in items:
                 deliver_purchase(self, item, controller.get_keeper_name())
             return
-
-        # --- STRATEGY 2: Legacy (Pawnshop) ---
+        
+        # Legacy Fallback
         List(self.world, self.player, self.room, self.args).execute()
 
 @VerbRegistry.register(["buy"])
 class Buy(BaseVerb):
-    """
-    Handles buying from BOTH the Catalog (Controller) and Physical Displays (Pawnshop).
-    """
     def execute(self):
         if not self.args:
             self.player.send_message("What do you want to buy?")
             return
 
-        # Prepare context
         controller = get_or_create_shop_controller(self.room, self.world)
         arg_str = " ".join(self.args).lower()
         
-        # --- PATH A: Controller/Catalog Buy ---
+        # PATH A: Controller
         if controller:
-            # 1. Check if user typed a Number (Alias to Order)
-            if self.args[0].isdigit() and len(self.args) == 1:
+            if self.args[0].isdigit():
                 Order(self.world, self.player, self.room, self.args).execute()
                 return
 
-            # 2. Check if user typed a Name that exists in Catalog
             cat_idx = controller.find_item_index_by_keyword(arg_str)
             if cat_idx != -1:
                 items, msg = controller.buy_item(cat_idx, 1, self.player)
@@ -214,7 +196,7 @@ class Buy(BaseVerb):
                     self.player.send_message(msg)
                     return
 
-        # --- PATH B: Physical/Pawnshop Buy (Dynamic Displays) ---
+        # PATH B: Physical
         item_to_buy = None
         source_container_view = None
         item_index = -1
@@ -224,10 +206,8 @@ class Buy(BaseVerb):
             if obj.get("is_dynamic_display"):
                 storage = obj.get("container_storage", {}).get("in", [])
                 for i, item_ref in enumerate(storage):
-                    if isinstance(item_ref, dict):
-                        item_data = item_ref
-                    else:
-                        item_data = game_items.get(item_ref, {})
+                    if isinstance(item_ref, dict): item_data = item_ref
+                    else: item_data = game_items.get(item_ref, {})
                     
                     if item_data:
                         if (arg_str == item_data.get("name", "").lower() or
@@ -236,42 +216,36 @@ class Buy(BaseVerb):
                             item_index = i
                             source_container_view = obj
                             break
-                if item_to_buy:
-                    break
+                if item_to_buy: break
         
         if not item_to_buy:
             self.player.send_message("That item is not for sale here.")
             return
 
-        # Calculate Price (Legacy/Physical Logic)
         dummy_shop_data = {"markdown": 0.5, "markup": 1.2}
-        if controller:
-            keeper_name = controller.get_keeper_name()
-        else:
-            keeper_name = "The Shopkeeper"
-            for obj in self.room.objects:
-                if obj.get("is_npc") and obj.get("shop_data"):
-                    dummy_shop_data = obj["shop_data"]
-                    keeper_name = obj.get("name")
-                    break
-
-        price = get_item_buy_price(item_to_buy, game_items, dummy_shop_data)
+        keeper_name = controller.get_keeper_name() if controller else "The Shopkeeper"
         
-        player_silver = self.player.wealth.get("silvers", 0)
-        if player_silver < price:
-            self.player.send_message(f"You can't afford that. It costs {price} silver and you have {player_silver}.")
+        price = get_item_buy_price(item_to_buy, game_items, dummy_shop_data)
+        if self.player.wealth.get("silvers", 0) < price:
+            self.player.send_message("You can't afford that.")
             return
 
-        self.player.wealth["silvers"] = player_silver - price
-
-        if isinstance(item_to_buy, dict):
-            new_item = item_to_buy
-            deliver_purchase(self, new_item, keeper_name)
+        self.player.wealth["silvers"] -= price
+        
+        if isinstance(item_to_buy, dict): new_item = item_to_buy
         else:
             new_item = copy.deepcopy(game_items.get(item_to_buy))
             new_item["uid"] = uuid.uuid4().hex
-            deliver_purchase(self, new_item, keeper_name)
+        
+        deliver_purchase(self, new_item, keeper_name)
 
         if source_container_view:
-            source_container_view["container_storage"]["in"].pop(item_index)
+            # We must also update persistence for physical items
+            # Find matching stub in room.data
+            for stub in self.room.data.get("objects", []):
+                if stub.get("uid") == source_container_view.get("uid"):
+                    if "container_storage" in stub and "in" in stub["container_storage"]:
+                         if len(stub["container_storage"]["in"]) > item_index:
+                             stub["container_storage"]["in"].pop(item_index)
+                             break
             self.world.save_room(self.room)
