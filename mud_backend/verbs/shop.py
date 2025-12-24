@@ -74,24 +74,25 @@ def deliver_purchase(verb, item, shop_data):
     }
     
     # 3. Find Counter
-    # Use the config's preferred counter key (e.g., "anvil", "display case")
-    preferred_counter = flavor.get("counter_key", "counter")
+    preferred_counter_key = flavor.get("counter_key", "counter")
     counter = None
     
-    # Try specific match
+    # Strategy A: Try specific match for preferred key (e.g. "anvil", "display case")
     for obj in room.objects:
         nm = obj.get("name", "").lower()
         kw = obj.get("keywords", [])
-        if preferred_counter in nm or preferred_counter in kw:
+        if preferred_counter_key in nm or preferred_counter_key in kw:
             counter = obj
             break
             
-    # Fallback generic match
+    # Strategy B: Fallback generic match (if "counter" requested but only "display case" exists)
     if not counter:
+        fallback_keywords = ["counter", "bar", "table", "desk", "case", "display", "shelf", "bench"]
         for obj in room.objects:
             kw = obj.get("keywords", [])
             nm = obj.get("name", "").lower()
-            if "counter" in kw or "bar" in kw or "table" in kw or "desk" in kw:
+            # Check if any fallback keyword is in name or keywords
+            if any(k in nm or k in kw for k in fallback_keywords):
                 counter = obj
                 break
             
@@ -103,22 +104,27 @@ def deliver_purchase(verb, item, shop_data):
             
         counter["container_storage"]["on"].append(bag)
         
-        # Resolve emote variables
         target_name = counter.get("name", "counter")
-        emote_msg = emote_tmpl.format(
-            npc=keeper_name,
-            player=player.name,
-            item=item_name,
-            bag=bag_name,
-            counter=target_name
-        )
         
-        verb.world.broadcast_to_room(room, emote_msg)
-        player.send_message(emote_msg) # Player sees the same emote
     else:
-        # Fallback: Floor
+        # Strategy C: Floor (Last Resort)
         room.objects.append(bag)
-        player.send_message(f"{keeper_name} sees your hands are full, bags the item, and sets it on the floor.")
+        target_name = "the floor"
+
+    # Send Emote (used for both Counter and Floor to ensure flavor is preserved)
+    emote_msg = emote_tmpl.format(
+        npc=keeper_name,
+        player=player.name,
+        item=item_name,
+        bag=bag_name,
+        counter=target_name # Will replace {bag} if template expects it, or just use context
+    )
+    
+    # Some templates use {bag} for the placed object name
+    emote_msg = emote_msg.replace("{bag}", bag_name)
+    
+    verb.world.broadcast_to_room(room, emote_msg)
+    player.send_message(emote_msg)
     
     verb.world.save_room(room)
 
