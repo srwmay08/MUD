@@ -85,7 +85,7 @@ def deliver_purchase(verb, item, shop_data):
             counter = obj
             break
             
-    # Strategy B: Fallback generic match (if "counter" requested but only "display case" exists)
+    # Strategy B: Fallback generic match (Updated to include 'case', 'display', 'shelf', 'bench')
     if not counter:
         fallback_keywords = ["counter", "bar", "table", "desk", "case", "display", "shelf", "bench"]
         for obj in room.objects:
@@ -117,10 +117,10 @@ def deliver_purchase(verb, item, shop_data):
         player=player.name,
         item=item_name,
         bag=bag_name,
-        counter=target_name # Will replace {bag} if template expects it, or just use context
+        counter=target_name 
     )
     
-    # Some templates use {bag} for the placed object name
+    # Some templates use {bag} for the placed object name, ensure it's replaced
     emote_msg = emote_msg.replace("{bag}", bag_name)
     
     verb.world.broadcast_to_room(room, emote_msg)
