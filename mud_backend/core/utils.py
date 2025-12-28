@@ -68,27 +68,27 @@ def find_object_by_keyword_or_id(search_term: str, object_list: List[Dict[str, A
     if search_term.startswith('#'):
         target_uid = search_term[1:] # Strip the '#'
         for obj in object_list:
-            if obj.get('uid') == target_uid:
+            if str(obj.get('uid')) == target_uid:
                 return obj
         return None # If ID provided but not found, return None immediately
 
     # 2. Keyword/Name Lookup (Standard)
-    search_term = clean_name(search_term)
+    clean_term = clean_name(search_term)
     
     # Priority 1: Exact Name Match
     for obj in object_list:
-        if clean_name(obj.get("name", "")) == search_term:
+        if clean_name(obj.get("name", "")) == clean_term:
             return obj
             
     # Priority 2: Keyword Match
     for obj in object_list:
         keywords = [k.lower() for k in obj.get("keywords", [])]
-        if search_term in keywords:
+        if clean_term in keywords:
             return obj
             
     # Priority 3: Partial Name Match
     for obj in object_list:
-        if search_term in clean_name(obj.get("name", "")):
+        if clean_term in clean_name(obj.get("name", "")):
             return obj
 
     return None
