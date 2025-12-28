@@ -33,8 +33,8 @@ class List(BaseVerb):
             if isinstance(item_ref, dict): name = item_ref.get("name")
             else: name = game_items.get(item_ref, {}).get("name", "An item")
             
-            price = get_item_buy_price(item_ref, game_items, shop_data)
-            self.player.send_message(f"- {name:<30} {price} silver")
+            # Legacy: Hide price for organic feel consistency
+            self.player.send_message(f"- {name:<30}")
             count += 1
 
 @VerbRegistry.register(["order"])
@@ -138,7 +138,7 @@ class Buy(BaseVerb):
         price = get_item_buy_price(item_to_buy, game_items, dummy_shop_data)
         
         if self.player.wealth.get("silvers", 0) < price:
-            self.player.send_message("You can't afford that.")
+            self.player.send_message(f"You count your coins but realize you don't have the {price} silver required.")
             return
 
         # Transact
@@ -156,7 +156,7 @@ class Buy(BaseVerb):
             # Minimal fallback if no controller exists
             self.player.worn_items["mainhand"] = new_item["uid"]
             self.world.game_items[new_item["uid"]] = new_item
-            self.player.send_message(f"You buy {new_item.get('name')} for {price}s.")
+            self.player.send_message(f"You purchase {new_item.get('name')} for {price}s.")
 
         # Update Persistence (Remove from Physical Container)
         if source_container_view:

@@ -1,145 +1,135 @@
-# mud_backend/verbs/foraging.py
-import time
+import json
 import random
-from mud_backend.verbs.base_verb import BaseVerb
-from mud_backend.core.registry import VerbRegistry
-from mud_backend.core.item_utils import get_item_data, find_item_in_hands, find_item_in_inventory
-from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
+import os
 
-@VerbRegistry.register(["forage", "search"])
-class Forage(BaseVerb):
-    def execute(self):
-        if check_action_roundtime(self.player, "other"): return
-        
-        room_data = self.room.data
-        if not room_data.get("forageable"):
-            self.player.send_message("You don't see anything worth foraging here.")
+class ForagingSystem:
+    """
+    Handles the discovery and collection of flora from the game world.
+    Strictly handles 'World -> Inventory' logic.
+    """
+    
+    # Path to the JSON file
+    PLANT_DATA_FILE = "items_plants.json"
+    
+    # Cache for loaded plant data
+    _plants_data = None
+
+    @classmethod
+    def load_plants(cls):
+        """
+        Loads the plant definitions from the JSON file if not already loaded.
+        """
+        if cls._plants_data is not None:
             return
 
-        skill_level = self.player.skills.get("survival", 0)
-        chance = 30 + (skill_level * 2)
-        
-        self.player.send_message("You begin searching the area for useful resources...")
-        
-        if random.randint(1, 100) <= chance:
-            possible_items = room_data.get("forage_items", [])
-            if not possible_items:
-                self.player.send_message("You find nothing of interest.")
-            else:
-                item_id = random.choice(possible_items)
-                item_template = self.world.game_items.get(item_id)
-                if item_template:
-                    import copy
-                    import uuid
-                    new_item = copy.deepcopy(item_template)
-                    new_item["uid"] = uuid.uuid4().hex
-                    
-                    if not self.player.worn_items.get("mainhand"):
-                        self.player.worn_items["mainhand"] = new_item
-                        self.player.send_message(f"You found {new_item['name']} and picked it up.")
-                    elif not self.player.worn_items.get("offhand"):
-                        self.player.worn_items["offhand"] = new_item
-                        self.player.send_message(f"You found {new_item['name']} and picked it up.")
-                    else:
-                        self.player.inventory.append(new_item)
-                        self.player.send_message(f"You found {new_item['name']} and put it in your pack.")
-                        
-                    self.player.grant_experience(10, source="survival")
-        else:
-            self.player.send_message("You search fruitlessly.")
-            
-        set_action_roundtime(self.player, 5.0)
+        if not os.path.exists(cls.PLANT_DATA_FILE):
+            print(f"Error: {cls.PLANT_DATA_FILE} not found.")
+            cls._plants_data = {}
+            return
 
-@VerbRegistry.register(["eat", "consume"])
-class Eat(BaseVerb):
-    def execute(self):
-        if check_action_roundtime(self.player, "other"): return
-        if not self.args:
-            self.player.send_message("Eat what?")
-            return
-            
-        target_name = " ".join(self.args).lower()
-        
-        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
-        from_inventory = False
-        
-        if not item_ref:
-            item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
-            from_inventory = True
-            
-        if not item_ref:
-            self.player.send_message(f"You aren't holding or carrying any '{target_name}'.")
-            return
-            
-        item_data = get_item_data(item_ref, self.world.game_items)
-        
-        if not item_data.get("is_edible"):
-            self.player.send_message("That doesn't look edible.")
-            return
-            
-        self.player.send_message(f"You eat the {item_data['name']}.")
-        
-        if "nutrition" in item_data:
-            self.player.stamina = min(self.player.max_stamina, self.player.stamina + item_data["nutrition"])
-            self.player.send_message("You feel refreshed.")
-            
-        if from_inventory:
-            self.player.inventory.remove(item_ref)
-        else:
-            self.player.worn_items[hand_slot] = None
-            
-        set_action_roundtime(self.player, 2.0)
+        try:
+            with open(cls.PLANT_DATA_FILE, 'r') as f:
+                cls._plants_data = json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"Error decoding plant JSON: {e}")
+            cls._plants_data = {}
 
-@VerbRegistry.register(["drink", "quaff"])
-class Drink(BaseVerb):
-    def execute(self):
-        if check_action_roundtime(self.player, "other"): return
-        if not self.args:
-            self.player.send_message("Drink what?")
+    @classmethod
+    def get_plant_by_id(cls, plant_id):
+        """
+        Retrieves a copy of the plant data by ID.
+        """
+        cls.load_plants()
+        plant = cls._plants_data.get(plant_id)
+        if plant:
+            # Return a copy so we don't mutate the source template
+            return plant.copy()
+        return None
+
+    @staticmethod
+    def attempt_forage(player, current_biome):
+        """
+        Executes a foraging attempt based on player stats and current location.
+        
+        Args:
+            player: The player object (requires .stats, .inventory, .send_message).
+            current_biome: String representing the current area (e.g., "forest", "desert").
+        """
+        # 1. Base Skill Check (Example: Perception + Survival)
+        # You can adjust these stat references to match your specific player system
+        perception = player.stats.get("perception", 10)
+        survival = player.stats.get("survival", 0)
+        
+        # Simple d20 roll logic
+        roll = random.randint(1, 20) + (perception // 2) + survival
+        difficulty = ForagingSystem._get_biome_difficulty(current_biome)
+
+        if roll < difficulty:
+            ForagingSystem._handle_failure(player)
             return
-            
-        target_name = " ".join(self.args).lower()
-        
-        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
-        from_inventory = False
-        
-        if not item_ref:
-            item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
-            from_inventory = True
-            
-        if not item_ref:
-            self.player.send_message(f"You aren't holding or carrying any '{target_name}'.")
+
+        # 2. Determine Loot Table
+        loot_table = ForagingSystem._get_biome_loot(current_biome)
+        if not loot_table:
+            player.send_message("You search the area but find nothing of interest here.")
             return
-            
-        item_data = get_item_data(item_ref, self.world.game_items)
-        
-        if not item_data.get("is_drinkable"):
-            self.player.send_message("You can't drink that.")
+
+        # 3. Select Item
+        found_item_id = random.choice(loot_table)
+        item_data = ForagingSystem.get_plant_by_id(found_item_id)
+
+        if not item_data:
+            player.send_message("You found something, but it crumbled to dust (Data Error).")
             return
-            
-        self.player.send_message(f"You drink from the {item_data['name']}.")
+
+        # 4. Add to Inventory (The final step of Foraging)
+        player.inventory.append(item_data)
         
-        if "hydration" in item_data:
-            self.player.stamina = min(self.player.max_stamina, self.player.stamina + item_data["hydration"])
-            self.player.send_message("That hit the spot.")
-            
-        remaining_sips = item_data.get("sips", 1) - 1
-        
-        if isinstance(item_ref, dict):
-            if remaining_sips > 0:
-                item_ref["sips"] = remaining_sips
-                self.player.send_message(f"There are {remaining_sips} sips left.")
-            else:
-                if from_inventory:
-                    self.player.inventory.remove(item_ref)
-                else:
-                    self.player.worn_items[hand_slot] = None
-                self.player.send_message(f"You finish the {item_data['name']}.")
-        else:
-            if from_inventory:
-                self.player.inventory.remove(item_ref)
-            else:
-                self.player.worn_items[hand_slot] = None
-            self.player.send_message(f"You finish the {item_data['name']}.")
-            
-        set_action_roundtime(self.player, 2.0)
+        # 5. Success Message
+        player.send_message(f"You forage around and manage to find {item_data['name']}!")
+
+    @staticmethod
+    def _get_biome_difficulty(biome):
+        """
+        Returns the DC (Difficulty Class) for foraging in a specific biome.
+        """
+        difficulty_map = {
+            "forest": 10,
+            "plains": 8,
+            "desert": 15,
+            "swamp": 14,
+            "mountain": 16,
+            "dungeon": 18
+        }
+        return difficulty_map.get(biome.lower(), 12)
+
+    @staticmethod
+    def _get_biome_loot(biome):
+        """
+        Returns a list of item_ids valid for the given biome.
+        This allows specific herbs to only spawn in specific areas.
+        """
+        # In a real scenario, this might also be loaded from a json file
+        # or derived from tags in items_plants.json
+        loot_map = {
+            "forest": ["sweetfern_leaf", "basal_moss", "rosemarrow_potion", "pennyroyal_stem"],
+            "plains": ["knitbone_flower", "snapdragon_tea", "gingko_nut"],
+            "desert": ["withered_root", "numb_needle", "barrel_cactus", "crimson_aloe"],
+            "swamp": ["hydra_tongue", "troll_moss", "glow_lichen", "tormented_root"],
+            "mountain": ["ambrosia_stalk", "ironwood_bark", "kingsfoil_leaf"],
+            "dungeon": ["basal_moss", "starfruit_berry"]
+        }
+        return loot_map.get(biome.lower(), [])
+
+    @staticmethod
+    def _handle_failure(player):
+        """
+        Flavor text for failed attempts.
+        """
+        messages = [
+            "You scrounge around in the dirt but find nothing useful.",
+            "You see some plants, but they look withered and useless.",
+            "You search the area, but only find rocks and debris.",
+            "You fail to find any herbs of value."
+        ]
+        player.send_message(random.choice(messages))

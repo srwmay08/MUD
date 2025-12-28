@@ -205,9 +205,8 @@ class ShopController:
         
         for i, item in enumerate(inventory):
             name = item["name"]
-            price = item["base_value"]
-            qty = item["qty"]
-            lines.append(f"{i+1}. {name:<30} {price}s  (Qty: {qty})")
+            # Price and Qty hidden for organic feel
+            lines.append(f"{i+1}. {name}")
         
         lines.append("\nType 'ORDER <#>' to buy.")
         return lines
@@ -226,11 +225,11 @@ class ShopController:
             
         item_ref = inventory[item_index]
         if item_ref["qty"] < quantity:
-            return None, "Not enough stock available."
+            return None, f"The shopkeeper checks the stock, 'Sorry, I don't have enough of those.'"
             
         cost = item_ref["base_value"] * quantity
         if player.wealth["silvers"] < cost:
-            return None, f"You cannot afford that. Cost: {cost}."
+            return None, f"The shopkeeper eyes your purse, 'That will cost {cost} silver. Come back when you have the coin.'"
             
         # Transact
         player.wealth["silvers"] -= cost
@@ -248,7 +247,7 @@ class ShopController:
             new_item.pop("id", None)
             items_to_give.append(new_item)
             
-        return items_to_give, f"You buy {quantity} x {item_ref['name']} for {cost} silver."
+        return items_to_give, f"The shopkeeper accepts your {cost} silver. 'A fine choice,' they say."
 
     def deliver_item_to_player(self, player, item_data):
         """
