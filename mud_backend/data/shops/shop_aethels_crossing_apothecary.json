@@ -43,51 +43,25 @@
             "description": "A roll of clean white linen, suitable for binding wounds."
         },
         {
-            "id": "dried_yarrow",
-            "name": "dried yarrow",
+            "id": "sweetfern_leaf",
+            "name": "a sweetfern leaf",
             "keywords": [
-                "yarrow",
-                "dried",
-                "herb"
+            "leaf",
+            "sweetfern leaf",
+            "sweetfern"
             ],
             "type": "herb",
             "weight": 0.1,
-            "base_value": 15,
-            "qty": 20,
-            "description": "A bundle of pungent dried yarrow."
-        },
-        {
-            "id": "empty_glass_vial",
-            "name": "empty glass vial",
-            "keywords": [
-                "vial",
-                "glass",
-                "empty"
-            ],
-            "type": "container",
-            "weight": 0.2,
-            "base_value": 5,
-            "qty": 100,
-            "description": "A clear glass vial with a cork stopper."
-        },
-        {
-            "id": "blue_tonic",
-            "name": "flask of blue tonic",
-            "keywords": [
-                "flask",
-                "tonic",
-                "blue"
-            ],
-            "type": "potion",
-            "weight": 0.5,
-            "base_value": 50,
+            "base_value": 250,
             "qty": 10,
-            "description": "A flask containing a glowing blue liquid."
+            "description": "A sugary leaf with jagged edges, known to clot blood and knit flesh quickly.",
         }
     ],
     "display_case_items": [
         "dried_yarrow",
         "clean_linen_bandage",
-        "blue_tonic"
+        "blue_tonic",
+        "viridian_leaf",
+        "althion_stem"
     ]
 }

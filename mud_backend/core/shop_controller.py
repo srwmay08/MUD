@@ -40,6 +40,35 @@ class ShopController:
             print(f"Error loading shop template {self.filename}: {e}")
             return {}
 
+    def _hydrate_inventory(self, inventory_list):
+        """
+        Takes a list of partial item definitions (e.g. {'id': 'x', 'qty': 10})
+        and fills in the full details (name, desc, type) from the global AssetManager.
+        """
+        hydrated_list = []
+        
+        # Safely access the global items registry from the world object
+        assets = getattr(self.world, "assets", None)
+        global_items = assets.items if assets and hasattr(assets, "items") else {}
+
+        for item_entry in inventory_list:
+            item_id = item_entry.get("id")
+            
+            # If the item exists in our global registry, use it as the base
+            if item_id and item_id in global_items:
+                # 1. Deepcopy the global definition (source of truth)
+                full_item = copy.deepcopy(global_items[item_id])
+                
+                # 2. Update with shop-specific overrides (qty, custom price, etc.)
+                full_item.update(item_entry)
+                
+                hydrated_list.append(full_item)
+            else:
+                # Fallback: If not found globally, assume the shop entry has full data (Legacy support)
+                hydrated_list.append(copy.deepcopy(item_entry))
+                
+        return hydrated_list
+
     def _load_or_create_state(self):
         """
         Loads state from the Room's persistence data. 
@@ -50,10 +79,15 @@ class ShopController:
             return self.room.data["shop_state"]
 
         # Otherwise, create a fresh state from the template
+        template_inventory = self.template.get("inventory", [])
+        
+        # Hydrate the inventory using global assets
+        hydrated_inventory = self._hydrate_inventory(template_inventory)
+
         initial_state = {
             "balance": self.template.get("balance", 1000),
             "last_tick_time": time.time(),
-            "inventory": copy.deepcopy(self.template.get("inventory", [])),
+            "inventory": hydrated_inventory,
             "display_case_items": [] # IDs of items currently in the case
         }
         
@@ -80,6 +114,7 @@ class ShopController:
             return
 
         # Template for max limits
+        # Note: We rely on the template for 'max_qty' reference.
         template_inv = {item["id"]: item for item in self.template.get("inventory", [])}
         
         updated = False
@@ -204,8 +239,8 @@ class ShopController:
         lines = [f"--- {keeper}'s Stock ---"]
         
         for i, item in enumerate(inventory):
-            name = item["name"]
-            # Price and Qty hidden for organic feel
+            name = item.get("name", "Unknown Item")
+            # Price and Qty hidden for organic feel, but can be added back if needed
             lines.append(f"{i+1}. {name}")
         
         lines.append("\nType 'ORDER <#>' to buy.")
