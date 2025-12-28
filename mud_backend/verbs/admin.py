@@ -1,5 +1,7 @@
 # mud_backend/verbs/admin.py
 import time
+import copy
+import uuid
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
 from mud_backend import config
@@ -31,6 +33,44 @@ class GiveWealth(BaseVerb):
         target.wealth["silvers"] = target.wealth.get("silvers", 0) + amount
         self.player.send_message(f"Added {amount} silver to {target.name}. Total: {target.wealth['silvers']}.")
         target.mark_dirty()
+
+@VerbRegistry.register(["giveitem", "additem"], admin_only=True)
+class GiveItem(BaseVerb):
+    def execute(self):
+        if not self.args:
+            self.player.send_message("Usage: GIVEITEM <item_id> [target_player]")
+            return
+
+        item_id = self.args[0]
+        
+        # Determine target
+        target = self.player
+        if len(self.args) > 1:
+            target_name = self.args[1].lower()
+            found = self.world.get_player_obj(target_name)
+            if found:
+                target = found
+            else:
+                self.player.send_message(f"Player '{target_name}' not found.")
+                return
+
+        # Fetch item template
+        item_template = self.world.game_items.get(item_id)
+        if not item_template:
+            self.player.send_message(f"Item ID '{item_id}' not found in game registry.")
+            return
+
+        # Create new instance with unique ID
+        new_item = copy.deepcopy(item_template)
+        new_item["uid"] = uuid.uuid4().hex
+        
+        # Add to target inventory
+        target.inventory.append(new_item)
+        target.mark_dirty()
+
+        self.player.send_message(f"Created '{new_item['name']}' ({item_id}) and gave it to {target.name}.")
+        if target != self.player:
+            target.send_message(f"An admin has given you {new_item['name']}.")
 
 @VerbRegistry.register(["teleport", "goto_player"], admin_only=True)
 class Teleport(BaseVerb):

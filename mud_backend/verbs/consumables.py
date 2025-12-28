@@ -12,13 +12,13 @@ class ConsumableSystem:
         Main entry point for consuming an item.
         
         Args:
-            player: The player object (must support injuries/scars dicts and send_message).
+            player: The player object (must support wounds/scars dicts and send_message).
             item_data: The dictionary representing the item from items_plants.json.
         """
         # Extract the specific effect block
         effect = item_data.get("effect_on_use")
         
-        # If the item has no define effect, return early
+        # If the item has no defined effect, return early
         if not effect:
             verb = item_data.get("use_verb", "use")
             player.send_message(f"You {verb} the {item_data['name']}, but nothing happens.")
@@ -32,11 +32,11 @@ class ConsumableSystem:
             amount = effect["heal_hp"]
             ConsumableSystem._apply_hp_healing(player, amount, item_data['name'], verb)
 
-        # 2. Handle Injury Healing
+        # 2. Handle Wound Healing
         elif "heal_injury" in effect:
             location = effect["heal_injury"]["location"]
             rank = effect["heal_injury"]["rank"]
-            ConsumableSystem._apply_injury_healing(player, location, rank, item_data['name'], verb)
+            ConsumableSystem._apply_wound_healing(player, location, rank, item_data['name'], verb)
 
         # 3. Handle Scar Healing
         elif "heal_scar" in effect:
@@ -71,23 +71,23 @@ class ConsumableSystem:
         player.send_message(f"You {verb} the {item_name}. A wave of warmth spreads through you, restoring {healed_amount} health.")
 
     @staticmethod
-    def _apply_injury_healing(player, location, item_rank, item_name, verb):
+    def _apply_wound_healing(player, location, item_rank, item_name, verb):
         """
-        Logic for healing fresh injuries.
+        Logic for healing fresh wounds.
         """
-        # Check if player actually has an injury at this location
-        # Assumes player.injuries is a dict like: {'head_neck': 2, 'arms_legs': 1}
-        current_injury_rank = player.injuries.get(location, 0)
+        # Check if player actually has a wound at this location
+        # Matches player.wounds in game_objects.py
+        current_wound_rank = player.wounds.get(location, 0)
 
-        if current_injury_rank == 0:
+        if current_wound_rank == 0:
             human_loc = location.replace("_", " ")
             player.send_message(f"You {verb} the {item_name}. It tastes medicinal, but you have no injuries to your {human_loc}.")
             return
 
-        # Check potency: Item Rank must be >= Injury Rank
-        if item_rank >= current_injury_rank:
-            # Remove the injury entirely
-            del player.injuries[location]
+        # Check potency: Item Rank must be >= Wound Rank
+        if item_rank >= current_wound_rank:
+            # Remove the wound entirely
+            del player.wounds[location]
             
             # Send flavor text
             msg = ConsumableSystem._get_healing_flavor_text(location, False)
@@ -102,7 +102,7 @@ class ConsumableSystem:
         Logic for healing old scars.
         """
         # Check if player has a scar at this location
-        # Assumes player.scars is a dict like: {'head_neck': 1}
+        # Matches player.scars in game_objects.py
         current_scar_rank = player.scars.get(location, 0)
 
         if current_scar_rank == 0:
