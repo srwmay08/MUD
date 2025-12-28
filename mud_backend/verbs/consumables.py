@@ -1,4 +1,7 @@
 import random
+from mud_backend.verbs.base_verb import BaseVerb
+from mud_backend.core.registry import VerbRegistry
+from mud_backend.core.item_utils import find_item_in_hands, get_item_data, find_item_in_inventory
 
 class ConsumableSystem:
     """
@@ -12,13 +15,13 @@ class ConsumableSystem:
         Main entry point for consuming an item.
         
         Args:
-            player: The player object (must support wounds/scars dicts and send_message).
+            player: The player object.
             item_data: The dictionary representing the item from items_plants.json.
         """
         # Extract the specific effect block
         effect = item_data.get("effect_on_use")
         
-        # If the item has no defined effect, return early
+        # If the item has no define effect, return early
         if not effect:
             verb = item_data.get("use_verb", "use")
             player.send_message(f"You {verb} the {item_data['name']}, but nothing happens.")
@@ -32,7 +35,7 @@ class ConsumableSystem:
             amount = effect["heal_hp"]
             ConsumableSystem._apply_hp_healing(player, amount, item_data['name'], verb)
 
-        # 2. Handle Wound Healing
+        # 2. Handle Wound Healing (Renamed from heal_injury to match common terminology, checks 'wounds')
         elif "heal_injury" in effect:
             location = effect["heal_injury"]["location"]
             rank = effect["heal_injury"]["rank"]
@@ -76,7 +79,7 @@ class ConsumableSystem:
         Logic for healing fresh wounds.
         """
         # Check if player actually has a wound at this location
-        # Matches player.wounds in game_objects.py
+        # Uses player.wounds (from game_objects.py)
         current_wound_rank = player.wounds.get(location, 0)
 
         if current_wound_rank == 0:
@@ -88,6 +91,11 @@ class ConsumableSystem:
         if item_rank >= current_wound_rank:
             # Remove the wound entirely
             del player.wounds[location]
+            # Remove bandage if present on that location
+            if location in player.bandages:
+                del player.bandages[location]
+            
+            player.mark_dirty()
             
             # Send flavor text
             msg = ConsumableSystem._get_healing_flavor_text(location, False)
@@ -102,7 +110,6 @@ class ConsumableSystem:
         Logic for healing old scars.
         """
         # Check if player has a scar at this location
-        # Matches player.scars in game_objects.py
         current_scar_rank = player.scars.get(location, 0)
 
         if current_scar_rank == 0:
@@ -114,6 +121,7 @@ class ConsumableSystem:
         if item_rank >= current_scar_rank:
             # Remove the scar entirely
             del player.scars[location]
+            player.mark_dirty()
             
             # Send flavor text
             msg = ConsumableSystem._get_healing_flavor_text(location, True)
@@ -151,3 +159,81 @@ class ConsumableSystem:
                 return "You hear a wet crunching sound as bones snap back into place and torn muscle rebinds."
             else:
                 return "The wound closes rapidly, leaving only faint skin behind."
+
+@VerbRegistry.register(["eat", "consume"])
+class Eat(BaseVerb):
+    def execute(self):
+        if not self.args:
+            self.player.send_message("Eat what?")
+            return
+
+        target_name = " ".join(self.args)
+        
+        # 1. Try to find item in hands first (Standard MUD behavior)
+        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+        
+        # 2. If not in hands, try inventory (Auto-hold logic, optional but nice)
+        if not item_ref:
+            item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
+            hand_slot = "inventory" # Marker logic below
+
+        if not item_ref:
+            self.player.send_message(f"You don't have '{target_name}'.")
+            return
+
+        # Get Item Data
+        item_data = get_item_data(item_ref, self.world.game_items)
+        if not item_data:
+            self.player.send_message("That item seems to be glitched.")
+            return
+
+        # Check if it is food/herb/consumable
+        if item_data.get("item_type") not in ["herb", "food", "potion"]:
+            # If it has an effect_on_use, we allow it, otherwise reject
+            if not item_data.get("effect_on_use"):
+                self.player.send_message(f"You cannot eat {item_data['name']}.")
+                return
+
+        # Execute Consumption
+        ConsumableSystem.consume_item(self.player, item_data)
+
+        # Destroy Item
+        if hand_slot == "inventory":
+            self.player.inventory.remove(item_ref)
+        else:
+            self.player.worn_items[hand_slot] = None
+        
+        self.player.mark_dirty()
+
+@VerbRegistry.register(["drink", "quaff", "sip"])
+class Drink(BaseVerb):
+    def execute(self):
+        if not self.args:
+            self.player.send_message("Drink what?")
+            return
+
+        target_name = " ".join(self.args)
+        
+        # Prioritize hands for drinking
+        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+        
+        if not item_ref:
+            self.player.send_message("You must be holding the potion to drink it.")
+            return
+
+        item_data = get_item_data(item_ref, self.world.game_items)
+        if not item_data: return
+
+        # Check types
+        if item_data.get("item_type") not in ["potion", "drink", "herb"]:
+             if not item_data.get("effect_on_use"):
+                self.player.send_message(f"You cannot drink {item_data['name']}.")
+                return
+
+        # Execute Consumption
+        ConsumableSystem.consume_item(self.player, item_data)
+
+        # Logic: If it's a potion, maybe it leaves an empty vial?
+        # For now, we destroy the item like 'eat'
+        self.player.worn_items[hand_slot] = None
+        self.player.mark_dirty()

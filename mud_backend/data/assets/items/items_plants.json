@@ -1,439 +1,441 @@
-  {
-      "id": "viridian_leaf",
-      "name": "a viridian leaf",
-      "keywords": [
-        "leaf",
-        "viridian leaf"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 20,
-      "qty": 20,
-      "description": "A simple green leaf, prized by herbalists for its minor restorative properties.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_hp": 15
-      }
-    },
-    {
-      "id": "althion_stem",
-      "name": "an althion stem",
-      "keywords": [
-        "stem",
-        "althion stem"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 75,
-      "qty": 10,
-      "description": "A thick, fibrous stem that pulses with a faint magical energy.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_hp": 50
-      }
-    },
-    {
-      "id": "sweetfern_leaf",
-      "name": "a sweetfern leaf",
-      "keywords": [
-        "leaf",
-        "sweetfern leaf",
-        "sweetfern"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 15,
-      "qty": 10,
-      "description": "A sugary leaf with jagged edges, known to clot blood and knit flesh quickly.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_hp": 10
-      }
-    },
-    {
-      "id": "crimson_aloe",
-      "name": "some crimson aloe",
-      "keywords": [
-        "aloe",
-        "crimson aloe",
-        "gel"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 60,
-      "qty": 10,
-      "description": "A thick, red-tinged gel that smells faintly of copper. It rapidly accelerates natural healing.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_hp": 45
-      }
-    },
-    {
-      "id": "withered_root",
-      "name": "a withered root",
-      "keywords": [
-        "root",
-        "withered root"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 50,
-      "qty": 10,
-      "description": "A dry, spindly root. When chewed, it calms minor tremors and twitches in the nerves.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "nervous_system",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "tormented_root",
-      "name": "a tormented root",
-      "keywords": [
-        "root",
-        "tormented root"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 200,
-      "qty": 10,
-      "description": "A twisted, knotty root that looks like it died in pain. It shocks the nervous system into repairing major trauma.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "nervous_system",
-          "rank": 2
-        }
-      }
-    },
-    {
-      "id": "numb_needle",
-      "name": "a numb-needle cactus",
-      "keywords": [
-        "cactus",
-        "numb-needle",
-        "meat"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 100,
-      "qty": 10,
-      "description": "A small chunk of fleshy cactus meat that restores sensation to numbed areas where scars have formed.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "nervous_system",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "barrel_cactus",
-      "name": "some barrel cactus flesh",
-      "keywords": [
-        "cactus",
-        "flesh",
-        "barrel cactus"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 300,
-      "qty": 10,
-      "description": "Potent, water-heavy cactus flesh that repairs deep-seated nerve damage and chronic shakes.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "nervous_system",
-          "rank": 2
-        }
-      }
-    },
-    {
-      "id": "rosemarrow_potion",
-      "name": "a rosemarrow potion",
-      "keywords": [
-        "potion",
-        "rosemarrow"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 50,
-      "qty": 10,
-      "description": "A sweet, pink distillation that clears concussions and eases headaches.",
-      "use_verb": "drink",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "head_neck",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "snapdragon_tea",
-      "name": "a cup of snapdragon tea",
-      "keywords": [
-        "tea",
-        "cup",
-        "snapdragon tea"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 200,
-      "qty": 10,
-      "description": "A spicy tea that helps mend fractured skulls and jaw injuries.",
-      "use_verb": "drink",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "head_neck",
-          "rank": 2
-        }
-      }
-    },
-    {
-      "id": "pennyroyal_stem",
-      "name": "a pennyroyal stem",
-      "keywords": [
-        "stem",
-        "pennyroyal"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 100,
-      "qty": 10,
-      "description": "Chewing this fibrous stem fades minor facial scars and corrects slurred speech.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "head_neck",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "kingsfoil_leaf",
-      "name": "a kingsfoil leaf",
-      "keywords": [
-        "leaf",
-        "kingsfoil"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 300,
-      "qty": 10,
-      "description": "A royal leaf with golden veins that repairs major disfigurement and deep cranial trauma.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "head_neck",
-          "rank": 2
-        }
-      }
-    },
-    {
-      "id": "basal_moss",
-      "name": "some basal moss",
-      "keywords": [
-        "moss",
-        "basal moss"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 50,
-      "qty": 10,
-      "description": "Common dungeon moss that tastes like dirt, but knits minor organ bruising effectively.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "torso_eyes",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "pothinir_grass",
-      "name": "some pothinir grass",
-      "keywords": [
-        "grass",
-        "pothinir"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 200,
-      "qty": 10,
-      "description": "A sharp, pungent grass that repairs ruptured organs and stems internal bleeding.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "torso_eyes",
-          "rank": 2
-        }
-      }
-    },
-    {
-      "id": "starfruit_berry",
-      "name": "a star-fruit berry",
-      "keywords": [
-        "berry",
-        "star-fruit",
-        "starfruit"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 1000,
-      "qty": 10,
-      "description": "A luminous, eye-shaped berry capable of regenerating a lost eye if consumed whole.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "torso_eyes",
-          "rank": 3
-        }
-      }
-    },
-    {
-      "id": "troll_moss",
-      "name": "some troll-moss",
-      "keywords": [
-        "moss",
-        "troll-moss"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 100,
-      "qty": 10,
-      "description": "Sticky, resilient moss that clears up shortness of breath and smooths internal scarring.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "torso_eyes",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "glow_lichen",
-      "name": "some glow-lichen",
-      "keywords": [
-        "lichen",
-        "glow-lichen"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 300,
-      "qty": 10,
-      "description": "Bioluminescent lichen that scours deep scar tissue from vital organs.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "torso_eyes",
-          "rank": 2
-        }
-      }
-    },
-    {
-      "id": "knitbone_flower",
-      "name": "a knit-bone flower",
-      "keywords": [
-        "flower",
-        "knit-bone",
-        "knitbone"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 50,
-      "qty": 10,
-      "description": "A small white flower that mends sprains and minor fractures in the limbs.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "arms_legs",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "ambrosia_stalk",
-      "name": "an ambrosia stalk",
-      "keywords": [
-        "stalk",
-        "ambrosia stalk",
-        "ambrosia"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 200,
-      "qty": 10,
-      "description": "A rigid green stalk that sets and fuses broken bones almost instantly.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "arms_legs",
-          "rank": 2
-        }
-      }
-    },
-    {
-      "id": "hydra_tongue",
-      "name": "a hydra tongue",
-      "keywords": [
-        "tongue",
-        "hydra tongue",
-        "plant"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 1000,
-      "qty": 10,
-      "description": "A rare, writhing plant frond that stimulates the rapid regrowth of a severed limb.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_injury": {
-          "location": "arms_legs",
-          "rank": 3
-        }
-      }
-    },
-    {
-      "id": "gingko_nut",
-      "name": "a gingko nut",
-      "keywords": [
-        "nut",
-        "gingko nut",
-        "gingko"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 100,
-      "qty": 10,
-      "description": "Eating this nut restores flexibility to stiff joints scarred by old injuries.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "arms_legs",
-          "rank": 1
-        }
-      }
-    },
-    {
-      "id": "ironwood_bark",
-      "name": "some ironwood bark",
-      "keywords": [
-        "bark",
-        "ironwood bark",
-        "ironwood"
-      ],
-      "type": "herb",
-      "weight": 0.1,
-      "base_value": 300,
-      "qty": 10,
-      "description": "Tough, fibrous bark that cures atrophied muscles and straightens malformed limbs.",
-      "use_verb": "eat",
-      "effect_on_use": {
-        "heal_scar": {
-          "location": "arms_legs",
-          "rank": 2
-        }
+{
+  "viridian_leaf": {
+    "id": "viridian_leaf",
+    "name": "a viridian leaf",
+    "keywords": [
+      "leaf",
+      "viridian leaf"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 20,
+    "qty": 20,
+    "description": "A simple green leaf, prized by herbalists for its minor restorative properties.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_hp": 15
+    }
+  },
+  "althion_stem": {
+    "id": "althion_stem",
+    "name": "an althion stem",
+    "keywords": [
+      "stem",
+      "althion stem"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 75,
+    "qty": 10,
+    "description": "A thick, fibrous stem that pulses with a faint magical energy.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_hp": 50
+    }
+  },
+  "sweetfern_leaf": {
+    "id": "sweetfern_leaf",
+    "name": "a sweetfern leaf",
+    "keywords": [
+      "leaf",
+      "sweetfern leaf",
+      "sweetfern"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 15,
+    "qty": 10,
+    "description": "A sugary leaf with jagged edges, known to clot blood and knit flesh quickly.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_hp": 10
+    }
+  },
+  "crimson_aloe": {
+    "id": "crimson_aloe",
+    "name": "some crimson aloe",
+    "keywords": [
+      "aloe",
+      "crimson aloe",
+      "gel"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 60,
+    "qty": 10,
+    "description": "A thick, red-tinged gel that smells faintly of copper. It rapidly accelerates natural healing.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_hp": 45
+    }
+  },
+  "withered_root": {
+    "id": "withered_root",
+    "name": "a withered root",
+    "keywords": [
+      "root",
+      "withered root"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 50,
+    "qty": 10,
+    "description": "A dry, spindly root. When chewed, it calms minor tremors and twitches in the nerves.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "nervous_system",
+        "rank": 1
       }
     }
+  },
+  "tormented_root": {
+    "id": "tormented_root",
+    "name": "a tormented root",
+    "keywords": [
+      "root",
+      "tormented root"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 200,
+    "qty": 10,
+    "description": "A twisted, knotty root that looks like it died in pain. It shocks the nervous system into repairing major trauma.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "nervous_system",
+        "rank": 2
+      }
+    }
+  },
+  "numb_needle": {
+    "id": "numb_needle",
+    "name": "a numb-needle cactus",
+    "keywords": [
+      "cactus",
+      "numb-needle",
+      "meat"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 100,
+    "qty": 10,
+    "description": "A small chunk of fleshy cactus meat that restores sensation to numbed areas where scars have formed.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "nervous_system",
+        "rank": 1
+      }
+    }
+  },
+  "barrel_cactus": {
+    "id": "barrel_cactus",
+    "name": "some barrel cactus flesh",
+    "keywords": [
+      "cactus",
+      "flesh",
+      "barrel cactus"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 300,
+    "qty": 10,
+    "description": "Potent, water-heavy cactus flesh that repairs deep-seated nerve damage and chronic shakes.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "nervous_system",
+        "rank": 2
+      }
+    }
+  },
+  "rosemarrow_potion": {
+    "id": "rosemarrow_potion",
+    "name": "a rosemarrow potion",
+    "keywords": [
+      "potion",
+      "rosemarrow"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 50,
+    "qty": 10,
+    "description": "A sweet, pink distillation that clears concussions and eases headaches.",
+    "use_verb": "drink",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "head_neck",
+        "rank": 1
+      }
+    }
+  },
+  "snapdragon_tea": {
+    "id": "snapdragon_tea",
+    "name": "a cup of snapdragon tea",
+    "keywords": [
+      "tea",
+      "cup",
+      "snapdragon tea"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 200,
+    "qty": 10,
+    "description": "A spicy tea that helps mend fractured skulls and jaw injuries.",
+    "use_verb": "drink",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "head_neck",
+        "rank": 2
+      }
+    }
+  },
+  "pennyroyal_stem": {
+    "id": "pennyroyal_stem",
+    "name": "a pennyroyal stem",
+    "keywords": [
+      "stem",
+      "pennyroyal"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 100,
+    "qty": 10,
+    "description": "Chewing this fibrous stem fades minor facial scars and corrects slurred speech.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "head_neck",
+        "rank": 1
+      }
+    }
+  },
+  "kingsfoil_leaf": {
+    "id": "kingsfoil_leaf",
+    "name": "a kingsfoil leaf",
+    "keywords": [
+      "leaf",
+      "kingsfoil"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 300,
+    "qty": 10,
+    "description": "A royal leaf with golden veins that repairs major disfigurement and deep cranial trauma.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "head_neck",
+        "rank": 2
+      }
+    }
+  },
+  "basal_moss": {
+    "id": "basal_moss",
+    "name": "some basal moss",
+    "keywords": [
+      "moss",
+      "basal moss"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 50,
+    "qty": 10,
+    "description": "Common dungeon moss that tastes like dirt, but knits minor organ bruising effectively.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "torso_eyes",
+        "rank": 1
+      }
+    }
+  },
+  "pothinir_grass": {
+    "id": "pothinir_grass",
+    "name": "some pothinir grass",
+    "keywords": [
+      "grass",
+      "pothinir"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 200,
+    "qty": 10,
+    "description": "A sharp, pungent grass that repairs ruptured organs and stems internal bleeding.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "torso_eyes",
+        "rank": 2
+      }
+    }
+  },
+  "starfruit_berry": {
+    "id": "starfruit_berry",
+    "name": "a star-fruit berry",
+    "keywords": [
+      "berry",
+      "star-fruit",
+      "starfruit"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 1000,
+    "qty": 10,
+    "description": "A luminous, eye-shaped berry capable of regenerating a lost eye if consumed whole.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "torso_eyes",
+        "rank": 3
+      }
+    }
+  },
+  "troll_moss": {
+    "id": "troll_moss",
+    "name": "some troll-moss",
+    "keywords": [
+      "moss",
+      "troll-moss"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 100,
+    "qty": 10,
+    "description": "Sticky, resilient moss that clears up shortness of breath and smooths internal scarring.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "torso_eyes",
+        "rank": 1
+      }
+    }
+  },
+  "glow_lichen": {
+    "id": "glow_lichen",
+    "name": "some glow-lichen",
+    "keywords": [
+      "lichen",
+      "glow-lichen"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 300,
+    "qty": 10,
+    "description": "Bioluminescent lichen that scours deep scar tissue from vital organs.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "torso_eyes",
+        "rank": 2
+      }
+    }
+  },
+  "knitbone_flower": {
+    "id": "knitbone_flower",
+    "name": "a knit-bone flower",
+    "keywords": [
+      "flower",
+      "knit-bone",
+      "knitbone"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 50,
+    "qty": 10,
+    "description": "A small white flower that mends sprains and minor fractures in the limbs.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "arms_legs",
+        "rank": 1
+      }
+    }
+  },
+  "ambrosia_stalk": {
+    "id": "ambrosia_stalk",
+    "name": "an ambrosia stalk",
+    "keywords": [
+      "stalk",
+      "ambrosia stalk",
+      "ambrosia"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 200,
+    "qty": 10,
+    "description": "A rigid green stalk that sets and fuses broken bones almost instantly.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "arms_legs",
+        "rank": 2
+      }
+    }
+  },
+  "hydra_tongue": {
+    "id": "hydra_tongue",
+    "name": "a hydra tongue",
+    "keywords": [
+      "tongue",
+      "hydra tongue",
+      "plant"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 1000,
+    "qty": 10,
+    "description": "A rare, writhing plant frond that stimulates the rapid regrowth of a severed limb.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_injury": {
+        "location": "arms_legs",
+        "rank": 3
+      }
+    }
+  },
+  "gingko_nut": {
+    "id": "gingko_nut",
+    "name": "a gingko nut",
+    "keywords": [
+      "nut",
+      "gingko nut",
+      "gingko"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 100,
+    "qty": 10,
+    "description": "Eating this nut restores flexibility to stiff joints scarred by old injuries.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "arms_legs",
+        "rank": 1
+      }
+    }
+  },
+  "ironwood_bark": {
+    "id": "ironwood_bark",
+    "name": "some ironwood bark",
+    "keywords": [
+      "bark",
+      "ironwood bark",
+      "ironwood"
+    ],
+    "type": "herb",
+    "weight": 0.1,
+    "base_value": 300,
+    "qty": 10,
+    "description": "Tough, fibrous bark that cures atrophied muscles and straightens malformed limbs.",
+    "use_verb": "eat",
+    "effect_on_use": {
+      "heal_scar": {
+        "location": "arms_legs",
+        "rank": 2
+      }
+    }
+  }
+}
