@@ -13,7 +13,7 @@
     "description": "A simple green leaf, prized by herbalists for its minor restorative properties.",
     "use_verb": "eat",
     "effect_on_use": {
-      "heal_hp": 15
+      "heal_hp": [8, 18]
     }
   },
   "althion_stem": {
@@ -30,7 +30,7 @@
     "description": "A thick, fibrous stem that pulses with a faint magical energy.",
     "use_verb": "eat",
     "effect_on_use": {
-      "heal_hp": 50
+      "heal_hp": [15, 30]
     }
   },
   "sweetfern_leaf": {
@@ -48,7 +48,7 @@
     "description": "A sugary leaf with jagged edges, known to clot blood and knit flesh quickly.",
     "use_verb": "eat",
     "effect_on_use": {
-      "heal_hp": 10
+      "heal_hp": [25, 45]
     }
   },
   "crimson_aloe": {
@@ -66,7 +66,7 @@
     "description": "A thick, red-tinged gel that smells faintly of copper. It rapidly accelerates natural healing.",
     "use_verb": "eat",
     "effect_on_use": {
-      "heal_hp": 45
+      "heal_hp": [35, 65]
     }
   },
   "withered_root": {

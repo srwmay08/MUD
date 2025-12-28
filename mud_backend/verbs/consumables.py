@@ -33,6 +33,10 @@ class ConsumableSystem:
     def consume_item(player, item_data):
         """
         Main entry point for consuming an item.
+        
+        Args:
+            player: The player object.
+            item_data: The dictionary representing the item from items_plants.json.
         """
         effect = item_data.get("effect_on_use")
         
@@ -43,9 +47,14 @@ class ConsumableSystem:
 
         verb = item_data.get("use_verb", "consume")
 
-        # 1. Handle HP Healing
+        # 1. Handle HP Healing (Supports fixed int or [min, max] list)
         if "heal_hp" in effect:
-            amount = effect["heal_hp"]
+            val = effect["heal_hp"]
+            if isinstance(val, list) and len(val) == 2:
+                amount = random.randint(val[0], val[1])
+            else:
+                amount = int(val)
+            
             ConsumableSystem._apply_hp_healing(player, amount, item_data['name'], verb)
 
         # 2. Handle Wound Healing
