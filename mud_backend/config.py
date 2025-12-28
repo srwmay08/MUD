@@ -10,10 +10,19 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data")
 ASSETS_PATH = os.path.join(BASE_DIR, "data", "assets")
 
+# --- Security ---
+# Loads from environment variable, defaults to dev key if not found
+SECRET_KEY = os.environ.get("MUD_SECRET_KEY", "dev-secret-key-change-me")
+
 # --- System & Debug ---
 DEBUG_MODE = True
 DEBUG_COMBAT_ROLLS = True
 DEBUG_GAME_TICK_RESPAWN_PHASE = True
+
+# --- Logging Configuration ---
+LOG_FILE = "mud_server.log"
+LOG_FORMAT = '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+LOG_LEVEL = "DEBUG" if DEBUG_MODE else "INFO"
 
 # --- Access Control ---
 # Usernames (lowercase) that automatically get admin privileges on all their characters

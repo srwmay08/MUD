@@ -3,7 +3,7 @@ import math
 import random
 import time
 import re
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 def clean_name(name: str) -> str:
     """Helper to strip articles from names using regex."""
@@ -53,6 +53,45 @@ def roll_dice(num_dice, sides, modifier=0):
     for _ in range(num_dice):
         total += random.randint(1, sides)
     return total + modifier
+
+# --- SEARCH HELPERS ---
+def find_object_by_keyword_or_id(search_term: str, object_list: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    Searches for an object in a list by either:
+    1. Exact UUID match (if search_term starts with '#')
+    2. Keyword match (name or keywords)
+    """
+    if not search_term:
+        return None
+    
+    # 1. ID Lookup (Shadow Command support)
+    if search_term.startswith('#'):
+        target_uid = search_term[1:] # Strip the '#'
+        for obj in object_list:
+            if obj.get('uid') == target_uid:
+                return obj
+        return None # If ID provided but not found, return None immediately
+
+    # 2. Keyword/Name Lookup (Standard)
+    search_term = clean_name(search_term)
+    
+    # Priority 1: Exact Name Match
+    for obj in object_list:
+        if clean_name(obj.get("name", "")) == search_term:
+            return obj
+            
+    # Priority 2: Keyword Match
+    for obj in object_list:
+        keywords = [k.lower() for k in obj.get("keywords", [])]
+        if search_term in keywords:
+            return obj
+            
+    # Priority 3: Partial Name Match
+    for obj in object_list:
+        if search_term in clean_name(obj.get("name", "")):
+            return obj
+
+    return None
 
 # --- ROUNDTIME HELPERS ---
 def check_action_roundtime(player, action_type="other") -> bool:

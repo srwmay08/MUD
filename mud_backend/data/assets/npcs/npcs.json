@@ -59,7 +59,7 @@
             ],
             "wander_chance": 0.8
         },
-        "name": "a grizzled warrior",
+        "name": "a Grizzled Warrior",
         "perception_dc": 0,
         "quest_giver_ids": [
             "trip_quest_1"
