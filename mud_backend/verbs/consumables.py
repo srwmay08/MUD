@@ -9,25 +9,38 @@ class ConsumableSystem:
     potions, and foods defined in items_plants.json.
     """
 
+    # Expanded BODY_GROUPS to catch variations in wound keys (e.g. lefteye vs left_eye)
+    BODY_GROUPS = {
+        "head_neck": [
+            "head", "neck", "face", "skull", "jaw", "throat"
+        ],
+        "torso_eyes": [
+            "chest", "abdomen", "back", "torso", "gut", "stomach", "ribs",
+            "right_eye", "left_eye", "righteye", "lefteye", "eye_right", "eye_left", "eyes"
+        ],
+        "arms_legs": [
+            "right_arm", "left_arm", "right_hand", "left_hand", "right_leg", "left_leg",
+            "rightarm", "leftarm", "righthand", "lefthand", "rightleg", "leftleg",
+            "arm_right", "arm_left", "hand_right", "hand_left", "leg_right", "leg_left",
+            "arms", "legs", "hands", "feet"
+        ],
+        "nervous_system": [
+            "nerves", "nervous_system", "spine", "spirit"
+        ]
+    }
+
     @staticmethod
     def consume_item(player, item_data):
         """
         Main entry point for consuming an item.
-        
-        Args:
-            player: The player object.
-            item_data: The dictionary representing the item from items_plants.json.
         """
-        # Extract the specific effect block
         effect = item_data.get("effect_on_use")
         
-        # If the item has no define effect, return early
         if not effect:
             verb = item_data.get("use_verb", "use")
             player.send_message(f"You {verb} the {item_data['name']}, but nothing happens.")
             return
 
-        # Determine the action verb for messaging
         verb = item_data.get("use_verb", "consume")
 
         # 1. Handle HP Healing
@@ -35,7 +48,7 @@ class ConsumableSystem:
             amount = effect["heal_hp"]
             ConsumableSystem._apply_hp_healing(player, amount, item_data['name'], verb)
 
-        # 2. Handle Wound Healing (Renamed from heal_injury to match common terminology, checks 'wounds')
+        # 2. Handle Wound Healing
         elif "heal_injury" in effect:
             location = effect["heal_injury"]["location"]
             rank = effect["heal_injury"]["rank"]
@@ -48,15 +61,10 @@ class ConsumableSystem:
             ConsumableSystem._apply_scar_healing(player, location, rank, item_data['name'], verb)
             
         else:
-            # Fallback if effect key exists but is empty or unrecognized
             player.send_message(f"You {verb} the {item_data['name']} with no discernible result.")
 
     @staticmethod
     def _apply_hp_healing(player, amount, item_name, verb):
-        """
-        Restores HP to the player.
-        """
-        # Calculate healing
         current = player.hp
         maximum = player.max_hp
         
@@ -74,88 +82,99 @@ class ConsumableSystem:
         player.send_message(f"You {verb} the {item_name}. A wave of warmth spreads through you, restoring {healed_amount} health.")
 
     @staticmethod
-    def _apply_wound_healing(player, location, item_rank, item_name, verb):
+    def _apply_wound_healing(player, target_location, item_rank, item_name, verb):
         """
-        Logic for healing fresh wounds.
+        Logic for healing fresh wounds with group support.
         """
-        # Check if player actually has a wound at this location
-        # Uses player.wounds (from game_objects.py)
-        current_wound_rank = player.wounds.get(location, 0)
+        # Determine actual body parts to check
+        possible_parts = ConsumableSystem.BODY_GROUPS.get(target_location, [target_location])
+        
+        best_candidate = None
+        highest_rank_found = 0
 
-        if current_wound_rank == 0:
-            human_loc = location.replace("_", " ")
+        # Find the most severe wound in the target group
+        for part in possible_parts:
+            w_rank = player.wounds.get(part, 0)
+            if w_rank > 0:
+                # Prioritize the highest rank wound we can find
+                if w_rank > highest_rank_found:
+                    highest_rank_found = w_rank
+                    best_candidate = part
+        
+        if not best_candidate:
+            human_loc = target_location.replace("_", " ")
             player.send_message(f"You {verb} the {item_name}. It tastes medicinal, but you have no injuries to your {human_loc}.")
             return
 
         # Check potency: Item Rank must be >= Wound Rank
-        if item_rank >= current_wound_rank:
-            # Remove the wound entirely
-            del player.wounds[location]
-            # Remove bandage if present on that location
-            if location in player.bandages:
-                del player.bandages[location]
+        if item_rank >= highest_rank_found:
+            del player.wounds[best_candidate]
+            if best_candidate in player.bandages:
+                del player.bandages[best_candidate]
             
             player.mark_dirty()
-            
-            # Send flavor text
-            msg = ConsumableSystem._get_healing_flavor_text(location, False)
+            msg = ConsumableSystem._get_healing_flavor_text(best_candidate, False)
             player.send_message(f"You {verb} the {item_name}. {msg}")
         else:
-            human_loc = location.replace("_", " ")
+            human_loc = best_candidate.replace("_", " ")
             player.send_message(f"You {verb} the {item_name}. It eases the pain slightly, but is not potent enough to heal the severe wound on your {human_loc}.")
 
     @staticmethod
-    def _apply_scar_healing(player, location, item_rank, item_name, verb):
+    def _apply_scar_healing(player, target_location, item_rank, item_name, verb):
         """
-        Logic for healing old scars.
+        Logic for healing old scars with group support.
         """
-        # Check if player has a scar at this location
-        current_scar_rank = player.scars.get(location, 0)
+        possible_parts = ConsumableSystem.BODY_GROUPS.get(target_location, [target_location])
+        
+        best_candidate = None
+        highest_rank_found = 0
 
-        if current_scar_rank == 0:
-            human_loc = location.replace("_", " ")
+        for part in possible_parts:
+            s_rank = player.scars.get(part, 0)
+            if s_rank > 0:
+                if s_rank > highest_rank_found:
+                    highest_rank_found = s_rank
+                    best_candidate = part
+
+        if not best_candidate:
+            human_loc = target_location.replace("_", " ")
             player.send_message(f"You {verb} the {item_name}. It tingles, but you have no scar tissue on your {human_loc}.")
             return
 
-        # Check potency: Item Rank must be >= Scar Rank
-        if item_rank >= current_scar_rank:
-            # Remove the scar entirely
-            del player.scars[location]
+        if item_rank >= highest_rank_found:
+            del player.scars[best_candidate]
             player.mark_dirty()
-            
-            # Send flavor text
-            msg = ConsumableSystem._get_healing_flavor_text(location, True)
+            msg = ConsumableSystem._get_healing_flavor_text(best_candidate, True)
             player.send_message(f"You {verb} the {item_name}. {msg}")
         else:
-            human_loc = location.replace("_", " ")
+            human_loc = best_candidate.replace("_", " ")
             player.send_message(f"You {verb} the {item_name}. Your {human_loc} itches, but the deep scarring remains.")
 
     @staticmethod
     def _get_healing_flavor_text(location, is_scar):
-        """
-        Returns immersive text based on body location and whether it is a fresh injury or a scar.
-        """
+        # Normalize location for text check
+        loc_str = location.lower()
+        
         if is_scar:
-            if location == "nervous_system":
+            if any(x in loc_str for x in ["nerve", "spine", "spirit"]):
                 return "Your hands stop shaking as the nerve damage is repaired. You feel steady again."
-            elif location == "head_neck":
+            elif any(x in loc_str for x in ["head", "neck", "face", "jaw"]):
                 return "The tightness in your face relaxes. Old scar tissue softens and fades away completely."
-            elif location == "torso_eyes":
-                return "You take a deep, clean breath. The restricting internal scarring in your chest dissolves."
-            elif location == "arms_legs":
+            elif any(x in loc_str for x in ["chest", "abdomen", "back", "eye", "gut", "stomach", "torso"]):
+                return "You take a deep, clean breath. The restricting internal scarring and tissue damage dissolves."
+            elif any(x in loc_str for x in ["arm", "leg", "hand", "foot", "feet"]):
                 return "A prickling sensation runs through your limbs. The stiffness in your joints melts away."
             else:
                 return "The old wounds fade, leaving your skin unblemished."
-        
         else:
             # Fresh Injuries
-            if location == "nervous_system":
+            if any(x in loc_str for x in ["nerve", "spine", "spirit"]):
                 return "A soothing numbness washes over you. The violent tremors and pain in your nerves cease."
-            elif location == "head_neck":
+            elif any(x in loc_str for x in ["head", "neck", "face", "jaw"]):
                 return "A loud *pop* echoes in your ears. Your vision clears and the pounding headache vanishes."
-            elif location == "torso_eyes":
-                return "The sharp pain in your gut subsides. You feel your internal organs knitting back together."
-            elif location == "arms_legs":
+            elif any(x in loc_str for x in ["chest", "abdomen", "back", "eye", "gut", "stomach", "torso"]):
+                return "The sharp pain in your gut subsides. You feel your internal organs and tissues knitting back together."
+            elif any(x in loc_str for x in ["arm", "leg", "hand", "foot", "feet"]):
                 return "You hear a wet crunching sound as bones snap back into place and torn muscle rebinds."
             else:
                 return "The wound closes rapidly, leaving only faint skin behind."
@@ -169,35 +188,30 @@ class Eat(BaseVerb):
 
         target_name = " ".join(self.args)
         
-        # 1. Try to find item in hands first (Standard MUD behavior)
+        # 1. Try to find item in hands first
         item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
         
-        # 2. If not in hands, try inventory (Auto-hold logic, optional but nice)
+        # 2. If not in hands, try inventory
         if not item_ref:
             item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
-            hand_slot = "inventory" # Marker logic below
+            hand_slot = "inventory"
 
         if not item_ref:
             self.player.send_message(f"You don't have '{target_name}'.")
             return
 
-        # Get Item Data
         item_data = get_item_data(item_ref, self.world.game_items)
         if not item_data:
             self.player.send_message("That item seems to be glitched.")
             return
 
-        # Check if it is food/herb/consumable
         if item_data.get("item_type") not in ["herb", "food", "potion"]:
-            # If it has an effect_on_use, we allow it, otherwise reject
             if not item_data.get("effect_on_use"):
                 self.player.send_message(f"You cannot eat {item_data['name']}.")
                 return
 
-        # Execute Consumption
         ConsumableSystem.consume_item(self.player, item_data)
 
-        # Destroy Item
         if hand_slot == "inventory":
             self.player.inventory.remove(item_ref)
         else:
@@ -213,8 +227,6 @@ class Drink(BaseVerb):
             return
 
         target_name = " ".join(self.args)
-        
-        # Prioritize hands for drinking
         item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
         
         if not item_ref:
@@ -224,16 +236,11 @@ class Drink(BaseVerb):
         item_data = get_item_data(item_ref, self.world.game_items)
         if not item_data: return
 
-        # Check types
         if item_data.get("item_type") not in ["potion", "drink", "herb"]:
              if not item_data.get("effect_on_use"):
                 self.player.send_message(f"You cannot drink {item_data['name']}.")
                 return
 
-        # Execute Consumption
         ConsumableSystem.consume_item(self.player, item_data)
-
-        # Logic: If it's a potion, maybe it leaves an empty vial?
-        # For now, we destroy the item like 'eat'
         self.player.worn_items[hand_slot] = None
         self.player.mark_dirty()
