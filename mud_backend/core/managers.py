@@ -1,22 +1,35 @@
 # mud_backend/core/managers.py
-import threading
 import copy
+import threading
 import uuid
 from collections import deque
-from typing import Dict, Any, Optional, Set, List, Union, TYPE_CHECKING
-from mud_backend.core.game_objects import Room, Player
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import TYPE_CHECKING
+from typing import Union
+
+from mud_backend.core.game_objects import Player
+from mud_backend.core.game_objects import Room
 
 if TYPE_CHECKING:
     from mud_backend.core.game_state import World
 
+
 class ConnectionManager:
-    """Handles SocketIO connections and broadcasting."""
+    """
+    Handles SocketIO connections and broadcasting.
+    """
     def __init__(self, world: 'World'):
         self.world = world
-        self.socketio = None # Injected later
+        self.socketio = None  # Injected later
         
     def send_to_player(self, player_name_lower: str, message: str, msg_type: str = "message"):
-        if not self.socketio: return
+        if not self.socketio:
+            return
+        
         player_info = self.world.get_player_info(player_name_lower)
         if player_info:
             sid = player_info.get("sid")
@@ -36,13 +49,15 @@ class ConnectionManager:
 
     def join_room(self, sid: str, room_id: str):
         """Adds a socket to a room channel."""
-        if not self.socketio: return
+        if not self.socketio:
+            return
         if hasattr(self.socketio, 'server'):
             self.socketio.server.enter_room(sid, room_id)
 
     def leave_room(self, sid: str, room_id: str):
         """Removes a socket from a room channel."""
-        if not self.socketio: return
+        if not self.socketio:
+            return
         if hasattr(self.socketio, 'server'):
             self.socketio.server.leave_room(sid, room_id)
 
@@ -50,7 +65,8 @@ class ConnectionManager:
         """
         Broadcasts to all players in a room by iterating the Entity Manager's player list.
         """
-        if not self.socketio: return
+        if not self.socketio:
+            return
         
         # Normalize skip_sid to a set
         skip_sids_set = set()
@@ -63,7 +79,6 @@ class ConnectionManager:
         # We rely on the Entity Manager for truth about who is in the room.
         players_in_room = self.world.entity_manager.get_players_in_room(room_id)
         
-        # [DEBUG] Show who is in the room index
         print(f"[DEBUG BROADCAST] Room: {room_id} | Msg: {message[:30]}... | Candidates: {players_in_room}")
 
         for player_name in players_in_room:
@@ -75,7 +90,6 @@ class ConnectionManager:
             player_obj = player_info.get("player_obj")
             sid = player_info.get("sid")
             
-            # Skip invalid, offline, or explicitly skipped players
             if not player_obj or not sid: 
                 print(f"[DEBUG BROADCAST] Skipped {player_name} (No SID/Obj)")
                 continue
@@ -85,10 +99,11 @@ class ConnectionManager:
                 continue
             
             # Flag Checks
-            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off": continue 
-            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off": continue 
+            if msg_type.startswith("ambient") and player_obj.flags.get("ambient", "on") == "off":
+                continue 
+            if msg_type == "combat_death" and player_obj.flags.get("showdeath", "on") == "off":
+                continue 
             
-            # [DEBUG] Confirm sending
             print(f"[DEBUG BROADCAST] Sending to {player_name} (SID: {sid})")
 
             self.socketio.emit(
@@ -98,7 +113,8 @@ class ConnectionManager:
             )
 
     def broadcast_to_world(self, message: str, msg_type: str = "global_chat", skip_player_name: str = None):
-        if not self.socketio: return
+        if not self.socketio:
+            return
         
         all_players = self.world.get_all_players_info()
         for p_name, p_info in all_players:
@@ -114,7 +130,8 @@ class ConnectionManager:
                 )
 
     def broadcast_to_radius(self, start_room_id: str, radius: int, message: str, msg_type: str = "message", skip_player_name: str = None):
-        if not self.socketio: return
+        if not self.socketio:
+            return
 
         # BFS to find valid rooms and their distances
         rooms_in_range = set()
@@ -129,17 +146,21 @@ class ConnectionManager:
                 continue
 
             curr_room = self.world.room_manager.get_room(curr_id)
-            if not curr_room: continue
+            if not curr_room:
+                continue
             
             is_curr_outdoor = curr_room.get("is_outdoor", False)
             
             for direction, next_room_id in curr_room.get("exits", {}).items():
                 next_room = self.world.room_manager.get_room(next_room_id)
-                if not next_room: continue
+                if not next_room:
+                    continue
+                
                 is_next_outdoor = next_room.get("is_outdoor", False)
                 move_cost = 1
                 if is_curr_outdoor != is_next_outdoor:
                     move_cost += 1
+                
                 new_total_cost = curr_cost + move_cost
                 if next_room_id not in visited_costs or new_total_cost < visited_costs[next_room_id]:
                     visited_costs[next_room_id] = new_total_cost
@@ -149,6 +170,7 @@ class ConnectionManager:
         for p_name, p_info in all_players:
             if skip_player_name and p_name == skip_player_name:
                 continue
+            
             p_room_id = p_info.get("current_room_id")
             if p_room_id in rooms_in_range:
                 sid = p_info.get("sid")
@@ -172,6 +194,9 @@ class ConnectionManager:
 
 
 class RoomManager:
+    """
+    Manages active Room instances and hydration from data templates.
+    """
     def __init__(self, world: 'World'):
         self.world = world
         self.active_rooms: Dict[str, Room] = {}
@@ -268,6 +293,9 @@ class RoomManager:
 
 
 class EntityManager:
+    """
+    Tracks location of Mobs and Players for quick lookup.
+    """
     def __init__(self, world: 'World'):
         self.world = world
         self.index_lock = threading.RLock()

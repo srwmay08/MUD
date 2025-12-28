@@ -1,5 +1,10 @@
 # mud_backend/core/registry.py
-from typing import Callable, Dict, List, Type, Optional, Tuple
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Type
 
 class VerbRegistry:
     # Stores tuples: (VerbClass, is_admin_only)

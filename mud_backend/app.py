@@ -1,81 +1,111 @@
 # mud_backend/app.py
-import eventlet
-eventlet.monkey_patch(thread=False)
-
-import sys
-import os
-import time
 import datetime
-import threading
+import os
 import queue
+import sys
+import threading
+import time
+import traceback
 
+import eventlet
 from flask import Flask
-from flask import request
 from flask import render_template
+from flask import request
 from flask import session
-from flask_socketio import SocketIO
 from flask_socketio import emit
 from flask_socketio import join_room
+from flask_socketio import SocketIO
 
+# Monkey patch must be early
+eventlet.monkey_patch(thread=False)
+
+# Path insertion (Keep until package structure is formalized)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from mud_backend import config
+from mud_backend.core import combat_system
+from mud_backend.core import db
+from mud_backend.core import quest_handler
+from mud_backend.core import scripting
 from mud_backend.core.command_executor import execute_command
+from mud_backend.core.game_loop import monster_ai
 from mud_backend.core.game_loop_handler import check_and_run_game_tick
 from mud_backend.core.game_state import World
-from mud_backend.core import db
-from mud_backend.core import scripting
-from mud_backend.core import combat_system
-from mud_backend.core.game_loop import monster_ai
-from mud_backend import config
 from mud_backend.core.room_handler import _handle_npc_idle_dialogue
 from mud_backend.core.worker import WorkerManager
-from mud_backend.core import quest_handler
 
+
+# --- APP CONFIGURATION ---
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'templates'))
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mud_frontend', 'static'))
+
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.config['SECRET_KEY'] = 'your-very-secret-key-please-change-me!'
 
-# Use eventlet for asynchronous networking
 socketio = SocketIO(app, async_mode='eventlet')
 game_event_queue = queue.Queue()
 
-# --- GLOBAL DEFINITIONS ---
-# These define the structure, but do not START anything yet.
+
+# --- WORLD INITIALIZATION ---
 print("[SERVER INIT] Defining World...")
 world = World()
 world.socketio = socketio
 world.app = app
-# Initialize the manager but DO NOT start it here
 world.worker_manager = WorkerManager()
 
+
+# --- ROUTES ---
 @app.route("/")
 def index():
     return render_template("index.html")
 
+
+# --- BACKGROUND TASKS ---
 def persistence_task(world_instance: World):
-    """Saves dirty players to DB every 60 seconds."""
+    """
+    Saves dirty players to DB every 60 seconds.
+    """
     print("[SERVER] Persistence task started.")
     while True:
         socketio.sleep(60)
         count = 0
         active_players = world_instance.get_all_players_info()
+        
         for name, data in active_players:
             player = data.get("player_obj")
             if player and player._is_dirty:
                 db.save_game_state(player)
                 player._is_dirty = False
                 count += 1
+        
         if count > 0:
             print(f"[PERSISTENCE] Saved {count} players to database.")
 
-def game_loop_task(world_instance: World):
-    print("[SERVER START] Game Loop task started.")
 
+def game_loop_task(world_instance: World):
+    """
+    Main Game Loop. Handles events, combat, AI, and global ticks.
+    """
+    print("[SERVER START] Game Loop task started.")
     quest_handler.initialize_quest_listeners(world_instance)
+
+    # Define helpers outside the loop for performance
+    def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
+        world_instance.broadcast_to_room(room_id, message, msg_type, skip_sid)
+
+    def send_to_player(player_name, message, msg_type):
+        world_instance.send_message_to_player(player_name.lower(), message, msg_type)
+
+    def send_vitals_to_player(player_name, vitals_data):
+        p_info = world_instance.get_player_info(player_name.lower())
+        if p_info and p_info.get("sid"):
+            socketio.emit("update_vitals", vitals_data, to=p_info["sid"])
 
     with app.app_context():
         while True:
+            current_time = time.time()
+            log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+
             # 1. Process Event Queue
             events_processed = 0
             while not game_event_queue.empty() and events_processed < 50:
@@ -87,43 +117,36 @@ def game_loop_task(world_instance: World):
                     break
                 except Exception as e:
                     print(f"[GAME LOOP ERROR] {e}")
-                    import traceback
                     traceback.print_exc()
 
             # Yield to allow heartbeats
             socketio.sleep(0)
-
-            current_time = time.time()
-            log_time = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
-
-            def broadcast_to_room(room_id, message, msg_type, skip_sid=None):
-                world_instance.broadcast_to_room(room_id, message, msg_type, skip_sid)
-
-            def send_to_player(player_name, message, msg_type):
-                world_instance.send_message_to_player(player_name.lower(), message, msg_type)
-
-            def send_vitals_to_player(player_name, vitals_data):
-                p_info = world_instance.get_player_info(player_name.lower())
-                if p_info and p_info.get("sid"):
-                    socketio.emit("update_vitals", vitals_data, to=p_info["sid"])
 
             # 2. Process Player Queues
             active_players = world_instance.get_all_players_info()
             for player_key, p_info in active_players:
                 player_obj = p_info.get("player_obj")
                 sid = p_info.get("sid")
+                
                 if player_obj and player_obj.command_queue:
                     combat_state = world_instance.get_combat_state(player_key)
                     in_rt = False
+                    
                     if combat_state and current_time < combat_state.get("next_action_time", 0):
                         in_rt = True
+                    
                     if not in_rt:
                         cmd_to_run = player_obj.command_queue.pop(0)
                         result_data = execute_command(world_instance, player_obj.name, cmd_to_run, sid)
                         socketio.emit("command_response", result_data, to=sid)
 
             # 3. Combat Tick
-            combat_system.process_combat_tick(world_instance, broadcast_to_room, send_to_player, send_vitals_to_player)
+            combat_system.process_combat_tick(
+                world_instance, 
+                broadcast_to_room, 
+                send_to_player, 
+                send_vitals_to_player
+            )
 
             # 4. Monster Tick
             if current_time - world_instance.last_monster_tick_time >= config.MONSTER_TICK_INTERVAL_SECONDS:
@@ -141,31 +164,11 @@ def game_loop_task(world_instance: World):
 
             socketio.sleep(0.05)
 
-@socketio.on('connect')
-def handle_connect():
-    sid = request.sid
-    print(f"[CONNECTION] Client connected: {sid}")
-    session['state'] = 'auth_user'
-    emit("prompt_username", to=sid)
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    sid = request.sid
-    player_name = session.get('player_name')
-    player_info = None
-    if player_name:
-        player_info = world.remove_player(player_name.lower())
-    if player_name and player_info:
-        room_id = player_info.get("current_room_id")
-        if room_id:
-            emit("message", f'<span class="keyword" data-name="{player_name}">{player_name}</span> disappears.', to=room_id)
-        player_obj = player_info.get("player_obj")
-        if player_obj:
-            db.save_game_state(player_obj)
-    else:
-        print(f"[CONNECTION] Unauthenticated client disconnected: {sid}")
 
 def process_command_worker(player_name, command, sid, old_room_id=None):
+    """
+    Background worker for processing commands off the main event loop.
+    """
     try:
         result_data = execute_command(world, player_name, command, sid)
         new_player_info = world.get_player_info(player_name.lower())
@@ -173,9 +176,7 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
         player_obj = new_player_info.get("player_obj") if new_player_info else None
 
         if new_room_id and old_room_id and old_room_id != new_room_id:
-            # MOVEMENT HANDLED BY Player.move_to_room IN game_objects.py
-            # WE ONLY TRIGGER GAME LOGIC HERE
-            
+            # MOVEMENT LOGIC
             socketio.start_background_task(_handle_npc_idle_dialogue, world, player_name, new_room_id)
 
             real_active_room = world.get_active_room_safe(new_room_id)
@@ -195,8 +196,38 @@ def process_command_worker(player_name, command, sid, old_room_id=None):
 
     except Exception as e:
         print(f"Error in worker: {e}")
-        import traceback
         traceback.print_exc()
+
+
+# --- SOCKET HANDLERS ---
+@socketio.on('connect')
+def handle_connect():
+    sid = request.sid
+    print(f"[CONNECTION] Client connected: {sid}")
+    session['state'] = 'auth_user'
+    emit("prompt_username", to=sid)
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    sid = request.sid
+    player_name = session.get('player_name')
+    player_info = None
+    
+    if player_name:
+        player_info = world.remove_player(player_name.lower())
+    
+    if player_name and player_info:
+        room_id = player_info.get("current_room_id")
+        if room_id:
+            emit("message", f'<span class="keyword" data-name="{player_name}">{player_name}</span> disappears.', to=room_id)
+        
+        player_obj = player_info.get("player_obj")
+        if player_obj:
+            db.save_game_state(player_obj)
+    else:
+        print(f"[CONNECTION] Unauthenticated client disconnected: {sid}")
+
 
 @socketio.on('command')
 def handle_command_event(data):
@@ -216,11 +247,13 @@ def handle_command_event(data):
     elif state == 'auth_pass':
         password = command
         username = session.get('username')
+        
         if not password or not username:
             session['state'] = 'auth_user'
             emit("login_failed", "Error.", to=sid)
             emit("prompt_username", to=sid)
             return
+        
         account = db.fetch_account(username)
         if not account:
             db.create_account(username, password)
@@ -244,12 +277,15 @@ def handle_command_event(data):
     elif state == 'char_create_name':
         new_char_name = command.capitalize()
         username = session.get('username')
+        
         if not new_char_name.isalpha() or len(new_char_name) < 3:
             emit("name_invalid", "Invalid name.", to=sid)
             return
+        
         if db.fetch_player_data(new_char_name):
             emit("name_taken", to=sid)
             return
+        
         session['player_name'] = new_char_name
         session['state'] = 'in_game'
         result_data = execute_command(world, new_char_name, "look", sid, account_username=username)
@@ -261,9 +297,11 @@ def handle_command_event(data):
             session['state'] = 'char_create_name'
             emit("prompt_create_character", to=sid)
             return
+        
         if char_name not in session.get('characters', []):
             emit("char_invalid", "Invalid character.", to=sid)
             return
+        
         session['player_name'] = char_name
         session['state'] = 'in_game'
 
@@ -278,20 +316,13 @@ def handle_command_event(data):
             room_id = player_info.get("current_room_id")
 
             # 3. Send History (Inject into result_data or send separately)
-            # Prepend history to the look output for seamlessness
             if player_obj and player_obj.message_history:
-                # We prepend history, excluding the last few if they duplicate the 'look' output
-                # Just dumping it is usually fine
                 result_data["messages"] = player_obj.message_history + result_data["messages"]
 
             if room_id:
-                # --- FIXED & DEBUGGED ---
                 print(f"[DEBUG LOGIN] {char_name} joining room {room_id} (SID: {sid})")
                 join_room(room_id, sid=sid)
-                
-                # CRITICAL: Manually add to room index so broadcast finds them
                 world.add_player_to_room_index(char_name.lower(), room_id)
-                
                 world.broadcast_to_room(room_id, f"{char_name} arrives.", "message", skip_sid=sid)
 
         emit("command_response", result_data, to=sid)
@@ -302,9 +333,15 @@ def handle_command_event(data):
             session['state'] = 'auth_user'
             emit("login_failed", "Session error.", to=sid)
             return
+        
         old_player_info = world.get_player_info(player_name.lower())
         old_room_id = old_player_info.get("current_room_id") if old_player_info else None
-        game_event_queue.put((process_command_worker, {"player_name": player_name, "command": command, "sid": sid, "old_room_id": old_room_id}))
+        
+        game_event_queue.put((
+            process_command_worker, 
+            {"player_name": player_name, "command": command, "sid": sid, "old_room_id": old_room_id}
+        ))
+
 
 if __name__ == "__main__":
     # 1. Start Workers (Only in main process)
