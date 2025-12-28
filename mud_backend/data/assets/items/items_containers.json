@@ -12,5 +12,14 @@
       "back"
     ],
     "base_value": 50
+  },
+  "empty_glass_vial": {
+    "name": "empty glass vial",
+    "keywords": ["vial", "glass", "empty"],
+    "item_type": "container",
+    "weight": 0.2,
+    "base_value": 5,
+    "max_value": 8,
+    "description": "A clear glass vial with a cork stopper."
   }
 }

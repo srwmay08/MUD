@@ -87,14 +87,36 @@ def sync_shop_data_to_storage(room, shop_data: Dict[str, Any]):
     if not found_in_data and "shop_data" in room.data:
         room.data["shop_data"] = shop_data
 
+def calculate_dynamic_item_value(item_data: Dict[str, Any]) -> int:
+    """
+    Calculates the 'market value' of an item based on its defined range.
+    Uses 'base_value' (min) and 'max_value' (max).
+    """
+    base = item_data.get("base_value", 0)
+    # Check for max_value to define a range
+    maximum = item_data.get("max_value", base)
+    
+    if maximum < base:
+        maximum = base
+        
+    return random.randint(base, maximum)
+
 def get_item_buy_price(item_ref: Any, game_items: Dict[str, Any], shop_data: Dict[str, Any]) -> int:
     """
-    Calculates the price a player pays to buy an item.
+    Calculates the price a player pays to buy an item from a shop.
+    Supports dynamic fluctuations if 'current_market_value' is stored on the item,
+    otherwise calculates a fresh random value within the range.
     """
-    if isinstance(item_ref, dict):
-        base_value = item_ref.get("base_value", 0)
+    # 1. Check if the specific item instance has a locked-in market value (e.g. shop inventory)
+    if isinstance(item_ref, dict) and "current_market_value" in item_ref:
+        base_value = item_ref["current_market_value"]
+    elif isinstance(item_ref, dict):
+        # Calculate on the fly (less ideal for shops, good for random estimation)
+        base_value = calculate_dynamic_item_value(item_ref)
     else:
-        base_value = game_items.get(item_ref, {}).get("base_value", 0)
+        # Look up global
+        item_def = game_items.get(item_ref, {})
+        base_value = calculate_dynamic_item_value(item_def)
         
     markup = shop_data.get("markup", 1.2)
     return int(base_value * markup)
@@ -102,11 +124,13 @@ def get_item_buy_price(item_ref: Any, game_items: Dict[str, Any], shop_data: Dic
 def get_item_sell_price(item_ref: Any, game_items: Dict[str, Any], shop_data: Dict[str, Any]) -> int:
     """
     Calculates the price a shop pays to buy an item from a player.
+    Always uses the dynamic range logic.
     """
     if isinstance(item_ref, dict):
-        base_value = item_ref.get("base_value", 0)
+        base_value = calculate_dynamic_item_value(item_ref)
     else:
-        base_value = game_items.get(item_ref, {}).get("base_value", 0)
+        item_def = game_items.get(item_ref, {})
+        base_value = calculate_dynamic_item_value(item_def)
         
     markdown = shop_data.get("markdown", 0.5)
     return int(base_value * markdown)

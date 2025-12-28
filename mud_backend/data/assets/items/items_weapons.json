@@ -406,5 +406,34 @@
         "chance": 1
       }
     ]
+  },
+  "rusted_dagger": {
+    "name": "a rusted dagger",
+    "description": "A pitted, rusted dagger. It's barely functional as a weapon.",
+    "item_type": "weapon",
+    "wearable_slot": "mainhand",
+    "skill": "small_edged",
+    "keywords": ["dagger", "rusted dagger"],
+    "base_value": 5,
+    "max_value": 10,
+    "attacks": [
+      { "verb": "stab", "damage_type": "puncture", "chance": 1.0 }
+    ],
+    "damage_factors": {
+      "unarmed": 0.300,
+      "cloth": 0.350,
+      "leather": 0.240,
+      "scale": 0.200,
+      "chain": 0.150,
+      "plate": 0.125
+    },
+    "avd_modifiers": {
+      "unarmed": 45,
+      "cloth": 40,
+      "leather": 33,
+      "scale": 24,
+      "chain": 13,
+      "plate": 7
+    }
   }
 }

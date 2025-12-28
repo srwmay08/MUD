@@ -29,39 +29,25 @@
     },
     "inventory": [
         {
-            "id": "clean_linen_bandage",
-            "name": "clean linen bandage",
-            "keywords": [
-                "bandage",
-                "linen",
-                "clean"
-            ],
-            "type": "medical",
-            "weight": 0.1,
-            "base_value": 10,
-            "qty": 50,
-            "description": "A roll of clean white linen, suitable for binding wounds."
+            "id": "sweetfern_leaf",
+            "qty": 50
         },
         {
-            "id": "sweetfern_leaf",
-            "name": "a sweetfern leaf",
-            "keywords": [
-            "leaf",
-            "sweetfern leaf",
-            "sweetfern"
-            ],
-            "type": "herb",
-            "weight": 0.1,
-            "base_value": 250,
-            "qty": 10,
-            "description": "A sugary leaf with jagged edges, known to clot blood and knit flesh quickly.",
+            "id": "dried_yarrow",
+            "qty": 20
+        },
+        {
+            "id": "empty_glass_vial",
+            "qty": 100
+        },
+        {
+            "id": "blue_tonic",
+            "qty": 10
         }
     ],
     "display_case_items": [
         "dried_yarrow",
         "clean_linen_bandage",
-        "blue_tonic",
-        "viridian_leaf",
-        "althion_stem"
+        "blue_tonic"
     ]
 }

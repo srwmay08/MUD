@@ -6,7 +6,7 @@ import time
 import copy
 import uuid
 from mud_backend import config
-from mud_backend.core.economy import get_item_buy_price
+from mud_backend.core.economy import get_item_buy_price, calculate_dynamic_item_value
 
 class ShopController:
     def __init__(self, shop_filename, room, world):
@@ -44,6 +44,7 @@ class ShopController:
         """
         Takes a list of partial item definitions (e.g. {'id': 'x', 'qty': 10})
         and fills in the full details (name, desc, type) from the global AssetManager.
+        Also initializes dynamic pricing.
         """
         hydrated_list = []
         
@@ -62,10 +63,17 @@ class ShopController:
                 # 2. Update with shop-specific overrides (qty, custom price, etc.)
                 full_item.update(item_entry)
                 
+                # 3. Initialize Dynamic Market Value if not present
+                if "current_market_value" not in full_item:
+                    full_item["current_market_value"] = calculate_dynamic_item_value(full_item)
+                
                 hydrated_list.append(full_item)
             else:
-                # Fallback: If not found globally, assume the shop entry has full data (Legacy support)
-                hydrated_list.append(copy.deepcopy(item_entry))
+                # Fallback: If not found globally, assume the shop entry has full data
+                item = copy.deepcopy(item_entry)
+                if "current_market_value" not in item:
+                    item["current_market_value"] = calculate_dynamic_item_value(item)
+                hydrated_list.append(item)
                 
         return hydrated_list
 
@@ -103,7 +111,8 @@ class ShopController:
 
     def _simulate_economy(self):
         """
-        Drains and replenishes items based on elapsed time to simulate a living economy.
+        Drains and replenishes items based on elapsed time.
+        Also fluctuates prices.
         """
         now = time.time()
         last_tick = self.state.get("last_tick_time", now)
@@ -114,29 +123,36 @@ class ShopController:
             return
 
         # Template for max limits
-        # Note: We rely on the template for 'max_qty' reference.
         template_inv = {item["id"]: item for item in self.template.get("inventory", [])}
         
         updated = False
         
         for item in self.state["inventory"]:
-            item_id = item["id"]
-            if item_id not in template_inv: continue
+            item_id = item.get("id")
             
-            max_qty = template_inv[item_id].get("qty", 10)
-            current_qty = item["qty"]
-            
-            # 1. Drain (Simulate Sales): 10% chance to lose 1-3 items
-            if current_qty > 0 and random.random() < 0.1:
-                loss = random.randint(1, 3)
-                item["qty"] = max(0, current_qty - loss)
+            # 1. Update Prices (Price Fluctuation)
+            # Re-roll market value based on item range definition [base_value, max_value]
+            new_value = calculate_dynamic_item_value(item)
+            if new_value != item.get("current_market_value"):
+                item["current_market_value"] = new_value
                 updated = True
 
-            # 2. Replenish (Restock): 20% chance to gain 1-5 items up to max
-            if current_qty < max_qty and random.random() < 0.2:
-                gain = random.randint(1, 5)
-                item["qty"] = min(max_qty, current_qty + gain)
-                updated = True
+            # Inventory Management
+            if item_id and item_id in template_inv:
+                max_qty = template_inv[item_id].get("qty", 10)
+                current_qty = item["qty"]
+                
+                # 2. Drain (Simulate Sales): 10% chance to lose 1-3 items
+                if current_qty > 0 and random.random() < 0.1:
+                    loss = random.randint(1, 3)
+                    item["qty"] = max(0, current_qty - loss)
+                    updated = True
+
+                # 3. Replenish (Restock): 20% chance to gain 1-5 items up to max
+                if current_qty < max_qty and random.random() < 0.2:
+                    gain = random.randint(1, 5)
+                    item["qty"] = min(max_qty, current_qty + gain)
+                    updated = True
 
         if updated:
             self.state["last_tick_time"] = now
@@ -189,7 +205,6 @@ class ShopController:
     def refresh_display_case(self):
         """
         Populates the display case by modifying the ROOM DATA directly.
-        This ensures changes persist through re-hydration.
         Returns True if changes were made.
         """
         # 1. Find the case stub in persistent data
@@ -230,7 +245,7 @@ class ShopController:
         return self.state.get("inventory", [])
         
     def get_formatted_inventory(self):
-        """Returns a list of strings representing the menu."""
+        """Returns a list of strings representing the menu with prices."""
         inventory = self.get_inventory()
         if not inventory:
             return ["The shelves are bare."]
@@ -238,10 +253,24 @@ class ShopController:
         keeper = self.get_keeper_name()
         lines = [f"--- {keeper}'s Stock ---"]
         
+        # Get Shop Metadata for Markup calculations
+        shop_metadata = {}
+        for obj in self.room.objects:
+             if obj.get("is_npc") and "shop_data" in obj:
+                 shop_metadata = obj["shop_data"]
+                 break
+        
         for i, item in enumerate(inventory):
             name = item.get("name", "Unknown Item")
-            # Price and Qty hidden for organic feel, but can be added back if needed
-            lines.append(f"{i+1}. {name}")
+            qty = item.get("qty", 0)
+            
+            # Calculate Display Price using the stored dynamic value
+            price = get_item_buy_price(item, {}, shop_metadata)
+            
+            if qty > 0:
+                lines.append(f"{i+1}. {name} - {price} silver")
+            else:
+                lines.append(f"{i+1}. {name} - (Out of Stock)")
         
         lines.append("\nType 'ORDER <#>' to buy.")
         return lines
@@ -261,8 +290,17 @@ class ShopController:
         item_ref = inventory[item_index]
         if item_ref["qty"] < quantity:
             return None, f"The shopkeeper checks the stock, 'Sorry, I don't have enough of those.'"
-            
-        cost = item_ref["base_value"] * quantity
+        
+        # Calculate Cost using economy helper + stored market value
+        shop_metadata = {}
+        for obj in self.room.objects:
+             if obj.get("is_npc") and "shop_data" in obj:
+                 shop_metadata = obj["shop_data"]
+                 break
+                 
+        unit_price = get_item_buy_price(item_ref, {}, shop_metadata)
+        cost = unit_price * quantity
+        
         if player.wealth["silvers"] < cost:
             return None, f"The shopkeeper eyes your purse, 'That will cost {cost} silver. Come back when you have the coin.'"
             
@@ -280,6 +318,8 @@ class ShopController:
             new_item["uid"] = uuid.uuid4().hex
             new_item.pop("qty", None)
             new_item.pop("id", None)
+            # Remove internal economy tags before giving to player
+            new_item.pop("current_market_value", None)
             items_to_give.append(new_item)
             
         return items_to_give, f"The shopkeeper accepts your {cost} silver. 'A fine choice,' they say."
