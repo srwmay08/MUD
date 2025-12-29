@@ -42,7 +42,37 @@ class Talk(BaseVerb):
         # 1. Find the NPC
         target_npc = _find_npc_in_room(self.room, target_name)
         if not target_npc:
-            self.player.send_message(f"You don't see anyone named '{target_name}' here to talk to.")
+            # Better Error Handling for UIDs (e.g. from client clicks)
+            display_name = target_name
+            if target_name.startswith("#"):
+                # Try to resolve UID to name even if not in room
+                target_uid = target_name[1:]
+                
+                # Check active mobs
+                # We can check world.entity_manager.mob_locations or active_mob_uids
+                # But we need the object to get the name.
+                # Since we don't have a direct 'get_mob_by_uid' that returns the dict irrespective of room easily without iteration,
+                # we can try a best-effort scan if needed, or check defeated.
+                
+                # However, for a simple error message, we can check if it was a player or a known entity.
+                # A quick way is checking if it exists in mob_locations
+                mob_room_id = self.world.mob_locations.get(target_uid)
+                if mob_room_id:
+                    # Fetch from that room to get name? expensive but accurate
+                    room = self.world.get_active_room_safe(mob_room_id)
+                    if room:
+                        with room.lock:
+                            for obj in room.objects:
+                                if obj.get("uid") == target_uid:
+                                    display_name = obj.get("name", "Someone")
+                                    break
+                else:
+                    # Check defeated
+                    defeated = self.world.get_defeated_monster(target_uid)
+                    if defeated:
+                        display_name = defeated.get("name", "The dead creature")
+
+            self.player.send_message(f"You don't see anyone named '{display_name}' here to talk to.")
             return
             
         npc_name = target_npc.get("name", "the NPC")

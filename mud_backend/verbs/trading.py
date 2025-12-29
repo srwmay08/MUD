@@ -210,7 +210,7 @@ class Give(BaseVerb):
             target_player = self.world.get_player_obj(target_name_input)
 
         if not target_player or target_player.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{self.args[0]}' here.")
+            self.player.send_message(f"You don't see anyone named {self.args[0]} here.")
             return
             
         if target_player.name.lower() == self.player.name.lower():
@@ -510,7 +510,7 @@ class Exchange(BaseVerb):
             target_player = self.world.get_player_obj(target_player_name)
 
         if not target_player or target_player.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_player_name}' here.")
+            self.player.send_message(f"You don't see anyone named {target_player_name} here.")
             return
             
         if target_player.name.lower() == self.player.name.lower():
