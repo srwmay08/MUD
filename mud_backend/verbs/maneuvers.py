@@ -1,230 +1,241 @@
+# mud_backend/verbs/maneuvers.py
 import random
 import time
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
-from mud_backend.core.utils import check_action_roundtime, set_action_roundtime
-from mud_backend.core.utils import get_stat_bonus, calculate_skill_bonus
-from mud_backend.core.combat_system import _get_stat_modifiers
+from mud_backend.core import combat_system
+from mud_backend.core.utils import check_action_roundtime, set_action_roundtime, calculate_skill_bonus, get_stat_bonus
 
-# Skills that can be used for tripping
-TRIP_WEAPON_SKILLS = ["polearms", "staves", "two_handed_blunt"]
-
-@VerbRegistry.register(["trip"])
-class Trip(BaseVerb):
+@VerbRegistry.register(["perform", "maneuver"]) 
+class Perform(BaseVerb):
     """
-    Handles the 'trip' command.
-    Attempts to knock an opponent prone using a suitable weapon.
+    PERFORM <maneuver> <target>
+    Executes a learned combat maneuver.
+    Supported: Feint, Sweep, Disarm, Sunder
     """
-
     def execute(self):
-        # --- NEW: Gating check ---
-        if "trip" not in self.player.known_maneuvers and "trip_training" not in self.player.known_maneuvers:
-            self.player.send_message("You do not know how to perform that maneuver.")
-            return
-        # --- END NEW ---
-
         # 1. Check Roundtime
         if check_action_roundtime(self.player, action_type="attack"):
             return
 
-        # 2. Check Weapon
-        weapon_data = self.player.get_equipped_item_data("mainhand")
-        weapon_skill = weapon_data.get("skill") if weapon_data else None
-
-        if weapon_skill not in TRIP_WEAPON_SKILLS:
-            self.player.send_message("You must be wielding a polearm, staff, or two-handed blunt weapon to trip.")
-            return
-
-        weapon_name = weapon_data.get("name", "your weapon")
-
-        # 3. Find Target
         if not self.args:
-            self.player.send_message("Who do you want to trip?")
-            return
-            
-        target_name = " ".join(self.args).lower()
-        target_monster = None
-        for obj in self.room.objects:
-            # --- MODIFIED: Include NPCs ---
-            if (obj.get("is_monster") or obj.get("is_npc")) and not self.world.get_defeated_monster(obj.get("uid")):
-            # --- END MODIFIED ---
-                if (target_name == obj.get("name", "").lower() or 
-                    target_name in obj.get("keywords", [])):
-                    target_monster = obj
-                    break
-        
-        if not target_monster:
-            self.player.send_message(f"You don't see a '{target_name}' here to trip.")
+            self.player.send_message("Perform what maneuver?")
             return
 
-        target_name = target_monster.get("name", "the creature")
-
-        # --- NEW: Check if training ---
-        is_training = "trip_training" in self.player.known_maneuvers
-        is_warrior = target_monster.get("monster_id") == "grizzled_warrior"
+        # 2. Parse Arguments (Maneuver Name vs Target)
+        # We assume the maneuver name is at the start.
+        # This is tricky because maneuvers can be multi-word.
+        # Strategy: Iterate known maneuvers, match against start of args string.
         
-        if is_training and not is_warrior:
-            self.player.send_message("You must complete your training with the Grizzled Warrior before you can trip other targets.")
+        args_str = " ".join(self.args).lower()
+        matched_maneuver = None
+        target_name = None
+        
+        # Sort known maneuvers by length (descending) to match "shield bash" before "shield"
+        known_sorted = sorted(self.player.known_maneuvers, key=len, reverse=True)
+        
+        for m_key in known_sorted:
+            m_name_display = m_key.replace("_", " ")
+            if args_str.startswith(m_name_display):
+                matched_maneuver = m_key
+                # The rest of the string is the target
+                remainder = args_str[len(m_name_display):].strip()
+                if remainder:
+                    target_name = remainder
+                break
+        
+        if not matched_maneuver:
+            self.player.send_message("You don't know that maneuver (or you mistyped it).")
             return
-        # --- END NEW ---
-        
-        # ---
-        # --- NEW: Engage the warrior to prevent wandering
-        # ---
-        target_uid = target_monster.get("uid")
-        player_uid = self.player.name.lower()
 
-        if is_training and is_warrior:
-            warrior_state = self.world.get_combat_state(target_uid)
-            is_engaged = (warrior_state and 
-                          warrior_state.get("state_type") == "combat" and 
-                          warrior_state.get("target_id") == player_uid)
+        # 3. Resolve Target
+        target = None
+        
+        if not target_name:
+            # Auto-target last combatant
+            last_target_id = self.player.combat_state.get("last_target")
+            if last_target_id:
+                possible_target = self.world.get_instance(last_target_id)
+                if possible_target and possible_target.current_room_id == self.room.room_id:
+                    target = possible_target
             
-            if not is_engaged:
-                # Set combat state on warrior to prevent wandering
-                self.world.set_combat_state(target_uid, {
-                    "state_type": "combat",
-                    "target_id": player_uid,
-                    "next_action_time": time.time() + 9999, # He won't attack
-                    "current_room_id": self.room.room_id
-                })
-                # Set combat state on player to allow for "flee" messages
-                self.world.set_combat_state(player_uid, {
-                    "state_type": "combat",
-                    "target_id": target_uid,
-                    "next_action_time": time.time(), # Player is free
-                    "current_room_id": self.room.room_id,
-                    "rt_type": "hard"
-                })
-        # ---
-        # --- END ENGAGE LOGIC
-        # ---
-
-        # 4. Perform CMAN Check
-        
-        # --- Attacker's Offense Bonus ---
-        # "biggest factor is... bonus in Combat Maneuvers."
-        cman_bonus = calculate_skill_bonus(self.player.skills.get("combat_maneuvers", 0))
-        
-        # --- FIX: Use stat_modifiers ---
-        player_modifiers = self.player.stat_modifiers
-        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", player_modifiers)
-        agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", player_modifiers)
-        
-        level_bonus = self.player.level * 2 # "Level difference plays a factor"
-        
-        attacker_bonus = cman_bonus + str_bonus + agi_bonus + level_bonus
-        
-        # --- Defender's Defense Bonus ---
-        defender_stats = target_monster.get("stats", {})
-        defender_skills = target_monster.get("skills", {})
-        defender_level = target_monster.get("level", 1)
-        
-        # --- FIX: Get Defender Modifiers ---
-        # Since target_monster is a dict (monster), modifiers are {}
-        defender_modifiers = _get_stat_modifiers(target_monster)
-
-        # "Each rank...gives...up to +15 to defend" (We use skill bonus, which is stronger)
-        def_cman_bonus = calculate_skill_bonus(defender_skills.get("combat_maneuvers", 0))
-        
-        # --- FIX: Pass dictionary ---
-        def_str_bonus = get_stat_bonus(defender_stats.get("STR", 50), "STR", defender_modifiers)
-        def_agi_bonus = get_stat_bonus(defender_stats.get("AGI", 50), "AGI", defender_modifiers)
-        def_dex_bonus = get_stat_bonus(defender_stats.get("DEX", 50), "DEX", defender_modifiers)
-        
-        def_level_bonus = defender_level * 2
-        
-        defender_bonus = def_cman_bonus + def_str_bonus + def_agi_bonus + def_dex_bonus + def_level_bonus
-
-        # --- Factor in Stance ---
-        stance_mod = 0
-        attacker_stance = self.player.stance
-        if attacker_stance in ["offensive", "advance"]: stance_mod = 20
-        if attacker_stance in ["guarded", "defensive"]: stance_mod = -20
-        
-        defender_stance = target_monster.get("stance", "creature")
-        if defender_stance in ["offensive", "advance"]: stance_mod -= 20
-        if defender_stance in ["guarded", "defensive"]: stance_mod += 20
-        
-        # --- Factor in Posture ---
-        posture_mod = 0
-        if target_monster.get("posture", "standing") == "prone":
-            posture_mod = -30 # Harder to trip a target that is already prone
-
-        # --- Factor in Stun ---
-        stun_mod = 0
-        if "stun" in target_monster.get("status_effects", []):
-            stun_mod = 10 # "A stunned target has -10 to defend"
-        
-        # --- END CMAN CALCULATION ---
-
-        # 5. Resolve
-        roll = random.randint(1, 100)
-        result = 0 # Default to fail
-
-        # --- THIS IS THE KEY FIX for the 50% success rate ---
-        if is_training and is_warrior:
-            self.player.send_message("[You attempt the training maneuver...]")
-            
-            # Simple 50/50 check for training, ignoring stats
-            if random.random() < 0.50: # 50% success rate
-                result = 101 # Force success
-            else:
-                result = 0 # Force fail
-        
+            if not target:
+                self.player.send_message(f"Perform {matched_maneuver.replace('_',' ')} on whom?")
+                return
         else:
-            # Real combat calculation
-            # (Attacker - Defender) + Roll + Advantage + Mods
-            advantage = 50 # Base advantage (like in combat_system.py)
-            result = (attacker_bonus - defender_bonus) + roll + advantage + stance_mod + posture_mod + stun_mod
-            self.player.send_message(f"[Roll: {result} (A:{attacker_bonus} vs D:{defender_bonus}) + d100:{roll} + Adv:{advantage} + Mod:{stance_mod+posture_mod+stun_mod}]")
+            # --- ID MATCHING ---
+            if target_name.startswith("#"):
+                target_uid = target_name[1:]
+                
+                # Check Players
+                room_players = self.world.room_players.get(self.room.room_id, [])
+                for p_name in room_players:
+                    p_obj = self.world.get_player_obj(p_name)
+                    if p_obj and str(p_obj.uid) == target_uid:
+                        target = p_obj
+                        break
+                
+                # Check Mobs
+                if not target:
+                    for obj in self.room.objects:
+                        if str(obj.get("uid")) == target_uid:
+                            if obj.get("is_monster") or obj.get("is_npc"):
+                                target = obj
+                            break
+            # -------------------
+            
+            # --- NAME MATCHING ---
+            if not target:
+                # Check Players
+                room_players = self.world.room_players.get(self.room.room_id, [])
+                for p_name in room_players:
+                    if p_name == target_name:
+                        target = self.world.get_player_obj(p_name)
+                        break
+                
+                # Check Monsters
+                if not target:
+                    for obj in self.room.objects:
+                        if (obj.get("name", "").lower() == target_name or 
+                            target_name in obj.get("keywords", [])):
+                            if obj.get("is_monster") or obj.get("is_npc"):
+                                target = obj
+                                break
+            # ---------------------
 
-        # 6. Check Result
-        if result > 100: # Success!
+            if not target:
+                self.player.send_message(f"You don't see '{target_name}' here.")
+                return
+
+        if target == self.player:
+            self.player.send_message("You cannot perform maneuvers on yourself.")
+            return
+
+        # 4. Dispatch Maneuver Logic
+        if matched_maneuver == "feint":
+            self._do_feint(target)
+        elif matched_maneuver == "sweep":
+            self._do_sweep(target)
+        elif matched_maneuver == "disarm":
+            self._do_disarm(target)
+        elif matched_maneuver == "sunder":
+            self._do_sunder(target)
+        else:
+            self.player.send_message(f"The maneuver '{matched_maneuver}' is not yet implemented mechanically.")
+
+
+    def _do_feint(self, target):
+        # Cost: 10 Stamina
+        if self.player.stamina < 10:
+            self.player.send_message("You are too exhausted to feint.")
+            return
+        self.player.stamina -= 10
+
+        # Formula: (Weapon Skill + AGI Bonus + d100) vs (Target Level * 5 + Target WIS Bonus + d100)
+        # Simplified: Player Attack Roll vs Target Defense Roll
+        
+        # Attack
+        weapon_skill_rank = 0 # Need to detect weapon type, assume max of valid weapon skills for now?
+        # A simple fallback: Use Combat Maneuvers skill
+        cm_rank = self.player.skills.get("combat_maneuvers", 0)
+        cm_bonus = calculate_skill_bonus(cm_rank)
+        agi_bonus = get_stat_bonus(self.player.stats.get("AGI", 50), "AGI", self.player.stat_modifiers)
+        roll = random.randint(1, 100)
+        attack_total = cm_bonus + agi_bonus + roll
+
+        # Defense
+        target_lvl = target.get("level", 1)
+        target_wis = target.get("stats", {}).get("WIS", 50)
+        wis_bonus = get_stat_bonus(target_wis, "WIS", combat_system._get_stat_modifiers(target))
+        def_roll = random.randint(1, 100)
+        defense_total = (target_lvl * 5) + wis_bonus + def_roll
+
+        self.player.send_message(f"You attempt to feint {target.get('name')}! (Roll: {attack_total} vs {defense_total})")
+        
+        margin = attack_total - defense_total
+        
+        if margin > 0:
+            # Success: Apply Stance Penalty to target or Bonus to next attack
+            self.player.send_message(f"Success! {target.get('name')} falls for your trick and is left open.")
             
-            # --- NEW: Handle training success ---
-            if is_training and is_warrior:
-                self.player.quest_trip_counter += 1
-                count = self.player.quest_trip_counter
-                
-                self.player.send_message(f"You swing your {weapon_name} low and sweep {target_name}'s legs!")
-                self.player.send_message(f"The {target_name} topples to the ground!")
-                
-                if count >= 10:
-                    # Quest complete!
-                    self.player.send_message("The warrior dusts himself off and nods. 'Alright, alright, I've had enough! You've got the hang of it. Be careful with that.'")
-                    self.player.send_message("You have learned: **Trip**")
-                    if "trip_training" in self.player.known_maneuvers:
-                        self.player.known_maneuvers.remove("trip_training")
-                    self.player.known_maneuvers.append("trip")
-                    self.player.completed_quests.append("trip_quest_1") # Use the quest_id from quests.json
-                    
-                    # --- NEW: Disengage combat ---
-                    self.world.stop_combat_for_all(player_uid, target_uid)
-                    # --- END NEW ---
-                    
-                    set_action_roundtime(self.player, 3.0, rt_type="hard") # Shorter RT on completion
-                else:
-                    # Quest in progress
-                    self.player.send_message(f"The {target_name} scrambles back to his feet. 'Not bad! Again! ({count}/10)'")
-                    set_action_roundtime(self.player, 5.0, rt_type="hard") # The 5s RT
+            # Effect: Reduce target stance effectiveness or treat as lower stance for next hit
+            # Implementation: Add temporary status effect to target
             
-            else:
-                # --- Original success logic ---
-                target_monster["posture"] = "prone"
-                self.player.send_message(f"You swing your {weapon_name} low and sweep {target_name}'s legs!")
-                self.player.send_message(f"The {target_name} topples to the ground!")
-                
-                # Set RT for success
-                set_action_roundtime(self.player, 5.0, rt_type="hard")
+            # For simplicity, we just deal a free 'attack' with bonus hit chance immediately?
+            # Or assume the system handles state. Let's send message and apply a debuff.
             
-        else: # Failure
-            # --- NEW: Handle training failure ---
-            if is_training and is_warrior:
-                self.player.send_message(f"You attempt to trip {target_name} but fail.")
-                self.player.send_message(f"The {target_name} scoffs. 'Too slow! Again!'")
-            else:
-                # --- Original failure logic ---
-                self.player.send_message(f"You attempt to trip {target_name} but fail to knock them down.")
+            debuff_id = "feint_open"
+            combat_system.apply_status_effect(target, debuff_id, duration=10, data={"defense_penalty": 25})
             
-            set_action_roundtime(self.player, 3.0, rt_type="hard")
+        else:
+            self.player.send_message(f"{target.get('name')} ignores your feint.")
+
+        set_action_roundtime(self.player, 3.0) # Fast RT
+
+
+    def _do_sweep(self, target):
+        if self.player.stamina < 15:
+            self.player.send_message("Too exhausted.")
+            return
+        self.player.stamina -= 15
+
+        # Check Size? (Cannot sweep giants?)
+        # if target.size > player.size + 1... (Need size data)
+
+        cm_rank = self.player.skills.get("combat_maneuvers", 0)
+        cm_bonus = calculate_skill_bonus(cm_rank)
+        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", self.player.stat_modifiers)
+        roll = random.randint(1, 100)
+        attack = cm_bonus + str_bonus + roll
+
+        t_agi = target.get("stats", {}).get("AGI", 50)
+        t_agi_bonus = get_stat_bonus(t_agi, "AGI", combat_system._get_stat_modifiers(target))
+        t_level = target.get("level", 1)
+        defense = (t_level * 5) + t_agi_bonus + random.randint(1, 100)
+
+        self.player.send_message(f"You drop low and attempt to sweep {target.get('name')}'s legs.")
+
+        if attack > defense:
+            self.player.send_message(f"**CRASH!** {target.get('name')} hits the ground hard!")
+            damage = random.randint(1, 5) # Minor fall damage
+            
+            # Apply Prone
+            combat_system.apply_status_effect(target, "prone", duration=15)
+            
+            # Deal damage
+            new_hp = self.world.modify_monster_hp(target.get("uid"), target.get("max_hp", 10), damage)
+            if new_hp <= 0:
+                self.player.send_message(f"{target.get('name')} dies from the fall!")
+                combat_system.handle_monster_death(self.world, self.player, target, self.room)
+        else:
+            self.player.send_message(f"{target.get('name')} nimbly hops over your leg.")
+
+        set_action_roundtime(self.player, 5.0)
+
+
+    def _do_disarm(self, target):
+        # Requires weapon in hand?
+        if self.player.stamina < 20: return
+        self.player.stamina -= 20
+        
+        # Only works if target has a weapon (Monster loot table check or 'weapon' tag)
+        # Simplified: Check if monster description or attack type implies weapon.
+        # Usually monsters just have natural attacks.
+        # Assuming we can only disarm NPC/Players wielding items.
+        
+        # Placeholder for Monster Disarm (Most monsters don't drop weapons yet)
+        self.player.send_message(f"You attempt to disarm {target.get('name')}... but they have a death grip (or no weapon)!")
+        set_action_roundtime(self.player, 4.0)
+
+
+    def _do_sunder(self, target):
+        # Attack weapon/armor to reduce its effectiveness
+        if self.player.stamina < 20: return
+        self.player.stamina -= 20
+        
+        self.player.send_message(f"You strike a heavy blow at {target.get('name')}'s defenses!")
+        
+        # Treat as an attack with damage bonus but high RT?
+        combat_system.perform_attack(self.player, target, self.room, self.world, maneuver_bonus="sunder")
+        
+        set_action_roundtime(self.player, 7.0)
