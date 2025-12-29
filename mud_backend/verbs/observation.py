@@ -181,6 +181,7 @@ def _show_room_filtered(player, room, world):
     # Highlight Objects (No grouping)
     visible_objects = []
     for obj in room.objects:
+        if not isinstance(obj, dict): continue # SKIP BROKEN DATA
         if obj.get("hidden", False):
             continue
 
@@ -237,6 +238,7 @@ class Examine(BaseVerb):
             
             # 1. Room Objects
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if str(obj.get("uid")) == t_uid:
                     found_object = obj
                     break
@@ -244,6 +246,7 @@ class Examine(BaseVerb):
             # 2. Room Containers (e.g., on tables)
             if not found_object:
                 for obj in self.room.objects:
+                    if not isinstance(obj, dict): continue
                     if "container_storage" in obj:
                         for prep in obj["container_storage"]:
                             for item_ref in obj["container_storage"][prep]:
@@ -295,6 +298,7 @@ class Examine(BaseVerb):
         if not found_object:
             target_name = _clean_name(target_name)
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if (target_name == obj.get("name", "").lower() or
                         target_name in obj.get("keywords", [])):
                     found_object = obj
@@ -372,6 +376,7 @@ class Look(BaseVerb):
             
             # A. Search Room Objects
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if str(obj.get("uid")) == t_uid:
                     found_obj = obj
                     break
@@ -379,6 +384,7 @@ class Look(BaseVerb):
             # B. Search Room Containers (e.g. items on tables)
             if not found_obj:
                 for obj in self.room.objects:
+                    if not isinstance(obj, dict): continue
                     if "container_storage" in obj:
                         for prep in obj["container_storage"]:
                             for item in obj["container_storage"][prep]:
@@ -427,6 +433,7 @@ class Look(BaseVerb):
         else:
             target_name = _clean_name(target_name)
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if (target_name == obj.get("name", "").lower() or
                     target_name in obj.get("keywords", [])):
                     found_obj = obj

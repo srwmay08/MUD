@@ -30,6 +30,7 @@ class Drop(BaseVerb):
             has_well = False
             well_obj = None
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if "well" in obj.get("keywords", []) or "well" in obj.get("name", "").lower():
                     has_well = True
                     well_obj = obj

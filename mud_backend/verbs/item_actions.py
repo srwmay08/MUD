@@ -33,6 +33,7 @@ class ObjectInteraction(BaseVerb):
             
             # 1. Search Room Objects (Dynamic) by UID
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if str(obj.get("uid")) == target_uid:
                     found_obj = obj
                     break
@@ -43,6 +44,7 @@ class ObjectInteraction(BaseVerb):
                 static_objs = self.room.data.get("objects", [])
                 all_statics = details + static_objs
                 for obj in all_statics:
+                    if not isinstance(obj, dict): continue
                     if str(obj.get("uid")) == target_uid:
                         found_obj = obj
                         break
@@ -53,6 +55,7 @@ class ObjectInteraction(BaseVerb):
             
             # 1. Search Room Objects (Dynamic items/mobs)
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 n = obj.get("name", "").lower()
                 k = obj.get("keywords", [])
                 if clean_target == n or clean_target == clean_name(n) or clean_target in k:
@@ -66,6 +69,7 @@ class ObjectInteraction(BaseVerb):
                 all_statics = details + static_objs
                 
                 for detail in all_statics:
+                    if not isinstance(detail, dict): continue
                     d_name = detail.get("name", "").lower()
                     d_keys = detail.get("keywords", [])
                     
@@ -98,8 +102,6 @@ class ObjectInteraction(BaseVerb):
                 p_info = self.world.get_player_info(self.player.name.lower())
                 p_sid = p_info.get("sid") if p_info else None
                 
-                print(f"[DEBUG INTERACTION] Action: {msg} | Room: {self.room.room_id} | Actor SID: {p_sid}")
-
                 self.world.broadcast_to_room(
                     self.room.room_id, 
                     msg, 
@@ -190,6 +192,7 @@ class Get(BaseVerb):
             
             # 1. Check Room Floor
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if str(obj.get("uid")) == target_uid:
                     found_ref = obj
                     source_type = 'room'
@@ -198,6 +201,7 @@ class Get(BaseVerb):
             # 2. Check Visible Containers in Room
             if not found_ref:
                 for obj in self.room.objects:
+                    if not isinstance(obj, dict): continue
                     if "container_storage" in obj:
                         for prep in obj["container_storage"]:
                             items = obj["container_storage"][prep]
@@ -225,7 +229,7 @@ class Get(BaseVerb):
             # 4. Check Inside Worn Containers
             if not found_ref:
                 for slot, item_ref in self.player.worn_items.items():
-                    if item_ref and "container_storage" in item_ref:
+                    if item_ref and isinstance(item_ref, dict) and "container_storage" in item_ref:
                          for prep in item_ref["container_storage"]:
                             items = item_ref["container_storage"][prep]
                             for i, sub_item in enumerate(items):
@@ -279,6 +283,7 @@ class Get(BaseVerb):
                      # Sync Persistence for Room Containers
                      if source_type == 'room_container' and "uid" in found_container:
                          for p_obj in self.room.data.get("objects", []):
+                             if not isinstance(p_obj, dict): continue
                              if p_obj.get("uid") == found_container["uid"]:
                                  if "container_storage" in p_obj and found_prep_type in p_obj["container_storage"]:
                                      try: p_obj["container_storage"][found_prep_type].pop(found_index)
@@ -302,6 +307,7 @@ class Get(BaseVerb):
                     self.room.objects.remove(found_ref)
                     # Sync Persistence
                     for i, p_obj in enumerate(self.room.data.get("objects", [])):
+                        if not isinstance(p_obj, dict): continue
                         if str(p_obj.get("uid")) == target_uid:
                             self.room.data["objects"].pop(i)
                             break
@@ -354,11 +360,13 @@ class Get(BaseVerb):
             if target_container_name.startswith('#'):
                 uid = target_container_name[1:]
                 for obj in self.room.objects:
+                    if not isinstance(obj, dict): continue
                     if str(obj.get("uid")) == uid:
                         container_obj = obj; break
             
             if not container_obj:
                 for obj in self.room.objects:
+                    if not isinstance(obj, dict): continue
                     o_name = obj.get("name", "").lower()
                     if clean_cont == o_name or clean_cont == clean_name(o_name) or clean_cont in obj.get("keywords", []):
                         container_obj = obj
@@ -392,6 +400,7 @@ class Get(BaseVerb):
                     if "uid" in container_obj:
                         persistent_objs = self.room.data.get("objects", [])
                         for p_obj in persistent_objs:
+                            if not isinstance(p_obj, dict): continue
                             if p_obj.get("uid") == container_obj["uid"]:
                                 if "container_storage" in p_obj and found_prep in p_obj["container_storage"]:
                                     try:
@@ -502,6 +511,7 @@ class Get(BaseVerb):
                 if target_uid:
                     persistent_objs = self.room.data.get("objects", [])
                     for i, obj in enumerate(persistent_objs):
+                        if not isinstance(obj, dict): continue
                         if obj.get("uid") == target_uid:
                             persistent_objs.pop(i)
                             break
@@ -512,6 +522,7 @@ class Get(BaseVerb):
 
             # Check Surfaces (ON) - Implicit check
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 item_ref, found_prep, idx = find_item_in_obj_storage(obj, target_item_name, game_items, specific_prep="on")
                 if item_ref:
                     if not target_hand_slot:
@@ -524,6 +535,7 @@ class Get(BaseVerb):
                     if "uid" in obj:
                         persistent_objs = self.room.data.get("objects", [])
                         for p_obj in persistent_objs:
+                            if not isinstance(p_obj, dict): continue
                             if p_obj.get("uid") == obj["uid"]:
                                 if "container_storage" in p_obj and found_prep in p_obj["container_storage"]:
                                     try:

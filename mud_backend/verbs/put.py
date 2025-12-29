@@ -203,6 +203,7 @@ class Put(BaseVerb):
         if target_container_name.startswith("#"):
             c_uid = target_container_name[1:]
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 if str(obj.get("uid")) == c_uid:
                     container_obj = obj
                     break
@@ -217,6 +218,7 @@ class Put(BaseVerb):
         else:
             # Check Room Objects (Bench, Table, etc.)
             for obj in self.room.objects:
+                if not isinstance(obj, dict): continue
                 o_name = obj.get("name", "").lower()
                 if target_container_name == o_name or target_container_name == clean_name(o_name) or target_container_name in obj.get("keywords", []):
                     container_obj = obj
@@ -321,6 +323,7 @@ class Put(BaseVerb):
              if target_uid:
                  persistent_objs = self.room.data.get("objects", [])
                  for p_obj in persistent_objs:
+                     if not isinstance(p_obj, dict): continue
                      if p_obj.get("uid") == target_uid:
                          if "container_storage" not in p_obj:
                              p_obj["container_storage"] = {}
