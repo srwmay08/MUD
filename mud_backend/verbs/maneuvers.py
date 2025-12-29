@@ -6,40 +6,52 @@ from mud_backend.core.registry import VerbRegistry
 from mud_backend.core import combat_system
 from mud_backend.core.utils import check_action_roundtime, set_action_roundtime, calculate_skill_bonus, get_stat_bonus
 
-@VerbRegistry.register(["perform", "maneuver"]) 
+@VerbRegistry.register(["perform", "maneuver", "trip"]) 
 class Perform(BaseVerb):
     """
     PERFORM <maneuver> <target>
+    or
+    TRIP <target>
+    
     Executes a learned combat maneuver.
-    Supported: Feint, Sweep, Disarm, Sunder
+    Supported: Feint, Sweep, Disarm, Sunder, Trip
     """
     def execute(self):
         # 1. Check Roundtime
         if check_action_roundtime(self.player, action_type="attack"):
             return
 
-        if not self.args:
-            self.player.send_message("Perform what maneuver?")
-            return
-
-        # 2. Parse Arguments (Maneuver Name vs Target)
-        # We assume the maneuver name is at the start.
-        args_str = " ".join(self.args).lower()
         matched_maneuver = None
         target_name = None
-        
-        # Sort known maneuvers by length (descending) to match "shield bash" before "shield"
-        known_sorted = sorted(self.player.known_maneuvers, key=len, reverse=True)
-        
-        for m_key in known_sorted:
-            m_name_display = m_key.replace("_", " ")
-            if args_str.startswith(m_name_display):
-                matched_maneuver = m_key
-                # The rest of the string is the target
-                remainder = args_str[len(m_name_display):].strip()
-                if remainder:
-                    target_name = remainder
-                break
+
+        # 2. Parse Arguments (Direct Command vs Perform)
+        if self.command_keyword == "trip":
+            matched_maneuver = "trip"
+            target_name = " ".join(self.args).lower()
+        else:
+            # Handle "PERFORM <maneuver> <target>"
+            if not self.args:
+                self.player.send_message("Perform what maneuver?")
+                return
+
+            args_str = " ".join(self.args).lower()
+            
+            # Sort known maneuvers by length (descending) to match "shield bash" before "shield"
+            known_sorted = sorted(self.player.known_maneuvers, key=len, reverse=True)
+            
+            # Allow "trip" to be performed even if not explicitly in known_maneuvers yet (for the quest)
+            # or ensure it's handled if the player types "perform trip"
+            check_list = known_sorted + ["trip"]
+            
+            for m_key in check_list:
+                m_name_display = m_key.replace("_", " ")
+                if args_str.startswith(m_name_display):
+                    matched_maneuver = m_key
+                    # The rest of the string is the target
+                    remainder = args_str[len(m_name_display):].strip()
+                    if remainder:
+                        target_name = remainder
+                    break
         
         if not matched_maneuver:
             self.player.send_message("You don't know that maneuver (or you mistyped it).")
@@ -117,6 +129,8 @@ class Perform(BaseVerb):
             self._do_disarm(target)
         elif matched_maneuver == "sunder":
             self._do_sunder(target)
+        elif matched_maneuver == "trip":
+            self._do_trip(target)
         else:
             self.player.send_message(f"The maneuver '{matched_maneuver}' is not yet implemented mechanically.")
 
@@ -198,6 +212,48 @@ class Perform(BaseVerb):
 
         set_action_roundtime(self.player, 5.0)
 
+    def _do_trip(self, target):
+        """
+        Trip logic, similar to sweep but distinct for the quest line.
+        """
+        if self.player.stamina < 10:
+            self.player.send_message("You are too exhausted to attempt a trip.")
+            return
+        self.player.stamina -= 10
+
+        # Calculations
+        cm_rank = self.player.skills.get("combat_maneuvers", 0)
+        cm_bonus = calculate_skill_bonus(cm_rank)
+        str_bonus = get_stat_bonus(self.player.stats.get("STR", 50), "STR", self.player.stat_modifiers)
+        roll = random.randint(1, 100)
+        attack = cm_bonus + str_bonus + roll
+
+        # Defense
+        t_agi = target.get("stats", {}).get("AGI", 50)
+        t_agi_bonus = get_stat_bonus(t_agi, "AGI", combat_system._get_stat_modifiers(target))
+        t_level = target.get("level", 1)
+        defense = (t_level * 5) + t_agi_bonus + random.randint(1, 100)
+
+        self.player.send_message(f"You hook your weapon around {target.get('name')}'s leg and pull!")
+
+        if attack > defense:
+            self.player.send_message(f"**THUD!** {target.get('name')} loses their balance and falls prone!")
+            
+            # Apply Prone
+            combat_system.apply_status_effect(target, "prone", duration=10)
+            
+            # --- QUEST LOGIC ---
+            # If target is the Grizzled Warrior trainer, update the quest
+            if target.get("monster_id") == "grizzled_warrior":
+                self.player.quest_counters["quest_trip_success"] = 1
+                self.player.send_message("The warrior grunts in approval. 'Not bad! Talk to me again.'")
+                self.player.mark_dirty()
+            # -------------------
+
+        else:
+            self.player.send_message(f"{target.get('name')} steps firmly out of your trip attempt.")
+
+        set_action_roundtime(self.player, 4.0)
 
     def _do_disarm(self, target):
         if self.player.stamina < 20: return

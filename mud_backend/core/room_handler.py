@@ -77,97 +77,102 @@ def hydrate_room_objects(room: Room, world: 'World'):
     """
     Merges object stubs from the room's DB data with live asset templates.
     Ensures persistent UIDs are assigned to stubs in room.data.
+    Uses is_hydrated flag to prevent overwriting runtime state (e.g. moving mobs).
     """
-    # Initialize Shop & Display Case if needed
+    # 1. Hydrate from Static Data (ONCE ONLY)
+    if not getattr(room, "is_hydrated", False):
+        merged_objects = []
+        
+        # Merging logic: Combine standard objects and legacy hidden_objects
+        all_objects_stubs = []
+        
+        standard_objs = room.data.get("objects", [])
+        if standard_objs:
+            all_objects_stubs.extend(standard_objs)
+            
+        hidden_objs = room.data.get("hidden_objects", [])
+        if hidden_objs:
+            # Force the hidden flag on these legacy items
+            for h_obj in hidden_objs:
+                h_obj['hidden'] = True
+                all_objects_stubs.append(h_obj)
+        
+        if all_objects_stubs:
+            for obj_stub in all_objects_stubs: 
+                node_id = obj_stub.get("node_id")
+                monster_id = obj_stub.get("monster_id")
+                item_id = obj_stub.get("item_id")
+
+                merged_obj = None
+
+                # Ensure UID exists in the STUB (Persistence)
+                if "uid" not in obj_stub:
+                    obj_stub["uid"] = uuid.uuid4().hex
+
+                current_uid = obj_stub["uid"]
+
+                if node_id:
+                    template = world.game_nodes.get(node_id)
+                    if template:
+                        merged_obj = copy.deepcopy(template)
+                        merged_obj.update(obj_stub)
+                
+                elif monster_id:
+                    # Check if defeated
+                    if world.get_defeated_monster(current_uid) is not None:
+                        continue 
+                    
+                    template = world.game_monster_templates.get(monster_id)
+                    if template:
+                        merged_obj = copy.deepcopy(template)
+                        merged_obj.update(obj_stub)
+
+                elif item_id:
+                    template = world.game_items.get(item_id)
+                    if template:
+                        merged_obj = copy.deepcopy(template)
+                        merged_obj.update(obj_stub)
+                        merged_obj["is_item"] = True
+                    else:
+                        merged_obj = copy.deepcopy(obj_stub)
+                        merged_obj["name"] = f"Broken Item ({item_id})"
+
+                else:
+                    # Custom Object / NPC
+                    merged_obj = copy.deepcopy(obj_stub)
+                
+                if merged_obj:
+                    # Ensure hydrated object has the UID
+                    merged_obj["uid"] = current_uid
+
+                    # Shop Data Injection fix
+                    if "pawnbroker" in merged_obj.get("keywords", []) or "merchant" in merged_obj.get("keywords", []):
+                        if "shop_data" not in merged_obj and "shop_data" in obj_stub:
+                             merged_obj["shop_data"] = copy.deepcopy(obj_stub["shop_data"])
+                        
+                        if "shop_data" not in merged_obj and "pawnbroker" in merged_obj.get("keywords", []):
+                            merged_obj["shop_data"] = {
+                                "inventory": [],
+                                "sold_counts": {},
+                                "type": "pawnshop"
+                            }
+
+                    if "verbs" in merged_obj:
+                        merged_obj["verbs"] = [v.upper() for v in merged_obj["verbs"]]
+                    merged_objects.append(merged_obj)
+        
+        room.objects = merged_objects
+        room.is_hydrated = True
+        
+        if room.objects:
+            room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
+
+    # 2. Dynamic Updates (Every Look)
+    # Initialize Shop & Display Case if needed (updates existing objects)
     if room.data.get("shop_config_id"):
         controller = get_or_create_shop_controller(room, world)
         if controller:
             controller.refresh_display_case() 
-
-    merged_objects = []
-    
-    # Merging logic: Combine standard objects and legacy hidden_objects
-    all_objects_stubs = []
-    
-    standard_objs = room.data.get("objects", [])
-    if standard_objs:
-        all_objects_stubs.extend(standard_objs)
-        
-    hidden_objs = room.data.get("hidden_objects", [])
-    if hidden_objs:
-        # Force the hidden flag on these legacy items
-        for h_obj in hidden_objs:
-            h_obj['hidden'] = True
-            all_objects_stubs.append(h_obj)
-    
-    if all_objects_stubs:
-        for obj_stub in all_objects_stubs: 
-            node_id = obj_stub.get("node_id")
-            monster_id = obj_stub.get("monster_id")
-            item_id = obj_stub.get("item_id")
-
-            merged_obj = None
-
-            # Ensure UID exists in the STUB (Persistence)
-            if "uid" not in obj_stub:
-                obj_stub["uid"] = uuid.uuid4().hex
-
-            current_uid = obj_stub["uid"]
-
-            if node_id:
-                template = world.game_nodes.get(node_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub)
-            
-            elif monster_id:
-                # Check if defeated
-                if world.get_defeated_monster(current_uid) is not None:
-                    continue 
-                
-                template = world.game_monster_templates.get(monster_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub)
-
-            elif item_id:
-                template = world.game_items.get(item_id)
-                if template:
-                    merged_obj = copy.deepcopy(template)
-                    merged_obj.update(obj_stub)
-                    merged_obj["is_item"] = True
-                else:
-                    merged_obj = copy.deepcopy(obj_stub)
-                    merged_obj["name"] = f"Broken Item ({item_id})"
-
-            else:
-                # Custom Object / NPC
-                merged_obj = copy.deepcopy(obj_stub)
-            
-            if merged_obj:
-                # Ensure hydrated object has the UID
-                merged_obj["uid"] = current_uid
-
-                # Shop Data Injection fix
-                if "pawnbroker" in merged_obj.get("keywords", []) or "merchant" in merged_obj.get("keywords", []):
-                    if "shop_data" not in merged_obj and "shop_data" in obj_stub:
-                         merged_obj["shop_data"] = copy.deepcopy(obj_stub["shop_data"])
-                    
-                    if "shop_data" not in merged_obj and "pawnbroker" in merged_obj.get("keywords", []):
-                        merged_obj["shop_data"] = {
-                            "inventory": [],
-                            "sold_counts": {},
-                            "type": "pawnshop"
-                        }
-
-                if "verbs" in merged_obj:
-                    merged_obj["verbs"] = [v.upper() for v in merged_obj["verbs"]]
-                merged_objects.append(merged_obj)
-    
-    room.objects = merged_objects
-    
-    if room.objects:
-        room.objects.sort(key=lambda obj: (_get_object_sort_priority(obj), obj.get("name", "z")))
 
 def show_room_to_player(player: Player, room: Room):
     """

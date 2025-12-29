@@ -1548,3 +1548,296 @@
 2025-12-28 21:30:29,056 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
 2025-12-28 21:30:29,056 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
 2025-12-28 21:30:29,057 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:30:39,104 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:30:39,104 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:30:39,105 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:30:59,140 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:30:59,140 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:30:59,141 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:31:29,209 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:31:29,209 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:31:29,210 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:31:38,656 [DEBUG] mud_backend.core.managers: Room: temple_of_light | Msg: The shadows lengthen across th... | Candidates: set()
+2025-12-28 21:31:39,224 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:31:39,224 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:31:59,302 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:31:59,302 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:32:09,362 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:32:09,362 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:32:29,421 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:32:29,421 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:32:39,450 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:32:39,450 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:32:49,491 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:32:49,491 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:32:59,499 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:32:59,499 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:33:09,517 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:33:09,517 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:33:19,577 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:33:19,578 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:33:29,604 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:33:29,604 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:33:29,605 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:33:39,643 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:33:39,643 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:33:39,644 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:33:59,720 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:33:59,720 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:34:07,171 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: Sevax gets some troll-moss fro... | Candidates: {'sevax'}
+2025-12-28 21:34:07,171 [DEBUG] mud_backend.core.managers: Skipped sevax (SID gmyO3UstTMXrgeNVAAAD is in skip list)
+2025-12-28 21:34:09,751 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:34:09,752 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:34:19,780 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:34:19,780 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:34:29,790 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:34:29,790 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:34:38,517 [INFO] mud_backend: [PERSISTENCE] Saved 1 players to database.
+2025-12-28 21:34:39,809 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:34:39,809 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:34:40,432 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: Sevax gets some basal moss fro... | Candidates: {'sevax'}
+2025-12-28 21:34:40,432 [DEBUG] mud_backend.core.managers: Skipped sevax (SID gmyO3UstTMXrgeNVAAAD is in skip list)
+2025-12-28 21:34:59,857 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:34:59,857 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:35:03,298 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: Sevax gets some pothinir grass... | Candidates: {'sevax'}
+2025-12-28 21:35:03,298 [DEBUG] mud_backend.core.managers: Skipped sevax (SID gmyO3UstTMXrgeNVAAAD is in skip list)
+2025-12-28 21:35:09,868 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:35:09,868 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:35:19,912 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:35:19,912 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:35:19,913 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:35:29,956 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:35:29,956 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:35:29,956 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:35:39,970 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:35:39,970 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:35:50,002 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:35:50,002 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:36:00,057 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:36:00,057 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:36:10,063 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:36:10,063 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:36:20,074 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:36:20,074 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:36:30,084 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:36:30,084 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:36:40,123 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:36:40,123 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:36:40,124 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:36:50,154 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:36:50,154 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:36:50,155 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:37:00,164 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:37:00,164 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:37:00,165 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:37:20,182 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:37:20,182 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:37:20,183 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:37:30,200 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:37:30,200 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:37:38,989 [DEBUG] mud_backend.core.managers: Room: temple_of_light | Msg: A gentle breeze swirls leaves ... | Candidates: set()
+2025-12-28 21:37:40,231 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:37:40,231 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:38:09,011 [DEBUG] mud_backend.core.managers: Room: temple_of_light | Msg: The bronze doors hum faintly, ... | Candidates: set()
+2025-12-28 21:38:30,325 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:38:30,325 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:38:30,326 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:38:40,375 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:38:40,375 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:38:40,376 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:38:50,432 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:38:50,432 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:38:50,433 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:39:00,473 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:39:00,473 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:39:00,474 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:39:10,503 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:39:10,503 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:39:20,522 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:39:20,522 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:39:30,523 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:39:30,523 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:39:39,079 [DEBUG] mud_backend.core.managers: Room: temple_of_light | Msg: The rising sun strikes the bro... | Candidates: set()
+2025-12-28 21:39:40,576 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:39:40,576 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:39:50,617 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:39:50,617 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:40:00,677 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:40:00,677 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:40:00,678 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:40:10,688 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:40:10,688 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:40:10,690 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:40:30,797 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:40:30,797 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:40:50,855 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:40:50,857 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:40:50,858 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:41:00,880 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:41:00,880 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:41:00,881 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:41:10,923 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:41:10,923 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:41:20,946 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:41:20,947 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:41:30,989 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:41:30,989 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:41:41,050 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:41:41,050 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:41:51,061 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:41:51,061 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:42:01,073 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:42:01,073 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:42:01,074 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:42:11,106 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:42:11,106 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:42:11,106 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:42:21,147 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:42:21,148 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:42:31,157 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:42:31,157 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:42:31,158 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:42:41,209 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:42:41,209 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:42:41,210 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:42:51,262 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:42:51,262 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:43:01,304 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:43:01,304 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:43:11,308 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:43:11,308 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:43:21,366 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:43:21,366 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:43:21,367 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:43:31,391 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:43:31,391 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:43:31,391 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:43:51,493 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:43:51,493 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:44:01,496 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:44:01,496 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:44:09,392 [DEBUG] mud_backend.core.managers: Room: temple_of_light | Msg: The bronze doors hum faintly, ... | Candidates: set()
+2025-12-28 21:44:11,509 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:44:11,509 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:44:11,510 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:44:21,556 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:44:21,556 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:44:21,557 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:44:31,563 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:44:31,563 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:44:41,608 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:44:41,608 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:44:51,621 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:44:51,621 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:45:11,672 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:45:11,672 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:45:11,672 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:45:21,714 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:45:21,714 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:45:21,715 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:45:31,757 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:45:31,757 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:45:31,758 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:45:41,771 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:45:41,771 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:45:41,772 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:45:51,807 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:45:51,807 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:45:51,808 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:46:01,833 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:46:01,833 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:46:01,834 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:46:09,477 [DEBUG] mud_backend.core.managers: Room: temple_of_light | Msg: A gentle breeze swirls leaves ... | Candidates: set()
+2025-12-28 21:46:21,880 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:46:21,880 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:46:21,881 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:46:31,890 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:46:31,890 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:46:31,890 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:46:41,926 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:46:41,926 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:46:51,938 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:46:51,938 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:47:02,000 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:47:02,000 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:47:12,022 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:47:12,022 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:47:12,023 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:47:22,043 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:47:22,043 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:47:22,044 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:47:32,097 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:47:32,097 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:47:39,534 [DEBUG] mud_backend.core.managers: Room: temple_of_light | Msg: The shadows lengthen across th... | Candidates: set()
+2025-12-28 21:47:42,156 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:47:42,156 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:47:42,157 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:47:52,194 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:47:52,194 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:47:52,195 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:48:12,262 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:48:12,262 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:48:22,278 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:48:22,278 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:48:32,281 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:48:32,281 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:48:32,281 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:48:42,281 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:48:42,281 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gmyO3UstTMXrgeNVAAAD)
+2025-12-28 21:48:42,282 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:49:02,357 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:49:02,357 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:49:17,841 [INFO] mud_backend: Defining World...
+2025-12-28 21:49:17,847 [INFO] mud_backend: Starting Workers...
+2025-12-28 21:49:17,863 [INFO] mud_backend: Loading Data...
+2025-12-28 21:49:17,989 [INFO] mud_backend: Starting Background Tasks...
+2025-12-28 21:49:17,989 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-28 21:49:17,993 [INFO] mud_backend: Game Loop task started.
+2025-12-28 21:49:17,994 [INFO] mud_backend: Persistence task started.
+2025-12-28 21:49:19,206 [INFO] mud_backend: [CONNECTION] Client connected: 22lcRNYXdjBJ_AnRAAAB
+2025-12-28 21:49:19,571 [INFO] mud_backend: Defining World...
+2025-12-28 21:49:21,474 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: 22lcRNYXdjBJ_AnRAAAB
+2025-12-28 21:49:21,756 [INFO] mud_backend: [CONNECTION] Client connected: cQMxDcu-1L-f_uBpAAAD
+2025-12-28 21:49:26,377 [DEBUG] mud_backend: [LOGIN] Sevax joining room town_square (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:49:26,378 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: Sevax arrives.... | Candidates: {'sevax'}
+2025-12-28 21:49:26,378 [DEBUG] mud_backend.core.managers: Skipped sevax (SID cQMxDcu-1L-f_uBpAAAD is in skip list)
+2025-12-28 21:49:27,878 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:49:27,878 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:49:27,878 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:49:37,925 [DEBUG] mud_backend.core.managers: Room: ts_southwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:49:37,925 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:49:57,990 [DEBUG] mud_backend.core.managers: Room: ts_west | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:49:57,990 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:49:57,991 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:50:08,012 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:50:08,013 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:50:08,013 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:50:18,027 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:50:18,027 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:50:28,084 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:50:28,084 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:50:38,138 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:50:38,138 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:50:38,139 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:50:48,150 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:50:48,150 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:50:48,151 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:50:58,162 [DEBUG] mud_backend.core.managers: Room: ts_south | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:50:58,162 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:51:08,222 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:51:08,234 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:51:08,235 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:51:18,246 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:51:18,269 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:51:18,269 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:51:28,260 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:51:28,260 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:51:38,277 [DEBUG] mud_backend.core.managers: Room: ts_north | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:51:38,277 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:51:38,278 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:51:58,342 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 21:51:58,346 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
+2025-12-28 21:51:58,346 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 21:52:08,400 [DEBUG] mud_backend.core.managers: Room: ts_northwest | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 21:52:08,400 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
+2025-12-28 21:52:08,401 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: cQMxDcu-1L-f_uBpAAAD)
