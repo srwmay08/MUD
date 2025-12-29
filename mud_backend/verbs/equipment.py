@@ -26,16 +26,42 @@ class Wear(BaseVerb):
         source_type = None 
         source_slot = None
         
-        hand_item_id, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
-        if hand_item_id:
-            item_id = hand_item_id
-            source_type = "hand"
-            source_slot = hand_slot
-        else:
-            inv_item_id = find_item_in_inventory(self.player, self.world.game_items, target_name)
-            if inv_item_id:
-                item_id = inv_item_id
-                source_type = "inventory"
+        # ID MATCHING
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            
+            # Check Hands
+            for slot in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(slot)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_id = item
+                        source_type = "hand"
+                        source_slot = slot
+                        break
+            
+            # Check Inventory
+            if not item_id:
+                for item in self.player.inventory:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_id = item
+                        source_type = "inventory"
+                        break
+        
+        # NAME MATCHING (Fallback)
+        if not item_id:
+            hand_item_id, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+            if hand_item_id:
+                item_id = hand_item_id
+                source_type = "hand"
+                source_slot = hand_slot
+            else:
+                inv_item_id = find_item_in_inventory(self.player, self.world.game_items, target_name)
+                if inv_item_id:
+                    item_id = inv_item_id
+                    source_type = "inventory"
 
         if not item_id:
             self.player.send_message(f"You don't have a '{target_name}'.")
@@ -73,7 +99,23 @@ class Remove(BaseVerb):
             self.player.send_message("Remove what?")
             return
         target_name = " ".join(self.args).lower()
-        item_id, slot = find_item_worn(self.player, target_name)
+        
+        item_id = None
+        slot = None
+
+        # ID MATCHING
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            for s, item_ref in self.player.worn_items.items():
+                if item_ref:
+                    i_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
+                    if str(i_uid) == target_uid:
+                        item_id = item_ref
+                        slot = s
+                        break
+        else:
+            item_id, slot = find_item_worn(self.player, target_name)
+
         if not item_id:
             self.player.send_message(f"You are not wearing a {target_name}.")
             return

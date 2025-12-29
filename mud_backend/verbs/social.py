@@ -27,12 +27,21 @@ class SocialCombat(BaseVerb):
         target_name = " ".join(self.args).lower()
         target_npc = None
         
-        # Find NPC
-        for obj in self.room.objects:
-            if obj.get("is_npc") or obj.get("is_monster"):
-                if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
-                    target_npc = obj
-                    break
+        # ID Matching
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            for obj in self.room.objects:
+                if obj.get("is_npc") or obj.get("is_monster"):
+                    if str(obj.get("uid")) == target_uid:
+                        target_npc = obj
+                        break
+        # Name Matching
+        else:
+            for obj in self.room.objects:
+                if obj.get("is_npc") or obj.get("is_monster"):
+                    if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
+                        target_npc = obj
+                        break
         
         if not target_npc:
             self.player.send_message(f"You don't see {target_name} here.")
@@ -119,11 +128,20 @@ class Invite(BaseVerb):
         target_player = None
         players_outside_names = self.world.room_players.get(outside_room_id, set())
         
-        # Simple fuzzy match for name
-        for name in players_outside_names:
-            if name.lower() == target_name or target_name in name.lower().split():
-                target_player = self.world.get_player_obj(name)
-                break
+        # ID Match (if they can see IDs from inside a table, rare but consistent)
+        if target_name.startswith("#"):
+            t_uid = target_name[1:]
+            for name in players_outside_names:
+                p_obj = self.world.get_player_obj(name)
+                if p_obj and str(p_obj.uid) == t_uid:
+                    target_player = p_obj
+                    break
+        else:
+            # Simple fuzzy match for name
+            for name in players_outside_names:
+                if name.lower() == target_name or target_name in name.lower().split():
+                    target_player = self.world.get_player_obj(name)
+                    break
         
         if not target_player:
             self.player.send_message(f"You don't see '{target_name}' nearby.")

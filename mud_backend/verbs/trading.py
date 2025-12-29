@@ -14,11 +14,20 @@ def _count_item_in_inventory(player, target_item_id: str) -> int:
     return count
 
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
-    for obj in room.objects:
-        if obj.get("quest_giver_ids") or obj.get("is_npc"):
-            if (target_name == obj.get("name", "").lower() or 
-                target_name in obj.get("keywords", [])):
-                return obj
+    # ID Matching
+    if target_name.startswith("#"):
+        uid = target_name[1:]
+        for obj in room.objects:
+            if obj.get("quest_giver_ids") or obj.get("is_npc"):
+                if str(obj.get("uid")) == uid:
+                    return obj
+    # Name Matching
+    else:
+        for obj in room.objects:
+            if obj.get("quest_giver_ids") or obj.get("is_npc"):
+                if (target_name == obj.get("name", "").lower() or 
+                    target_name in obj.get("keywords", [])):
+                    return obj
     return None
 
 @VerbRegistry.register(["give"]) 
@@ -69,12 +78,32 @@ class Give(BaseVerb):
             if target_npc:
                 npc_name = target_npc.get("name", "the NPC")
                 
-                # Use Core functions
-                item_id_to_give, item_source_location = find_item_in_hands(self.player, self.world.game_items, target_item_name)
+                item_id_to_give = None
+                item_source_location = None
+                
+                # ID Match for Item
+                if target_item_name.startswith("#"):
+                    t_uid = target_item_name[1:]
+                    for slot in ["mainhand", "offhand"]:
+                        item = self.player.worn_items.get(slot)
+                        if item and str(item.get("uid")) == t_uid:
+                            item_id_to_give = item
+                            item_source_location = slot
+                            break
+                    if not item_id_to_give:
+                        for item in self.player.inventory:
+                            if str(item.get("uid")) == t_uid:
+                                item_id_to_give = item
+                                item_source_location = "inventory"
+                                break
+                
+                # Fallback to Name
                 if not item_id_to_give:
-                    item_id_to_give = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
-                    if item_id_to_give:
-                        item_source_location = "inventory"
+                    item_id_to_give, item_source_location = find_item_in_hands(self.player, self.world.game_items, target_item_name)
+                    if not item_id_to_give:
+                        item_id_to_give = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
+                        if item_id_to_give:
+                            item_source_location = "inventory"
                 
                 if not item_id_to_give:
                     self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
@@ -168,7 +197,18 @@ class Give(BaseVerb):
                     self.player.send_message(f"The {npc_name} does not seem interested in that.")
                     return
 
-        target_player = self.world.get_player_obj(target_name_input)
+        target_player = None
+        if target_name_input.startswith("#"):
+            t_uid = target_name_input[1:]
+            room_players = self.world.room_players.get(self.room.room_id, [])
+            for p_name in room_players:
+                p_obj = self.world.get_player_obj(p_name)
+                if p_obj and str(p_obj.uid) == t_uid:
+                    target_player = p_obj
+                    break
+        else:
+            target_player = self.world.get_player_obj(target_name_input)
+
         if not target_player or target_player.current_room_id != self.player.current_room_id:
             self.player.send_message(f"You don't see anyone named '{self.args[0]}' here.")
             return
@@ -205,16 +245,33 @@ class Give(BaseVerb):
             item_id_to_give = None
             item_source_location = None 
             
-            # Use Core
-            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
-            if item_id_hand:
-                item_id_to_give = item_id_hand
-                item_source_location = hand_slot
-            else:
-                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
-                if item_id_inv:
-                    item_id_to_give = item_id_inv
-                    item_source_location = "inventory"
+            # ID Match Item
+            if target_item_name.startswith("#"):
+                t_uid = target_item_name[1:]
+                for slot in ["mainhand", "offhand"]:
+                    item = self.player.worn_items.get(slot)
+                    if item and str(item.get("uid")) == t_uid:
+                        item_id_to_give = item
+                        item_source_location = slot
+                        break
+                if not item_id_to_give:
+                    for item in self.player.inventory:
+                        if str(item.get("uid")) == t_uid:
+                            item_id_to_give = item
+                            item_source_location = "inventory"
+                            break
+            
+            # Name Match Fallback
+            if not item_id_to_give:
+                item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
+                if item_id_hand:
+                    item_id_to_give = item_id_hand
+                    item_source_location = hand_slot
+                else:
+                    item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
+                    if item_id_inv:
+                        item_id_to_give = item_id_inv
+                        item_source_location = "inventory"
             
             if not item_id_to_give:
                 self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")
@@ -440,7 +497,18 @@ class Exchange(BaseVerb):
             self.player.send_message("Usage: EXCHANGE {item} WITH {player} FOR {silvers} SILVER")
             return
 
-        target_player = self.world.get_player_obj(target_player_name)
+        target_player = None
+        if target_player_name.startswith("#"):
+            t_uid = target_player_name[1:]
+            room_players = self.world.room_players.get(self.room.room_id, [])
+            for p_name in room_players:
+                p_obj = self.world.get_player_obj(p_name)
+                if p_obj and str(p_obj.uid) == t_uid:
+                    target_player = p_obj
+                    break
+        else:
+            target_player = self.world.get_player_obj(target_player_name)
+
         if not target_player or target_player.current_room_id != self.player.current_room_id:
             self.player.send_message(f"You don't see anyone named '{target_player_name}' here.")
             return
@@ -464,15 +532,33 @@ class Exchange(BaseVerb):
             item_source_location = "mainhand"
         
         if not item_id_to_give:
-            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
-            if item_id_hand:
-                item_id_to_give = item_id_hand
-                item_source_location = hand_slot
-            else:
-                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
-                if item_id_inv:
-                    item_id_to_give = item_id_inv
-                    item_source_location = "inventory"
+            # ID Matching for Item
+            if target_item_name.startswith("#"):
+                t_uid = target_item_name[1:]
+                for slot in ["mainhand", "offhand"]:
+                    item = self.player.worn_items.get(slot)
+                    if item and str(item.get("uid")) == t_uid:
+                        item_id_to_give = item
+                        item_source_location = slot
+                        break
+                if not item_id_to_give:
+                    for item in self.player.inventory:
+                        if str(item.get("uid")) == t_uid:
+                            item_id_to_give = item
+                            item_source_location = "inventory"
+                            break
+            
+            # Name Fallback
+            if not item_id_to_give:
+                item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
+                if item_id_hand:
+                    item_id_to_give = item_id_hand
+                    item_source_location = hand_slot
+                else:
+                    item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
+                    if item_id_inv:
+                        item_id_to_give = item_id_inv
+                        item_source_location = "inventory"
         
         if not item_id_to_give:
             self.player.send_message(f"You don't have a '{target_item_name}' in your pack or hands.")

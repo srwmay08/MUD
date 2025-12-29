@@ -1,3 +1,4 @@
+# mud_backend/verbs/consumables.py
 import random
 from mud_backend.verbs.base_verb import BaseVerb
 from mud_backend.core.registry import VerbRegistry
@@ -196,14 +197,41 @@ class Eat(BaseVerb):
             return
 
         target_name = " ".join(self.args)
+        item_ref = None
+        hand_slot = None
         
-        # 1. Try to find item in hands first
-        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+        # ID MATCHING
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            
+            # Check Hands
+            for slot in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(slot)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_ref = item
+                        hand_slot = slot
+                        break
+            
+            # Check Inventory
+            if not item_ref:
+                for item in self.player.inventory:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_ref = item
+                        hand_slot = "inventory"
+                        break
         
-        # 2. If not in hands, try inventory
+        # NAME MATCHING (Fallback)
         if not item_ref:
-            item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
-            hand_slot = "inventory"
+            # 1. Try to find item in hands first
+            item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+            
+            # 2. If not in hands, try inventory
+            if not item_ref:
+                item_ref = find_item_in_inventory(self.player, self.world.game_items, target_name)
+                hand_slot = "inventory"
 
         if not item_ref:
             self.player.send_message(f"You don't have '{target_name}'.")
@@ -236,7 +264,24 @@ class Drink(BaseVerb):
             return
 
         target_name = " ".join(self.args)
-        item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+        item_ref = None
+        hand_slot = None
+
+        # ID MATCHING
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            for slot in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(slot)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_ref = item
+                        hand_slot = slot
+                        break
+        
+        # NAME MATCHING (Fallback)
+        if not item_ref:
+            item_ref, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
         
         if not item_ref:
             self.player.send_message("You must be holding the potion to drink it.")

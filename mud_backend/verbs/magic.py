@@ -95,11 +95,23 @@ class Cast(BaseVerb):
         
         target_name = " ".join(self.args).lower()
         target = None
-        for obj in self.room.objects:
-             if obj.get("is_monster") and not self.world.get_defeated_monster(obj.get("uid")):
-                 if target_name in obj.get("keywords", []):
-                     target = obj
-                     break
+        
+        # ID MATCHING
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == target_uid:
+                    if obj.get("is_monster") and not self.world.get_defeated_monster(obj.get("uid")):
+                        target = obj
+                        break
+        
+        # NAME MATCHING (Fallback)
+        if not target:
+            for obj in self.room.objects:
+                 if obj.get("is_monster") and not self.world.get_defeated_monster(obj.get("uid")):
+                     if target_name in obj.get("keywords", []):
+                         target = obj
+                         break
         
         if not target:
             self.player.send_message("You don't see that here.")
