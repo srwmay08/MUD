@@ -142,9 +142,23 @@ class Charge(BaseVerb):
         item_ref = None
         slot = None
         
-        if target_arg in ["ore", "coal", "flux"]:
+        # 1. Try ID Match
+        if target_arg.startswith("#"):
+            target_uid = target_arg[1:]
+            for s in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(s)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_ref = item
+                        slot = s
+                        break
+        
+        # 2. Try Keyword Match (Handy shortcut)
+        if not item_ref and target_arg in ["ore", "coal", "flux", "weapon"]:
              item_ref, slot = find_item_in_hands(self.player, self.world.game_items, target_arg)
         
+        # 3. Fallback
         if not item_ref:
              item_ref, slot = find_item_in_hands(self.player, self.world.game_items, target_arg) 
 

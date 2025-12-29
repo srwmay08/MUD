@@ -13,6 +13,16 @@ from mud_backend.core.room_handler import show_room_to_player
 from mud_backend.core.registry import VerbRegistry
 
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
+    # ID Matching
+    if target_name.startswith("#"):
+        target_uid = target_name[1:]
+        for obj in room_objects:
+            if (obj.get("is_gathering_node") and 
+                obj.get("node_type") == node_type):
+                if str(obj.get("uid")) == target_uid:
+                    return obj
+
+    # Name Matching
     for obj in room_objects:
         if (obj.get("is_gathering_node") and 
             obj.get("node_type") == node_type):

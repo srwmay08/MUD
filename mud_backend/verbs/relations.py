@@ -35,11 +35,23 @@ class Relations(BaseVerb):
                     self.player.send_message(f"Ignored: {', '.join([f.capitalize() for f in self.player.ignored])}")
             return
 
-        # --- Resolve Target ---
+        # --- Resolve Target (Handle #ID) ---
+        resolved_name = target_name
+        
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            # Search active players for this UID
+            all_players = self.world.get_all_players_info()
+            for p_name, p_info in all_players:
+                p_obj = p_info.get("player_obj")
+                if p_obj and str(p_obj.uid) == target_uid:
+                    resolved_name = p_name.lower()
+                    break
+        
         # We search DB because you might want to add offline players
-        target_data = db.fetch_player_data(target_name)
+        target_data = db.fetch_player_data(resolved_name)
         if not target_data:
-            self.player.send_message(f"Player '{target_name}' does not exist.")
+            self.player.send_message(f"Player '{resolved_name}' does not exist.")
             return
             
         real_name = target_data["name"]

@@ -36,7 +36,24 @@ class Carve(BaseVerb):
             self.player.send_message("You need a knife or dagger to carve wood.")
             return
 
-        wood_ref, wood_slot = find_item_in_hands(self.player, self.world.game_items, wood_target)
+        wood_ref = None
+        wood_slot = None
+
+        # 1. ID Match
+        if wood_target.startswith("#"):
+            target_uid = wood_target[1:]
+            for s in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(s)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        wood_ref = item
+                        wood_slot = s
+                        break
+        
+        # 2. Name Match
+        if not wood_ref:
+            wood_ref, wood_slot = find_item_in_hands(self.player, self.world.game_items, wood_target)
         
         if not wood_ref:
             self.player.send_message(f"You aren't holding '{wood_target}'.")
