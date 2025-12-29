@@ -102,12 +102,23 @@ class Stalk(BaseVerb):
             return
 
         target_name = " ".join(self.args).lower()
-        
-        # Look for target in room
-        target_obj = self.world.get_player_obj(target_name)
+        target_obj = None
+
+        # --- ID MATCHING ---
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            room_players = self.world.room_players.get(self.room.room_id, [])
+            for p_name in room_players:
+                p_obj = self.world.get_player_obj(p_name)
+                if p_obj and str(p_obj.uid) == target_uid:
+                    target_obj = p_obj
+                    break
+        # --- NAME MATCHING ---
+        else:
+            target_obj = self.world.get_player_obj(target_name)
         
         if not target_obj or target_obj.current_room_id != self.room.room_id:
-            self.player.send_message(f"You do not see {target_name} here to stalk.")
+            self.player.send_message(f"You do not see '{target_name}' here to stalk.")
             return
             
         if target_obj.name.lower() == self.player.name.lower():
@@ -118,7 +129,7 @@ class Stalk(BaseVerb):
         if target_obj.is_hidden:
             # Must detect them to stalk
             if target_obj.uid not in self.player.detected_hiders:
-                self.player.send_message(f"You do not see {target_name} here.")
+                self.player.send_message(f"You do not see '{target_name}' here.")
                 return
 
         self.player.stalking_target_uid = target_obj.uid

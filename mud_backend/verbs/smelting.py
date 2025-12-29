@@ -26,6 +26,7 @@ class Crush(BaseVerb):
     def execute(self):
         if check_action_roundtime(self.player, "other"): return
         
+        # 1. Check Tool (Hammer)
         has_hammer = False
         for slot in ["mainhand", "offhand"]:
             item_ref = self.player.worn_items.get(slot)
@@ -38,9 +39,28 @@ class Crush(BaseVerb):
             self.player.send_message("You need a hammer to crush ore.")
             return
 
-        ore_ref, ore_slot = find_item_in_hands(self.player, self.world.game_items, "ore")
+        # 2. Find Target Ore
+        ore_ref = None
+        ore_slot = None
+        target_name = " ".join(self.args).lower() if self.args else "ore"
+
+        # ID Match
+        if target_name.startswith("#"):
+            t_uid = target_name[1:]
+            for slot in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(slot)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == t_uid:
+                        ore_ref = item
+                        ore_slot = slot
+                        break
+        # Name/Keyword Match
+        else:
+            ore_ref, ore_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+
         if not ore_ref:
-            self.player.send_message("You need to be holding ore to crush it.")
+            self.player.send_message("You need to be holding the ore you wish to crush.")
             return
         
         ore_data = get_item_data(ore_ref, self.world.game_items)
@@ -50,6 +70,7 @@ class Crush(BaseVerb):
             self.player.send_message("You can only crush raw metal ore chunks (copper, iron).")
             return
 
+        # 3. Check Environment (Table)
         has_table = False
         for obj in self.room.objects:
             if "table" in obj.get("keywords", []):
@@ -59,6 +80,7 @@ class Crush(BaseVerb):
             self.player.send_message("You need a sturdy table to crush ore on.")
             return
 
+        # 4. Execute
         metal_props = METAL_PROPERTIES[material]
 
         self.player.send_message(f"You smash the {material} ore with your hammer, reducing it to gravel.")
@@ -70,7 +92,6 @@ class Crush(BaseVerb):
         gem_found = False
         if dropped_items:
              for item_id in dropped_items: 
-                 # Note: generate_loot_from_table returns list of item IDs
                  item_data = self.world.game_items.get(item_id)
                  if item_data:
                      self.player.inventory.append(item_id)
@@ -93,9 +114,28 @@ class Wash(BaseVerb):
     def execute(self):
         if check_action_roundtime(self.player, "other"): return
         
-        ore_ref, ore_slot = find_item_in_hands(self.player, self.world.game_items, "ore")
+        # 1. Find Target Ore
+        ore_ref = None
+        ore_slot = None
+        target_name = " ".join(self.args).lower() if self.args else "ore"
+
+        # ID Match
+        if target_name.startswith("#"):
+            t_uid = target_name[1:]
+            for slot in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(slot)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == t_uid:
+                        ore_ref = item
+                        ore_slot = slot
+                        break
+        # Name Match
+        else:
+            ore_ref, ore_slot = find_item_in_hands(self.player, self.world.game_items, target_name)
+
         if not ore_ref:
-            self.player.send_message("You need to be holding crushed ore to wash it.")
+            self.player.send_message("You need to be holding the crushed ore to wash it.")
             return
             
         ore_data = get_item_data(ore_ref, self.world.game_items)
@@ -105,6 +145,7 @@ class Wash(BaseVerb):
             self.player.send_message("That ore doesn't need washing (or hasn't been crushed yet).")
             return
 
+        # 2. Check Environment (Sink)
         has_sink = False
         for obj in self.room.objects:
             if "sink" in obj.get("keywords", []):
@@ -114,6 +155,7 @@ class Wash(BaseVerb):
             self.player.send_message("You need a sink or water source to wash the ore.")
             return
 
+        # 3. Execute
         metal_props = METAL_PROPERTIES[material]
         self.player.send_message("You thoroughly wash the dirt and grit from the ore.")
         self.player.worn_items[ore_slot] = metal_props["washed_id"]
