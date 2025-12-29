@@ -76,29 +76,61 @@ class AuctionVerb(BaseVerb):
             
             try:
                 price = int(self.args[-1])
-                item_name = " ".join(self.args[1:-1])
+                item_arg = " ".join(self.args[1:-1])
             except ValueError:
                 self.player.send_message("Price must be a number.")
                 return
 
-            # Check Hands FIRST
-            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, item_name)
-            item_id_inv = None
-            
-            item_source = None
             item_id = None
+            item_source = None
+            hand_slot = None
+
+            # 1. Check ID directly if provided
+            if item_arg.startswith("#"):
+                uid = item_arg[1:]
+                # Check Hands
+                for slot, i_ref in self.player.worn_items.items():
+                    if slot in ["mainhand", "offhand"] and i_ref:
+                        if isinstance(i_ref, dict) and str(i_ref.get("uid")) == uid:
+                            item_id = i_ref
+                            item_source = "hand"
+                            hand_slot = slot
+                            break
+                        elif isinstance(i_ref, str) and i_ref == uid: # Rare case where ID matches
+                            item_id = i_ref
+                            item_source = "hand"
+                            hand_slot = slot
+                            break
+                
+                # Check Inventory if not in hand
+                if not item_id:
+                    for i_ref in self.player.inventory:
+                        if isinstance(i_ref, dict) and str(i_ref.get("uid")) == uid:
+                             item_id = i_ref
+                             item_source = "inventory"
+                             break
+                        elif isinstance(i_ref, str) and i_ref == uid:
+                             item_id = i_ref
+                             item_source = "inventory"
+                             break
             
-            if item_id_hand:
-                item_id = item_id_hand
-                item_source = "hand"
-            else:
-                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, item_name)
-                if item_id_inv:
-                    item_id = item_id_inv
-                    item_source = "inventory"
+            # 2. Check Name (Standard)
+            if not item_id:
+                # Check Hands FIRST
+                item_id_hand, found_hand_slot = find_item_in_hands(self.player, self.world.game_items, item_arg)
+                
+                if item_id_hand:
+                    item_id = item_id_hand
+                    item_source = "hand"
+                    hand_slot = found_hand_slot
+                else:
+                    item_id_inv = find_item_in_inventory(self.player, self.world.game_items, item_arg)
+                    if item_id_inv:
+                        item_id = item_id_inv
+                        item_source = "inventory"
 
             if not item_id:
-                self.player.send_message(f"You don't have '{item_name}' in your hands or inventory.")
+                self.player.send_message(f"You don't have '{item_arg}' in your hands or inventory.")
                 return
 
             # Handle item logic (dict vs str ID) and removal
@@ -199,13 +231,29 @@ class MailVerb(BaseVerb):
                 self.player.send_message("Usage: MAIL SEND <player_name> <subject>")
                 return
             
-            recipient = self.args[1]
+            recipient_arg = self.args[1]
             subject = " ".join(self.args[2:])
             
             # Verify recipient exists
-            target_data = db.fetch_player_data(recipient)
+            # Allow #ID if online, otherwise expect name
+            recipient_name = recipient_arg
+            if recipient_arg.startswith("#"):
+                 # Resolve ID to name if online
+                 uid = recipient_arg[1:]
+                 found = False
+                 for name, info in self.world.get_all_players_info():
+                     p = info.get("player_obj")
+                     if p and str(p.uid) == uid:
+                         recipient_name = p.name
+                         found = True
+                         break
+                 if not found:
+                     self.player.send_message(f"Could not find player with ID {recipient_arg} online.")
+                     return
+
+            target_data = db.fetch_player_data(recipient_name)
             if not target_data:
-                self.player.send_message(f"Player '{recipient}' not found.")
+                self.player.send_message(f"Player '{recipient_name}' not found.")
                 return
                 
             self.player.temp_data["mail_draft"] = {
@@ -244,22 +292,53 @@ class MailVerb(BaseVerb):
             if "mail_draft" not in self.player.temp_data:
                 self.player.send_message("No draft open.")
                 return
-            item_name = " ".join(self.args[1:])
+            item_arg = " ".join(self.args[1:])
             
-            # Check hands first, then inventory for attachments
-            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, item_name)
-            item_id_inv = None
             item_id = None
             item_source = None
+            hand_slot = None
 
-            if item_id_hand:
-                item_id = item_id_hand
-                item_source = "hand"
-            else:
-                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, item_name)
-                if item_id_inv:
-                    item_id = item_id_inv
-                    item_source = "inventory"
+            # 1. Check ID directly if provided
+            if item_arg.startswith("#"):
+                uid = item_arg[1:]
+                # Check Hands
+                for slot, i_ref in self.player.worn_items.items():
+                    if slot in ["mainhand", "offhand"] and i_ref:
+                        if isinstance(i_ref, dict) and str(i_ref.get("uid")) == uid:
+                            item_id = i_ref
+                            item_source = "hand"
+                            hand_slot = slot
+                            break
+                        elif isinstance(i_ref, str) and i_ref == uid:
+                            item_id = i_ref
+                            item_source = "hand"
+                            hand_slot = slot
+                            break
+                # Check Inventory
+                if not item_id:
+                    for i_ref in self.player.inventory:
+                        if isinstance(i_ref, dict) and str(i_ref.get("uid")) == uid:
+                             item_id = i_ref
+                             item_source = "inventory"
+                             break
+                        elif isinstance(i_ref, str) and i_ref == uid:
+                             item_id = i_ref
+                             item_source = "inventory"
+                             break
+
+            # 2. Check Name (Standard)
+            if not item_id:
+                # Check hands first, then inventory for attachments
+                item_id_hand, found_hand_slot = find_item_in_hands(self.player, self.world.game_items, item_arg)
+                if item_id_hand:
+                    item_id = item_id_hand
+                    item_source = "hand"
+                    hand_slot = found_hand_slot
+                else:
+                    item_id_inv = find_item_in_inventory(self.player, self.world.game_items, item_arg)
+                    if item_id_inv:
+                        item_id = item_id_inv
+                        item_source = "inventory"
 
             if not item_id:
                 self.player.send_message("You don't have that.")

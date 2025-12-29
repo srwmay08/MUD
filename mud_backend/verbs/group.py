@@ -46,7 +46,7 @@ class Group(BaseVerb):
                 self.player.send_message("Usage: GROUP LEADER <player>")
                 return
             
-            target_player_obj = self.world.get_player_obj(target_name.lower())
+            target_player_obj = self._resolve_local_target(target_name)
             if not target_player_obj or target_player_obj.group_id != self.player.group_id:
                 self.player.send_message(f"'{target_name}' is not in your group.")
                 return
@@ -68,7 +68,7 @@ class Group(BaseVerb):
                 self.player.send_message("Usage: GROUP REMOVE <player>")
                 return
                 
-            target_player_obj = self.world.get_player_obj(target_name.lower())
+            target_player_obj = self._resolve_local_target(target_name)
             if not target_player_obj or target_player_obj.group_id != self.player.group_id:
                 self.player.send_message(f"'{target_name}' is not in your group.")
                 return
@@ -86,17 +86,18 @@ class Group(BaseVerb):
             return
 
         # GROUP <player> (Invite/Auto-Join)
-        target_player_name = " ".join(self.args).lower()
-        target_player_obj = self.world.get_player_obj(target_player_name)
+        target_str = " ".join(self.args).lower()
+        target_player_obj = self._resolve_local_target(target_str)
         
         if not target_player_obj or target_player_obj.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_player_name}' here.")
+            self.player.send_message(f"You don't see anyone named '{target_str}' here.")
             return
             
         if target_player_obj.group_id:
             self.player.send_message(f"{target_player_obj.name} is already in a group.")
             return
             
+        target_player_name = target_player_obj.name.lower()
         pending_invite = self.world.get_pending_group_invite(target_player_name)
         if pending_invite and pending_invite.get("from_player_name", "").lower() != player_key:
             self.player.send_message(f"{target_player_obj.name} already has a pending group invitation from someone else.")
@@ -156,23 +157,35 @@ class Group(BaseVerb):
         for member_name in members:
             status = "(Leader)" if member_name.lower() == group['leader'] else ""
             self.player.send_message(f"- {member_name} {status}")
+            
+    def _resolve_local_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            room_players = self.world.room_players.get(self.player.current_room_id, [])
+            for p_name in room_players:
+                p_obj = self.world.get_player_obj(p_name)
+                if p_obj and str(p_obj.uid) == uid:
+                    return p_obj
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["hold"]) 
 class Hold(BaseVerb):
     def execute(self):
         player_key = self.player.name.lower()
-        target_player_name = " ".join(self.args).lower()
+        target_str = " ".join(self.args).lower()
         
-        target_player_obj = self.world.get_player_obj(target_player_name)
+        target_player_obj = self._resolve_local_target(target_str)
         
         if not target_player_obj or target_player_obj.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_player_name}' here.")
+            self.player.send_message(f"You don't see anyone named '{target_str}' here.")
             return
             
         if target_player_obj.group_id:
             self.player.send_message(f"{target_player_obj.name} is already in a group.")
             return
         
+        target_player_name = target_player_obj.name.lower()
         pending_invite = self.world.get_pending_group_invite(target_player_name)
         if pending_invite and pending_invite.get("from_player_name", "").lower() != player_key:
             self.player.send_message(f"{target_player_obj.name} is considering another offer.")
@@ -221,6 +234,17 @@ class Hold(BaseVerb):
             self.player.send_message(f"You reach out to hold {target_player_obj.name}'s hand...")
             self.world.send_message_to_group(self.player.group_id, f"{target_player_obj.name} has joined the group.")
 
+    def _resolve_local_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            room_players = self.world.room_players.get(self.player.current_room_id, [])
+            for p_name in room_players:
+                p_obj = self.world.get_player_obj(p_name)
+                if p_obj and str(p_obj.uid) == uid:
+                    return p_obj
+            return None
+        return self.world.get_player_obj(target_str)
+
 @VerbRegistry.register(["join"]) 
 class Join(BaseVerb):
     def execute(self):
@@ -233,8 +257,15 @@ class Join(BaseVerb):
             return
 
         player_key = self.player.name.lower()
-        target_leader_name = " ".join(self.args).lower()
+        target_str = " ".join(self.args).lower()
         
+        # Determine if target is name or ID
+        target_leader_name = target_str
+        target_leader_obj = self._resolve_local_target(target_str)
+        if target_leader_obj:
+            target_leader_name = target_leader_obj.name.lower()
+        
+        # Check Invites First
         invite = self.world.get_pending_group_invite(player_key)
         
         if invite and invite["from_player_name"].lower() == target_leader_name:
@@ -262,10 +293,9 @@ class Join(BaseVerb):
             self.world.send_message_to_group(invite["group_id"], f"{self.player.name} has joined the group.")
             return
         
-        target_leader_obj = self.world.get_player_obj(target_leader_name)
-        
+        # Fallback: Join via target (if open)
         if not target_leader_obj or target_leader_obj.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_leader_name}' here.")
+            self.player.send_message(f"You don't see anyone named '{target_str}' here.")
             return
             
         if target_leader_obj.flags.get("groupinvites", "on") == "off":
@@ -301,6 +331,17 @@ class Join(BaseVerb):
             self.world.set_group(target_group["id"], target_group)
             
             self.world.send_message_to_group(target_group["id"], f"{self.player.name} has joined the group.")
+
+    def _resolve_local_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            room_players = self.world.room_players.get(self.player.current_room_id, [])
+            for p_name in room_players:
+                p_obj = self.world.get_player_obj(p_name)
+                if p_obj and str(p_obj.uid) == uid:
+                    return p_obj
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["leave"]) 
 class Leave(BaseVerb):

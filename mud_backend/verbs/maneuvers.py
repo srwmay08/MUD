@@ -24,9 +24,6 @@ class Perform(BaseVerb):
 
         # 2. Parse Arguments (Maneuver Name vs Target)
         # We assume the maneuver name is at the start.
-        # This is tricky because maneuvers can be multi-word.
-        # Strategy: Iterate known maneuvers, match against start of args string.
-        
         args_str = " ".join(self.args).lower()
         matched_maneuver = None
         target_name = None
@@ -67,7 +64,7 @@ class Perform(BaseVerb):
             if target_name.startswith("#"):
                 target_uid = target_name[1:]
                 
-                # Check Players
+                # Check Players in Room
                 room_players = self.world.room_players.get(self.room.room_id, [])
                 for p_name in room_players:
                     p_obj = self.world.get_player_obj(p_name)
@@ -75,7 +72,7 @@ class Perform(BaseVerb):
                         target = p_obj
                         break
                 
-                # Check Mobs
+                # Check Mobs in Room
                 if not target:
                     for obj in self.room.objects:
                         if str(obj.get("uid")) == target_uid:
@@ -132,10 +129,8 @@ class Perform(BaseVerb):
         self.player.stamina -= 10
 
         # Formula: (Weapon Skill + AGI Bonus + d100) vs (Target Level * 5 + Target WIS Bonus + d100)
-        # Simplified: Player Attack Roll vs Target Defense Roll
         
         # Attack
-        weapon_skill_rank = 0 # Need to detect weapon type, assume max of valid weapon skills for now?
         # A simple fallback: Use Combat Maneuvers skill
         cm_rank = self.player.skills.get("combat_maneuvers", 0)
         cm_bonus = calculate_skill_bonus(cm_rank)
@@ -155,22 +150,16 @@ class Perform(BaseVerb):
         margin = attack_total - defense_total
         
         if margin > 0:
-            # Success: Apply Stance Penalty to target or Bonus to next attack
             self.player.send_message(f"Success! {target.get('name')} falls for your trick and is left open.")
             
-            # Effect: Reduce target stance effectiveness or treat as lower stance for next hit
-            # Implementation: Add temporary status effect to target
-            
-            # For simplicity, we just deal a free 'attack' with bonus hit chance immediately?
-            # Or assume the system handles state. Let's send message and apply a debuff.
-            
+            # Effect: Reduce target stance effectiveness
             debuff_id = "feint_open"
             combat_system.apply_status_effect(target, debuff_id, duration=10, data={"defense_penalty": 25})
             
         else:
             self.player.send_message(f"{target.get('name')} ignores your feint.")
 
-        set_action_roundtime(self.player, 3.0) # Fast RT
+        set_action_roundtime(self.player, 3.0)
 
 
     def _do_sweep(self, target):
@@ -178,9 +167,6 @@ class Perform(BaseVerb):
             self.player.send_message("Too exhausted.")
             return
         self.player.stamina -= 15
-
-        # Check Size? (Cannot sweep giants?)
-        # if target.size > player.size + 1... (Need size data)
 
         cm_rank = self.player.skills.get("combat_maneuvers", 0)
         cm_bonus = calculate_skill_bonus(cm_rank)
@@ -214,28 +200,20 @@ class Perform(BaseVerb):
 
 
     def _do_disarm(self, target):
-        # Requires weapon in hand?
         if self.player.stamina < 20: return
         self.player.stamina -= 20
         
-        # Only works if target has a weapon (Monster loot table check or 'weapon' tag)
-        # Simplified: Check if monster description or attack type implies weapon.
-        # Usually monsters just have natural attacks.
-        # Assuming we can only disarm NPC/Players wielding items.
-        
-        # Placeholder for Monster Disarm (Most monsters don't drop weapons yet)
+        # Placeholder for Monster Disarm
         self.player.send_message(f"You attempt to disarm {target.get('name')}... but they have a death grip (or no weapon)!")
         set_action_roundtime(self.player, 4.0)
 
 
     def _do_sunder(self, target):
-        # Attack weapon/armor to reduce its effectiveness
         if self.player.stamina < 20: return
         self.player.stamina -= 20
         
         self.player.send_message(f"You strike a heavy blow at {target.get('name')}'s defenses!")
         
-        # Treat as an attack with damage bonus but high RT?
         combat_system.perform_attack(self.player, target, self.room, self.world, maneuver_bonus="sunder")
         
         set_action_roundtime(self.player, 7.0)

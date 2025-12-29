@@ -33,7 +33,7 @@ class Band(BaseVerb):
             return
             
         command = self.args[0].lower()
-        target_name = " ".join(self.args[1:])
+        target_arg = " ".join(self.args[1:])
         player_key = self.player.name.lower()
         
         if command == "create":
@@ -60,19 +60,27 @@ class Band(BaseVerb):
             return
 
         if command == "join":
-            if not target_name:
-                self.player.send_message("Usage: BAND JOIN <leader_name>")
+            if not target_arg:
+                self.player.send_message("Usage: BAND JOIN <leader_name_or_id>")
                 return
             
             if self.player.band_id:
                 self.player.send_message("You are already in an adventuring band. Use BAND REMOVE first.")
                 return
 
-            target_leader_key = target_name.lower()
+            # Resolve target to key (name)
+            target_leader_key = self._resolve_player_key(target_arg)
+            if not target_leader_key:
+                # If target is not online and arg is an ID, we fail. If arg is name, we try string.
+                if target_arg.startswith("#"):
+                    self.player.send_message("Could not find that player online.")
+                    return
+                target_leader_key = target_arg.lower()
+
             invite_band = self.world.get_band_invite_for_player(player_key)
             
             if not invite_band or invite_band["pending_invites"].get(player_key) != target_leader_key:
-                self.player.send_message(f"You have not been invited to a band by '{target_name.capitalize()}'.")
+                self.player.send_message(f"You have not been invited to a band by '{target_arg}'.")
                 return
             
             band_id = invite_band["id"]
@@ -140,7 +148,7 @@ class Band(BaseVerb):
             return
             
         if command == "invite":
-            if not target_name:
+            if not target_arg:
                 self.player.send_message("Usage: BAND INVITE <player>")
                 return
             
@@ -148,30 +156,35 @@ class Band(BaseVerb):
                 self.player.send_message(f"Your band is full. You cannot invite more than {MAX_BAND_MEMBERS} members.")
                 return
 
-            target_player_key = target_name.lower()
-            
+            target_player_key = self._resolve_player_key(target_arg)
+            if not target_player_key:
+                 if target_arg.startswith("#"):
+                     self.player.send_message("Player not found online.")
+                     return
+                 target_player_key = target_arg.lower()
+
             if target_player_key in band["members"]:
-                self.player.send_message(f"{target_name.capitalize()} is already in your band.")
+                self.player.send_message(f"{target_player_key.capitalize()} is already in your band.")
                 return
                 
             if target_player_key in band["pending_invites"]:
-                self.player.send_message(f"You have already invited {target_name.capitalize()}.")
+                self.player.send_message(f"You have already invited {target_player_key.capitalize()}.")
                 return
 
             target_player_data = db.fetch_player_data(target_player_key) 
             if not target_player_data:
-                self.player.send_message(f"There is no player named '{target_name}'.")
+                self.player.send_message(f"There is no player named '{target_arg}'.")
                 return
                 
             if target_player_data.get("band_id"):
-                self.player.send_message(f"{target_name.capitalize()} is already in another adventuring band.")
+                self.player.send_message(f"{target_player_key.capitalize()} is already in another adventuring band.")
                 return
 
             band["pending_invites"][target_player_key] = player_key
             self.world.set_band(band_id, band)
             db.save_band(band)
             
-            self.player.send_message(f"You have invited {target_name.capitalize()} to join your band.")
+            self.player.send_message(f"You have invited {target_player_key.capitalize()} to join your band.")
             
             self.world.send_message_to_player(
                 target_player_key,
@@ -181,24 +194,30 @@ class Band(BaseVerb):
             return
 
         if command == "kick":
-            if not target_name:
+            if not target_arg:
                 self.player.send_message("Usage: BAND KICK <player>")
                 return
             
-            target_player_key = target_name.lower()
+            target_player_key = self._resolve_player_key(target_arg)
+            if not target_player_key:
+                 if target_arg.startswith("#"):
+                     self.player.send_message("Player not found online.")
+                     return
+                 target_player_key = target_arg.lower()
+
             if target_player_key == player_key:
                 self.player.send_message("You cannot kick yourself. Use BAND REMOVE.")
                 return
                 
             if target_player_key not in band["members"]:
-                self.player.send_message(f"'{target_name}' is not in your adventuring band.")
+                self.player.send_message(f"'{target_arg}' is not in your adventuring band.")
                 return
                 
             band["members"].remove(target_player_key)
             self.world.set_band(band_id, band)
             db.save_band(band)
             
-            self.world.send_message_to_band(band_id, f"{target_name.capitalize()} has been kicked from the adventuring band by the leader.")
+            self.world.send_message_to_band(band_id, f"{target_player_key.capitalize()} has been kicked from the adventuring band by the leader.")
             
             db.update_player_band(target_player_key, None)
             
@@ -223,3 +242,14 @@ class Band(BaseVerb):
             return
             
         self.player.send_message("Usage: BAND <create|invite|join|list|remove|kick|delete>")
+
+    def _resolve_player_key(self, target_str):
+        """Resolves target_str (Name or #ID) to a player name key if online."""
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p.name.lower()
+            return None
+        return target_str.lower()

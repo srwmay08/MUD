@@ -22,8 +22,8 @@ class GiveWealth(BaseVerb):
 
         target = self.player
         if len(self.args) > 1:
-            target_name = self.args[1].lower()
-            found = self.world.get_player_obj(target_name)
+            target_str = self.args[1].lower()
+            found = self._resolve_global_target(target_str)
             if found: 
                 target = found
             else:
@@ -33,6 +33,16 @@ class GiveWealth(BaseVerb):
         target.wealth["silvers"] = target.wealth.get("silvers", 0) + amount
         self.player.send_message(f"Added {amount} silver to {target.name}. Total: {target.wealth['silvers']}.")
         target.mark_dirty()
+
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["giveitem", "additem"], admin_only=True)
 class GiveItem(BaseVerb):
@@ -46,12 +56,12 @@ class GiveItem(BaseVerb):
         # Determine target
         target = self.player
         if len(self.args) > 1:
-            target_name = self.args[1].lower()
-            found = self.world.get_player_obj(target_name)
+            target_str = self.args[1].lower()
+            found = self._resolve_global_target(target_str)
             if found:
                 target = found
             else:
-                self.player.send_message(f"Player '{target_name}' not found.")
+                self.player.send_message(f"Player '{target_str}' not found.")
                 return
 
         # Fetch item template
@@ -71,6 +81,16 @@ class GiveItem(BaseVerb):
         self.player.send_message(f"Created '{new_item['name']}' ({item_id}) and gave it to {target.name}.")
         if target != self.player:
             target.send_message(f"An admin has given you {new_item['name']}.")
+            
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["teleport", "goto_player"], admin_only=True)
 class Teleport(BaseVerb):
@@ -104,21 +124,31 @@ class Teleport(BaseVerb):
                     return
         # ----------------------------
         
-        target = " ".join(self.args)
+        target_str = " ".join(self.args)
         
-        # 1. Try Room ID
-        room = self.world.get_room(target)
-        if room:
-            self.player.move_to_room(target, "You fade out and reappear elsewhere.")
-            return
-
-        # 2. Try Player
-        target_player = self.world.get_player_obj(target.lower())
+        # 1. Try Player first (Global ID or Name)
+        target_player = self._resolve_global_target(target_str.lower())
         if target_player:
             self.player.move_to_room(target_player.current_room_id, f"You teleport to {target_player.name}.")
             return
-            
+
+        # 2. Try Room ID
+        room = self.world.get_room(target_str)
+        if room:
+            self.player.move_to_room(target_str, "You fade out and reappear elsewhere.")
+            return
+
         self.player.send_message("Target not found.")
+
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["summon"], admin_only=True)
 class Summon(BaseVerb):
@@ -127,8 +157,8 @@ class Summon(BaseVerb):
             self.player.send_message("Summon who?")
             return
         
-        target_name = " ".join(self.args).lower()
-        target_player = self.world.get_player_obj(target_name)
+        target_str = " ".join(self.args).lower()
+        target_player = self._resolve_global_target(target_str)
         
         if not target_player:
             self.player.send_message("Player not found.")
@@ -136,6 +166,16 @@ class Summon(BaseVerb):
             
         target_player.move_to_room(self.player.current_room_id, "You are magically summoned!")
         self.player.send_message(f"You summoned {target_player.name}.")
+
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["wiz", "invis", "inviz"], admin_only=True)
 class Wiz(BaseVerb):
@@ -156,8 +196,8 @@ class Restore(BaseVerb):
     def execute(self):
         target = self.player
         if self.args:
-            name = " ".join(self.args).lower()
-            found = self.world.get_player_obj(name)
+            target_str = " ".join(self.args).lower()
+            found = self._resolve_global_target(target_str)
             if found: target = found
             else: 
                 self.player.send_message("Player not found.")
@@ -179,6 +219,16 @@ class Restore(BaseVerb):
             self.player.send_message(f"You restored {target.name}.")
         target.mark_dirty()
 
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
+
 @VerbRegistry.register(["force"], admin_only=True)
 class Force(BaseVerb):
     def execute(self):
@@ -186,10 +236,10 @@ class Force(BaseVerb):
             self.player.send_message("Usage: FORCE <player> <command>")
             return
             
-        target_name = self.args[0].lower()
+        target_str = self.args[0].lower()
         command_str = " ".join(self.args[1:])
         
-        target_player = self.world.get_player_obj(target_name)
+        target_player = self._resolve_global_target(target_str)
         if not target_player:
             self.player.send_message("Player not found.")
             return
@@ -197,16 +247,26 @@ class Force(BaseVerb):
         self.player.send_message(f"Forcing {target_player.name} to: {command_str}")
         target_player.command_queue.append(command_str)
 
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
+
 @VerbRegistry.register(["kick"], admin_only=True)
 class Kick(BaseVerb):
     def execute(self):
         if not self.args: return
-        target_name = self.args[0].lower()
-        target_player = self.world.get_player_obj(target_name)
+        target_str = self.args[0].lower()
+        target_player = self._resolve_global_target(target_str)
         
         if target_player:
             # Get SID
-            p_info = self.world.get_player_info(target_name)
+            p_info = self.world.get_player_info(target_player.name.lower())
             if p_info and p_info.get("sid"):
                 self.world.socketio.disconnect(p_info["sid"])
                 self.player.send_message(f"Kicked {target_player.name}.")
@@ -215,12 +275,22 @@ class Kick(BaseVerb):
         else:
             self.player.send_message("Player not active.")
 
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
+
 @VerbRegistry.register(["freeze"], admin_only=True)
 class Freeze(BaseVerb):
     def execute(self):
         if not self.args: return
-        target_name = self.args[0].lower()
-        target_player = self.world.get_player_obj(target_name)
+        target_str = self.args[0].lower()
+        target_player = self._resolve_global_target(target_str)
         
         if target_player:
             current = target_player.flags.get("frozen", "off")
@@ -232,6 +302,16 @@ class Freeze(BaseVerb):
                 target_player.flags["frozen"] = "off"
                 self.player.send_message(f"{target_player.name} is thawed.")
                 target_player.send_message("You can move again.")
+    
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["advance", "givexp", "level"], admin_only=True)
 class Advance(BaseVerb):
@@ -241,7 +321,7 @@ class Advance(BaseVerb):
             self.player.send_message("Types: xp, level, ptp, mtp, stp, money")
             return
             
-        target_name = self.args[0].lower()
+        target_str = self.args[0].lower()
         adv_type = self.args[1].lower()
         try:
             amount = int(self.args[2])
@@ -249,7 +329,7 @@ class Advance(BaseVerb):
             self.player.send_message("Amount must be a number.")
             return
             
-        target = self.world.get_player_obj(target_name)
+        target = self._resolve_global_target(target_str)
         if not target:
             self.player.send_message("Player not found.")
             return
@@ -262,11 +342,9 @@ class Advance(BaseVerb):
             target.level = max(0, target.level + amount)
             
             # --- FIX: Update XP Target and Reset Training Limits on Admin Level Up ---
-            # 1. Update the XP Target for the new level
             if hasattr(target, "_get_xp_target_for_level"):
                 target.level_xp_target = target._get_xp_target_for_level(target.level)
             
-            # 2. Reset training limits so the player can train again immediately
             target.ranks_trained_this_level.clear()
             # ------------------------------------------------------------------------
 
@@ -294,6 +372,16 @@ class Advance(BaseVerb):
         self.player.send_message(f"Adjusted {target.name}: {amount} {adv_type}.")
         target.mark_dirty()
 
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
+
 @VerbRegistry.register(["snoop"], admin_only=True)
 class Snoop(BaseVerb):
     def execute(self):
@@ -301,8 +389,8 @@ class Snoop(BaseVerb):
             self.player.send_message("Snoop who?")
             return
         
-        target_name = self.args[0].lower()
-        if target_name == "off":
+        target_str = self.args[0].lower()
+        if target_str == "off":
             # Find who we are snooping
             targets = []
             for p_name, info in self.world.get_all_players_info():
@@ -313,7 +401,7 @@ class Snoop(BaseVerb):
             self.player.send_message(f"Stopped snooping: {', '.join(targets)}")
             return
 
-        target = self.world.get_player_obj(target_name)
+        target = self._resolve_global_target(target_str)
         if not target:
             self.player.send_message("Player not found.")
             return
@@ -324,28 +412,33 @@ class Snoop(BaseVerb):
         target.flags["snooped_by"].append(self.player.name.lower())
         self.player.send_message(f"You are now snooping {target.name}.")
 
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
+
 @VerbRegistry.register(["injure", "scar"], admin_only=True)
 class Injure(BaseVerb):
     """
     Applies injuries or scars to a player for testing purposes.
     Usage: INJURE <target> <location> <rank>
            SCAR <target> <location> <rank>
-    Locations: head, neck, chest, abdomen, back, right_arm, left_arm, 
-               right_hand, left_hand, right_leg, left_leg, right_eye, left_eye,
-               nerves (spirit), spirit (heart)
     """
     def execute(self):
         if len(self.args) < 3:
             self.player.send_message(f"Usage: {self.command.upper()} <target> <location> <rank>")
             return
 
-        target_name = self.args[0].lower()
+        target_str = self.args[0].lower()
         
         # Handle multi-word locations (e.g. "right eye" -> "right_eye")
-        # Rank is always the last argument
         try:
             rank = int(self.args[-1])
-            # Join everything between target and rank
             location_raw = " ".join(self.args[1:-1]).lower()
             location = location_raw.replace(" ", "_")
         except ValueError:
@@ -356,10 +449,10 @@ class Injure(BaseVerb):
             self.player.send_message(f"Usage: {self.command.upper()} <target> <location> <rank>")
             return
 
-        if target_name == "self" or target_name == "me":
+        if target_str in ["self", "me"]:
             target = self.player
         else:
-            target = self.world.get_player_obj(target_name)
+            target = self._resolve_global_target(target_str)
         
         if not target:
             self.player.send_message("Target not found.")
@@ -388,9 +481,18 @@ class Injure(BaseVerb):
         
         target.mark_dirty()
         
-        # Send update immediately
         if target.name != self.player.name:
             target.send_message(f"An admin has modified your body state ({self.command}).")
+
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)
 
 @VerbRegistry.register(["renew"], admin_only=True)
 class Renew(BaseVerb):
@@ -403,15 +505,15 @@ class Renew(BaseVerb):
             self.player.send_message("Usage: RENEW <target> <location>")
             return
 
-        target_name = self.args[0].lower()
+        target_str = self.args[0].lower()
         # Location is everything after target
         location_raw = " ".join(self.args[1:]).lower()
         location = location_raw.replace(" ", "_")
 
-        if target_name in ["self", "me"]:
+        if target_str in ["self", "me"]:
             target = self.player
         else:
-            target = self.world.get_player_obj(target_name)
+            target = self._resolve_global_target(target_str)
         
         if not target:
             self.player.send_message("Target not found.")
@@ -440,3 +542,13 @@ class Renew(BaseVerb):
                 target.send_message(f"An admin renewed your {location}.")
         else:
             self.player.send_message(f"{target.name} has no wounds or scars on {location}.")
+
+    def _resolve_global_target(self, target_str):
+        if target_str.startswith("#"):
+            uid = target_str[1:]
+            for name, info in self.world.get_all_players_info():
+                p = info.get("player_obj")
+                if p and str(p.uid) == uid:
+                    return p
+            return None
+        return self.world.get_player_obj(target_str)

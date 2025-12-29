@@ -11,10 +11,18 @@ from mud_backend import config
 from typing import Dict, Any
 
 
-
 # This helper is copied from the new mining.py
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
-    """Helper to find a gathering node by name and type."""
+    """Helper to find a gathering node by name, keywords, or ID."""
+    # Check ID match
+    if target_name.startswith("#"):
+        uid = target_name[1:]
+        for obj in room_objects:
+            if str(obj.get("uid")) == uid and obj.get("is_gathering_node") and obj.get("node_type") == node_type:
+                return obj
+        return None
+
+    # Check Name/Keyword match
     for obj in room_objects:
         if (obj.get("is_gathering_node") and 
             obj.get("node_type") == node_type):
