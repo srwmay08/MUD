@@ -14,10 +14,18 @@ from mud_backend import config
 
 def _find_target_corpse(room_objects: list, target_name: str) -> Dict[str, Any] | None:
     """
-    Helper function to find a corpse object by name or keywords.
+    Helper function to find a corpse object by name, keywords, or #ID.
     It prioritizes finding an un-searched corpse.
     """
     
+    # ID Matching
+    if target_name.startswith("#"):
+        target_uid = target_name[1:]
+        for obj in room_objects:
+            if not obj.get("is_corpse"): continue
+            if str(obj.get("uid")) == target_uid:
+                return obj
+
     unsearched_matches = []
     searched_matches = []
     

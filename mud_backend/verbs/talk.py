@@ -5,7 +5,16 @@ from typing import Dict, Any, Optional
 from mud_backend.core.registry import VerbRegistry 
 
 def _find_npc_in_room(room, target_name: str) -> Optional[Dict[str, Any]]:
-    """Finds an NPC object in the room by name or keyword."""
+    """Finds an NPC object in the room by name, keyword, or #ID."""
+    # ID Matching
+    if target_name.startswith("#"):
+        target_uid = target_name[1:]
+        for obj in room.objects:
+            if obj.get("quest_giver_ids") or obj.get("is_npc"):
+                if str(obj.get("uid")) == target_uid:
+                    return obj
+    
+    # Name/Keyword Matching
     for obj in room.objects:
         if obj.get("quest_giver_ids") or obj.get("is_npc"):
             if (target_name == obj.get("name", "").lower() or 

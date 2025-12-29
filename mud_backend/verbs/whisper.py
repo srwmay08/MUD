@@ -33,9 +33,6 @@ class Whisper(BaseVerb):
                 return
             
             group_id = self.player.group_id
-            # Send to all members, skipping ignores logic is complex for groups.
-            # Usually groups imply trust, so we might skip ignore checks, 
-            # OR we manually iterate members. Let's iterate.
             
             full_msg = f"{self.player.name} whispers to the group, \"{message}\""
             
@@ -82,7 +79,22 @@ class Whisper(BaseVerb):
 
         else:
             # --- WHISPER <player> ---
-            target_player = self.world.get_player_obj(target)
+            target_player = None
+            
+            # ID MATCHING
+            if target.startswith("#"):
+                t_uid = target[1:]
+                # Iterate all connected players to find UID (expensive but necessary for global whisper by ID)
+                all_players = self.world.get_all_players_info()
+                for p_name, p_info in all_players:
+                    p_obj = p_info.get("player_obj")
+                    if p_obj and str(p_obj.uid) == t_uid:
+                        target_player = p_obj
+                        break
+            # NAME MATCHING
+            else:
+                target_player = self.world.get_player_obj(target)
+
             if not target_player:
                 self.player.send_message(f"You cannot find '{self.args[0]}' to whisper to.")
                 return
@@ -94,7 +106,6 @@ class Whisper(BaseVerb):
             # Check Ignore
             if target_player.is_ignoring(self.player.name):
                 # Standard behavior: Don't tell the sender they are ignored, just drop it.
-                # Or tell them "They are not listening."
                 self.player.send_message(f"You whisper to {target_player.name}, \"{message}\"")
                 return
 

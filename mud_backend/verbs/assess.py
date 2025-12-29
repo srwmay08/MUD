@@ -16,47 +16,62 @@ class Assess(BaseVerb):
             return
             
         target = " ".join(self.args).lower()
+        target_obj = None
+        
+        # ID MATCHING
+        if target.startswith("#"):
+            t_uid = target[1:]
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == t_uid:
+                    target_obj = obj
+                    break
+        
+        # NAME MATCHING
+        if not target_obj:
+            for obj in self.room.objects:
+                if target in obj.get("keywords", []) or target == obj.get("name", "").lower():
+                    target_obj = obj
+                    break
         
         # --- Assess Furnace ---
-        for obj in self.room.objects:
-            if target in obj.get("keywords", []) and "state" in obj:
-                state = obj["state"]
-                temp = state.get("temp", 20)
-                fuel = state.get("fuel", 0)
-                slag = state.get("slag", 0)
-                
-                # Determine Player Skill Level
-                # Using 'mining' as a proxy for metallurgy knowledge here
-                skill_rank = self.player.skills.get("mining", 0)
-                
-                self.player.send_message(f"--- Assessment: {obj['name']} ---")
-                
-                # Temperature Analysis
-                if skill_rank < 10:
-                    # Novice View
-                    if temp < 100: self.player.send_message("Heat: Cold")
-                    elif temp < 600: self.player.send_message("Heat: Warm")
-                    elif temp < 1000: self.player.send_message("Heat: Hot")
-                    else: self.player.send_message("Heat: Dangerously Hot")
-                else:
-                    # Expert View
-                    self.player.send_message(f"Temperature: {temp}°C")
-                    if temp > 1085: self.player.send_message("   (Sufficient to melt copper)")
-                
-                # Fuel Analysis
-                if skill_rank < 5:
-                    fuel_desc = "Empty" if fuel <= 0 else "Some fuel remains"
-                    self.player.send_message(f"Fuel: {fuel_desc}")
-                else:
-                    self.player.send_message(f"Fuel Level:  {int(fuel)} units")
+        if target_obj and "state" in target_obj:
+            state = target_obj["state"]
+            temp = state.get("temp", 20)
+            fuel = state.get("fuel", 0)
+            slag = state.get("slag", 0)
+            
+            # Determine Player Skill Level
+            # Using 'mining' as a proxy for metallurgy knowledge here
+            skill_rank = self.player.skills.get("mining", 0)
+            
+            self.player.send_message(f"--- Assessment: {target_obj['name']} ---")
+            
+            # Temperature Analysis
+            if skill_rank < 10:
+                # Novice View
+                if temp < 100: self.player.send_message("Heat: Cold")
+                elif temp < 600: self.player.send_message("Heat: Warm")
+                elif temp < 1000: self.player.send_message("Heat: Hot")
+                else: self.player.send_message("Heat: Dangerously Hot")
+            else:
+                # Expert View
+                self.player.send_message(f"Temperature: {temp}°C")
+                if temp > 1085: self.player.send_message("   (Sufficient to melt copper)")
+            
+            # Fuel Analysis
+            if skill_rank < 5:
+                fuel_desc = "Empty" if fuel <= 0 else "Some fuel remains"
+                self.player.send_message(f"Fuel: {fuel_desc}")
+            else:
+                self.player.send_message(f"Fuel Level:  {int(fuel)} units")
 
-                # Airflow
-                self.player.send_message(f"Air Flow:    {state.get('air_flow')}%")
+            # Airflow
+            self.player.send_message(f"Air Flow:    {state.get('air_flow')}%")
+            
+            # Slag Warning (High Skill)
+            if skill_rank >= 15 and slag > 20:
+                self.player.send_message("**WARNING**: You hear the gurgling of molten waste. The furnace needs tapping!")
                 
-                # Slag Warning (High Skill)
-                if skill_rank >= 15 and slag > 20:
-                    self.player.send_message("**WARNING**: You hear the gurgling of molten waste. The furnace needs tapping!")
-                    
-                return
+            return
         
         self.player.send_message("You don't see that here to assess.")

@@ -13,9 +13,18 @@ from typing import Dict, Any
 from mud_backend.core.room_handler import show_room_to_player
 
 def _find_target_node(room_objects: list, target_name: str, node_type: str) -> Dict[str, Any] | None:
-    """Helper to find a gathering node by name and type."""
-    # This helper only needs to search room.objects,
-    # because nodes must be "sensed" (moved to room.objects) before harvesting.
+    """Helper to find a gathering node by name, keyword, or #ID."""
+    
+    # ID Matching
+    if target_name.startswith("#"):
+        target_uid = target_name[1:]
+        for obj in room_objects:
+            if (obj.get("is_gathering_node") and 
+                obj.get("node_type") == node_type):
+                if str(obj.get("uid")) == target_uid:
+                    return obj
+
+    # Name Matching
     for obj in room_objects:
         if (obj.get("is_gathering_node") and 
             obj.get("node_type") == node_type):
