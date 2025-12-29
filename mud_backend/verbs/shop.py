@@ -30,11 +30,19 @@ class List(BaseVerb):
         count = 0
         for item_ref in inventory:
             if count > 15: break
-            if isinstance(item_ref, dict): name = item_ref.get("name")
-            else: name = game_items.get(item_ref, {}).get("name", "An item")
+            if isinstance(item_ref, dict): 
+                name = item_ref.get("name")
+                uid = item_ref.get("uid", "")
+            else: 
+                name = game_items.get(item_ref, {}).get("name", "An item")
+                uid = ""
             
             # Legacy: Hide price for organic feel consistency
-            self.player.send_message(f"- {name:<30}")
+            # Added data-command for click-to-buy support (if UID exists)
+            if uid:
+                self.player.send_message(f"- <span class='keyword' data-command='buy #{uid}'>{name:<30}</span>")
+            else:
+                self.player.send_message(f"- {name:<30}")
             count += 1
 
 @VerbRegistry.register(["order"])
@@ -112,6 +120,11 @@ class Buy(BaseVerb):
         item_index = -1
         game_items = self.world.game_items
 
+        # ID Matching
+        target_uid = None
+        if arg_str.startswith("#"):
+            target_uid = arg_str[1:]
+
         # Scan room objects (including display cases)
         for obj in self.room.objects:
             if obj.get("is_dynamic_display") or obj.get("is_container"):
@@ -121,7 +134,14 @@ class Buy(BaseVerb):
                     else: item_data = game_items.get(item_ref, {})
                     
                     if item_data:
-                        if (arg_str == item_data.get("name", "").lower() or
+                        # Check UID Match
+                        if target_uid and str(item_data.get("uid")) == target_uid:
+                            item_to_buy = item_ref
+                            item_index = i
+                            source_container_view = obj
+                            break
+                        # Check Name Match
+                        if not target_uid and (arg_str == item_data.get("name", "").lower() or
                                 arg_str in item_data.get("keywords", [])):
                             item_to_buy = item_ref
                             item_index = i

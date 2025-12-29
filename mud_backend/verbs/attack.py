@@ -78,17 +78,32 @@ class Attack(BaseVerb):
         target_monster_data = None
 
         # Find Target
-        for obj in self.room.objects:
-            if obj.get("is_monster") or obj.get("is_npc"):
-                uid = obj.get("uid")
-                is_defeated = False
-                if uid:
-                    is_defeated = self.world.get_defeated_monster(uid) is not None
-
-                if not is_defeated:
-                    if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
+        if target_name.startswith("#"):
+            # ID Matching
+            target_uid = target_name[1:]
+            for obj in self.room.objects:
+                if (obj.get("is_monster") or obj.get("is_npc")) and str(obj.get("uid")) == target_uid:
+                    uid = obj.get("uid")
+                    is_defeated = False
+                    if uid:
+                        is_defeated = self.world.get_defeated_monster(uid) is not None
+                    
+                    if not is_defeated:
                         target_monster_data = obj
                         break
+        else:
+            # Name Matching
+            for obj in self.room.objects:
+                if obj.get("is_monster") or obj.get("is_npc"):
+                    uid = obj.get("uid")
+                    is_defeated = False
+                    if uid:
+                        is_defeated = self.world.get_defeated_monster(uid) is not None
+
+                    if not is_defeated:
+                        if target_name in obj.get("keywords", []) or target_name == obj.get("name", "").lower():
+                            target_monster_data = obj
+                            break
 
         if not target_monster_data:
             self.player.send_message(f"You don't see a '{target_name}' here to attack.")

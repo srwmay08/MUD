@@ -53,13 +53,40 @@ class Drop(BaseVerb):
         target_item_name = clean_name(args_str)
         game_items = self.world.game_items
         
-        item_ref, hand_slot = find_item_in_hands(self.player, game_items, target_item_name)
+        item_ref = None
+        hand_slot = None
         from_inventory = False
 
+        # ID Matching
+        if target_item_name.startswith("#"):
+            target_uid = target_item_name[1:]
+            
+            # Check Hands
+            for slot in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(slot)
+                if item:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_ref = item
+                        hand_slot = slot
+                        break
+            
+            # Check Inventory
+            if not item_ref:
+                for item in self.player.inventory:
+                    i_uid = item.get("uid") if isinstance(item, dict) else item
+                    if str(i_uid) == target_uid:
+                        item_ref = item
+                        from_inventory = True
+                        break
+
+        # Name Matching (Fallback)
         if not item_ref:
-            item_ref = find_item_in_inventory(self.player, game_items, target_item_name)
-            if item_ref:
-                from_inventory = True
+            item_ref, hand_slot = find_item_in_hands(self.player, game_items, target_item_name)
+            if not item_ref:
+                item_ref = find_item_in_inventory(self.player, game_items, target_item_name)
+                if item_ref:
+                    from_inventory = True
 
         if not item_ref:
             self.player.send_message(f"You don't have a '{target_item_name}'.")

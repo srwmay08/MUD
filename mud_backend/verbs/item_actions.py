@@ -186,11 +186,13 @@ class Get(BaseVerb):
             found_container = None
             found_prep_type = None
             found_index = -1
+            source_type = None # 'room', 'room_container', 'inventory', 'worn_container', 'inventory_container'
             
             # 1. Check Room Floor
             for obj in self.room.objects:
                 if str(obj.get("uid")) == target_uid:
                     found_ref = obj
+                    source_type = 'room'
                     break
             
             # 2. Check Visible Containers in Room
@@ -198,7 +200,6 @@ class Get(BaseVerb):
                 for obj in self.room.objects:
                     if "container_storage" in obj:
                         for prep in obj["container_storage"]:
-                            # Iterate items
                             items = obj["container_storage"][prep]
                             for i, item_ref in enumerate(items):
                                 i_uid = item_ref.get("uid") if isinstance(item_ref, dict) else None
@@ -207,6 +208,7 @@ class Get(BaseVerb):
                                     found_container = obj
                                     found_prep_type = prep
                                     found_index = i
+                                    source_type = 'room_container'
                                     break
                             if found_ref: break
                     if found_ref: break
@@ -217,7 +219,44 @@ class Get(BaseVerb):
                      i_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
                      if str(i_uid) == target_uid:
                          found_ref = item_ref
+                         source_type = 'inventory'
                          break
+            
+            # 4. Check Inside Worn Containers
+            if not found_ref:
+                for slot, item_ref in self.player.worn_items.items():
+                    if item_ref and "container_storage" in item_ref:
+                         for prep in item_ref["container_storage"]:
+                            items = item_ref["container_storage"][prep]
+                            for i, sub_item in enumerate(items):
+                                i_uid = sub_item.get("uid") if isinstance(sub_item, dict) else None
+                                if str(i_uid) == target_uid:
+                                    found_ref = sub_item
+                                    found_container = item_ref
+                                    found_prep_type = prep
+                                    found_index = i
+                                    source_type = 'worn_container'
+                                    break
+                            if found_ref: break
+                    if found_ref: break
+
+            # 5. Check Inside Inventory Containers
+            if not found_ref:
+                for item_ref in self.player.inventory:
+                    if isinstance(item_ref, dict) and "container_storage" in item_ref:
+                         for prep in item_ref["container_storage"]:
+                            items = item_ref["container_storage"][prep]
+                            for i, sub_item in enumerate(items):
+                                i_uid = sub_item.get("uid") if isinstance(sub_item, dict) else None
+                                if str(i_uid) == target_uid:
+                                    found_ref = sub_item
+                                    found_container = item_ref
+                                    found_prep_type = prep
+                                    found_index = i
+                                    source_type = 'inventory_container'
+                                    break
+                            if found_ref: break
+                    if found_ref: break
 
             # Execute Pickup based on where found
             if found_ref:
@@ -233,11 +272,12 @@ class Get(BaseVerb):
                 item_data = get_item_data(found_ref, self.world.game_items)
                 item_name = item_data.get('name', 'item')
 
-                # CASE A: Found in Container
-                if found_container:
+                # CASE A: Found in Room Container or Player Container
+                if source_type in ['room_container', 'worn_container', 'inventory_container']:
                      found_container["container_storage"][found_prep_type].pop(found_index)
-                     # Sync Persistence
-                     if "uid" in found_container:
+                     
+                     # Sync Persistence for Room Containers
+                     if source_type == 'room_container' and "uid" in found_container:
                          for p_obj in self.room.data.get("objects", []):
                              if p_obj.get("uid") == found_container["uid"]:
                                  if "container_storage" in p_obj and found_prep_type in p_obj["container_storage"]:
@@ -246,14 +286,19 @@ class Get(BaseVerb):
                                  break
                      
                      self.player.worn_items[target_hand_slot] = found_ref
-                     c_name = found_container['name']
-                     self.player.send_message(f"You get {item_name} from {found_prep_type} the {c_name}.")
-                     self.world.save_room(self.room)
+                     c_name = found_container.get('name', 'container')
+                     
+                     if source_type == 'room_container':
+                        self.player.send_message(f"You get {item_name} from {found_prep_type} the {c_name}.")
+                        self.world.save_room(self.room)
+                     else:
+                        self.player.send_message(f"You get {item_name} from your {c_name}.")
+
                      set_action_roundtime(self.player, 1.0)
                      return
 
                 # CASE B: Found on Floor
-                elif found_ref in self.room.objects:
+                elif source_type == 'room':
                     self.room.objects.remove(found_ref)
                     # Sync Persistence
                     for i, p_obj in enumerate(self.room.data.get("objects", [])):
@@ -266,8 +311,8 @@ class Get(BaseVerb):
                     self.world.save_room(self.room)
                     return
 
-                # CASE C: Inventory
-                elif found_ref in self.player.inventory:
+                # CASE C: Inventory (Unstow)
+                elif source_type == 'inventory':
                     self.player.inventory.remove(found_ref)
                     self.player.worn_items[target_hand_slot] = found_ref
                     self.player.send_message(f"You get {item_name} from your pack and hold it.")
@@ -331,7 +376,7 @@ class Get(BaseVerb):
                                 i_name = item_data.get("name", "").lower()
                                 if clean_item == i_name or clean_item in item_data.get("keywords", []):
                                     price = get_item_buy_price(item_ref, game_items, shop_data)
-                                    self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} costs {price} silvers.'")
+                                    self.player.send_message(f"The pawnbroker notices your interest. 'That {item_data.get('name')} will cost you {price} silvers.'")
                                     return
 
                 # Container Storage Check

@@ -230,15 +230,18 @@ class Examine(BaseVerb):
         if target_name.startswith("at "):
             target_name = target_name[3:]
         
-        # UPDATED: Explicit ID matching
+        # UPDATED: Explicit ID matching with Deep Search
         found_object = None
         if target_name.startswith("#"):
             t_uid = target_name[1:]
+            
+            # 1. Room Objects
             for obj in self.room.objects:
                 if str(obj.get("uid")) == t_uid:
                     found_object = obj
                     break
-            # Also check nested containers if not found on floor
+            
+            # 2. Room Containers (e.g., on tables)
             if not found_object:
                 for obj in self.room.objects:
                     if "container_storage" in obj:
@@ -251,23 +254,44 @@ class Examine(BaseVerb):
                             if found_object: break
                     if found_object: break
             
-            # Also check inventory/worn
+            # 3. Worn Items
             if not found_object:
-                # Check worn
                 for slot, item_ref in self.player.worn_items.items():
                     if not item_ref: continue
                     item_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
                     if str(item_uid) == t_uid:
                         found_object = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref)
                         break
-                # Check inventory
-                if not found_object:
-                    for item_ref in self.player.inventory:
-                         item_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
-                         if str(item_uid) == t_uid:
-                             found_object = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref)
-                             break
+                    
+                    # 4. Inside Worn Containers
+                    if isinstance(item_ref, dict) and "container_storage" in item_ref:
+                         for prep in item_ref["container_storage"]:
+                            for sub_item in item_ref["container_storage"][prep]:
+                                sub_uid = sub_item.get("uid") if isinstance(sub_item, dict) else None
+                                if str(sub_uid) == t_uid:
+                                    found_object = sub_item
+                                    break
+                            if found_object: break
+
+            # 5. Inventory
+            if not found_object:
+                for item_ref in self.player.inventory:
+                     item_uid = item_ref.get("uid") if isinstance(item_ref, dict) else item_ref
+                     if str(item_uid) == t_uid:
+                         found_object = item_ref if isinstance(item_ref, dict) else self.world.game_items.get(item_ref)
+                         break
+                     
+                     # 6. Inside Inventory Containers
+                     if isinstance(item_ref, dict) and "container_storage" in item_ref:
+                         for prep in item_ref["container_storage"]:
+                            for sub_item in item_ref["container_storage"][prep]:
+                                sub_uid = sub_item.get("uid") if isinstance(sub_item, dict) else None
+                                if str(sub_uid) == t_uid:
+                                    found_object = sub_item
+                                    break
+                            if found_object: break
         
+        # Name Matching (Fallback)
         if not found_object:
             target_name = _clean_name(target_name)
             for obj in self.room.objects:
@@ -345,10 +369,61 @@ class Look(BaseVerb):
         
         if target_name.startswith("#"):
             t_uid = target_name[1:]
+            
+            # A. Search Room Objects
             for obj in self.room.objects:
                 if str(obj.get("uid")) == t_uid:
                     found_obj = obj
                     break
+            
+            # B. Search Room Containers (e.g. items on tables)
+            if not found_obj:
+                for obj in self.room.objects:
+                    if "container_storage" in obj:
+                        for prep in obj["container_storage"]:
+                            for item in obj["container_storage"][prep]:
+                                item_uid = item.get("uid") if isinstance(item, dict) else None
+                                if str(item_uid) == t_uid:
+                                    found_obj = item
+                                    break
+                            if found_obj: break
+                    if found_obj: break
+            
+            # C. Search Worn Items & Containers
+            if not found_obj:
+                for slot, item in self.player.worn_items.items():
+                    if not item: continue
+                    if str(item.get("uid")) == t_uid:
+                        found_obj = item
+                        source_loc = "worn"
+                        break
+                    if "container_storage" in item:
+                         for prep in item["container_storage"]:
+                            for sub_item in item["container_storage"][prep]:
+                                sub_uid = sub_item.get("uid") if isinstance(sub_item, dict) else None
+                                if str(sub_uid) == t_uid:
+                                    found_obj = sub_item
+                                    source_loc = "worn_container"
+                                    break
+                            if found_obj: break
+            
+            # D. Search Inventory & Containers
+            if not found_obj:
+                for item in self.player.inventory:
+                    if str(item.get("uid")) == t_uid:
+                        found_obj = item
+                        source_loc = "inventory"
+                        break
+                    if "container_storage" in item:
+                         for prep in item["container_storage"]:
+                            for sub_item in item["container_storage"][prep]:
+                                sub_uid = sub_item.get("uid") if isinstance(sub_item, dict) else None
+                                if str(sub_uid) == t_uid:
+                                    found_obj = sub_item
+                                    source_loc = "inventory_container"
+                                    break
+                            if found_obj: break
+                            
         else:
             target_name = _clean_name(target_name)
             for obj in self.room.objects:
@@ -357,11 +432,11 @@ class Look(BaseVerb):
                     found_obj = obj
                     break
 
-        if not found_obj:
-            item_data, loc = _find_item_on_player(self.player, target_name)
-            if item_data:
-                found_obj = item_data
-                source_loc = loc
+            if not found_obj:
+                item_data, loc = _find_item_on_player(self.player, target_name)
+                if item_data:
+                    found_obj = item_data
+                    source_loc = loc
 
         if not found_obj:
             if target_name == "self" or target_name == self.player.name.lower():

@@ -167,7 +167,19 @@ class Diagnose(BaseVerb):
         if self.args:
             target_name = self.args[0]
             if target_name.lower() != "my":
-                found = self.world.get_player_obj(target_name.lower())
+                found = None
+                # ID Matching
+                if target_name.startswith("#"):
+                    t_uid = target_name[1:]
+                    room_players = self.world.room_players.get(self.room.room_id, [])
+                    for p_name in room_players:
+                        p_obj = self.world.get_player_obj(p_name)
+                        if p_obj and str(p_obj.uid) == t_uid:
+                            found = p_obj
+                            break
+                else:
+                    found = self.world.get_player_obj(target_name.lower())
+
                 if not found:
                     self.player.send_message(f"You don't see {target_name} here.")
                     return
@@ -288,8 +300,19 @@ class Tend(BaseVerb):
             target = self.player
             location_arg = " ".join(self.args[1:]).lower()
         else:
-            # Check for other player
-            found_target = self.world.get_player_obj(potential_target_name)
+            # Check for other player (with ID support)
+            found_target = None
+            if potential_target_name.startswith("#"):
+                 t_uid = potential_target_name[1:]
+                 room_players = self.world.room_players.get(self.room.room_id, [])
+                 for p_name in room_players:
+                     p_obj = self.world.get_player_obj(p_name)
+                     if p_obj and str(p_obj.uid) == t_uid:
+                         found_target = p_obj
+                         break
+            else:
+                found_target = self.world.get_player_obj(potential_target_name)
+
             if found_target and found_target.current_room_id == self.player.current_room_id:
                 target = found_target
                 location_arg = " ".join(self.args[1:]).lower()

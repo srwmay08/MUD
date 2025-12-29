@@ -43,8 +43,35 @@ class Put(BaseVerb):
                 self.player.send_message("Your locker is full.")
                 return
 
-            item_id_hand, hand_slot = find_item_in_hands(self.player, self.world.game_items, target_item_name)
+            item_id_hand = None
+            hand_slot = None
             item_id_inv = None
+            game_items = self.world.game_items
+
+            # ID Matching for Locker
+            if target_item_name.startswith("#"):
+                t_uid = target_item_name[1:]
+                # Check Hands
+                for slot in ["mainhand", "offhand"]:
+                    item = self.player.worn_items.get(slot)
+                    if item:
+                        i_uid = item.get("uid") if isinstance(item, dict) else item
+                        if str(i_uid) == t_uid:
+                            item_id_hand = item
+                            hand_slot = slot
+                            break
+                # Check Inventory
+                if not item_id_hand:
+                    for item in self.player.inventory:
+                        i_uid = item.get("uid") if isinstance(item, dict) else item
+                        if str(i_uid) == t_uid:
+                            item_id_inv = item
+                            break
+            else:
+                item_id_hand, hand_slot = find_item_in_hands(self.player, game_items, target_item_name)
+                if not item_id_hand:
+                    item_id_inv = find_item_in_inventory(self.player, game_items, target_item_name)
+
             item_id = None
             item_source = None
 
@@ -52,7 +79,6 @@ class Put(BaseVerb):
                 item_id = item_id_hand
                 item_source = "hand"
             else:
-                item_id_inv = find_item_in_inventory(self.player, self.world.game_items, target_item_name)
                 if item_id_inv:
                     item_id = item_id_inv
                     item_source = "inventory"
@@ -134,14 +160,33 @@ class Put(BaseVerb):
         # --- 2. FIND THE ITEM (Hands or Inventory) ---
         item_ref = None; hand_slot = None; from_inventory = False
 
-        # Check Hands
-        item_ref, hand_slot = find_item_in_hands(self.player, game_items, target_item_name)
-
-        # Check Inventory (if not in hands)
-        if not item_ref:
-            item_ref = find_item_in_inventory(self.player, game_items, target_item_name)
-            if item_ref:
-                from_inventory = True
+        # Check Hands (with ID support)
+        if target_item_name.startswith("#"):
+            t_uid = target_item_name[1:]
+            for slot in ["mainhand", "offhand"]:
+                item = self.player.worn_items.get(slot)
+                if item:
+                     i_uid = item.get("uid") if isinstance(item, dict) else item
+                     if str(i_uid) == t_uid:
+                         item_ref = item
+                         hand_slot = slot
+                         break
+            if not item_ref:
+                for item in self.player.inventory:
+                     i_uid = item.get("uid") if isinstance(item, dict) else item
+                     if str(i_uid) == t_uid:
+                         item_ref = item
+                         from_inventory = True
+                         break
+        else:
+            # Check Hands (Normal)
+            item_ref, hand_slot = find_item_in_hands(self.player, game_items, target_item_name)
+            
+            # Check Inventory (if not in hands)
+            if not item_ref:
+                item_ref = find_item_in_inventory(self.player, game_items, target_item_name)
+                if item_ref:
+                    from_inventory = True
         
         # Must be holding it to place it (except for stowing from inventory)
         if not item_ref:
@@ -154,16 +199,32 @@ class Put(BaseVerb):
         # --- 3. FIND THE CONTAINER/SURFACE ---
         container_obj = None
         
-        # Check Room Objects (Bench, Table, etc.)
-        for obj in self.room.objects:
-            o_name = obj.get("name", "").lower()
-            if target_container_name == o_name or target_container_name == clean_name(o_name) or target_container_name in obj.get("keywords", []):
-                container_obj = obj
-                break
-        
-        # Check worn containers if not found in room
-        if not container_obj:
-             container_obj = find_container_on_player(self.player, game_items, target_container_name)
+        # Check by #ID
+        if target_container_name.startswith("#"):
+            c_uid = target_container_name[1:]
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == c_uid:
+                    container_obj = obj
+                    break
+            if not container_obj:
+                # Check worn items by ID
+                for slot, item in self.player.worn_items.items():
+                    if item:
+                         i_uid = item.get("uid") if isinstance(item, dict) else item
+                         if str(i_uid) == c_uid:
+                             container_obj = item if isinstance(item, dict) else game_items.get(item)
+                             break
+        else:
+            # Check Room Objects (Bench, Table, etc.)
+            for obj in self.room.objects:
+                o_name = obj.get("name", "").lower()
+                if target_container_name == o_name or target_container_name == clean_name(o_name) or target_container_name in obj.get("keywords", []):
+                    container_obj = obj
+                    break
+            
+            # Check worn containers if not found in room
+            if not container_obj:
+                 container_obj = find_container_on_player(self.player, game_items, target_container_name)
 
         if not container_obj:
             self.player.send_message(f"You don't see a {target_container_name} here.")
@@ -235,7 +296,7 @@ class Put(BaseVerb):
         container_obj["container_storage"][target_prep].append(item_ref)
 
         # FIX: Clean name for display to avoid "the a bench"
-        c_name = container_obj['name']
+        c_name = container_obj.get('name', 'container')
         if c_name.lower().startswith("a "): c_name = c_name[2:]
         elif c_name.lower().startswith("an "): c_name = c_name[3:]
         elif c_name.lower().startswith("the "): c_name = c_name[4:]
