@@ -1288,3 +1288,23 @@
 2025-12-28 15:22:19,929 [DEBUG] mud_backend.core.managers: Skipped sevax (SID 4GhxrWZPUJpCrGH8AAAF is in skip list)
 2025-12-28 15:22:36,891 [INFO] mud_backend: [PERSISTENCE] Saved 1 players to database.
 2025-12-28 15:52:39,269 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: <span class="keyword" data-nam... | Candidates: set()
+2025-12-28 19:57:31,940 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: 4GhxrWZPUJpCrGH8AAAF
+2025-12-28 19:57:36,376 [INFO] mud_backend: Defining World...
+2025-12-28 19:57:36,416 [INFO] mud_backend: Starting Workers...
+2025-12-28 19:57:36,431 [INFO] mud_backend: Loading Data...
+2025-12-28 19:57:36,543 [INFO] mud_backend: Starting Background Tasks...
+2025-12-28 19:57:36,543 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-28 19:57:36,545 [INFO] mud_backend: Game Loop task started.
+2025-12-28 19:57:36,545 [INFO] mud_backend: Persistence task started.
+2025-12-28 19:57:38,042 [INFO] mud_backend: Defining World...
+2025-12-28 19:57:38,212 [INFO] mud_backend: [CONNECTION] Client connected: W6sfmjzF-haWiUkLAAAB
+2025-12-28 19:57:41,417 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: W6sfmjzF-haWiUkLAAAB
+2025-12-28 19:57:41,668 [INFO] mud_backend: [CONNECTION] Client connected: gtc1lCjKNHg_7SehAAAD
+2025-12-28 19:57:46,262 [DEBUG] mud_backend: [LOGIN] Sevax joining room ts_southeast (SID: gtc1lCjKNHg_7SehAAAD)
+2025-12-28 19:57:46,263 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: Sevax arrives.... | Candidates: {'sevax'}
+2025-12-28 19:57:46,263 [DEBUG] mud_backend.core.managers: Skipped sevax (SID gtc1lCjKNHg_7SehAAAD is in skip list)
+2025-12-28 19:58:07,972 [DEBUG] mud_backend.core.managers: Room: apothecary_shop | Msg: The Apothecary arrives to tend... | Candidates: {'sevax'}
+2025-12-28 19:58:07,972 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: gtc1lCjKNHg_7SehAAAD)
+2025-12-28 19:58:07,974 [DEBUG] mud_backend.core.managers: Room: ts_southeast | Msg: <span class="keyword" data-nam... | Candidates: set()
+2025-12-28 19:58:07,974 [DEBUG] mud_backend.core.managers: Room: apothecary_shop | Msg: <span class="keyword" data-nam... | Candidates: {'sevax'}
+2025-12-28 19:58:07,974 [DEBUG] mud_backend.core.managers: Skipped sevax (SID gtc1lCjKNHg_7SehAAAD is in skip list)

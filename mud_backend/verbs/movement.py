@@ -374,26 +374,39 @@ class Enter(BaseVerb):
         
         enterable_object = None
         
-        if target_name == "table":
-            possible_tables = []
+        # ID MATCHING
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
             for obj in self.room.objects:
-                obj_verbs = [v.upper() for v in obj.get("verbs", [])]
-                if "table" in obj.get("keywords", []) and "ENTER" in obj_verbs:
-                    possible_tables.append(obj)
-            
-            for table in possible_tables:
-                t_room_id = resolve_interaction_room(table, "ENTER")
-                if t_room_id:
-                    occupants = self.world.room_players.get(t_room_id, set())
-                    if not occupants:
-                        enterable_object = table
+                if str(obj.get("uid")) == target_uid:
+                    # Check if it has ENTER verb
+                    obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                    if "ENTER" in obj_verbs:
+                        enterable_object = obj
                         break
-            if not enterable_object and possible_tables:
-                enterable_object = possible_tables[0]
-        else:
-            enterable_object = next((obj for obj in self.room.objects 
-                                     if (obj['name'].lower() == target_name or target_name in obj.get("keywords", []))
-                                     and "ENTER" in [v.upper() for v in obj.get("verbs", [])]), None)
+        
+        # NAME MATCHING
+        if not enterable_object:
+            if target_name == "table":
+                possible_tables = []
+                for obj in self.room.objects:
+                    obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                    if "table" in obj.get("keywords", []) and "ENTER" in obj_verbs:
+                        possible_tables.append(obj)
+                
+                for table in possible_tables:
+                    t_room_id = resolve_interaction_room(table, "ENTER")
+                    if t_room_id:
+                        occupants = self.world.room_players.get(t_room_id, set())
+                        if not occupants:
+                            enterable_object = table
+                            break
+                if not enterable_object and possible_tables:
+                    enterable_object = possible_tables[0]
+            else:
+                enterable_object = next((obj for obj in self.room.objects 
+                                         if (obj['name'].lower() == target_name or target_name in obj.get("keywords", []))
+                                         and "ENTER" in [v.upper() for v in obj.get("verbs", [])]), None)
 
         if not enterable_object:
             self.player.send_message(f"You cannot enter the **{target_name}**.")
@@ -446,6 +459,11 @@ class Enter(BaseVerb):
         is_door_or_gate = "door" in obj_keywords or "gate" in obj_keywords
         
         obj_clean_name = clean_name(enterable_object.get('name', target_name))
+        
+        # If using ID, try to make the output nicer
+        if obj_clean_name.startswith("#"):
+            obj_clean_name = "object"
+            
         leave_suffix = ""
 
         if current_posture == "standing":
@@ -569,14 +587,27 @@ class Climb(BaseVerb):
         target_name = " ".join(self.args).lower() 
         
         climbable_object = None
-        for obj in self.room.objects:
-            # Case insensitive check for CLIMB in verbs
-            obj_verbs = [v.upper() for v in obj.get("verbs", [])]
-            if "CLIMB" in obj_verbs:
-                if (target_name == obj.get("name", "").lower() or
-                    target_name in obj.get("keywords", [])):
-                    climbable_object = obj
-                    break
+        
+        # ID MATCHING
+        if target_name.startswith("#"):
+            target_uid = target_name[1:]
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == target_uid:
+                    obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                    if "CLIMB" in obj_verbs:
+                        climbable_object = obj
+                        break
+        
+        # NAME MATCHING
+        if not climbable_object:
+            for obj in self.room.objects:
+                # Case insensitive check for CLIMB in verbs
+                obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                if "CLIMB" in obj_verbs:
+                    if (target_name == obj.get("name", "").lower() or
+                        target_name in obj.get("keywords", [])):
+                        climbable_object = obj
+                        break
 
         if not climbable_object:
             self.player.send_message(f"You cannot climb the **{target_name}** here.")
@@ -612,6 +643,7 @@ class Climb(BaseVerb):
             rt = max(1.0, 5.0 - (success_margin / 20.0))
             move_msg = f"You grasp the {target_name} and begin to climb...\nAfter a few moments, you arrive."
             obj_clean_name = clean_name(climbable_object.get('name', target_name))
+            if obj_clean_name.startswith("#"): obj_clean_name = "object"
             leave_suffix = f"climbs the {obj_clean_name}."
             self.player.temp_leave_message = leave_suffix
             
@@ -724,31 +756,46 @@ class Move(BaseVerb):
 
         # Check static objects for GO/MOVE verbs if not a standard exit
         if not target_room_id:
-            for obj in self.room.objects:
-                if (target_name == obj.get("name", "").lower() or 
-                    target_name in obj.get("keywords", [])):
-                    
-                    obj_verbs = [v.upper() for v in obj.get("verbs", [])]
-                    valid_verbs = ["GO", "MOVE", "WALK", "CLIMB", "ENTER"]
-                    matching_verbs = [v for v in obj_verbs if v in valid_verbs]
-                    
-                    if matching_verbs:
-                        if "table" in obj.get("keywords", []):
-                            continue
-                        
+            found_obj = None
+            
+            # ID MATCHING
+            if target_name.startswith("#"):
+                target_uid = target_name[1:]
+                for obj in self.room.objects:
+                    if str(obj.get("uid")) == target_uid:
+                        found_obj = obj
+                        break
+            
+            # NAME MATCHING
+            if not found_obj:
+                for obj in self.room.objects:
+                    if (target_name == obj.get("name", "").lower() or 
+                        target_name in obj.get("keywords", [])):
+                        found_obj = obj
+                        break
+            
+            # PROCESS FOUND OBJECT
+            if found_obj:
+                obj_verbs = [v.upper() for v in found_obj.get("verbs", [])]
+                valid_verbs = ["GO", "MOVE", "WALK", "CLIMB", "ENTER"]
+                matching_verbs = [v for v in obj_verbs if v in valid_verbs]
+                
+                if matching_verbs:
+                    if "table" in found_obj.get("keywords", []):
+                        pass # Tables are handled by ENTER usually
+                    else:
                         # First try legacy
-                        t_room = obj.get("target_room") or obj.get("destination_id")
+                        t_room = found_obj.get("target_room") or found_obj.get("destination_id")
                         
                         # Then try to resolve via interactions using matched verbs
                         if not t_room:
                             for v in matching_verbs:
-                                t_room = resolve_interaction_room(obj, v)
+                                t_room = resolve_interaction_room(found_obj, v)
                                 if t_room: break
 
                         if t_room:
                             target_room_id = t_room
-                            move_dir_name = obj.get("name")
-                            break
+                            move_dir_name = found_obj.get("name")
         
         if target_room_id:
             # Burden Check
@@ -776,6 +823,7 @@ class Move(BaseVerb):
                     leave_suffix = f"heads {move_dir_name}."
                 else:
                     clean_obj = clean_name(move_dir_name)
+                    if clean_obj.startswith("#"): clean_obj = "somewhere"
                     move_msg = f"You move towards the {move_dir_name}..."
                     leave_suffix = f"heads towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
@@ -785,6 +833,7 @@ class Move(BaseVerb):
                     leave_suffix = f"creeps {move_dir_name}."
                 else:
                     clean_obj = clean_name(move_dir_name)
+                    if clean_obj.startswith("#"): clean_obj = "somewhere"
                     move_msg = f"You creep towards the {move_dir_name}..."
                     leave_suffix = f"creeps towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
@@ -794,6 +843,7 @@ class Move(BaseVerb):
                     leave_suffix = f"crawls {move_dir_name}."
                 else:
                     clean_obj = clean_name(move_dir_name)
+                    if clean_obj.startswith("#"): clean_obj = "somewhere"
                     move_msg = f"You crawl towards the {move_dir_name}..."
                     leave_suffix = f"crawls towards the {clean_obj}."
                 self.player.temp_leave_message = leave_suffix
@@ -913,16 +963,30 @@ class Move(BaseVerb):
              return
 
         enterable_object = None
-        for obj in self.room.objects:
-             obj_verbs = [v.upper() for v in obj.get("verbs", [])]
-             if "ENTER" in obj_verbs:
-                if (target_name == obj.get("name", "").lower() or
-                    target_name in obj.get("keywords", [])):
-                    enterable_object = obj
-                    break
+        
+        # Check for ENTER verb in object list using ID if possible
+        if target_name.startswith("#"):
+            t_uid = target_name[1:]
+            for obj in self.room.objects:
+                if str(obj.get("uid")) == t_uid:
+                    obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                    if "ENTER" in obj_verbs:
+                        enterable_object = obj
+                        break
+        
+        if not enterable_object:
+            for obj in self.room.objects:
+                 obj_verbs = [v.upper() for v in obj.get("verbs", [])]
+                 if "ENTER" in obj_verbs:
+                    if (target_name == obj.get("name", "").lower() or
+                        target_name in obj.get("keywords", [])):
+                        enterable_object = obj
+                        break
                                  
         if enterable_object:
-            enter_verb = Enter(self.world, self.player, self.room, enterable_object['name'].lower().split())
+            # Re-dispatch to Enter class using clean arguments
+            # If it was an ID, pass the ID again, Enter class now handles it
+            enter_verb = Enter(self.world, self.player, self.room, [target_name])
             enter_verb.execute() 
             return
 

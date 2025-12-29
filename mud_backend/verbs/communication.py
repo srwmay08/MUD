@@ -8,10 +8,32 @@ from mud_backend.core.registry import VerbRegistry
 # --- HELPERS ---
 
 def _find_item_worn(player, target_name: str) -> str | None:
-    """Finds an item worn by the player matching the name."""
+    """Finds an item worn by the player matching the name or #ID."""
+    # ID Matching
+    if target_name.startswith("#"):
+        t_uid = target_name[1:]
+        for slot, item_ref in player.worn_items.items():
+            if item_ref:
+                # Handle dictionary items or ID strings lookup
+                item_data = None
+                if isinstance(item_ref, dict):
+                    item_data = item_ref
+                else:
+                    item_data = player.world.game_items.get(item_ref)
+                
+                if item_data and str(item_data.get("uid")) == t_uid:
+                    return item_ref # Return the reference used in worn_items
+        return None
+
+    # Name Matching
     for slot, item_id in player.worn_items.items():
         if item_id:
-            item_data = player.world.game_items.get(item_id)
+            item_data = None
+            if isinstance(item_id, dict):
+                item_data = item_id
+            else:
+                item_data = player.world.game_items.get(item_id)
+            
             if item_data:
                 if (target_name == item_data.get("name", "").lower() or 
                     target_name in item_data.get("keywords", [])):
@@ -100,11 +122,12 @@ class Twist(BaseVerb):
         if check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
-        if "ring" not in target_name and "signet" not in target_name:
+        # Allow pass if ID is used, OR if name contains keywords
+        if not target_name.startswith("#") and "ring" not in target_name and "signet" not in target_name:
             self.player.send_message("Twist what?")
             return
 
-        item_id = _find_item_worn(self.player, "signet")
+        item_id = _find_item_worn(self.player, target_name)
         if not item_id:
             self.player.send_message("You aren't wearing a signet ring to twist.")
             return
@@ -131,11 +154,11 @@ class Tap(BaseVerb):
         if check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
-        if "ring" not in target_name and "signet" not in target_name:
+        if not target_name.startswith("#") and "ring" not in target_name and "signet" not in target_name:
             self.player.send_message("Tap what?")
             return
 
-        item_id = _find_item_worn(self.player, "signet")
+        item_id = _find_item_worn(self.player, target_name)
         if not item_id:
             self.player.send_message("You aren't wearing a signet ring.")
             return
@@ -154,11 +177,11 @@ class Turn(BaseVerb):
         if check_action_roundtime(self.player, action_type="other"): return
 
         target_name = " ".join(self.args).lower()
-        if "ring" not in target_name and "signet" not in target_name:
+        if not target_name.startswith("#") and "ring" not in target_name and "signet" not in target_name:
             self.player.send_message("Turn what?")
             return
 
-        item_id = _find_item_worn(self.player, "signet")
+        item_id = _find_item_worn(self.player, target_name)
         if not item_id:
             self.player.send_message("You aren't wearing a signet ring.")
             return
