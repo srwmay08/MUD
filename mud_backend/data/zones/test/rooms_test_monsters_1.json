@@ -1,20 +1,75 @@
 [
-        {
-        "room_id": "test_monsters_1",
-        "name": "test_monsters_1",
+    {
+        "ambient_events": [],
         "description": {
             "default": "The monster testing rooms"
         },
         "exits": {
+            "east": "room_1767064643880_944"
         },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
+        "illumination": 50,
         "is_outdoor": true,
-        "objects": [
-        ],
-
+        "name": "test_monsters_1",
+        "objects": [],
+        "room_id": "test_monsters_1",
         "x": 0,
         "y": 0,
-        "z": 0,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "south": "room_1767064645328_861",
+            "west": "test_monsters_1"
+        },
+        "flags": {
+            "hiding_allowed": true,
+            "is_node": false,
+            "is_pvp": false,
+            "is_sanctuary": false,
+            "is_super_node": false,
+            "magic_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true
+        },
         "illumination": 50,
+        "interior_id": "rooms_test_monsters_1",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "Level 1 Monsters",
+        "objects": [],
+        "room_id": "room_1767064643880_944",
+        "x": 1,
+        "y": 0,
+        "z": 0
+    },
+    {
+        "ambient_events": [],
+        "description": {
+            "default": ""
+        },
+        "exits": {
+            "north": "room_1767064643880_944"
+        },
         "flags": {
             "is_node": false,
             "is_super_node": false,
@@ -28,6 +83,20 @@
             "sneak_in_allowed": true,
             "sneak_out_allowed": true
         },
-        "ambient_events": []
-        }
+        "illumination": 50,
+        "interior_id": "rooms_test_monsters_1",
+        "is_outdoor": false,
+        "is_table": false,
+        "name": "Fallow Shote",
+        "objects": [
+            {
+                "monster_id": "fallow_shote",
+                "is_monster": true
+            }
+        ],
+        "room_id": "room_1767064645328_861",
+        "x": 1,
+        "y": -1,
+        "z": 0
+    }
 ]

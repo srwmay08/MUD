@@ -346,7 +346,13 @@ class Player(GameEntity):
     def armor_rt_penalty(self) -> float:
         armor_id = self.worn_items.get("torso")
         if not armor_id: return 0.0
-        armor_data = self.world.game_items.get(armor_id)
+        
+        # Handle dict or ID in worn_items
+        if isinstance(armor_id, dict):
+            armor_data = armor_id
+        else:
+            armor_data = self.world.game_items.get(armor_id)
+
         if not armor_data: return 0.0
         base_rt = armor_data.get("armor_rt", 0)
         if base_rt == 0: return 0.0
@@ -515,9 +521,19 @@ class Player(GameEntity):
             self.message_history = self.message_history[-100:]
 
     def get_equipped_item_data(self, slot: str) -> Optional[dict]:
-        item_id = self.worn_items.get(slot) 
-        if item_id: return self.world.game_items.get(item_id)
-        return None
+        """
+        Retrieves the item data for a specific slot.
+        FIX: Handles cases where the slot contains the item dict directly OR an ID string.
+        """
+        item_ref = self.worn_items.get(slot) 
+        if not item_ref: return None
+        
+        # If the slot already contains the dictionary, return it.
+        if isinstance(item_ref, dict):
+            return item_ref
+            
+        # Otherwise, assume it's an ID and look it up.
+        return self.world.game_items.get(item_ref)
 
     def get_armor_type(self) -> str:
         DEFAULT_UNARMORED_TYPE = "unarmed" 

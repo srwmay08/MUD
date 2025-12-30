@@ -301,108 +301,116 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
     for i, uid in enumerate(active_uids):
         if i % 50 == 0:
             world.socketio.sleep(0) # Yield to heartbeat
-            
-        room_id = world.mob_locations.get(uid)
-        if not room_id:
-            world.unregister_mob(uid)
-            continue
-            
-        # Check room status
-        with world.index_lock:
-            players_in_room = world.room_players.get(room_id)
         
-        room = world.get_active_room_safe(room_id)
-        if not room:
-             if players_in_room:
-                 world.get_room(room_id) # Hydrate
-                 room = world.get_active_room_safe(room_id)
-             else:
-                 continue
-        
-        if not room: continue
-
-        monster_obj = None
-        with room.lock:
-            for obj in room.objects:
-                if obj.get("uid") == uid:
-                    monster_obj = obj
-                    break
-        
-        if not monster_obj:
-            world.unregister_mob(uid)
-            continue
-
-        # Hydrate template if missing movement rules (rare but possible on reload)
-        monster_id = monster_obj.get("monster_id")
-        if monster_id and "movement_rules" not in monster_obj:
-             template = world.game_monster_templates.get(monster_id)
-             if template: monster_obj.update(copy.deepcopy(template))
-
-        # --- AI PRIORITY 1: Check Status Effects (Stun/Delimbed/Prone) ---
-        status_effects = monster_obj.get("status_effects", [])
-        
-        if "stunned" in status_effects:
-            # Skip all actions if stunned
-            continue
+        # --- Error Handling Block Start ---
+        try:
+            room_id = world.mob_locations.get(uid)
+            if not room_id:
+                world.unregister_mob(uid)
+                continue
+                
+            # Check room status
+            with world.index_lock:
+                players_in_room = world.room_players.get(room_id)
             
-        # --- AI PRIORITY 2: Combat & Behavior Tree ---
-        combat_state = world.get_combat_state(uid)
-        in_combat = combat_state and combat_state.get("state_type") == "combat"
-        target_id = combat_state.get("target_id") if in_combat else None
-
-        # [FIX] Validate Target Presence: If target left room, stop combat
-        if in_combat and target_id:
-            target_found = False
+            room = world.get_active_room_safe(room_id)
+            if not room:
+                 if players_in_room:
+                     world.get_room(room_id) # Hydrate
+                     room = world.get_active_room_safe(room_id)
+                 else:
+                     continue
             
-            # Check players
-            if players_in_room:
-                for p_name in players_in_room:
-                    if p_name.lower() == target_id:
-                        target_found = True
+            if not room: continue
+
+            monster_obj = None
+            with room.lock:
+                for obj in room.objects:
+                    if obj.get("uid") == uid:
+                        monster_obj = obj
                         break
             
-            # Check mobs (if not found as player)
-            if not target_found:
-                with room.lock:
-                    for obj in room.objects:
-                        if obj.get("uid") == target_id:
+            if not monster_obj:
+                world.unregister_mob(uid)
+                continue
+
+            # Hydrate template if missing movement rules (rare but possible on reload)
+            monster_id = monster_obj.get("monster_id")
+            if monster_id and "movement_rules" not in monster_obj:
+                 template = world.game_monster_templates.get(monster_id)
+                 if template: monster_obj.update(copy.deepcopy(template))
+
+            # --- AI PRIORITY 1: Check Status Effects (Stun/Delimbed/Prone) ---
+            status_effects = monster_obj.get("status_effects", [])
+            
+            if "stunned" in status_effects:
+                # Skip all actions if stunned
+                continue
+                
+            # --- AI PRIORITY 2: Combat & Behavior Tree ---
+            combat_state = world.get_combat_state(uid)
+            in_combat = combat_state and combat_state.get("state_type") == "combat"
+            target_id = combat_state.get("target_id") if in_combat else None
+
+            # [FIX] Validate Target Presence: If target left room, stop combat
+            if in_combat and target_id:
+                target_found = False
+                
+                # Check players
+                if players_in_room:
+                    for p_name in players_in_room:
+                        if p_name.lower() == target_id:
                             target_found = True
                             break
+                
+                # Check mobs (if not found as player)
+                if not target_found:
+                    with room.lock:
+                        for obj in room.objects:
+                            if obj.get("uid") == target_id:
+                                target_found = True
+                                break
+                
+                if not target_found:
+                    world.remove_combat_state(uid)
+                    in_combat = False
+                    target_id = None
+                    # Optional: You could broadcast a message here like "The creature looks confused."
+
+            # 2a. Execute Behavior Script (if any)
+            # We do this even if not in combat to allow for passive behaviors like healing or buffering
+            script_action = _execute_behavior_tree(world, monster_obj, target_id, room_id, broadcast_callback)
             
-            if not target_found:
-                world.remove_combat_state(uid)
-                in_combat = False
-                target_id = None
-                # Optional: You could broadcast a message here like "The creature looks confused."
+            if script_action:
+                _perform_ai_action(world, monster_obj, script_action, target_id, room_id, broadcast_callback)
+                # If action taken, skip standard attack/move this tick
+                continue
 
-        # 2a. Execute Behavior Script (if any)
-        # We do this even if not in combat to allow for passive behaviors like healing or buffering
-        script_action = _execute_behavior_tree(world, monster_obj, target_id, room_id, broadcast_callback)
-        
-        if script_action:
-            _perform_ai_action(world, monster_obj, script_action, target_id, room_id, broadcast_callback)
-            # If action taken, skip standard attack/move this tick
+            # 2b. Standard Aggro Scan (if not fighting)
+            if not in_combat:
+                started_combat = _scan_for_player_targets(world, monster_obj, room_id)
+                if not started_combat:
+                    _check_and_start_npc_combat(world, monster_obj, room_id)
+
+            # --- AI PRIORITY 3: Movement (Wander) ---
+            # Only move if not in combat and not prone/delimbed legs
+            if monster_obj.get("movement_rules") and not in_combat:
+                # Check for leg damage preventing movement
+                if monster_obj.get("delimbed_right_leg") or monster_obj.get("delimbed_left_leg"):
+                    pass # Can't wander if legless
+                elif monster_obj.get("posture") == "prone":
+                    # Stand up chance?
+                    if random.random() < 0.5:
+                        monster_obj["posture"] = "standing"
+                        broadcast_callback(room_id, f"The {monster_obj.get('name')} struggles to its feet.", "ambient")
+                else:
+                    potential_movers.append((monster_obj, room_id))
+
+        except Exception as e:
+            # Prevent one monster crashing the loop for everyone
+            print(f"ERROR: process_monster_ai failed for uid {uid}: {e}")
             continue
-
-        # 2b. Standard Aggro Scan (if not fighting)
-        if not in_combat:
-            started_combat = _scan_for_player_targets(world, monster_obj, room_id)
-            if not started_combat:
-                _check_and_start_npc_combat(world, monster_obj, room_id)
-
-        # --- AI PRIORITY 3: Movement (Wander) ---
-        # Only move if not in combat and not prone/delimbed legs
-        if monster_obj.get("movement_rules") and not in_combat:
-            # Check for leg damage preventing movement
-            if monster_obj.get("delimbed_right_leg") or monster_obj.get("delimbed_left_leg"):
-                pass # Can't wander if legless
-            elif monster_obj.get("posture") == "prone":
-                # Stand up chance?
-                if random.random() < 0.5:
-                    monster_obj["posture"] = "standing"
-                    broadcast_callback(room_id, f"The {monster_obj.get('name')} struggles to its feet.", "ambient")
-            else:
-                potential_movers.append((monster_obj, room_id))
+        # --- Error Handling Block End ---
 
     moved_monster_uids = set()
 

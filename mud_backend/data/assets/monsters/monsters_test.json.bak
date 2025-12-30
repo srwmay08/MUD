@@ -1,0 +1,106 @@
+[
+    {
+        "action_timer_seconds": 10,
+        "ai_script": [
+            {
+                "action": {
+                    "type": "attack",
+                    "value": ""
+                },
+                "conditions": []
+            },
+            {
+                "action": {
+                    "type": "flee",
+                    "value": ""
+                },
+                "conditions": [
+                    {
+                        "type": "health_below_percent",
+                        "value": "20"
+                    }
+                ]
+            }
+        ],
+        "ambient_message_chance": 0.2,
+        "ambient_messages": [],
+        "attack_attributes": [
+            ""
+        ],
+        "attacks": [
+            {
+                "as": 25,
+                "chance": 0.5,
+                "damage_type": "crush",
+                "name": "Bite",
+                "verb": "pinch",
+                "weapon_name": "its claw"
+            },
+            {
+                "as": 35,
+                "chance": 0.5,
+                "damage_type": "impact",
+                "name": "Charge",
+                "verb": "bash",
+                "weapon_name": "its heavy claw"
+            }
+        ],
+        "body_type": "quadraped",
+        "description": "This creature is a far cry from a domesticated farm pig. Lean and muscular, its hide is a dusty, fallow brown covered in coarse, wire-like hair that stands on end along its spine. Two short but sharp yellowing tusks protrude from its lower jaw, currently caked with the soil of a ruined crop field. Its beady eyes watch you with territorial malice, and it grunts with a low, threatening timbre.",
+        "ds_bolt": 5,
+        "ds_melee": 13,
+        "ds_ranged": 5,
+        "faction": "Creatures",
+        "faction_adjustments_on_death": {},
+        "family": "Beast",
+        "hp_range": [
+            22,
+            32
+        ],
+        "is_aggressive": false,
+        "is_monster": true,
+        "keywords": [
+            "shote",
+            "fallow shote",
+            "pig",
+            "boar"
+        ],
+        "level": 1,
+        "level_range": [
+            1,
+            3
+        ],
+        "loot_table_id": "",
+        "max_hp": 20,
+        "monster_id": "fallow_shote",
+        "movement_rules": {
+            "wander_chance": 0
+        },
+        "name": "a fallow shote",
+        "perception_dc": 5,
+        "respawn_chance_per_tick": 0.5,
+        "respawn_time_seconds": 60,
+        "skills": {},
+        "spawn_message_arrival": "With a high-pitched squeal, a fallow shote bursts from the bushes, looking for something to destroy.",
+        "spawn_message_departure": "Kicking up a cloud of dust, the shote charges off to the {exit}.",
+        "stats": {
+            "AGI": 15,
+            "AUR": 10,
+            "CON": 40,
+            "DEX": 20,
+            "DIS": 10,
+            "ESS": 10,
+            "INF": 10,
+            "INT": 10,
+            "LOG": 10,
+            "STR": 35,
+            "WIS": 10,
+            "ZEA": 10
+        },
+        "td": 3,
+        "verbs": [
+            "look",
+            "attack"
+        ]
+    }
+]
