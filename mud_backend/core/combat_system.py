@@ -837,6 +837,36 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         crit_msg = crit_result.get("message", "").format(defender=defender_name)
         if crit_msg:
             results['critical_msg'] = f"   {crit_msg}"
+
+        # --- CUSTOM STATUS EFFECT LOGIC START ---
+        status_effect = selected_attack.get("status_effect")
+        if status_effect and random.random() < status_effect.get("chance", 1.0):
+            effect_type = status_effect.get("type")
+            
+            if effect_type == "knockdown":
+                target_posture = status_effect.get("target_posture", "sitting")
+                
+                # Apply to Player
+                if is_defender_player:
+                    # Only knock down if standing or crouching (don't force them up if prone)
+                    if defender.posture in ["standing", "crouching", "kneeling"]:
+                        defender.posture = target_posture
+                        defender.mark_dirty()
+                        
+                        msg_1st = status_effect.get("message_first_person", "You are knocked down!")
+                        msg_3rd = status_effect.get("message_third_person", f"{defender_name} is knocked down!").format(defender=defender_name)
+                        
+                        # Add to the appropriate messages
+                        if is_attacker_player:
+                            results['result_msg'] += f"\n{msg_3rd}" 
+                            results['broadcast_result_msg'] += f"\n{msg_3rd}"
+                        else:
+                            # Attacker is mob, Defender is player. 
+                            # 'result_msg' goes to Defender.
+                            results['result_msg'] += f"\n{msg_1st}"
+                            results['broadcast_result_msg'] += f"\n{msg_3rd}"
+        # --- CUSTOM STATUS EFFECT LOGIC END ---
+
     else:
         results['hit'] = False
         if is_attacker_player:

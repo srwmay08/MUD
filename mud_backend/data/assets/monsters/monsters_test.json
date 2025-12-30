@@ -45,12 +45,19 @@
                 "weapon_name": "its jagged tusks"
             },
             {
-                "as": 38,
-                "chance": 0.1,
+                "as": 35,
+                "chance": 0.5,
                 "damage_type": "impact",
                 "name": "Charge",
-                "verb": "ram",
-                "weapon_name": "its hard snout"
+                "verb": "bash",
+                "weapon_name": "its hard snout",
+                "status_effect": {
+                    "type": "knockdown",
+                    "chance": 0.4,
+                    "target_posture": "sitting",
+                    "message_first_person": "The force of the charge knocks you into a sitting position!",
+                    "message_third_person": "The force of the charge knocks {defender} into a sitting position!"
+                }
             }
         ],
         "body_type": "quadraped",
