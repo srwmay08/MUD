@@ -30,7 +30,7 @@
         "attacks": [
             {
                 "as": 25,
-                "chance": 0.5,
+                "chance": 0.55,
                 "damage_type": "crush",
                 "name": "Bite",
                 "verb": "bite",
@@ -38,7 +38,7 @@
             },
             {
                 "as": 35,
-                "chance": 0.3,
+                "chance": 0.35,
                 "damage_type": "pierce",
                 "name": "Charge",
                 "verb": "gore",
@@ -46,7 +46,7 @@
             },
             {
                 "as": 38,
-                "chance": 0.2,
+                "chance": 0.1,
                 "damage_type": "impact",
                 "name": "Charge",
                 "verb": "ram",
