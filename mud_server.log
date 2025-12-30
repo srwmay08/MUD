@@ -1960,3 +1960,44 @@
 2025-12-28 22:01:47,541 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: The grizzled warrior wanders o... | Candidates: set()
 2025-12-28 22:01:47,541 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: A grizzled warrior wanders in.... | Candidates: {'sevax'}
 2025-12-28 22:01:47,542 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: CJjAClkxa0dQJtvqAAAD)
+2025-12-28 22:03:45,297 [INFO] mud_backend: Defining World...
+2025-12-28 22:03:45,303 [INFO] mud_backend: Starting Workers...
+2025-12-28 22:03:45,317 [INFO] mud_backend: Loading Data...
+2025-12-28 22:03:45,425 [INFO] mud_backend: Starting Background Tasks...
+2025-12-28 22:03:45,425 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-28 22:03:45,428 [INFO] mud_backend: Game Loop task started.
+2025-12-28 22:03:45,428 [INFO] mud_backend: Persistence task started.
+2025-12-28 22:03:46,817 [INFO] mud_backend: Defining World...
+2025-12-28 22:03:54,154 [INFO] mud_backend: [CONNECTION] Client connected: NkocCgFRBCW1hTS_AAAC
+2025-12-28 22:03:55,972 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: NkocCgFRBCW1hTS_AAAC
+2025-12-28 22:03:56,066 [INFO] mud_backend: [CONNECTION] Client connected: Oo4cmqt4O_terGEnAAAE
+2025-12-28 22:04:00,937 [DEBUG] mud_backend: [LOGIN] Sevax joining room town_square (SID: Oo4cmqt4O_terGEnAAAE)
+2025-12-28 22:04:00,937 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: Sevax arrives.... | Candidates: {'sevax'}
+2025-12-28 22:04:00,938 [DEBUG] mud_backend.core.managers: Skipped sevax (SID Oo4cmqt4O_terGEnAAAE is in skip list)
+2025-12-28 22:04:05,371 [DEBUG] mud_backend.core.managers: Room: town_square | Msg: The grizzled warrior wanders o... | Candidates: {'sevax'}
+2025-12-28 22:04:05,371 [DEBUG] mud_backend.core.managers: Sending to sevax (SID: Oo4cmqt4O_terGEnAAAE)
+2025-12-28 22:04:05,372 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 22:04:15,394 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 22:04:15,394 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 22:04:25,448 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 22:04:25,448 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-28 22:04:45,515 [DEBUG] mud_backend.core.managers: Room: ts_northeast | Msg: The grizzled warrior wanders o... | Candidates: set()
+2025-12-28 22:04:45,515 [DEBUG] mud_backend.core.managers: Room: ts_east | Msg: A grizzled warrior wanders in.... | Candidates: set()
+2025-12-29 21:05:31,725 [INFO] mud_backend: Defining World...
+2025-12-29 21:05:31,730 [INFO] mud_backend: Starting Workers...
+2025-12-29 21:05:31,744 [INFO] mud_backend: Loading Data...
+2025-12-29 21:05:33,282 [INFO] mud_backend: Defining World...
+2025-12-29 21:05:34,582 [INFO] mud_backend: Starting Background Tasks...
+2025-12-29 21:05:34,583 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-29 21:05:34,585 [INFO] mud_backend: Game Loop task started.
+2025-12-29 21:05:34,585 [INFO] mud_backend: Persistence task started.
+2025-12-29 21:05:39,081 [INFO] mud_backend: [CONNECTION] Client connected: nKPpWXUNGt_0aZ7BAAAB
+2025-12-29 21:05:39,820 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: nKPpWXUNGt_0aZ7BAAAB
+2025-12-29 21:05:40,059 [INFO] mud_backend: [CONNECTION] Client connected: zPlE_gWDHXvp1WpyAAAD
+2025-12-29 21:07:36,467 [DEBUG] mud_backend.core.managers: Room: inn_room | Msg: Sevax picks up a note.... | Candidates: {'sevax'}
+2025-12-29 21:07:36,467 [DEBUG] mud_backend.core.managers: Skipped sevax (SID zPlE_gWDHXvp1WpyAAAD is in skip list)
+2025-12-29 21:08:04,831 [DEBUG] mud_backend.core.managers: Room: inn_room | Msg: Sevax puts a note in the leath... | Candidates: {'sevax'}
+2025-12-29 21:08:04,831 [DEBUG] mud_backend.core.managers: Skipped sevax (SID zPlE_gWDHXvp1WpyAAAD is in skip list)
+2025-12-29 21:08:09,217 [DEBUG] mud_backend.core.managers: Room: inn_room | Msg: <span class="keyword" data-nam... | Candidates: set()
+2025-12-29 21:08:09,218 [DEBUG] mud_backend.core.managers: Room: inn_front_desk | Msg: <span class="keyword" data-nam... | Candidates: {'sevax'}
+2025-12-29 21:08:09,218 [DEBUG] mud_backend.core.managers: Skipped sevax (SID zPlE_gWDHXvp1WpyAAAD is in skip list)

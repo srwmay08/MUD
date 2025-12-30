@@ -1,0 +1,33 @@
+[
+        {
+        "room_id": "test_monsters_1",
+        "name": "test_monsters_1",
+        "description": {
+            "default": "The monster testing rooms"
+        },
+        "exits": {
+        },
+        "is_outdoor": true,
+        "objects": [
+        ],
+
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "illumination": 50,
+        "flags": {
+            "is_node": false,
+            "is_super_node": false,
+            "is_sanctuary": false,
+            "is_pvp": false,
+            "magic_allowed": true,
+            "stealing_allowed": true,
+            "teleport_in_allowed": true,
+            "teleport_out_allowed": true,
+            "hiding_allowed": true,
+            "sneak_in_allowed": true,
+            "sneak_out_allowed": true
+        },
+        "ambient_events": []
+        }
+]

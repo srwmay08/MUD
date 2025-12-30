@@ -72,7 +72,7 @@ class Talk(BaseVerb):
                     if defeated:
                         display_name = defeated.get("name", "The dead creature")
 
-            self.player.send_message(f"You don't see anyone named '{display_name}' here to talk to.")
+            self.player.send_message(f"You don't see anyone named {display_name} here to talk to.")
             return
             
         npc_name = target_npc.get("name", "the NPC")
