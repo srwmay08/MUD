@@ -2447,3 +2447,55 @@
 2025-12-31 12:52:58,782 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID DC4NQfSDquwCjSsXAAAD is in skip list)
 2025-12-31 12:53:02,674 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote squeals angrily... | Candidates: {'edgedtest'}
 2025-12-31 12:53:02,675 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:53:32,744 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
+2025-12-31 12:53:32,744 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:53:42,707 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
+2025-12-31 12:53:42,708 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:54:52,944 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Mud flies into the air as a fa... | Candidates: {'edgedtest'}
+2025-12-31 12:54:52,945 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:55:22,999 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Mud flies into the air as a fa... | Candidates: {'edgedtest'}
+2025-12-31 12:55:23,000 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:55:33,046 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote scrapes its hoo... | Candidates: {'edgedtest'}
+2025-12-31 12:55:33,047 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:55:53,157 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Mud flies into the air as a fa... | Candidates: {'edgedtest'}
+2025-12-31 12:55:53,158 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:56:03,220 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote squeals angrily... | Candidates: {'edgedtest'}
+2025-12-31 12:56:03,221 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:56:42,909 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote squeals angrily... | Candidates: {'edgedtest'}
+2025-12-31 12:56:42,910 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:56:53,374 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote scrapes its hoo... | Candidates: {'edgedtest'}
+2025-12-31 12:56:53,379 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:58:03,631 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote squeals angrily... | Candidates: {'edgedtest'}
+2025-12-31 12:58:03,631 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:59:20,572 [INFO] mud_backend: Defining World...
+2025-12-31 12:59:20,579 [INFO] mud_backend: Starting Workers...
+2025-12-31 12:59:20,590 [INFO] mud_backend: Loading Data...
+2025-12-31 12:59:20,776 [INFO] mud_backend: Starting Background Tasks...
+2025-12-31 12:59:20,777 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-31 12:59:20,780 [INFO] mud_backend: Game Loop task started.
+2025-12-31 12:59:20,781 [INFO] mud_backend: Persistence task started.
+2025-12-31 12:59:21,631 [INFO] mud_backend: Defining World...
+2025-12-31 12:59:22,918 [INFO] mud_backend: [CONNECTION] Client connected: 9GA_JwUKEJWLNj99AAAB
+2025-12-31 12:59:28,112 [DEBUG] mud_backend: [LOGIN] Edgedtest joining room room_1767064645328_861 (SID: 9GA_JwUKEJWLNj99AAAB)
+2025-12-31 12:59:28,115 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Edgedtest arrives.... | Candidates: {'edgedtest'}
+2025-12-31 12:59:28,116 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID 9GA_JwUKEJWLNj99AAAB is in skip list)
+2025-12-31 12:59:50,682 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Mud flies into the air as a fa... | Candidates: {'edgedtest'}
+2025-12-31 12:59:50,683 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: 9GA_JwUKEJWLNj99AAAB)
+2025-12-31 12:59:51,559 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: <span class="keyword" data-nam... | Candidates: set()
+2025-12-31 12:59:51,560 [DEBUG] mud_backend.core.managers: Room: room_1767064643880_944 | Msg: <span class="keyword" data-nam... | Candidates: {'edgedtest'}
+2025-12-31 12:59:51,561 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID 9GA_JwUKEJWLNj99AAAB is in skip list)
+2025-12-31 12:59:52,859 [DEBUG] mud_backend.core.managers: Room: room_1767064643880_944 | Msg: <span class="keyword" data-nam... | Candidates: set()
+2025-12-31 12:59:52,860 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: <span class="keyword" data-nam... | Candidates: {'edgedtest'}
+2025-12-31 12:59:52,861 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID 9GA_JwUKEJWLNj99AAAB is in skip list)
+2025-12-31 13:00:20,663 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Mud flies into the air as a fa... | Candidates: {'edgedtest'}
+2025-12-31 13:00:20,664 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: 9GA_JwUKEJWLNj99AAAB)
+2025-12-31 13:00:50,862 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
+2025-12-31 13:00:50,863 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: 9GA_JwUKEJWLNj99AAAB)
+2025-12-31 13:01:10,921 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote scrapes its hoo... | Candidates: {'edgedtest'}
+2025-12-31 13:01:10,921 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: 9GA_JwUKEJWLNj99AAAB)
+2025-12-31 13:01:20,691 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Mud flies into the air as a fa... | Candidates: {'edgedtest'}
+2025-12-31 13:01:20,691 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: 9GA_JwUKEJWLNj99AAAB)
+2025-12-31 13:02:01,061 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Mud flies into the air as a fa... | Candidates: {'edgedtest'}
+2025-12-31 13:02:01,062 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: 9GA_JwUKEJWLNj99AAAB)
+2025-12-31 13:02:21,106 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote squeals angrily... | Candidates: {'edgedtest'}
+2025-12-31 13:02:21,107 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: 9GA_JwUKEJWLNj99AAAB)

@@ -334,11 +334,21 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                 world.unregister_mob(uid)
                 continue
 
-            # Hydrate template if missing movement rules (rare but possible on reload)
+            # Hydrate/Sync template data
             monster_id = monster_obj.get("monster_id")
-            if monster_id and "movement_rules" not in monster_obj:
+            if monster_id:
                  template = world.game_monster_templates.get(monster_id)
-                 if template: monster_obj.update(copy.deepcopy(template))
+                 if template:
+                     # [FIX] Force sync aggressive flag and AI scripts to ensure config changes apply live
+                     if "is_aggressive" in template:
+                         monster_obj["is_aggressive"] = template["is_aggressive"]
+                     if "ai_script" in template:
+                         monster_obj["ai_script"] = template["ai_script"]
+                     if "faction" in template:
+                         monster_obj["faction"] = template["faction"]
+
+                     if "movement_rules" not in monster_obj:
+                         monster_obj.update(copy.deepcopy(template))
 
             # --- AI PRIORITY 1: Check Status Effects (Stun/Delimbed/Prone) ---
             status_effects = monster_obj.get("status_effects", [])
