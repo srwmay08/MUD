@@ -23,26 +23,46 @@
             }
         ],
         "ambient_message_chance": 0.2,
-        "ambient_messages": [],
+        "ambient_messages": [
+            "squeals angrily and charges at a nearby fence post.",
+            "With a wet snort, {name} rips a large vegetable out of the ground and crushes it.",
+            " scrapes its hoof against the ground, eyeing you warily.",
+            "Mud flies into the air as {name} roots deeper into the earth."
+        ],
         "attack_attributes": [
             ""
         ],
         "attacks": [
             {
                 "as": 25,
-                "chance": 0.5,
-                "damage_type": "crush",
+                "chance": 0.4,
+                "damage_type": "puncture",
                 "name": "Bite",
-                "verb": "pinch",
-                "weapon_name": "its claw"
+                "verb": "bite",
+                "weapon_name": "its teeth"
             },
             {
                 "as": 35,
-                "chance": 0.5,
+                "chance": 0.3,
                 "damage_type": "impact",
                 "name": "Charge",
+                "status_effect": {
+                    "chance": 0.4,
+                    "message_first_person": "The force of the charge knocks you into a sitting position!",
+                    "message_third_person": "The force of the charge knocks {defender} into a sitting position!",
+                    "target_posture": "sitting",
+                    "type": "knockdown"
+                },
                 "verb": "bash",
-                "weapon_name": "its heavy claw"
+                "weapon_name": "its hard snout"
+            },
+            {
+                "as": 30,
+                "chance": 0.3,
+                "damage_type": "puncture",
+                "name": "Gore",
+                "verb": "gore",
+                "weapon_name": "its jagged tusks"
             }
         ],
         "body_type": "quadraped",
@@ -101,6 +121,7 @@
         "verbs": [
             "look",
             "attack"
-        ]
+        ],
+        "ambient_chance": 0.5
     }
 ]
