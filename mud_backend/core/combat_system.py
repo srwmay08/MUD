@@ -41,12 +41,13 @@ class CombatLogBuilder:
         return verb + "s"
 
     def get_attempt_message(self, perspective: str) -> str:
+        # CHANGED: Updated sentence structure to "{verb} at {target} with {weapon}"
         if perspective == 'attacker':
-            return f"You {self.verb} {self.weapon} at {self.defender}!"
+            return f"You {self.verb} at {self.defender} with {self.weapon}!"
         elif perspective == 'defender':
-            return f"{self.attacker} {self.verb_npc} {self.weapon} at you!"
+            return f"{self.attacker} {self.verb_npc} at you with {self.weapon}!"
         else:
-            return f"{self.attacker} {self.verb_npc} {self.weapon} at {self.defender}!"
+            return f"{self.attacker} {self.verb_npc} at {self.defender} with {self.weapon}!"
 
     def get_hit_result_message(self, total_damage: int) -> str:
         return f"   ... and hits for {total_damage} points of damage!"
@@ -711,7 +712,8 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         attack_list = attacker.get("attacks", [])
 
     if not attack_list:
-        attack_list = [{ "verb": "attack", "damage_type": "crush", "weapon_name": "fist", "chance": 1.0 }]
+        # CHANGED: Default verb from "attack" to "swing" to match new sentence structure
+        attack_list = [{ "verb": "swing", "damage_type": "crush", "weapon_name": "fist", "chance": 1.0 }]
     selected_attack = _get_weighted_attack(attack_list)
     if not selected_attack:
         selected_attack = attack_list[0]

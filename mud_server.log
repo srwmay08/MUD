@@ -2147,3 +2147,77 @@
 2025-12-30 12:18:19,687 [DEBUG] mud_backend.core.managers: Room: inn_room | Msg: <span class="keyword" data-nam... | Candidates: set()
 2025-12-30 12:18:19,687 [DEBUG] mud_backend.core.managers: Room: inn_front_desk | Msg: <span class="keyword" data-nam... | Candidates: {'edgedtest'}
 2025-12-30 12:18:19,687 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID 8eP9Wo5kXDu30YHaAAAD is in skip list)
+2025-12-30 12:19:22,916 [INFO] mud_backend: Defining World...
+2025-12-30 12:19:22,921 [INFO] mud_backend: Starting Workers...
+2025-12-30 12:19:22,928 [INFO] mud_backend: Loading Data...
+2025-12-30 12:19:23,071 [INFO] mud_backend: Starting Background Tasks...
+2025-12-30 12:19:23,071 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-30 12:19:23,074 [INFO] mud_backend: Game Loop task started.
+2025-12-30 12:19:23,074 [INFO] mud_backend: Persistence task started.
+2025-12-30 12:19:23,692 [INFO] mud_backend: Defining World...
+2025-12-30 12:19:26,109 [INFO] mud_backend: [CONNECTION] Client connected: KXVFP2VrGBnUcytuAAAB
+2025-12-30 12:19:47,091 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: KXVFP2VrGBnUcytuAAAB
+2025-12-30 12:19:47,169 [INFO] mud_backend: [CONNECTION] Client connected: ABYVyHIFWW4Gie3tAAAD
+2025-12-30 12:19:54,103 [DEBUG] mud_backend: [LOGIN] Edgedtest joining room inn_front_desk (SID: ABYVyHIFWW4Gie3tAAAD)
+2025-12-30 12:19:54,104 [DEBUG] mud_backend.core.managers: Room: inn_front_desk | Msg: Edgedtest arrives.... | Candidates: {'edgedtest'}
+2025-12-30 12:19:54,105 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:20:39,027 [DEBUG] mud_backend.core.managers: Room: test_monsters_1 | Msg: <span class="keyword" data-nam... | Candidates: set()
+2025-12-30 12:20:39,027 [DEBUG] mud_backend.core.managers: Room: room_1767064643880_944 | Msg: <span class="keyword" data-nam... | Candidates: {'edgedtest'}
+2025-12-30 12:20:39,027 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:20:40,970 [DEBUG] mud_backend.core.managers: Room: room_1767064643880_944 | Msg: <span class="keyword" data-nam... | Candidates: set()
+2025-12-30 12:20:40,971 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: <span class="keyword" data-nam... | Candidates: {'edgedtest'}
+2025-12-30 12:20:40,971 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:20:58,081 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bashes its hard... | Candidates: {'edgedtest'}
+2025-12-30 12:20:58,082 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:04,501 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites its teeth... | Candidates: {'edgedtest'}
+2025-12-30 12:21:04,502 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:10,929 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites its teeth... | Candidates: {'edgedtest'}
+2025-12-30 12:21:10,930 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:17,354 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores its jagge... | Candidates: {'edgedtest'}
+2025-12-30 12:21:17,354 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:23,771 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites its teeth... | Candidates: {'edgedtest'}
+2025-12-30 12:21:23,772 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:30,201 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores its jagge... | Candidates: {'edgedtest'}
+2025-12-30 12:21:30,202 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:36,623 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores its jagge... | Candidates: {'edgedtest'}
+2025-12-30 12:21:36,624 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:43,047 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores its jagge... | Candidates: {'edgedtest'}
+2025-12-30 12:21:43,047 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:49,476 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites its teeth... | Candidates: {'edgedtest'}
+2025-12-30 12:21:49,477 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:21:55,894 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores its jagge... | Candidates: {'edgedtest'}
+2025-12-30 12:21:55,895 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:22:02,325 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites its teeth... | Candidates: {'edgedtest'}
+2025-12-30 12:22:02,326 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:22:08,746 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores its jagge... | Candidates: {'edgedtest'}
+2025-12-30 12:22:08,747 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID ABYVyHIFWW4Gie3tAAAD is in skip list)
+2025-12-30 12:32:11,795 [INFO] mud_backend: Defining World...
+2025-12-30 12:32:11,801 [INFO] mud_backend: Starting Workers...
+2025-12-30 12:32:11,809 [INFO] mud_backend: Loading Data...
+2025-12-30 12:32:11,949 [INFO] mud_backend: Starting Background Tasks...
+2025-12-30 12:32:11,950 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-30 12:32:11,952 [INFO] mud_backend: Game Loop task started.
+2025-12-30 12:32:11,953 [INFO] mud_backend: Persistence task started.
+2025-12-30 12:32:12,588 [INFO] mud_backend: Defining World...
+2025-12-30 12:32:15,171 [INFO] mud_backend: [CONNECTION] Client connected: lA7-7C1nn7JT0Uq0AAAB
+2025-12-30 12:32:15,650 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: lA7-7C1nn7JT0Uq0AAAB
+2025-12-30 12:32:15,849 [INFO] mud_backend: [CONNECTION] Client connected: o_88wj3ayv2C9FWhAAAD
+2025-12-30 12:32:21,250 [DEBUG] mud_backend: [LOGIN] Edgedtest joining room room_1767064645328_861 (SID: o_88wj3ayv2C9FWhAAAD)
+2025-12-30 12:32:21,251 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Edgedtest arrives.... | Candidates: {'edgedtest'}
+2025-12-30 12:32:21,252 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:32:29,039 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:32:29,039 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:32:35,469 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:32:35,470 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:32:41,886 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:32:41,887 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:32:48,308 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:32:48,309 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:32:54,733 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:32:54,734 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:33:01,164 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote bites at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:33:01,164 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:33:07,591 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:33:07,592 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)
+2025-12-30 12:33:14,033 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: a fallow shote gores at Edgedt... | Candidates: {'edgedtest'}
+2025-12-30 12:33:14,033 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID o_88wj3ayv2C9FWhAAAD is in skip list)

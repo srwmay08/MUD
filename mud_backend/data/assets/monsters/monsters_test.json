@@ -30,23 +30,15 @@
         "attacks": [
             {
                 "as": 25,
-                "chance": 0.55,
-                "damage_type": "crush",
+                "chance": 0.45,
+                "damage_type": "puncture",
                 "name": "Bite",
                 "verb": "bite",
                 "weapon_name": "its teeth"
             },
             {
                 "as": 35,
-                "chance": 0.35,
-                "damage_type": "pierce",
-                "name": "Charge",
-                "verb": "gore",
-                "weapon_name": "its jagged tusks"
-            },
-            {
-                "as": 35,
-                "chance": 0.5,
+                "chance": 0.1,
                 "damage_type": "impact",
                 "name": "Charge",
                 "verb": "bash",
@@ -58,6 +50,14 @@
                     "message_first_person": "The force of the charge knocks you into a sitting position!",
                     "message_third_person": "The force of the charge knocks {defender} into a sitting position!"
                 }
+            },
+            {
+                "as": 30,
+                "chance": 0.45,
+                "damage_type": "puncture",
+                "name": "Gore",
+                "verb": "gore",
+                "weapon_name": "its jagged tusks"
             }
         ],
         "body_type": "quadraped",
