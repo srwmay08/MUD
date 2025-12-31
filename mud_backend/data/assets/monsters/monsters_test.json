@@ -30,7 +30,7 @@
         "attacks": [
             {
                 "as": 25,
-                "chance": 0.45,
+                "chance": 0.4,
                 "damage_type": "puncture",
                 "name": "Bite",
                 "verb": "bite",
@@ -38,7 +38,7 @@
             },
             {
                 "as": 35,
-                "chance": 0.1,
+                "chance": 0.3,
                 "damage_type": "impact",
                 "name": "Charge",
                 "verb": "bash",
@@ -53,7 +53,7 @@
             },
             {
                 "as": 30,
-                "chance": 0.45,
+                "chance": 0.3,
                 "damage_type": "puncture",
                 "name": "Gore",
                 "verb": "gore",

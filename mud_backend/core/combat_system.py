@@ -41,7 +41,6 @@ class CombatLogBuilder:
         return verb + "s"
 
     def get_attempt_message(self, perspective: str) -> str:
-        # CHANGED: Updated sentence structure to "{verb} at {target} with {weapon}"
         if perspective == 'attacker':
             return f"You {self.verb} at {self.defender} with {self.weapon}!"
         elif perspective == 'defender':
@@ -196,7 +195,8 @@ def _get_posture_status_factor(entity_posture: str, status_effects: list, combat
     factor *= p_data.get("defense_factor", 1.0)
     s_mods = combat_rules.get("status_modifiers", {})
     for effect in status_effects:
-        if effect in s_mods:
+        # Safety check: ensure effect is a string to prevent unhashable type errors
+        if isinstance(effect, str) and effect in s_mods:
             factor *= s_mods[effect].get("defense_factor", 1.0)
     return factor
 
@@ -491,7 +491,9 @@ def calculate_generic_defense(defender: Any, combat_rules: dict) -> int:
     ds += p_mods.get(posture, {}).get("ds_penalty", 0)
     s_mods = combat_rules.get("status_modifiers", {})
     for effect in status_effects:
-        ds += s_mods.get(effect, {}).get("ds_penalty", 0)
+        # Safety check again for list-based iteration
+        if isinstance(effect, str) and effect in s_mods:
+            ds += s_mods.get(effect, {}).get("ds_penalty", 0)
     return ds
 
 def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defender_modifiers: dict,
@@ -628,6 +630,22 @@ def calculate_defense_strength(defender: Any,
                                is_ranged_attack: bool, defender_stance: str,
                                defender_modifiers: dict,
                                combat_rules: dict) -> int:
+    
+    # --- HARDCODED DS CHECK FOR MONSTERS ---
+    # This overrides stat-based DS if the monster has ds_melee/ds_ranged defined
+    if not isinstance(defender, Player):
+        fixed_ds = None
+        if is_ranged_attack:
+            fixed_ds = defender.get("ds_ranged")
+        else:
+            fixed_ds = defender.get("ds_melee")
+            
+        if fixed_ds is not None:
+            # We still add generic bonuses (e.g. stunned/prone penalties, environment)
+            generic_ds = calculate_generic_defense(defender, combat_rules)
+            return max(0, int(fixed_ds) + generic_ds)
+    # ---------------------------------------
+
     if isinstance(defender, Player):
         stats, skills, posture, level = defender.stats, defender.skills, defender.posture, defender.level
         status_effects = defender.status_effects
@@ -712,7 +730,6 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
         attack_list = attacker.get("attacks", [])
 
     if not attack_list:
-        # CHANGED: Default verb from "attack" to "swing" to match new sentence structure
         attack_list = [{ "verb": "swing", "damage_type": "crush", "weapon_name": "fist", "chance": 1.0 }]
     selected_attack = _get_weighted_attack(attack_list)
     if not selected_attack:
@@ -745,14 +762,29 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
     attacker_weapon_type = _get_weapon_type(attacker_weapon_data)
     is_ranged_attack = attacker_weapon_type in ["bow", "crossbow"]
 
-    attacker_as = calculate_attack_strength(
-        attacker, attacker_stats, attacker_skills,
-        attacker_weapon_data,
-        attacker_stance,
-        attacker_modifiers,
-        combat_rules,
-        hand=hand_key
-    )
+    # --- ATTACKER AS CALCULATION START ---
+    attacker_as = 0
+    # Check if the attack definition has a hardcoded AS
+    fixed_as = selected_attack.get("as")
+    
+    if not is_attacker_player and fixed_as is not None:
+        attacker_as = int(fixed_as)
+        # Apply buffs if any to the fixed AS
+        buffs = attacker.get("buffs", {})
+        for buff in buffs.values():
+            if buff.get("type") == "as_bonus":
+                attacker_as += buff.get("val", 0)
+    else:
+        # Calculate normally based on stats/skills
+        attacker_as = calculate_attack_strength(
+            attacker, attacker_stats, attacker_skills,
+            attacker_weapon_data,
+            attacker_stance,
+            attacker_modifiers,
+            combat_rules,
+            hand=hand_key
+        )
+    # --- ATTACKER AS CALCULATION END ---
 
     defender_ds = calculate_defense_strength(
         defender, defender_armor_data, defender_shield_data,
@@ -767,7 +799,7 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
 
     as_str = f"+{attacker_as}" if attacker_as >= 0 else str(attacker_as)
     avd_str = f"+{avd_bonus}" if avd_bonus >= 0 else str(avd_bonus)
-    roll_string = (f"  AS: {as_str} + AvD: {avd_str} - DS: {defender_ds} + {d100_roll}  = {combat_roll_result}")
+    roll_string = (f"  AS: {as_str} + AvD: {avd_str} + d100: +{d100_roll} - DS: {defender_ds} = {combat_roll_result}")
 
     log_builder = CombatLogBuilder(attacker_name, defender_name, broadcast_weapon_display, attack_verb)
     results = {'hit': False, 'damage': 0, 'attempt_msg': "", 'broadcast_attempt_msg': "", 'roll_string': roll_string, 'result_msg': "", 'broadcast_result_msg': "", 'critical_msg': "", 'is_fatal': False}
