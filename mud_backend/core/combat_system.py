@@ -767,7 +767,7 @@ def resolve_attack(world: 'World', attacker: Any, defender: Any, game_items_glob
 
     as_str = f"+{attacker_as}" if attacker_as >= 0 else str(attacker_as)
     avd_str = f"+{avd_bonus}" if avd_bonus >= 0 else str(avd_bonus)
-    roll_string = (f"  AS: {as_str} + AvD: {avd_str} + d100: +{d100_roll} - DS: {defender_ds} = {combat_roll_result}")
+    roll_string = (f"  AS: {as_str} + AvD: {avd_str} - DS: {defender_ds} + {d100_roll}  = {combat_roll_result}")
 
     log_builder = CombatLogBuilder(attacker_name, defender_name, broadcast_weapon_display, attack_verb)
     results = {'hit': False, 'damage': 0, 'attempt_msg': "", 'broadcast_attempt_msg': "", 'roll_string': roll_string, 'result_msg': "", 'broadcast_result_msg': "", 'critical_msg': "", 'is_fatal': False}
