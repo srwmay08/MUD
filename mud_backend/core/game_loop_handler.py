@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from mud_backend.core.game_objects import Player
 from mud_backend.core.game_loop import environment
 from mud_backend.core.game_loop import monster_respawn
+from mud_backend.core.game_loop import monster_ai
 from mud_backend.core import loot_system
 from mud_backend import config
 
@@ -153,6 +154,18 @@ def check_and_run_game_tick(world: 'World', broadcast_callback: Callable, send_t
     )
 
     environment.process_room_periodic_events(world)
+
+    monster_ai.process_monster_ai(
+        world=world,
+        log_time_prefix=log_prefix,
+        broadcast_callback=broadcast_callback
+    )
+
+    monster_ai.process_monster_ambient_messages(
+        world=world,
+        log_time_prefix=log_prefix,
+        broadcast_callback=broadcast_callback
+    )
 
     monster_respawn.process_respawns(
         world=world,

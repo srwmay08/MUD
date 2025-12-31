@@ -2405,3 +2405,7 @@
 2025-12-31 12:45:40,943 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: lfJ9nuFpCiLnCR8AAAAB)
 2025-12-31 12:46:01,013 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
 2025-12-31 12:46:01,014 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: lfJ9nuFpCiLnCR8AAAAB)
+2025-12-31 12:49:01,447 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote  scrapes its ho... | Candidates: {'edgedtest'}
+2025-12-31 12:49:01,448 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: lfJ9nuFpCiLnCR8AAAAB)
+2025-12-31 12:49:31,481 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
+2025-12-31 12:49:31,481 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: lfJ9nuFpCiLnCR8AAAAB)
