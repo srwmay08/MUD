@@ -77,7 +77,7 @@
             22,
             32
         ],
-        "is_aggressive": false,
+        "is_aggressive": true,
         "is_monster": true,
         "keywords": [
             "shote",

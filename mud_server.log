@@ -2409,3 +2409,41 @@
 2025-12-31 12:49:01,448 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: lfJ9nuFpCiLnCR8AAAAB)
 2025-12-31 12:49:31,481 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
 2025-12-31 12:49:31,481 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: lfJ9nuFpCiLnCR8AAAAB)
+2025-12-31 12:50:23,126 [INFO] mud_backend: Defining World...
+2025-12-31 12:50:23,134 [INFO] mud_backend: Starting Workers...
+2025-12-31 12:50:23,145 [INFO] mud_backend: Loading Data...
+2025-12-31 12:50:23,303 [INFO] mud_backend: Starting Background Tasks...
+2025-12-31 12:50:23,303 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-31 12:50:23,306 [INFO] mud_backend: Game Loop task started.
+2025-12-31 12:50:23,306 [INFO] mud_backend: Persistence task started.
+2025-12-31 12:50:23,445 [INFO] mud_backend: [CONNECTION] Client connected: bcwt0Xi65d-K5LBfAAAB
+2025-12-31 12:50:24,119 [INFO] mud_backend: Defining World...
+2025-12-31 12:50:25,633 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: bcwt0Xi65d-K5LBfAAAB
+2025-12-31 12:50:25,893 [INFO] mud_backend: [CONNECTION] Client connected: mnapZwxhELFhZ2PMAAAD
+2025-12-31 12:50:30,725 [DEBUG] mud_backend: [LOGIN] Edgedtest joining room room_1767064645328_861 (SID: mnapZwxhELFhZ2PMAAAD)
+2025-12-31 12:50:30,728 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Edgedtest arrives.... | Candidates: {'edgedtest'}
+2025-12-31 12:50:30,729 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID mnapZwxhELFhZ2PMAAAD is in skip list)
+2025-12-31 12:50:53,143 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote scrapes its hoo... | Candidates: {'edgedtest'}
+2025-12-31 12:50:53,143 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: mnapZwxhELFhZ2PMAAAD)
+2025-12-31 12:50:53,210 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
+2025-12-31 12:50:53,210 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: mnapZwxhELFhZ2PMAAAD)
+2025-12-31 12:51:23,285 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: With a wet snort, a fallow sho... | Candidates: {'edgedtest'}
+2025-12-31 12:51:23,286 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: mnapZwxhELFhZ2PMAAAD)
+2025-12-31 12:52:23,460 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote squeals angrily... | Candidates: {'edgedtest'}
+2025-12-31 12:52:23,460 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: mnapZwxhELFhZ2PMAAAD)
+2025-12-31 12:52:42,659 [INFO] mud_backend: Defining World...
+2025-12-31 12:52:42,666 [INFO] mud_backend: Starting Workers...
+2025-12-31 12:52:42,684 [INFO] mud_backend: Loading Data...
+2025-12-31 12:52:42,843 [INFO] mud_backend: Starting Background Tasks...
+2025-12-31 12:52:42,843 [INFO] mud_backend: Running SocketIO server on http://127.0.0.1:8024
+2025-12-31 12:52:42,846 [INFO] mud_backend: Game Loop task started.
+2025-12-31 12:52:42,847 [INFO] mud_backend: Persistence task started.
+2025-12-31 12:52:43,677 [INFO] mud_backend: Defining World...
+2025-12-31 12:52:46,189 [INFO] mud_backend: [CONNECTION] Client connected: x7OuT1ubI9xEv0A4AAAB
+2025-12-31 12:52:51,400 [INFO] mud_backend: [CONNECTION] Unauthenticated client disconnected: x7OuT1ubI9xEv0A4AAAB
+2025-12-31 12:52:51,664 [INFO] mud_backend: [CONNECTION] Client connected: DC4NQfSDquwCjSsXAAAD
+2025-12-31 12:52:58,778 [DEBUG] mud_backend: [LOGIN] Edgedtest joining room room_1767064645328_861 (SID: DC4NQfSDquwCjSsXAAAD)
+2025-12-31 12:52:58,782 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: Edgedtest arrives.... | Candidates: {'edgedtest'}
+2025-12-31 12:52:58,782 [DEBUG] mud_backend.core.managers: Skipped edgedtest (SID DC4NQfSDquwCjSsXAAAD is in skip list)
+2025-12-31 12:53:02,674 [DEBUG] mud_backend.core.managers: Room: room_1767064645328_861 | Msg: A fallow shote squeals angrily... | Candidates: {'edgedtest'}
+2025-12-31 12:53:02,675 [DEBUG] mud_backend.core.managers: Sending to edgedtest (SID: DC4NQfSDquwCjSsXAAAD)
