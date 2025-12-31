@@ -453,4 +453,58 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                     break
             
             if chosen_exit and destination_room_id:
-                success = world.
+                success = world.move_object_between_rooms(monster, current_room_id, destination_room_id)
+                if success:
+                    if monster_uid:
+                        moved_monster_uids.add(monster_uid)
+                        world.update_mob_location(monster_uid, destination_room_id)
+                    
+                    monster_name = monster.get("name", "something")
+                    dep_msg = monster.get("spawn_message_departure", "The {name} slinks off towards the {exit}.").format(name=monster_name, exit=chosen_exit)
+                    broadcast_callback(current_room_id, dep_msg, "ambient_move")
+                    arr_msg = monster.get("spawn_message_arrival", "A {name} slinks in.").format(name=monster_name)
+                    broadcast_callback(destination_room_id, arr_msg, "ambient_move")
+                    
+                    # Re-scan for targets in new room immediately
+                    if not _scan_for_player_targets(world, monster, destination_room_id):
+                        _check_and_start_npc_combat(world, monster, destination_room_id)
+
+def process_monster_ambient_messages(world: 'World', log_time_prefix: str, broadcast_callback: Callable):
+    with world.index_lock:
+        active_rooms = [rid for rid, players in world.room_players.items() if players]
+    
+    for i, room_id in enumerate(active_rooms):
+        if i % 20 == 0:
+            world.socketio.sleep(0)
+
+        room_data = world.get_room(room_id)
+        if not room_data: continue
+
+        for obj in room_data.get("objects", []):
+            if obj.get("is_monster"):
+                monster_uid = obj.get("uid")
+                # Skip if in combat or invalid
+                if not monster_uid or world.get_combat_state(monster_uid): continue
+                
+                ambient_chance = obj.get("ambient_message_chance", 0.0)
+                ambient_messages = obj.get("ambient_messages", [])
+                
+                if ambient_messages and random.random() < ambient_chance:
+                    message_text = random.choice(ambient_messages)
+                    monster_name = obj.get("name", "A creature")
+                    
+                    # LOGIC CHANGE:
+                    # 1. Check if the message wants to place the name manually using {name}
+                    if "{name}" in message_text:
+                        final_message = message_text.format(name=monster_name)
+                    else:
+                        # 2. Default behavior: Prepend name, but remove the hardcoded "The "
+                        # This fixes "The a fallow shote..." -> "A fallow shote..."
+                        final_message = f"{monster_name} {message_text}"
+                    
+                    # Capitalize the first letter of the resulting sentence for polish
+                    if final_message:
+                        final_message = final_message[0].upper() + final_message[1:]
+
+                    broadcast_callback(room_id, final_message, "ambient")
+                    break
