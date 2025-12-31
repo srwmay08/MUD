@@ -14,6 +14,7 @@ ASSETS_DIR = os.path.join(DATA_DIR, 'assets')
 ZONES_DIR = os.path.join(DATA_DIR, 'zones')
 
 STATIC_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'mud_frontend', 'static'))
+AVD_FILE = os.path.join(GLOBAL_DIR, 'avd.json')
 
 # --- DYNAMIC IMPORT ---
 project_root = os.path.abspath(os.path.join(BASE_DIR, '..'))
@@ -32,9 +33,76 @@ app = Flask(__name__, template_folder='.', static_folder=STATIC_DIR)
 
 print(f"[ENTITY BUILDER] Data Root: {DATA_DIR}")
 
+# --- HELPER FUNCTIONS ---
+def load_json_file(filepath, default=None):
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            pass
+    return default or {}
+
+def save_json_file(filepath, data):
+    # Backup
+    if os.path.exists(filepath):
+        try:
+            with open(filepath + ".bak", 'w', encoding='utf-8') as f:
+                json.dump(load_json_file(filepath), f, indent=4)
+        except: pass
+    
+    with open(filepath, 'w') as f:
+        json.dump(data, f, indent=4)
+
+# --- ROUTES ---
+
 @app.route('/')
 def index():
     return render_template('entity_builder.html')
+
+@app.route('/api/avd', methods=['GET', 'POST'])
+def handle_avd():
+    """Handles the AVD global configuration file."""
+    if request.method == 'GET':
+        data = load_json_file(AVD_FILE, default={
+            "armor_types": {},
+            "weapon_types": [],
+            "avd_table": {},
+            "df_table": {}
+        })
+        return jsonify(data)
+    elif request.method == 'POST':
+        save_json_file(AVD_FILE, request.json)
+        return jsonify({"status": "success", "message": "AVD Tables Saved."})
+
+@app.route('/api/save_entity', methods=['POST'])
+def save_entity():
+    """Specialized save for weapons vs generic items to structure them correctly."""
+    data = request.json
+    entity_type = data.get('entity_type')
+    entity_data = data.get('data')
+    
+    if not entity_data or 'id' not in entity_data:
+        return jsonify({"error": "Missing Entity Data or ID"}), 400
+
+    # Select file based on type
+    if entity_type == 'weapon':
+        filepath = os.path.join(ASSETS_DIR, 'items', 'items_weapons.json')
+    elif entity_type == 'armor':
+        filepath = os.path.join(ASSETS_DIR, 'items', 'items_armor.json')
+    else:
+        # Default bucket
+        filepath = os.path.join(ASSETS_DIR, 'items', 'items_aethels_crossing.json')
+        
+    current_data = load_json_file(filepath, default={})
+    
+    # Update logic
+    item_id = entity_data.get('id')
+    current_data[item_id] = entity_data
+    
+    save_json_file(filepath, current_data)
+    return jsonify({"status": "success", "message": f"Saved {item_id} to {os.path.basename(filepath)}"})
+
 
 @app.route('/api/files', methods=['GET'])
 def list_files():
@@ -57,11 +125,9 @@ def list_files():
             rel = os.path.relpath(f, DATA_DIR).replace('\\', '/')
             categories[category_key].append(rel)
 
-    # 1. GLOBAL DATA (In /data/global/)
-    # We just list everything in global as editable files
+    # 1. GLOBAL DATA
     scan(GLOBAL_DIR, "*.json", "global")
-
-    # 2. ASSETS (In /data/assets/)
+    # 2. ASSETS
     scan(ASSETS_DIR, "monsters*.json", "monsters")
     scan(ASSETS_DIR, "npcs*.json", "monsters")
     scan(ASSETS_DIR, "items_*.json", "items")
@@ -74,10 +140,7 @@ def list_files():
 
 @app.route('/api/references', methods=['GET'])
 def get_references():
-    """
-    Returns lists of IDs for autocomplete.
-    Scans the new directory structure to find them.
-    """
+    """Returns lists of IDs for autocomplete."""
     refs = {
         "skills": [],
         "items": [],
@@ -93,10 +156,8 @@ def get_references():
         try:
             with open(skills_path, 'r') as f:
                 data = json.load(f)
-                # Handle list of dicts
                 if isinstance(data, list):
                     refs["skills"] = [s.get("skill_id") for s in data if "skill_id" in s]
-                # Handle dict of dicts
                 elif isinstance(data, dict):
                      refs["skills"] = list(data.keys())
         except: pass
@@ -107,7 +168,6 @@ def get_references():
         try:
             with open(faction_path, 'r') as f:
                 data = json.load(f)
-                # Structure: { "factions": { "Name": ... } }
                 factions_data = data.get("factions", {})
                 refs["factions"] = list(factions_data.keys())
         except: pass
@@ -139,7 +199,6 @@ def get_references():
                     refs["spells"].extend(data.keys())
         except: pass
     
-    # Sort for UI
     for k in refs: 
         if k != "slots": refs[k].sort()
 
@@ -150,14 +209,12 @@ def load_file():
     filename = request.args.get('file')
     if not filename: return jsonify({"error": "No filename"}), 400
     
-    # filename comes in relative to DATA_DIR (e.g. "global/skills.json")
     path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(path): return jsonify({"error": "Not found"}), 404
     
     try:
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
         is_dict = isinstance(data, dict)
         return jsonify({"data": data, "is_dict": is_dict})
     except Exception as e:
@@ -174,7 +231,6 @@ def save_file():
     path = os.path.join(DATA_DIR, filename)
     
     try:
-        # Create backup
         if os.path.exists(path):
             with open(path + ".bak", 'w', encoding='utf-8') as f:
                 json.dump(json.load(open(path)), f, indent=4)
