@@ -334,11 +334,21 @@ def process_monster_ai(world: 'World', log_time_prefix: str, broadcast_callback:
                 world.unregister_mob(uid)
                 continue
 
-            # Hydrate template if missing movement rules (rare but possible on reload)
+            # Hydrate/Sync template data
             monster_id = monster_obj.get("monster_id")
-            if monster_id and "movement_rules" not in monster_obj:
+            if monster_id:
                  template = world.game_monster_templates.get(monster_id)
-                 if template: monster_obj.update(copy.deepcopy(template))
+                 if template:
+                     # [FIX] Force sync aggressive flag and AI scripts to ensure config changes apply live
+                     if "is_aggressive" in template:
+                         monster_obj["is_aggressive"] = template["is_aggressive"]
+                     if "ai_script" in template:
+                         monster_obj["ai_script"] = template["ai_script"]
+                     if "faction" in template:
+                         monster_obj["faction"] = template["faction"]
+
+                     if "movement_rules" not in monster_obj:
+                         monster_obj.update(copy.deepcopy(template))
 
             # --- AI PRIORITY 1: Check Status Effects (Stun/Delimbed/Prone) ---
             status_effects = monster_obj.get("status_effects", [])
@@ -473,6 +483,7 @@ def process_monster_ambient_messages(world: 'World', log_time_prefix: str, broad
         for obj in room_data.get("objects", []):
             if obj.get("is_monster"):
                 monster_uid = obj.get("uid")
+                # Skip if in combat or invalid
                 if not monster_uid or world.get_combat_state(monster_uid): continue
                 
                 ambient_chance = obj.get("ambient_message_chance", 0.0)
@@ -481,5 +492,19 @@ def process_monster_ambient_messages(world: 'World', log_time_prefix: str, broad
                 if ambient_messages and random.random() < ambient_chance:
                     message_text = random.choice(ambient_messages)
                     monster_name = obj.get("name", "A creature")
-                    broadcast_callback(room_id, f"The {monster_name} {message_text}", "ambient")
+                    
+                    # LOGIC CHANGE:
+                    # 1. Check if the message wants to place the name manually using {name}
+                    if "{name}" in message_text:
+                        final_message = message_text.format(name=monster_name)
+                    else:
+                        # 2. Default behavior: Prepend name, but remove the hardcoded "The "
+                        # This fixes "The a fallow shote..." -> "A fallow shote..."
+                        final_message = f"{monster_name} {message_text}"
+                    
+                    # Capitalize the first letter of the resulting sentence for polish
+                    if final_message:
+                        final_message = final_message[0].upper() + final_message[1:]
+
+                    broadcast_callback(room_id, final_message, "ambient")
                     break

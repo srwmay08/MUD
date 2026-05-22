@@ -23,7 +23,12 @@
             }
         ],
         "ambient_message_chance": 0.2,
-        "ambient_messages": [],
+        "ambient_messages": [
+            "squeals angrily and charges at a nearby fence post.",
+            "With a wet snort, {name} rips a large vegetable out of the ground and crushes it.",
+            "scrapes its hoof against the ground, eyeing you warily.",
+            "Mud flies into the air as {name} roots deeper into the earth."
+        ],
         "attack_attributes": [
             ""
         ],
@@ -41,15 +46,15 @@
                 "chance": 0.3,
                 "damage_type": "impact",
                 "name": "Charge",
-                "verb": "bash",
-                "weapon_name": "its hard snout",
                 "status_effect": {
-                    "type": "knockdown",
                     "chance": 0.4,
-                    "target_posture": "sitting",
                     "message_first_person": "The force of the charge knocks you into a sitting position!",
-                    "message_third_person": "The force of the charge knocks {defender} into a sitting position!"
-                }
+                    "message_third_person": "The force of the charge knocks {defender} into a sitting position!",
+                    "target_posture": "sitting",
+                    "type": "knockdown"
+                },
+                "verb": "bash",
+                "weapon_name": "its hard snout"
             },
             {
                 "as": 30,
@@ -72,7 +77,7 @@
             22,
             32
         ],
-        "is_aggressive": false,
+        "is_aggressive": true,
         "is_monster": true,
         "keywords": [
             "shote",
@@ -116,6 +121,7 @@
         "verbs": [
             "look",
             "attack"
-        ]
+        ],
+        "ambient_chance": 1
     }
 ]
