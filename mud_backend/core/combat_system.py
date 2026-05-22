@@ -19,6 +19,30 @@ from mud_backend import config
 from mud_backend.core import loot_system
 from mud_backend.core import faction_handler
 
+# --- ARMOR SUB-GROUP (ASG) DATA TABLE ---
+# Mapped from provided table. 
+# hindrance_base uses the 'Wizard' column for the 8 arcane schools.
+ASG_TABLE = {
+    1:  {"name": "Cloth",               "rt": 0,  "ap": 0,   "cva": 25,  "hindrance_base": 0,  "max_hindrance": 0},
+    2:  {"name": "Robes",               "rt": 0,  "ap": 0,   "cva": 25,  "hindrance_base": 0,  "max_hindrance": 0},
+    5:  {"name": "Light Leather",       "rt": 0,  "ap": 0,   "cva": 20,  "hindrance_base": 0,  "max_hindrance": 0},
+    6:  {"name": "Full Leather",        "rt": 1,  "ap": -1,  "cva": 19,  "hindrance_base": 0,  "max_hindrance": 0},
+    7:  {"name": "Reinforced Leather",  "rt": 2,  "ap": -5,  "cva": 18,  "hindrance_base": 2,  "max_hindrance": 4},
+    8:  {"name": "Double Leather",      "rt": 2,  "ap": -6,  "cva": 17,  "hindrance_base": 4,  "max_hindrance": 6},
+    9:  {"name": "Leather Breastplate", "rt": 3,  "ap": -7,  "cva": 11,  "hindrance_base": 4,  "max_hindrance": 16},
+    10: {"name": "Cuirbouilli Leather", "rt": 4,  "ap": -8,  "cva": 10,  "hindrance_base": 7,  "max_hindrance": 20},
+    11: {"name": "Studded Leather",     "rt": 5,  "ap": -10, "cva": 9,   "hindrance_base": 9,  "max_hindrance": 24},
+    12: {"name": "Brigandine Armor",    "rt": 6,  "ap": -12, "cva": 8,   "hindrance_base": 12, "max_hindrance": 28},
+    13: {"name": "Chain Mail",          "rt": 7,  "ap": -13, "cva": 1,   "hindrance_base": 16, "max_hindrance": 40},
+    14: {"name": "Double Chain",        "rt": 8,  "ap": -14, "cva": 0,   "hindrance_base": 20, "max_hindrance": 45},
+    15: {"name": "Augmented Chain",     "rt": 8,  "ap": -16, "cva": -1,  "hindrance_base": 25, "max_hindrance": 55},
+    16: {"name": "Chain Hauberk",       "rt": 9,  "ap": -18, "cva": -2,  "hindrance_base": 30, "max_hindrance": 60},
+    17: {"name": "Metal Breastplate",   "rt": 9,  "ap": -20, "cva": -10, "hindrance_base": 35, "max_hindrance": 90},
+    18: {"name": "Augmented Breastplate","rt": 10, "ap": -25, "cva": -11, "hindrance_base": 40, "max_hindrance": 92},
+    19: {"name": "Half Plate",          "rt": 11, "ap": -30, "cva": -12, "hindrance_base": 45, "max_hindrance": 94},
+    20: {"name": "Full Plate",          "rt": 12, "ap": -35, "cva": -13, "hindrance_base": 50, "max_hindrance": 96}
+}
+
 class CombatLogBuilder:
     PLAYER_MISS_MESSAGES = [
         "   A clean miss.", "   You miss {defender} completely.", "   {defender} avoids the attack!",
@@ -86,7 +110,17 @@ def _get_weighted_attack(attack_list: List[Dict[str, Any]]) -> Optional[Dict[str
         upto += chance
     return random.choice(attack_list)
 
+def get_asg_data(item_data: Optional[Dict]) -> Dict:
+    """Retrieves ASG properties for an item, defaulting to Cloth (1) if not found."""
+    if not item_data:
+        return ASG_TABLE[1]
+    
+    asg = item_data.get("asg", 1)
+    # Fallback if asg is not in table
+    return ASG_TABLE.get(asg, ASG_TABLE[1])
+
 def get_entity_armor_type(entity, game_items_global: dict) -> str:
+    """Returns the armor_type string (e.g. 'plate', 'leather') for damage factors."""
     if hasattr(entity, 'get_armor_type'):
         return entity.get_armor_type()
     elif isinstance(entity, dict):
@@ -111,18 +145,41 @@ def _get_weapon_type(weapon_item_data: dict | None) -> str:
         return "runestaff"
     return "1H"
 
-def _get_armor_hindrance(armor_item_data: dict | None, defender_skills: dict) -> float:
-    if not armor_item_data:
-        return 1.0
-    base_ap = armor_item_data.get("armor_ap", 0)
-    if base_ap == 0:
-        return 1.0
-    base_rt = armor_item_data.get("armor_rt", 0)
-    armor_use_ranks = defender_skills.get("armor_use", 0)
+def calculate_armor_rt_penalty(armor_item_data: Optional[Dict], armor_use_ranks: int) -> float:
+    """
+    Calculates the Roundtime added by armor.
+    Penalty = Base RT - (Skill Bonus Reduction)
+    Reduction: 1st sec at 10 bonus, then 1 sec every 20 bonus.
+    """
+    asg_data = get_asg_data(armor_item_data)
+    base_rt = asg_data.get("rt", 0)
+    
+    if base_rt == 0:
+        return 0.0
+
     skill_bonus = calculate_skill_bonus(armor_use_ranks)
-    threshold = ((base_rt * 20) - 10)
-    effective_ap = base_ap if skill_bonus <= threshold else base_ap / 2
-    return max(0.0, 1.0 + (effective_ap / 200.0))
+    
+    reduction_seconds = 0
+    if skill_bonus >= 10:
+        reduction_seconds = 1 + (skill_bonus - 10) // 20
+        
+    final_rt = max(0, base_rt - reduction_seconds)
+    return float(final_rt)
+
+def calculate_action_penalty(armor_item_data: Optional[Dict], armor_use_ranks: int) -> int:
+    """
+    Calculates the Action Penalty (AP).
+    The skill bonus required to reduce AP to its base value is ((RT * 20) - 10).
+    Note: Standard mechanics usually imply the AP is the 'minimum' penalty.
+    Over-training can reduce it further, but for now we implement the base logic.
+    """
+    asg_data = get_asg_data(armor_item_data)
+    base_ap = asg_data.get("ap", 0)
+    # The prompt implies that if you meet the RT requirement, you get the base_ap.
+    # It doesn't explicitly specify a formula for *worse* AP if undertrained, 
+    # but implies AP is a factor in DS. We will return the base AP for now
+    # as the prompt focuses on RT and Hindrance formulas.
+    return base_ap
 
 def _get_random_hit_location(combat_rules: dict) -> str:
     locations = combat_rules.get("hit_locations", ["chest"])
@@ -202,7 +259,7 @@ def _get_posture_status_factor(entity_posture: str, status_effects: list, combat
 
 # --- ROUNDTIME ---
 
-def calculate_roundtime_twc(attacker_stats: dict, main_weapon: dict, off_weapon: dict) -> float:
+def calculate_roundtime_twc(attacker_stats: dict, main_weapon: dict, off_weapon: dict, armor_item: dict, armor_use_ranks: int) -> float:
     right_base = main_weapon.get("base_speed", 3) if main_weapon else 0
     left_base = off_weapon.get("base_speed", 3) if off_weapon else 0
     left_weight = off_weapon.get("weight", 3) if off_weapon else 0
@@ -217,11 +274,19 @@ def calculate_roundtime_twc(attacker_stats: dict, main_weapon: dict, off_weapon:
 
     agi_stat = attacker_stats.get("AGI", 50)
     rt_reduction = (agi_stat - 50) / 25
+    
+    # NEW: Armor RT Penalty
+    armor_rt_add = calculate_armor_rt_penalty(armor_item, armor_use_ranks)
 
-    return max(3.0, twc_base - rt_reduction)
+    return max(3.0, twc_base - rt_reduction + armor_rt_add)
 
-def calculate_roundtime(agility: int, weapon_base_speed: int = 3) -> float:
-    return max(3.0, float(weapon_base_speed + 2) - ((agility - 50) / 25))
+def calculate_roundtime(agility: int, weapon_base_speed: int = 3, armor_item: dict = None, armor_use_ranks: int = 0) -> float:
+    base_rt = float(weapon_base_speed + 2) - ((agility - 50) / 25)
+    
+    # NEW: Armor RT Penalty
+    armor_rt_add = calculate_armor_rt_penalty(armor_item, armor_use_ranks)
+    
+    return max(3.0, base_rt + armor_rt_add)
 
 # --- MAGIC COMBAT CALCULATIONS ---
 
@@ -291,36 +356,21 @@ def calculate_target_defense(target: Any, spell_data: dict) -> int:
     td = target_level + stat_bonus + buff_bonus
     return td
 
-def get_cva(target: Any) -> int:
+def get_cva(target: Any, armor_item: Optional[Dict]) -> int:
     """
     Cast vs Armor (CvA).
-    Positive = Easier to hit (Cloth). Negative = Harder to hit (Plate).
+    Looks up CvA based on ASG.
     """
-    armor_type = config.DEFAULT_UNARMORED_TYPE
     if isinstance(target, Player):
-        armor_type = target.get_armor_type()
+        asg_data = get_asg_data(armor_item)
+        return asg_data.get("cva", 20)
     else:
-        # Heuristic for monsters based on description/attributes
+        # Heuristic for monsters based on description/attributes if no item data
         defense_attrs = target.get("defense_attributes", [])
-        if "plate" in str(defense_attrs):
-            armor_type = "plate"
-        elif "chain" in str(defense_attrs):
-            armor_type = "chain"
-        elif "leather" in str(defense_attrs):
-            armor_type = "leather"
-        else:
-            armor_type = "cloth"
-
-    # Arbitrary values: High negative protects well, positive makes it easier
-    cva_map = {
-        "unarmored": 20,
-        "cloth": 15,
-        "leather": 0,
-        "scale": -5,
-        "chain": -10,
-        "plate": -20
-    }
-    return cva_map.get(armor_type, 0)
+        if "plate" in str(defense_attrs): return -10
+        if "chain" in str(defense_attrs): return -5
+        if "leather" in str(defense_attrs): return 5
+        return 20 # Cloth/None
 
 
 # --- ATTACK STRENGTH (AS) ---
@@ -504,9 +554,18 @@ def calculate_evade_defense(defender_stats: dict, defender_skills: dict, defende
     int_b = get_stat_bonus(defender_stats.get("INT", 50), "INT", defender_modifiers)
     dodging_ranks = defender_skills.get("dodging", 0)
     base_evade = agi_b + math.floor(int_b / 4) + dodging_ranks
-    hindrance = _get_armor_hindrance(armor_data, defender_skills)
+    
+    # Updated Action Penalty / Hindrance Logic
+    # DS Evade Hindrance = 1/2 of Action Penalty
+    armor_use_ranks = defender_skills.get("armor_use", 0)
+    action_penalty = calculate_action_penalty(armor_data, armor_use_ranks)
+    ds_hindrance = math.floor(abs(action_penalty) / 2)
+    
+    # Reduce Base Evade by hindrance
+    base_evade = max(0, base_evade - ds_hindrance)
+    
     shield_penalty = 0
-    evade_ds = (base_evade - shield_penalty) * hindrance * (stance_percent / 100.0) * factor_mod
+    evade_ds = (base_evade - shield_penalty) * (stance_percent / 100.0) * factor_mod
     if is_ranged:
         evade_ds *= 1.5
     return math.floor(evade_ds)
@@ -1045,8 +1104,20 @@ def process_combat_tick(world: 'World', broadcast_callback, send_to_player_callb
                     
                     world.stop_combat_for_all(combatant_id, state["target_id"])
                     continue
+        
+        # Calculate Roundtime
+        rt_seconds = 3.0
+        if isinstance(attacker, Player):
+             # Shouldn't happen in this loop for Player attackers (handled in verbs), 
+             # but just in case:
+             weapon_data = attacker.get_equipped_item_data("mainhand")
+             armor_data = attacker.get_equipped_item_data("torso")
+             armor_use = attacker.skills.get("armor_use", 0)
+             weapon_speed = weapon_data.get("base_speed", 3) if weapon_data else 3
+             rt_seconds = calculate_roundtime(attacker.stats.get("AGI", 50), weapon_speed, armor_data, armor_use)
+        else:
+             rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
 
-        rt_seconds = calculate_roundtime(attacker.get("stats", {}).get("AGI", 50))
         data = world.get_combat_state(combatant_id)
         if data:
             data["next_action_time"] = current_time + rt_seconds

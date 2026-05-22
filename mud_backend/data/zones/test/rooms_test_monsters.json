@@ -1,5 +1,7 @@
 [
     {
+        "room_id": "test_room_1",
+        "name": "Crab-Scuttled Shoreline",
         "description": {
             "default": "A narrow, rocky beach stretches west from the main docks. The air smells strongly of low tide and salt. Several giant crabs scuttle between dark pools of water, their hard shells clicking on the wet stones. A path leads back east to the Docks Gate, and another continues west along the shore."
         },
@@ -7,7 +9,6 @@
             "west": "shore_west_2"
         },
         "is_outdoor": true,
-        "name": "Crab-Scuttled Shoreline",
         "objects": [
             {
                 "monster_id": "giant_crab_lvl1",
@@ -18,7 +19,7 @@
                 "is_monster": true
             }
         ],
-        "room_id": "shore_west_1",
+
         "x": -1,
         "y": 2,
         "z": 0,
@@ -39,8 +40,9 @@
         "ambient_events": []
     },
     {
-        "description": {
-            "default": "The beach opens into a wide flat area filled with large, shimmering tide pools. The ground is slick with a strange, iridescent mucus. Massive, slow-moving snails crawl through the muck. The shore continues west and returns east."
+    "room_id": "test_room_2",
+    "description": {
+    "default": "The beach opens into a wide flat area filled with large, shimmering tide pools. The ground is slick with a strange, iridescent mucus. Massive, slow-moving snails crawl through the muck. The shore continues west and returns east."
         },
         "exits": {
             "east": "shore_west_1",
@@ -59,13 +61,14 @@
                 "monster_id": "giant_snail_lvl2"
             }
         ],
-        "room_id": "shore_west_2",
+
         "x": -2,
         "y": 2,
         "z": 0
     },
     {
-        "description": {
+    "room_id": "test_room_3",
+    "description": {
             "default": "A messy, foul-smelling camp is built from driftwood and shipwrecked timber. Scraps of fish and seaweed are scattered everywhere. Several Shore-Goblins shriek at your approach, their tamed crab-mounts clicking their claws aggressively. The only way out is back east to the tide pools."
         },
         "exits": {
@@ -87,7 +90,7 @@
                 "monster_id": "tamed_crab_lvl3"
             }
         ],
-        "room_id": "shore_west_3",
+
         "x": -3,
         "y": 2,
         "z": 0

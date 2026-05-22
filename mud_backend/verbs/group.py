@@ -90,7 +90,7 @@ class Group(BaseVerb):
         target_player_obj = self._resolve_local_target(target_str)
         
         if not target_player_obj or target_player_obj.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_str}' here.")
+            self.player.send_message(f"You don't see anyone named {target_str} here.")
             return
             
         if target_player_obj.group_id:
@@ -178,7 +178,7 @@ class Hold(BaseVerb):
         target_player_obj = self._resolve_local_target(target_str)
         
         if not target_player_obj or target_player_obj.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_str}' here.")
+            self.player.send_message(f"You don't see anyone named {target_str} here.")
             return
             
         if target_player_obj.group_id:
@@ -295,7 +295,7 @@ class Join(BaseVerb):
         
         # Fallback: Join via target (if open)
         if not target_leader_obj or target_leader_obj.current_room_id != self.player.current_room_id:
-            self.player.send_message(f"You don't see anyone named '{target_str}' here.")
+            self.player.send_message(f"You don't see anyone named {target_str} here.")
             return
             
         if target_leader_obj.flags.get("groupinvites", "on") == "off":

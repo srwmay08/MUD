@@ -1,0 +1,362 @@
+{
+  "1": {
+    "name": "Normal Clothing",
+    "ag": 1,
+    "asg": 1,
+    "weight": 0,
+    "rt": 0,
+    "ap": 0,
+    "cva_norm": 25,
+    "cva_magic": 20,
+    "spell_hindrance": {
+      "abjuration": 0,
+      "conjuration": 0,
+      "divination": 0,
+      "enchantment": 0,
+      "evocation": 0,
+      "illusion": 0,
+      "necromancy": 0,
+      "transmutation": 0
+    }
+  },
+  "2": {
+    "name": "Robes",
+    "ag": 1,
+    "asg": 2,
+    "weight": 8,
+    "rt": 0,
+    "ap": 0,
+    "cva_norm": 25,
+    "cva_magic": 15,
+    "spell_hindrance": {
+      "abjuration": 0,
+      "conjuration": 0,
+      "divination": 0,
+      "enchantment": 0,
+      "evocation": 0,
+      "illusion": 0,
+      "necromancy": 0,
+      "transmutation": 0
+    }
+  },
+  "5": {
+    "name": "Light Leather",
+    "ag": 2,
+    "asg": 5,
+    "weight": 10,
+    "rt": 0,
+    "ap": 0,
+    "cva_norm": 20,
+    "cva_magic": 15,
+    "spell_hindrance": {
+      "abjuration": 0,
+      "conjuration": 0,
+      "divination": 0,
+      "enchantment": 0,
+      "evocation": 0,
+      "illusion": 0,
+      "necromancy": 0,
+      "transmutation": 0
+    }
+  },
+  "6": {
+    "name": "Full Leather",
+    "ag": 2,
+    "asg": 6,
+    "weight": 13,
+    "rt": 1,
+    "ap": -1,
+    "cva_norm": 19,
+    "cva_magic": 14,
+    "spell_hindrance": {
+      "abjuration": 0,
+      "conjuration": 0,
+      "divination": 0,
+      "enchantment": 0,
+      "evocation": 0,
+      "illusion": 0,
+      "necromancy": 0,
+      "transmutation": 0
+    }
+  },
+  "7": {
+    "name": "Reinforced Leather",
+    "ag": 2,
+    "asg": 7,
+    "weight": 15,
+    "rt": 2,
+    "ap": -5,
+    "cva_norm": 18,
+    "cva_magic": 13,
+    "spell_hindrance": {
+      "abjuration": 2,
+      "conjuration": 2,
+      "divination": 2,
+      "enchantment": 2,
+      "evocation": 2,
+      "illusion": 2,
+      "necromancy": 2,
+      "transmutation": 2
+    }
+  },
+  "8": {
+    "name": "Double Leather",
+    "ag": 2,
+    "asg": 8,
+    "weight": 16,
+    "rt": 2,
+    "ap": -6,
+    "cva_norm": 17,
+    "cva_magic": 12,
+    "spell_hindrance": {
+      "abjuration": 4,
+      "conjuration": 4,
+      "divination": 4,
+      "enchantment": 4,
+      "evocation": 4,
+      "illusion": 4,
+      "necromancy": 4,
+      "transmutation": 4
+    }
+  },
+  "9": {
+    "name": "Leather Breastplate",
+    "ag": 3,
+    "asg": 9,
+    "weight": 16,
+    "rt": 3,
+    "ap": -7,
+    "cva_norm": 11,
+    "cva_magic": 5,
+    "spell_hindrance": {
+      "abjuration": 6,
+      "conjuration": 6,
+      "divination": 6,
+      "enchantment": 6,
+      "evocation": 6,
+      "illusion": 6,
+      "necromancy": 6,
+      "transmutation": 6
+    }
+  },
+  "10": {
+    "name": "Cuirbouilli Leather",
+    "ag": 3,
+    "asg": 10,
+    "weight": 17,
+    "rt": 4,
+    "ap": -8,
+    "cva_norm": 10,
+    "cva_magic": 4,
+    "spell_hindrance": {
+      "abjuration": 7,
+      "conjuration": 7,
+      "divination": 7,
+      "enchantment": 7,
+      "evocation": 7,
+      "illusion": 7,
+      "necromancy": 7,
+      "transmutation": 7
+    }
+  },
+  "11": {
+    "name": "Studded Leather",
+    "ag": 3,
+    "asg": 11,
+    "weight": 20,
+    "rt": 5,
+    "ap": -10,
+    "cva_norm": 9,
+    "cva_magic": 3,
+    "spell_hindrance": {
+      "abjuration": 9,
+      "conjuration": 9,
+      "divination": 9,
+      "enchantment": 9,
+      "evocation": 9,
+      "illusion": 9,
+      "necromancy": 9,
+      "transmutation": 9
+    }
+  },
+  "12": {
+    "name": "Brigandine Armor",
+    "ag": 3,
+    "asg": 12,
+    "weight": 25,
+    "rt": 6,
+    "ap": -12,
+    "cva_norm": 8,
+    "cva_magic": 2,
+    "spell_hindrance": {
+      "abjuration": 12,
+      "conjuration": 12,
+      "divination": 12,
+      "enchantment": 12,
+      "evocation": 12,
+      "illusion": 12,
+      "necromancy": 12,
+      "transmutation": 12
+    }
+  },
+  "13": {
+    "name": "Chain Mail",
+    "ag": 4,
+    "asg": 13,
+    "weight": 25,
+    "rt": 7,
+    "ap": -13,
+    "cva_norm": 1,
+    "cva_magic": -6,
+    "spell_hindrance": {
+      "abjuration": 16,
+      "conjuration": 16,
+      "divination": 16,
+      "enchantment": 16,
+      "evocation": 16,
+      "illusion": 16,
+      "necromancy": 16,
+      "transmutation": 16
+    }
+  },
+  "14": {
+    "name": "Double Chain",
+    "ag": 4,
+    "asg": 14,
+    "weight": 25,
+    "rt": 8,
+    "ap": -14,
+    "cva_norm": 0,
+    "cva_magic": -7,
+    "spell_hindrance": {
+      "abjuration": 20,
+      "conjuration": 20,
+      "divination": 20,
+      "enchantment": 20,
+      "evocation": 20,
+      "illusion": 20,
+      "necromancy": 20,
+      "transmutation": 20
+    }
+  },
+  "15": {
+    "name": "Augmented Chain",
+    "ag": 4,
+    "asg": 15,
+    "weight": 26,
+    "rt": 8,
+    "ap": -16,
+    "cva_norm": -1,
+    "cva_magic": -8,
+    "spell_hindrance": {
+      "abjuration": 25,
+      "conjuration": 25,
+      "divination": 25,
+      "enchantment": 25,
+      "evocation": 25,
+      "illusion": 25,
+      "necromancy": 25,
+      "transmutation": 25
+    }
+  },
+  "16": {
+    "name": "Chain Hauberk",
+    "ag": 4,
+    "asg": 16,
+    "weight": 27,
+    "rt": 9,
+    "ap": -18,
+    "cva_norm": -2,
+    "cva_magic": -9,
+    "spell_hindrance": {
+      "abjuration": 30,
+      "conjuration": 30,
+      "divination": 30,
+      "enchantment": 30,
+      "evocation": 30,
+      "illusion": 30,
+      "necromancy": 30,
+      "transmutation": 30
+    }
+  },
+  "17": {
+    "name": "Metal Breastplate",
+    "ag": 5,
+    "asg": 17,
+    "weight": 23,
+    "rt": 9,
+    "ap": -20,
+    "cva_norm": -10,
+    "cva_magic": -18,
+    "spell_hindrance": {
+      "abjuration": 35,
+      "conjuration": 35,
+      "divination": 35,
+      "enchantment": 35,
+      "evocation": 35,
+      "illusion": 35,
+      "necromancy": 35,
+      "transmutation": 35
+    }
+  },
+  "18": {
+    "name": "Augmented Breastplate",
+    "ag": 5,
+    "asg": 18,
+    "weight": 25,
+    "rt": 10,
+    "ap": -25,
+    "cva_norm": -11,
+    "cva_magic": -19,
+    "spell_hindrance": {
+      "abjuration": 40,
+      "conjuration": 40,
+      "divination": 40,
+      "enchantment": 40,
+      "evocation": 40,
+      "illusion": 40,
+      "necromancy": 40,
+      "transmutation": 40
+    }
+  },
+  "19": {
+    "name": "Half Plate",
+    "ag": 5,
+    "asg": 19,
+    "weight": 50,
+    "rt": 11,
+    "ap": -30,
+    "cva_norm": -12,
+    "cva_magic": -20,
+    "spell_hindrance": {
+      "abjuration": 45,
+      "conjuration": 45,
+      "divination": 45,
+      "enchantment": 45,
+      "evocation": 45,
+      "illusion": 45,
+      "necromancy": 45,
+      "transmutation": 45
+    }
+  },
+  "20": {
+    "name": "Full Plate",
+    "ag": 5,
+    "asg": 20,
+    "weight": 75,
+    "rt": 12,
+    "ap": -35,
+    "cva_norm": -13,
+    "cva_magic": -21,
+    "spell_hindrance": {
+      "abjuration": 50,
+      "conjuration": 50,
+      "divination": 50,
+      "enchantment": 50,
+      "evocation": 50,
+      "illusion": 50,
+      "necromancy": 50,
+      "transmutation": 50
+    }
+  }
+}
